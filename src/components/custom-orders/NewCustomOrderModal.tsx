@@ -29,6 +29,18 @@ import { CameraCaptureModal } from '../common/CameraCaptureModal';
 interface NewCustomOrderModalProps {
   isOpen: boolean;
   onClose: () => void;
+  initialData?: {
+    orderType?: 'CAKE' | 'BREAD';
+    cakeName?: string;
+    size?: string;
+    flavor?: string;
+    filling?: string;
+    inscription?: string;
+    themeNotes?: string;
+    referenceImage?: string;
+    totalKhr?: number;
+    depositKhr?: number;
+  };
 }
 
 const BREAD_PRESETS = [
@@ -51,7 +63,7 @@ const PACKAGING_OPTIONS = [
   'វេចខ្ចប់ប្រអប់ធំសម្រាប់កម្មវិធី (Bulk Catering Box)',
 ];
 
-export const NewCustomOrderModal: React.FC<NewCustomOrderModalProps> = ({ isOpen, onClose }) => {
+export const NewCustomOrderModal: React.FC<NewCustomOrderModalProps> = ({ isOpen, onClose, initialData }) => {
   const {
     lang,
     addCustomOrder,
@@ -109,6 +121,22 @@ export const NewCustomOrderModal: React.FC<NewCustomOrderModalProps> = ({ isOpen
     return tomorrow.toISOString().slice(0, 10);
   });
   const [pickupTime, setPickupTime] = useState('08:00');
+
+  // Sync initialData if provided when opening modal
+  React.useEffect(() => {
+    if (isOpen && initialData) {
+      if (initialData.orderType) setOrderType(initialData.orderType);
+      if (initialData.cakeName) setCakeName(initialData.cakeName);
+      if (initialData.size) setSize(initialData.size);
+      if (initialData.flavor) setFlavor(initialData.flavor);
+      if (initialData.filling) setFilling(initialData.filling);
+      if (initialData.inscription) setInscription(initialData.inscription);
+      if (initialData.themeNotes) setThemeNotes(initialData.themeNotes);
+      if (initialData.referenceImage) setReferenceImage(initialData.referenceImage);
+      if (initialData.totalKhr) setBaseCakePriceKhr(initialData.totalKhr.toString());
+      if (initialData.depositKhr) setDepositKhr(initialData.depositKhr.toString());
+    }
+  }, [isOpen, initialData]);
 
   // Party Add-on custom addition / edit state
   const [isAddingNewAddon, setIsAddingNewAddon] = useState(false);

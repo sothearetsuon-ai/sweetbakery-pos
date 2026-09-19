@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import {
   Sparkles,
   Eye,
+  EyeOff,
   Cake,
   Plus,
   Search,
@@ -14,6 +15,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Layers,
+  DollarSign,
+  Palette,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { useBakery } from '../../context/BakeryContext';
@@ -22,6 +25,8 @@ import { Product } from '../../types';
 import { soundFx } from '../../utils/audio';
 import { AddProductModal } from '../pos/AddProductModal';
 import { KioskSlideshowModal } from './KioskSlideshowModal';
+import { SelectDesignPriceModal } from './SelectDesignPriceModal';
+import { NewCustomOrderModal } from '../custom-orders/NewCustomOrderModal';
 
 // Animated Individual Cake Card with Auto-Transitions
 interface ShowcaseCardProps {
@@ -29,9 +34,16 @@ interface ShowcaseCardProps {
   onClick: () => void;
   exchangeRate: number;
   lang: string;
+  hidePrices?: boolean;
 }
 
-const ShowcaseCard: React.FC<ShowcaseCardProps> = ({ product, onClick, exchangeRate, lang }) => {
+const ShowcaseCard: React.FC<ShowcaseCardProps> = ({
+  product,
+  onClick,
+  exchangeRate,
+  lang,
+  hidePrices = true,
+}) => {
   const fallbackCake =
     'https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=500&q=80';
   const rawImages =
@@ -104,7 +116,7 @@ const ShowcaseCard: React.FC<ShowcaseCardProps> = ({ product, onClick, exchangeR
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-4 z-20">
           <span className="text-white text-xs font-bold flex items-center gap-1.5 bg-black/40 backdrop-blur-md px-3 py-1.5 rounded-xl">
             <Eye className="w-4 h-4" />
-            <span>ចុចមើលរូបធំ & កុម្ម៉ង់</span>
+            <span>{hidePrices ? 'ចុចមើលម៉ូដនំ & កំណត់តម្លៃ' : 'ចុចមើលរូបធំ & កុម្ម៉ង់'}</span>
           </span>
         </div>
       </div>
@@ -121,18 +133,32 @@ const ShowcaseCard: React.FC<ShowcaseCardProps> = ({ product, onClick, exchangeR
         )}
 
         <div className="pt-2 border-t border-rose-50 flex items-center justify-between">
-          <div>
-            <div className="text-lg font-black text-pink-600">
-              {priceKhr.toLocaleString()} ៛
-            </div>
-            <div className="text-[11px] text-slate-400 font-semibold">
-              ~ ${priceUsd.toFixed(2)}
-            </div>
-          </div>
+          {hidePrices ? (
+            <>
+              <span className="text-[11px] font-bold text-pink-700 bg-pink-50 px-2.5 py-1 rounded-xl flex items-center gap-1">
+                <Sparkles className="w-3 h-3 text-pink-500" />
+                <span>តម្លៃតាមទំហំ & ម៉ូដ</span>
+              </span>
+              <span className="px-3 py-1.5 bg-gradient-to-r from-pink-600 to-rose-500 text-white rounded-xl text-xs font-black transition-all shadow-2xs group-hover:scale-105">
+                រើសម៉ូដនំ ✨
+              </span>
+            </>
+          ) : (
+            <>
+              <div>
+                <div className="text-lg font-black text-pink-600">
+                  {priceKhr.toLocaleString()} ៛
+                </div>
+                <div className="text-[11px] text-slate-400 font-semibold">
+                  ~ ${priceUsd.toFixed(2)}
+                </div>
+              </div>
 
-          <span className="px-3 py-1.5 bg-pink-50 group-hover:bg-pink-600 group-hover:text-white text-pink-600 rounded-xl text-xs font-bold transition-all shadow-2xs">
-            មើលលម្អិត
-          </span>
+              <span className="px-3 py-1.5 bg-pink-50 group-hover:bg-pink-600 group-hover:text-white text-pink-600 rounded-xl text-xs font-bold transition-all shadow-2xs">
+                មើលលម្អិត
+              </span>
+            </>
+          )}
         </div>
       </div>
     </div>
@@ -143,12 +169,26 @@ export const CustomerShowcase: React.FC = () => {
   const { lang, products, categories, exchangeRate, addToCart } = useBakery();
   const text = t[lang];
 
+  // Default to true (Hide prices for customer viewing so customer picks model first)
+  const [hidePrices, setHidePrices] = useState<boolean>(() => {
+    const saved = localStorage.getItem('showcase_hide_prices');
+    return saved !== null ? saved === 'true' : true;
+  });
+
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [previewProduct, setPreviewProduct] = useState<Product | null>(null);
   const [isAddProductOpen, setIsAddProductOpen] = useState(false);
   const [isKioskOpen, setIsKioskOpen] = useState(false);
   const [orderConfirmed, setOrderConfirmed] = useState(false);
+
+  // Custom price selection modal state
+  const [productForCustomPricing, setProductForCustomPricing] = useState<Product | null>(null);
+  const [isSelectPriceModalOpen, setIsSelectPriceModalOpen] = useState(false);
+
+  // Custom order modal state (if customer wants pre-order with deposit)
+  const [isCustomOrderModalOpen, setIsCustomOrderModalOpen] = useState(false);
+  const [customOrderInitialData, setCustomOrderInitialData] = useState<any>(null);
 
   // Lightbox slideshow state
   const [lightboxImgIdx, setLightboxImgIdx] = useState(0);
@@ -192,20 +232,11 @@ export const CustomerShowcase: React.FC = () => {
     });
   }, [products, selectedCategory, searchQuery]);
 
-  const handleOrderCake = (product: Product) => {
-    soundFx.playSuccess();
-    confetti({
-      particleCount: 70,
-      spread: 60,
-      origin: { y: 0.7 },
-    });
-    addToCart(product);
-    setOrderConfirmed(true);
-    setTimeout(() => {
-      setOrderConfirmed(false);
-      setPreviewProduct(null);
-      setIsKioskOpen(false);
-    }, 900);
+  // Open custom price setup modal
+  const handleOpenCustomPrice = (product: Product) => {
+    soundFx.playPop();
+    setProductForCustomPricing(product);
+    setIsSelectPriceModalOpen(true);
   };
 
   const nextLightboxImg = () => {
@@ -236,12 +267,44 @@ export const CustomerShowcase: React.FC = () => {
               បណ្តុំរូបភាពនំខេកស្អាតៗ & ចលនាស្លាយ 🎂
             </h2>
             <p className="text-xs sm:text-sm text-pink-100 font-medium">
-              ភ្ញៀវអាចទស្សនារូបភាពនំខេកផ្លាស់ប្តូរស្វ័យប្រវត្តិ ជ្រើសរើសទំហំ រសជាតិ និងកុម្ម៉ង់ម៉ូដដែលពេញចិត្តបានភ្លាមៗ!
+              ភ្ញៀវអាចមើលរូបនំស្អាតៗសិនដោយមិនបាច់គិតតម្លៃ — ពេលភ្ញៀវពេញចិត្តម៉ូដណា បុគ្គលិកអាចចុចកំណត់តម្លៃតាមទំហំ និងការរចនាបានភ្លាមៗ!
             </p>
           </div>
 
-          {/* Action Buttons: Kiosk Presentation & Multi-Image Upload */}
-          <div className="flex items-center gap-3 shrink-0 flex-wrap">
+          {/* Action Buttons */}
+          <div className="flex items-center gap-2.5 shrink-0 flex-wrap">
+            {/* Toggle Hide/Show Prices for Customers */}
+            <button
+              type="button"
+              onClick={() => {
+                soundFx.playPop();
+                setHidePrices((prev) => {
+                  const next = !prev;
+                  localStorage.setItem('showcase_hide_prices', String(next));
+                  return next;
+                });
+              }}
+              className={`px-3.5 sm:px-4 py-3 rounded-2xl font-black text-xs sm:text-sm transition-all flex items-center gap-2 border shadow-lg cursor-pointer ${
+                hidePrices
+                  ? 'bg-amber-500/30 hover:bg-amber-500/45 text-amber-100 border-amber-300/40 ring-2 ring-amber-300/30'
+                  : 'bg-white/20 hover:bg-white/30 text-white border-white/20'
+              }`}
+              title="ចុចដើម្បីប្តូររវាងលាក់តម្លៃ (សម្រាប់អោយភ្ញៀវមើល) ឬបង្ហាញតម្លៃ"
+            >
+              {hidePrices ? (
+                <>
+                  <EyeOff className="w-4 h-4 text-yellow-300" />
+                  <span>របៀបបង្ហាញភ្ញៀវ៖ លាក់តម្លៃ 🙈</span>
+                </>
+              ) : (
+                <>
+                  <Eye className="w-4 h-4 text-emerald-300" />
+                  <span>របៀបទូទៅ៖ បង្ហាញតម្លៃ 👁️</span>
+                </>
+              )}
+            </button>
+
+            {/* Kiosk Slideshow Button */}
             <button
               onClick={() => {
                 soundFx.playPop();
@@ -250,18 +313,19 @@ export const CustomerShowcase: React.FC = () => {
               className="px-4 py-3 bg-white/20 hover:bg-white/30 backdrop-blur-md text-white font-black rounded-2xl border border-white/20 shadow-lg transition-all active:scale-95 flex items-center gap-2 text-xs sm:text-sm cursor-pointer"
             >
               <Tv className="w-4 h-4 text-yellow-300 animate-pulse" />
-              <span>ទម្រង់បញ្ចាំងស្លាយស្វ័យប្រវត្តិ (Kiosk)</span>
+              <span>ស្លាយស្វ័យប្រវត្តិ (Kiosk)</span>
             </button>
 
+            {/* Multi-Image Upload Button */}
             <button
               onClick={() => {
                 soundFx.playPop();
                 setIsAddProductOpen(true);
               }}
-              className="px-5 py-3 bg-white hover:bg-pink-50 text-pink-700 font-black rounded-2xl shadow-lg transition-all active:scale-95 flex items-center gap-2 text-xs sm:text-sm cursor-pointer"
+              className="px-4 sm:px-5 py-3 bg-white hover:bg-pink-50 text-pink-700 font-black rounded-2xl shadow-lg transition-all active:scale-95 flex items-center gap-2 text-xs sm:text-sm cursor-pointer"
             >
               <Plus className="w-5 h-5 stroke-[3]" />
-              <span>+ Upload រូបភាពច្រើន (Multi-Image)</span>
+              <span>+ បន្ថែមម៉ូដនំថ្មី</span>
             </button>
           </div>
         </div>
@@ -318,6 +382,7 @@ export const CustomerShowcase: React.FC = () => {
             }}
             exchangeRate={exchangeRate}
             lang={lang}
+            hidePrices={hidePrices}
           />
         ))}
       </div>
@@ -471,15 +536,27 @@ export const CustomerShowcase: React.FC = () => {
                   </button>
                 </div>
 
-                {/* Price in KHR First */}
-                <div className="p-3 bg-rose-50/60 border border-rose-100 rounded-2xl">
-                  <div className="text-2xl font-black text-pink-600">
-                    {((previewProduct.priceKhr ?? previewProduct.priceUsd * exchangeRate)).toLocaleString()} ៛
+                {/* Price Section: either fixed or custom sizing message */}
+                {hidePrices ? (
+                  <div className="p-3 bg-gradient-to-r from-pink-50 to-amber-50 border border-pink-200/80 rounded-2xl space-y-1">
+                    <span className="text-xs font-black text-pink-700 flex items-center gap-1.5">
+                      <Sparkles className="w-4 h-4 text-pink-500" />
+                      <span>តម្លៃគិតតាមទំហំ និងការរចនា (Custom Pricing)</span>
+                    </span>
+                    <p className="text-[11px] text-slate-500">
+                      លោកអ្នកអាចជ្រើសរើសទំហំនំ និងរសជាតិ ហើយបុគ្គលិកនឹងជួយកំណត់តម្លៃជូន!
+                    </p>
                   </div>
-                  <div className="text-xs text-slate-500 font-semibold">
-                    ~ ${previewProduct.priceUsd.toFixed(2)} USD
+                ) : (
+                  <div className="p-3 bg-rose-50/60 border border-rose-100 rounded-2xl">
+                    <div className="text-2xl font-black text-pink-600">
+                      {((previewProduct.priceKhr ?? previewProduct.priceUsd * exchangeRate)).toLocaleString()} ៛
+                    </div>
+                    <div className="text-xs text-slate-500 font-semibold">
+                      ~ ${previewProduct.priceUsd.toFixed(2)} USD
+                    </div>
                   </div>
-                </div>
+                )}
 
                 {previewProduct.description && (
                   <div>
@@ -506,27 +583,17 @@ export const CustomerShowcase: React.FC = () => {
                 </div>
               </div>
 
-              {/* Order this cake button */}
+              {/* Order / Select design button */}
               <button
                 type="button"
-                onClick={() => handleOrderCake(previewProduct)}
-                className={`w-full py-3.5 rounded-2xl font-black text-xs transition-all shadow-lg flex items-center justify-center gap-2 active:scale-95 cursor-pointer ${
-                  orderConfirmed
-                    ? 'bg-emerald-600 text-white shadow-emerald-500/25'
-                    : 'bg-gradient-to-r from-pink-600 to-rose-500 hover:from-pink-700 hover:to-rose-600 text-white shadow-pink-500/25'
-                }`}
+                onClick={() => {
+                  handleOpenCustomPrice(previewProduct);
+                  setPreviewProduct(null);
+                }}
+                className="w-full py-3.5 rounded-2xl font-black text-xs bg-gradient-to-r from-pink-600 to-rose-500 hover:from-pink-700 hover:to-rose-600 text-white shadow-lg shadow-pink-500/25 flex items-center justify-center gap-2 active:scale-95 cursor-pointer transition-all"
               >
-                {orderConfirmed ? (
-                  <>
-                    <CheckCircle2 className="w-4 h-4" />
-                    <span>បានបញ្ចូលទៅក្នុងកន្ត្រកកុម្ម៉ង់!</span>
-                  </>
-                ) : (
-                  <>
-                    <ShoppingBag className="w-4 h-4" />
-                    <span>កុម្ម៉ង់ម៉ូដនំនេះ (Order This Cake)</span>
-                  </>
-                )}
+                <ShoppingBag className="w-4 h-4" />
+                <span>រើសម៉ូដនំនេះ & កំណត់តម្លៃ ✨ (Select Design & Set Price)</span>
               </button>
             </div>
           </div>
@@ -544,7 +611,54 @@ export const CustomerShowcase: React.FC = () => {
         isOpen={isKioskOpen}
         onClose={() => setIsKioskOpen(false)}
         products={filteredProducts}
-        onOrderProduct={handleOrderCake}
+        onOrderProduct={(prod) => {
+          handleOpenCustomPrice(prod);
+          setIsKioskOpen(false);
+        }}
+        hidePrices={hidePrices}
+        onToggleHidePrices={() => {
+          setHidePrices((prev) => {
+            const next = !prev;
+            localStorage.setItem('showcase_hide_prices', String(next));
+            return next;
+          });
+        }}
+      />
+
+      {/* Modal to configure custom size, flavor, notes, and agreed price */}
+      <SelectDesignPriceModal
+        isOpen={isSelectPriceModalOpen}
+        onClose={() => {
+          setIsSelectPriceModalOpen(false);
+          setProductForCustomPricing(null);
+        }}
+        product={productForCustomPricing}
+        onAddToCart={(customizedProduct, size, flavor, notes) => {
+          addToCart(customizedProduct, size, flavor);
+        }}
+        onOpenCustomOrder={(orderData) => {
+          setCustomOrderInitialData({
+            orderType: 'CAKE',
+            cakeName: orderData.cakeName,
+            size: orderData.size,
+            flavor: orderData.flavor,
+            themeNotes: orderData.themeNotes,
+            referenceImage: orderData.referenceImage,
+            totalKhr: orderData.totalKhr,
+            depositKhr: orderData.depositKhr,
+          });
+          setIsCustomOrderModalOpen(true);
+        }}
+      />
+
+      {/* New Custom Order Modal pre-filled with design details */}
+      <NewCustomOrderModal
+        isOpen={isCustomOrderModalOpen}
+        onClose={() => {
+          setIsCustomOrderModalOpen(false);
+          setCustomOrderInitialData(null);
+        }}
+        initialData={customOrderInitialData}
       />
     </div>
   );

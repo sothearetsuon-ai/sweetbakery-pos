@@ -1,5 +1,5 @@
-﻿import React, { useState, useEffect } from 'react';
-import { X, Play, Pause, ChevronLeft, ChevronRight, ShoppingBag, Sparkles, Cake } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, Play, Pause, ChevronLeft, ChevronRight, ShoppingBag, Sparkles, Cake, Eye, EyeOff } from 'lucide-react';
 import { Product } from '../../types';
 import { useBakery } from '../../context/BakeryContext';
 import { soundFx } from '../../utils/audio';
@@ -9,6 +9,8 @@ interface KioskSlideshowModalProps {
   onClose: () => void;
   products: Product[];
   onOrderProduct: (product: Product) => void;
+  hidePrices?: boolean;
+  onToggleHidePrices?: () => void;
 }
 
 export const KioskSlideshowModal: React.FC<KioskSlideshowModalProps> = ({
@@ -16,6 +18,8 @@ export const KioskSlideshowModal: React.FC<KioskSlideshowModalProps> = ({
   onClose,
   products,
   onOrderProduct,
+  hidePrices = true,
+  onToggleHidePrices,
 }) => {
   const { lang, exchangeRate, storeInfo } = useBakery();
   const [currentProductIdx, setCurrentProductIdx] = useState(0);
@@ -99,14 +103,42 @@ export const KioskSlideshowModal: React.FC<KioskSlideshowModalProps> = ({
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5">
+          {/* Hide / Show Price Toggle */}
+          {onToggleHidePrices && (
+            <button
+              onClick={() => {
+                soundFx.playPop();
+                onToggleHidePrices();
+              }}
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-2xl text-xs font-bold border transition-all cursor-pointer ${
+                hidePrices
+                  ? 'bg-amber-500/30 border-amber-300/50 text-amber-200 hover:bg-amber-500/45'
+                  : 'bg-white/10 border-white/15 text-white hover:bg-white/20'
+              }`}
+              title="ចុចដើម្បីប្តូររវាងលាក់តម្លៃ ឬបង្ហាញតម្លៃ"
+            >
+              {hidePrices ? (
+                <>
+                  <EyeOff className="w-4 h-4 text-yellow-300" />
+                  <span>លាក់តម្លៃ 🙈</span>
+                </>
+              ) : (
+                <>
+                  <Eye className="w-4 h-4 text-emerald-300" />
+                  <span>បង្ហាញតម្លៃ 👁️</span>
+                </>
+              )}
+            </button>
+          )}
+
           {/* Play/Pause Toggle */}
           <button
             onClick={() => {
               soundFx.playPop();
               setIsPlaying(!isPlaying);
             }}
-            className="flex items-center gap-2 px-4 py-2 rounded-2xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold border border-white/15 transition-all cursor-pointer"
+            className="flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold border border-white/15 transition-all cursor-pointer"
           >
             {isPlaying ? <Pause className="w-4 h-4 text-pink-400" /> : <Play className="w-4 h-4 text-emerald-400" />}
             <span>{isPlaying ? 'ផ្អាកស្លាយ' : 'បន្តបញ្ចាំង'}</span>
@@ -198,16 +230,28 @@ export const KioskSlideshowModal: React.FC<KioskSlideshowModalProps> = ({
               </h2>
             </div>
 
-            {/* Price Box */}
-            <div className="p-4 rounded-2xl bg-gradient-to-r from-pink-900/40 to-rose-900/30 border border-pink-500/30">
-              <span className="text-xs text-pink-200 block font-semibold">តម្លៃលក់ជូនភ្ញៀវ៖</span>
-              <div className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-pink-400 to-rose-300">
-                {priceKhr.toLocaleString()} ៛
+            {/* Price Box or Custom Pricing message */}
+            {hidePrices ? (
+              <div className="p-4 rounded-2xl bg-gradient-to-r from-pink-900/30 to-amber-900/30 border border-pink-500/30 space-y-1">
+                <span className="text-xs text-pink-200 block font-black flex items-center gap-1.5">
+                  <Sparkles className="w-4 h-4 text-yellow-300" />
+                  <span>តម្លៃតាមទំហំ និងការរចនា (Custom Pricing)</span>
+                </span>
+                <p className="text-[11px] text-slate-300">
+                  លោកអ្នកអាចជ្រើសរើសទំហំ និងរសជាតិ ហើយបុគ្គលិកនឹងជួយកំណត់តម្លៃជូនភ្លាមៗ!
+                </p>
               </div>
-              <div className="text-xs text-slate-300 font-semibold">
-                ~ ${activeProduct.priceUsd.toFixed(2)} USD
+            ) : (
+              <div className="p-4 rounded-2xl bg-gradient-to-r from-pink-900/40 to-rose-900/30 border border-pink-500/30">
+                <span className="text-xs text-pink-200 block font-semibold">តម្លៃលក់ជូនភ្ញៀវ៖</span>
+                <div className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-pink-400 to-rose-300">
+                  {priceKhr.toLocaleString()} ៛
+                </div>
+                <div className="text-xs text-slate-300 font-semibold">
+                  ~ ${activeProduct.priceUsd.toFixed(2)} USD
+                </div>
               </div>
-            </div>
+            )}
 
             {activeProduct.description && (
               <p className="text-xs text-slate-300 leading-relaxed">
@@ -229,7 +273,7 @@ export const KioskSlideshowModal: React.FC<KioskSlideshowModalProps> = ({
               className="w-full py-4 rounded-2xl bg-gradient-to-r from-pink-600 to-rose-500 hover:from-pink-700 hover:to-rose-600 text-white font-black text-sm shadow-xl shadow-pink-600/30 flex items-center justify-center gap-2 transition-all active:scale-95 cursor-pointer"
             >
               <ShoppingBag className="w-5 h-5" />
-              <span>កុម្ម៉ង់នំនេះឥឡូវនេះ (Order Cake)</span>
+              <span>រើសម៉ូដនំនេះ & កំណត់តម្លៃ ✨</span>
             </button>
           </div>
         </div>
