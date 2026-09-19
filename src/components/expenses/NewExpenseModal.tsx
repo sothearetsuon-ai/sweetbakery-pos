@@ -16,6 +16,9 @@ import {
   Tag,
   Trash2,
   Edit2,
+  Wand2,
+  ArrowDown,
+  ArrowUp,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { useBakery } from '../../context/BakeryContext';
@@ -139,6 +142,21 @@ export const NewExpenseModal: React.FC<NewExpenseModalProps> = ({
     if (q > 0) {
       setUnitPriceKhr(Math.round(t / q).toString());
     }
+  };
+
+  const roundAmountTo = (precision: number, mode: 'nearest' | 'up' | 'down' = 'nearest') => {
+    soundFx.playPop();
+    const current = parseFloat(amountKhr) || (parseFloat(quantity) || 1) * (parseFloat(unitPriceKhr) || 0) || 0;
+    if (current <= 0) return;
+    let rounded = current;
+    if (mode === 'nearest') {
+      rounded = Math.round(current / precision) * precision;
+    } else if (mode === 'up') {
+      rounded = Math.ceil(current / precision) * precision;
+    } else if (mode === 'down') {
+      rounded = Math.floor(current / precision) * precision;
+    }
+    handleTotalAmountChange(rounded.toString());
   };
 
   const numQuantity = parseFloat(quantity) || 1;
@@ -413,9 +431,61 @@ export const NewExpenseModal: React.FC<NewExpenseModalProps> = ({
                     ៛
                   </span>
                 </div>
-                <div className="text-[10px] text-rose-700 font-bold mt-1">
-                  ~ ${numAmountUsd.toFixed(2)} USD
+                <div className="flex items-center justify-between mt-1">
+                  <span className="text-[10px] text-rose-700 font-bold">
+                    ~ ${numAmountUsd.toFixed(2)} USD
+                  </span>
+                  {numAmountKhr > 0 && numAmountKhr % 100 !== 0 && (
+                    <button
+                      type="button"
+                      onClick={() => roundAmountTo(100, 'nearest')}
+                      className="text-[9px] font-black text-rose-600 bg-rose-100/80 hover:bg-rose-200 px-1.5 py-0.5 rounded transition-colors cursor-pointer"
+                      title="ចុចដើម្បីបង្គត់ 100 ៛"
+                    >
+                      ✨ បង្គត់ 100៛
+                    </button>
+                  )}
                 </div>
+
+                {/* Smart One-Click Rounding Buttons */}
+                {numAmountKhr > 0 && (
+                  <div className="flex flex-wrap items-center gap-1 pt-1.5">
+                    <button
+                      type="button"
+                      onClick={() => roundAmountTo(100, 'nearest')}
+                      className="px-1.5 py-0.5 text-[9px] font-bold bg-white hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-md transition-all shadow-2xs active:scale-95 cursor-pointer"
+                      title="បង្គត់ទៅខ្ទង់រយ (ឧ. 465,700 ៛)"
+                    >
+                      ~{(Math.round(numAmountKhr / 100) * 100).toLocaleString()} ៛
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => roundAmountTo(1000, 'nearest')}
+                      className="px-1.5 py-0.5 text-[9px] font-bold bg-white hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-md transition-all shadow-2xs active:scale-95 cursor-pointer"
+                      title="បង្គត់ទៅខ្ទង់ពាន់ (ឧ. 466,000 ៛)"
+                    >
+                      ~{(Math.round(numAmountKhr / 1000) * 1000).toLocaleString()} ៛
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => roundAmountTo(1000, 'down')}
+                      className="px-1.5 py-0.5 text-[9px] font-bold bg-slate-50 hover:bg-slate-100 text-slate-600 border border-slate-200 rounded-md transition-all shadow-2xs active:scale-95 cursor-pointer flex items-center gap-0.5"
+                      title="បង្គត់ចុះ (Floor)"
+                    >
+                      <ArrowDown className="w-2 h-2" />
+                      <span>{(Math.floor(numAmountKhr / 1000) * 1000).toLocaleString()} ៛</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => roundAmountTo(1000, 'up')}
+                      className="px-1.5 py-0.5 text-[9px] font-bold bg-slate-50 hover:bg-slate-100 text-slate-600 border border-slate-200 rounded-md transition-all shadow-2xs active:scale-95 cursor-pointer flex items-center gap-0.5"
+                      title="បង្គត់ឡើង (Ceil)"
+                    >
+                      <ArrowUp className="w-2 h-2" />
+                      <span>{(Math.ceil(numAmountKhr / 1000) * 1000).toLocaleString()} ៛</span>
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
 
