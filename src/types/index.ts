@@ -49,20 +49,34 @@ export interface CartItem {
 
 export type OrderStatus = 'PENDING' | 'BAKING' | 'DECORATING' | 'READY' | 'DELIVERED' | 'CANCELLED';
 
+export interface BreadOrderItem {
+  nameKh: string;
+  nameEn?: string;
+  quantity: number;
+  unit: string; // 'ដើម', 'ដុំ', 'ថង់', 'ឡូ', 'ប្រអប់'
+  pricePerUnitKhr: number;
+  pricePerUnitUsd: number;
+  totalKhr: number;
+  totalUsd: number;
+}
+
 export interface CustomCakeOrder {
   id: string;
   orderNumber: string;
+  orderType?: 'CAKE' | 'BREAD'; // 'CAKE' = នំខួបកំណើត, 'BREAD' = នំបុ័ង & នំដុត
   customerName: string;
   phone: string;
   pickupDate: string; // YYYY-MM-DD
   pickupTime: string; // HH:mm
-  cakeName: string;
+  cakeName: string; // Cake Name OR Bread Order Summary
   size: string;
   flavor: string;
   filling?: string;
   inscription: string;
   themeNotes?: string;
   referenceImage?: string;
+  breadItems?: BreadOrderItem[];
+  packagingOption?: string; // 'ទាំងមូល (Whole)', 'ហាន់ជាបន្ទះ (Sliced)', 'ច្រកថង់មួយៗ (Individual)'
   status: OrderStatus;
   totalUsd: number;
   totalKhr?: number;

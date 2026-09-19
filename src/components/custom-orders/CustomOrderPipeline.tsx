@@ -20,8 +20,12 @@ export const CustomOrderPipeline: React.FC = () => {
   const [isConfirmClearAll, setIsConfirmClearAll] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [dateFilter, setDateFilter] = useState<'all' | 'today' | 'upcoming'>('all');
+  const [typeFilter, setTypeFilter] = useState<'ALL' | 'CAKE' | 'BREAD'>('ALL');
 
   const todayStr = new Date().toISOString().slice(0, 10);
+
+  const cakeCount = useMemo(() => customOrders.filter(o => o.orderType !== 'BREAD').length, [customOrders]);
+  const breadCount = useMemo(() => customOrders.filter(o => o.orderType === 'BREAD').length, [customOrders]);
 
   const filteredOrders = useMemo(() => {
     return customOrders.filter((order) => {
@@ -31,7 +35,8 @@ export const CustomOrderPipeline: React.FC = () => {
         order.customerName.toLowerCase().includes(q) ||
         order.phone.includes(q) ||
         order.orderNumber.toLowerCase().includes(q) ||
-        order.cakeName.toLowerCase().includes(q);
+        order.cakeName.toLowerCase().includes(q) ||
+        (order.breadItems && order.breadItems.some(it => it.nameKh.toLowerCase().includes(q) || it.nameEn?.toLowerCase().includes(q)));
 
       let matchesDate = true;
       if (dateFilter === 'today') {
@@ -40,9 +45,16 @@ export const CustomOrderPipeline: React.FC = () => {
         matchesDate = order.pickupDate > todayStr;
       }
 
-      return matchesSearch && matchesDate;
+      let matchesType = true;
+      if (typeFilter === 'CAKE') {
+        matchesType = order.orderType !== 'BREAD';
+      } else if (typeFilter === 'BREAD') {
+        matchesType = order.orderType === 'BREAD';
+      }
+
+      return matchesSearch && matchesDate && matchesType;
     });
-  }, [customOrders, searchQuery, dateFilter, todayStr]);
+  }, [customOrders, searchQuery, dateFilter, typeFilter, todayStr]);
 
   const columns: {
     status: OrderStatus;
@@ -126,20 +138,32 @@ export const CustomOrderPipeline: React.FC = () => {
       setReceiptSale(matching);
     } else {
       const orderTotalKhr = order.totalKhr ?? Math.round(order.totalUsd * exchangeRate);
+      
+      const receiptItems = order.orderType === 'BREAD' && order.breadItems && order.breadItems.length > 0
+        ? order.breadItems.map((it, idx) => ({
+            productId: `bread-${order.id}-${idx}`,
+            nameKh: `${it.nameKh} (${it.unit})`,
+            nameEn: `${it.nameEn || it.nameKh} (${it.unit})`,
+            quantity: it.quantity,
+            priceUsd: it.pricePerUnitUsd,
+            priceKhr: it.pricePerUnitKhr,
+          }))
+        : [
+            {
+              productId: `custom-${order.id}`,
+              nameKh: `នំកុម្ម៉ង់៖ ${order.cakeName} (${order.size})`,
+              nameEn: `Custom Cake: ${order.cakeName} (${order.size})`,
+              quantity: 1,
+              priceUsd: order.totalUsd,
+              priceKhr: orderTotalKhr,
+              image: order.referenceImage || undefined,
+            },
+          ];
+
       setReceiptSale({
         id: `sale-custom-${order.id}`,
         orderNumber: order.orderNumber,
-        items: [
-          {
-            productId: `custom-${order.id}`,
-            nameKh: `នំកុម្ម៉ង់៖ ${order.cakeName} (${order.size})`,
-            nameEn: `Custom Cake: ${order.cakeName} (${order.size})`,
-            quantity: 1,
-            priceUsd: order.totalUsd,
-            priceKhr: orderTotalKhr,
-            image: order.referenceImage || undefined,
-          },
-        ],
+        items: receiptItems,
         subtotalUsd: order.totalUsd,
         discountUsd: 0,
         totalUsd: order.totalUsd,
@@ -159,7 +183,9 @@ export const CustomOrderPipeline: React.FC = () => {
         remainingUsd: 0,
         pickupDate: order.pickupDate,
         pickupTime: order.pickupTime,
-        notes: `នំកុម្ម៉ង់ពិសេស (រសជាតិ៖ ${order.flavor}) • បានប្រគល់ជូនរួចរាល់`,
+        notes: order.orderType === 'BREAD'
+          ? `កុម្ម៉ង់នំបុ័ង & នំដុត (${order.packagingOption || 'ច្រកធម្មតា'}) • បានប្រគល់ជូនរួចរាល់`
+          : `នំកុម្ម៉ង់ពិសេស (រសជាតិ៖ ${order.flavor}) • បានប្រគល់ជូនរួចរាល់`,
         createdAt: order.createdAt || new Date().toISOString(),
       });
     }
@@ -168,18 +194,70 @@ export const CustomOrderPipeline: React.FC = () => {
   return (
     <div className="flex-1 flex flex-col p-3 sm:p-6 overflow-hidden pb-20 md:pb-6">
       {/* Top Controls */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 mb-3 sm:mb-6 shrink-0">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 mb-3 sm:mb-5 shrink-0">
         <div>
           <h2 className="text-lg sm:text-xl font-black text-slate-800 tracking-tight flex items-center gap-2">
-            <span>🎂</span>
-            <span>{text.orderPipelineTitle}</span>
+            <span>🎂 🥖</span>
+            <span>{text.orderPipelineTitle} & កុម្ម៉ង់នំបុ័ង</span>
           </h2>
           <p className="text-xs text-slate-500 mt-0.5">
-            តាមដានដំណើរការផលិតនំខួបកំណើត និងកុម្ម៉ង់ពិសេសតាមដំណាក់កាល
+            តាមដានដំណើរការផលិតនំខួបកំណើត និងនំបុ័ងកុម្ម៉ង់តាមដំណាក់កាល
           </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+          {/* Type Filter Pills */}
+          <div className="flex items-center bg-white/90 p-1 rounded-2xl border border-rose-100 shadow-2xs">
+            <button
+              onClick={() => {
+                soundFx.playPop();
+                setTypeFilter('ALL');
+              }}
+              className={`px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+                typeFilter === 'ALL'
+                  ? 'bg-slate-900 text-white shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <span>ទាំងអស់</span>
+              <span className="px-1.5 py-0.2 bg-white/20 rounded-full text-[10px] font-black">
+                {customOrders.length}
+              </span>
+            </button>
+            <button
+              onClick={() => {
+                soundFx.playPop();
+                setTypeFilter('CAKE');
+              }}
+              className={`px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+                typeFilter === 'CAKE'
+                  ? 'bg-gradient-to-r from-pink-600 to-rose-500 text-white shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <span>🎂 នំខេក</span>
+              <span className="px-1.5 py-0.2 bg-white/20 rounded-full text-[10px] font-black">
+                {cakeCount}
+              </span>
+            </button>
+            <button
+              onClick={() => {
+                soundFx.playPop();
+                setTypeFilter('BREAD');
+              }}
+              className={`px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+                typeFilter === 'BREAD'
+                  ? 'bg-gradient-to-r from-amber-600 to-orange-500 text-white shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <span>🥖 នំបុ័ង</span>
+              <span className="px-1.5 py-0.2 bg-white/20 rounded-full text-[10px] font-black">
+                {breadCount}
+              </span>
+            </button>
+          </div>
+
           {/* Search */}
           <div className="relative flex-1 sm:flex-initial">
             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -188,7 +266,7 @@ export const CustomOrderPipeline: React.FC = () => {
               placeholder="ស្វែងរកតាមឈ្មោះ/ទូរស័ព្ទ..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 pr-3 py-2 text-xs bg-white border border-rose-100 rounded-2xl focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500 w-full sm:w-56 shadow-2xs font-medium"
+              className="pl-9 pr-3 py-2 text-xs bg-white border border-rose-100 rounded-2xl focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500 w-full sm:w-48 shadow-2xs font-medium"
             />
           </div>
 

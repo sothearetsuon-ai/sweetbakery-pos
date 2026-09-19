@@ -33,14 +33,16 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, onAdvanceStatus, on
 
   const nextStatus = getNextStatus(order.status);
 
+  const isBreadOrder = order.orderType === 'BREAD';
+
   const getNextStatusLabel = (next: OrderStatus | null): string => {
     switch (next) {
       case 'BAKING':
-        return 'ចាប់ផ្តើមដុតនំ 🔥';
+        return isBreadOrder ? 'ចាប់ផ្តើមដុតនំបុ័ង 🔥' : 'ចាប់ផ្តើមដុតនំ 🔥';
       case 'DECORATING':
-        return 'ចាប់ផ្តើមតែងនំ 🎨';
+        return isBreadOrder ? 'វេចខ្ចប់ / ហាន់នំបុ័ង 🥖' : 'ចាប់ផ្តើមតែងនំ 🎨';
       case 'READY':
-        return 'នំរួចរាល់ អាចមកយក 🎉';
+        return isBreadOrder ? 'នំបុ័ងរួចរាល់ អាចមកយក 🎉' : 'នំរួចរាល់ អាចមកយក 🎉';
       case 'DELIVERED':
         return 'ប្រគល់ជូនភ្ញៀវរួចរាល់ ✔';
       default:
@@ -86,13 +88,18 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, onAdvanceStatus, on
   const progress = getProgressPercent(order.status);
 
   return (
-    <div className="bg-white rounded-3xl border border-rose-100/90 p-4 shadow-sm hover:shadow-xl hover:shadow-pink-500/10 hover:border-pink-300 transition-all duration-300 space-y-3 group">
+    <div className={`bg-white rounded-3xl border ${isBreadOrder ? 'border-amber-200/90 hover:border-amber-300 hover:shadow-amber-500/10' : 'border-rose-100/90 hover:border-pink-300 hover:shadow-pink-500/10'} p-4 shadow-sm hover:shadow-xl transition-all duration-300 space-y-3 group`}>
       {/* Top Header */}
       <div className="flex items-start justify-between gap-2 border-b border-rose-50 pb-2.5">
         <div>
-          <span className="text-[10px] font-black tracking-wider text-pink-600 bg-pink-50 px-2.5 py-0.5 rounded-full">
-            {order.orderNumber}
-          </span>
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className={`text-[10px] font-black tracking-wider ${isBreadOrder ? 'text-amber-700 bg-amber-50 border border-amber-200' : 'text-pink-600 bg-pink-50'} px-2.5 py-0.5 rounded-full`}>
+              {order.orderNumber}
+            </span>
+            <span className={`text-[10px] font-black px-2 py-0.5 rounded-md ${isBreadOrder ? 'bg-amber-500 text-white' : 'bg-pink-100 text-pink-700'}`}>
+              {isBreadOrder ? '🥖 នំបុ័ង & នំដុត' : '🎂 នំខួបកំណើត'}
+            </span>
+          </div>
           <h4 className="font-bold text-slate-800 text-sm mt-1">{order.customerName}</h4>
         </div>
 
@@ -131,38 +138,77 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, onAdvanceStatus, on
         </div>
         <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
           <div
-            className="h-full bg-gradient-to-r from-pink-500 via-rose-500 to-amber-400 rounded-full transition-all duration-500"
+            className={`h-full ${isBreadOrder ? 'bg-gradient-to-r from-amber-500 via-orange-500 to-emerald-400' : 'bg-gradient-to-r from-pink-500 via-rose-500 to-amber-400'} rounded-full transition-all duration-500`}
             style={{ width: `${progress}%` }}
           />
         </div>
       </div>
 
-      {/* Cake Details */}
-      <div className="space-y-1.5">
-        <div className="flex items-center justify-between text-xs">
-          <span className="font-bold text-slate-800">{order.cakeName}</span>
-          <span className="bg-slate-100 text-slate-700 text-[10px] font-black px-2 py-0.5 rounded-md">
-            {order.size}
-          </span>
-        </div>
-
-        <div className="text-[11px] text-slate-500">
-          រសជាតិ៖ <span className="font-semibold text-slate-700">{order.flavor}</span>
-        </div>
-
-        {/* Inscription quote box */}
-        {order.inscription && (
-          <div className="p-2.5 bg-gradient-to-r from-pink-50/80 to-rose-50/40 border border-pink-200/60 rounded-2xl text-pink-700 text-[11px] font-medium italic">
-            "{order.inscription}"
+      {/* Order Item Details */}
+      {isBreadOrder && order.breadItems && order.breadItems.length > 0 ? (
+        <div className="space-y-2">
+          <div className="bg-amber-50/60 border border-amber-100 rounded-2xl p-2.5 space-y-1.5">
+            <div className="text-[11px] font-black text-amber-800 flex items-center justify-between">
+              <span>🥖 បញ្ជីមុខទំនិញនំបុ័ង ({order.breadItems.length} មុខ)៖</span>
+              <span className="text-[10px] bg-amber-200/70 text-amber-900 px-1.5 py-0.5 rounded">
+                សរុប {order.breadItems.reduce((acc, it) => acc + it.quantity, 0)} {order.breadItems[0]?.unit || 'ដុំ'}
+              </span>
+            </div>
+            <div className="space-y-1 max-h-28 overflow-y-auto pr-1">
+              {order.breadItems.map((item, idx) => (
+                <div key={idx} className="flex items-center justify-between text-[11px] text-slate-700 bg-white/80 px-2 py-1 rounded-lg border border-amber-100/50">
+                  <span className="font-bold text-slate-800">
+                    {item.nameKh} <span className="text-amber-700">× {item.quantity} {item.unit}</span>
+                  </span>
+                  <span className="font-semibold text-slate-600">
+                    {item.totalKhr.toLocaleString()} ៛
+                  </span>
+                </div>
+              ))}
+            </div>
           </div>
-        )}
 
-        {order.themeNotes && (
-          <div className="text-[11px] text-slate-400 leading-snug">
-            ចំណាំ៖ {order.themeNotes}
+          {order.packagingOption && (
+            <div className="text-[11px] text-slate-600 bg-slate-50 border border-slate-100 px-2.5 py-1 rounded-xl flex items-center gap-1.5">
+              <span>📦</span>
+              <span className="font-semibold">វេចខ្ចប់៖</span>
+              <span>{order.packagingOption}</span>
+            </div>
+          )}
+
+          {order.themeNotes && (
+            <div className="text-[11px] text-slate-500 leading-snug">
+              ចំណាំ៖ {order.themeNotes}
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="space-y-1.5">
+          <div className="flex items-center justify-between text-xs">
+            <span className="font-bold text-slate-800">{order.cakeName}</span>
+            <span className="bg-slate-100 text-slate-700 text-[10px] font-black px-2 py-0.5 rounded-md">
+              {order.size}
+            </span>
           </div>
-        )}
-      </div>
+
+          <div className="text-[11px] text-slate-500">
+            រសជាតិ៖ <span className="font-semibold text-slate-700">{order.flavor}</span>
+          </div>
+
+          {/* Inscription quote box */}
+          {order.inscription && (
+            <div className="p-2.5 bg-gradient-to-r from-pink-50/80 to-rose-50/40 border border-pink-200/60 rounded-2xl text-pink-700 text-[11px] font-medium italic">
+              "{order.inscription}"
+            </div>
+          )}
+
+          {order.themeNotes && (
+            <div className="text-[11px] text-slate-400 leading-snug">
+              ចំណាំ៖ {order.themeNotes}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Pickup Timing */}
       <div className="flex items-center gap-1.5 text-xs text-amber-800 bg-amber-50/90 px-3 py-1.5 rounded-2xl border border-amber-200/80">
