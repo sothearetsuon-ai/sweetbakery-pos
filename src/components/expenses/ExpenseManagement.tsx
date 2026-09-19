@@ -301,7 +301,15 @@ export const ExpenseManagement: React.FC = () => {
             </button>
             {Object.entries(categoryLabels).map(([catKey, catVal]) => {
               const isActive = selectedCategory === catKey;
-              const count = expenses.filter((e) => e.category === catKey).length;
+              const count = expenses.filter((e) => {
+                const matchCat = e.category === catKey;
+                const matchReceipt =
+                  receiptFilter === 'ALL' ||
+                  (receiptFilter === 'WITH_RECEIPT' && !!e.receiptImage) ||
+                  (receiptFilter === 'WITHOUT_RECEIPT' && !e.receiptImage);
+                return matchCat && matchReceipt;
+              }).length;
+              const totalCatCount = expenses.filter((e) => e.category === catKey).length;
               return (
                 <button
                   key={catKey}
@@ -315,7 +323,7 @@ export const ExpenseManagement: React.FC = () => {
                       : 'bg-white text-slate-600 hover:bg-rose-50 border border-slate-200'
                   }`}
                 >
-                  {catVal.labelKh} {count > 0 ? `(${count})` : ''}
+                  {catVal.labelKh} {totalCatCount > 0 ? `(${receiptFilter === 'ALL' ? totalCatCount : count})` : ''}
                 </button>
               );
             })}
@@ -353,12 +361,45 @@ export const ExpenseManagement: React.FC = () => {
             <tbody className="divide-y divide-slate-100 font-medium">
               {filteredExpenses.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="p-12 text-center text-slate-400">
+                  <td colSpan={7} className="p-10 text-center text-slate-400">
                     <Receipt className="w-8 h-8 text-rose-300 mx-auto mb-2" />
-                    <p className="font-bold text-slate-600">គ្មានទិន្នន័យការចំណាយក្នុងលក្ខខណ្ឌនេះទេ</p>
-                    <p className="text-[11px] text-slate-400 mt-1">
-                      ចុចប៊ូតុង «+ កត់ត្រាការចំណាយថ្មី» ឬជ្រើសរើស «ទាំងអស់»
+                    <p className="font-bold text-slate-700 text-sm">
+                      {selectedCategory !== 'ALL' && receiptFilter !== 'ALL'
+                        ? `គ្មានទិន្នន័យចំណាយ ${categoryLabels[selectedCategory as ExpenseCategory]?.labelKh || ''} ដែល${receiptFilter === 'WITH_RECEIPT' ? 'មានរូបវិក្កយបត្រ' : 'គ្មានរូបវិក្កយបត្រ'}ឡើយ`
+                        : 'គ្មានទិន្នន័យការចំណាយក្នុងលក្ខខណ្ឌនេះទេ'}
                     </p>
+                    <p className="text-xs text-slate-400 mt-1 max-w-md mx-auto">
+                      {receiptFilter === 'WITHOUT_RECEIPT' && selectedCategory !== 'ALL'
+                        ? 'មុខទំនិញដែលគ្មានវិក្កយបត្រអាចស្ថិតនៅក្នុងប្រភេទផ្សេង (សូមចុចប៊ូតុង «បង្ហាញគ្រប់ប្រភេទ» ខាងក្រោម)'
+                        : 'លោកអ្នកអាចចុចប៊ូតុងខាងក្រោមដើម្បីមើលទិន្នន័យទាំងអស់'}
+                    </p>
+                    <div className="flex items-center justify-center gap-2 mt-4 flex-wrap">
+                      {selectedCategory !== 'ALL' && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            soundFx.playPop();
+                            setSelectedCategory('ALL');
+                          }}
+                          className="px-3.5 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer flex items-center gap-1"
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                          <span>បង្ហាញគ្រប់ប្រភេទ (Show All Categories)</span>
+                        </button>
+                      )}
+                      {receiptFilter !== 'ALL' && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            soundFx.playPop();
+                            setReceiptFilter('ALL');
+                          }}
+                          className="px-3.5 py-1.5 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer flex items-center gap-1"
+                        >
+                          <span>🔄 បង្ហាញទាំងអស់ (All Receipts)</span>
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ) : (
