@@ -99,7 +99,7 @@ export const Navbar: React.FC<NavbarProps> = ({
       : 'Good Evening 🧁 Ready for cake pickups';
 
   return (
-    <header className="glass-panel border-b border-rose-100/80 sticky top-0 z-40 px-3 sm:px-6 py-2 sm:py-3 shadow-xs">
+    <header className="bg-white/95 backdrop-blur-md border-b border-slate-200/90 sticky top-0 z-40 px-3 sm:px-6 py-2.5 sm:py-3 shadow-xs">
       <div className="flex items-center justify-between gap-2">
         {/* Left Side: Mobile Hamburger Menu + Brand */}
         <div className="flex items-center gap-2 sm:gap-3.5 shrink-0">
@@ -107,10 +107,10 @@ export const Navbar: React.FC<NavbarProps> = ({
           <button
             type="button"
             onClick={onToggleMobileDrawer}
-            className="md:hidden w-9 h-9 rounded-2xl bg-white border border-rose-200 text-slate-700 flex items-center justify-center hover:bg-rose-50 active:scale-95 shadow-2xs cursor-pointer"
+            className="md:hidden w-9 h-9 rounded-2xl bg-white border border-slate-200 text-slate-700 flex items-center justify-center hover:bg-slate-50 active:scale-95 shadow-2xs cursor-pointer"
             title="បើកម៉ឺនុយចម្បង"
           >
-            <Menu className="w-5 h-5 text-slate-700" />
+            <Menu className="w-5 h-5 text-slate-800" />
           </button>
 
           {/* Brand with vibrant luxury look */}
@@ -143,21 +143,21 @@ export const Navbar: React.FC<NavbarProps> = ({
 
             <div>
               <div className="flex items-center gap-1.5 sm:gap-2">
-                <h1 className="text-sm sm:text-xl font-black tracking-tight text-slate-800 flex items-center gap-1">
-                  <span className="max-w-[110px] sm:max-w-none truncate">
+                <h1 className="text-sm sm:text-xl font-black tracking-tight text-slate-900 flex items-center gap-1">
+                  <span className="max-w-[120px] sm:max-w-none truncate">
                     {lang === 'km' ? storeInfo.nameKh : storeInfo.nameEn}
                   </span>
-                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-pink-600 to-rose-500">
+                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-rose-600 via-pink-600 to-amber-600">
                     POS
                   </span>
                 </h1>
-                <span className="hidden sm:inline-block text-[10px] uppercase font-black tracking-wider bg-gradient-to-r from-pink-500 to-rose-500 text-white px-2 py-0.5 rounded-full shadow-xs">
+                <span className="hidden sm:inline-block text-[10px] uppercase font-black tracking-wider bg-gradient-to-r from-rose-600 to-pink-600 text-white px-2.5 py-0.5 rounded-full shadow-xs">
                   PRO ★
                 </span>
               </div>
-              <p className="hidden md:flex text-xs text-slate-500 items-center gap-1.5 mt-0.5">
+              <p className="hidden md:flex text-xs text-slate-600 items-center gap-1.5 mt-0.5">
                 <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                <span className="font-medium text-pink-700/80">
+                <span className="font-bold text-rose-700">
                   {lang === 'km' ? greetingKh : greetingEn}
                 </span>
               </p>
@@ -168,15 +168,15 @@ export const Navbar: React.FC<NavbarProps> = ({
         {/* Right Side: Live Clock & Actions */}
         <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
           {/* Live Digital Clock */}
-          <div className="hidden lg:flex items-center gap-2 bg-white/90 border border-rose-100 px-3 py-1.5 rounded-2xl text-xs shadow-2xs">
-            <Clock className="w-3.5 h-3.5 text-pink-500 animate-spin-slow" />
-            <span className="font-mono font-bold text-slate-700">{timeString}</span>
+          <div className="hidden lg:flex items-center gap-2 bg-white border border-slate-200/90 px-3 py-1.5 rounded-2xl text-xs shadow-2xs">
+            <Clock className="w-3.5 h-3.5 text-rose-500 animate-spin-slow" />
+            <span className="font-mono font-black text-slate-800">{timeString}</span>
           </div>
 
           {/* Exchange Rate Badge */}
-          <div className="hidden sm:flex items-center gap-2 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200/80 px-3 py-1.5 rounded-2xl text-xs shadow-2xs">
-            <span className="text-amber-700 font-semibold">{text.exchangeRateLabel}:</span>
-            <strong className="text-amber-900 font-bold">$1 = {exchangeRate.toLocaleString()} ៛</strong>
+          <div className="hidden sm:flex items-center gap-2 bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-amber-300 px-3 py-1.5 rounded-2xl text-xs shadow-2xs">
+            <span className="text-amber-800 font-bold">{text.exchangeRateLabel}:</span>
+            <strong className="text-amber-950 font-black">$1 = {exchangeRate.toLocaleString()} ៛</strong>
           </div>
 
           {/* Low Stock Badge */}

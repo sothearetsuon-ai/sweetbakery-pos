@@ -106,9 +106,9 @@ export const PosTerminal: React.FC = () => {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder={text.searchPlaceholder}
-                className="w-full pl-10 sm:pl-11 pr-10 sm:pr-12 py-2.5 sm:py-3 bg-white/90 backdrop-blur-md border border-rose-100 rounded-2xl text-xs sm:text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500 shadow-2xs transition-all font-medium"
+                className="w-full pl-10 sm:pl-11 pr-10 sm:pr-12 py-2.5 sm:py-3 bg-white border border-slate-200 rounded-2xl text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-rose-500/25 focus:border-rose-500 shadow-2xs transition-all font-semibold"
               />
-              <span className="hidden sm:inline-block absolute right-3 top-1/2 -translate-y-1/2 px-2 py-0.5 bg-slate-100 border border-slate-200 text-slate-400 text-[10px] font-mono rounded-lg">
+              <span className="hidden sm:inline-block absolute right-3 top-1/2 -translate-y-1/2 px-2 py-0.5 bg-slate-100 border border-slate-200 text-slate-500 text-[10px] font-mono rounded-lg">
                 /
               </span>
             </div>
@@ -122,21 +122,21 @@ export const PosTerminal: React.FC = () => {
                   soundFx.playPop();
                   setIsMobileCartOpen(true);
                 }}
-                className="lg:hidden px-3 py-2 bg-pink-50 hover:bg-pink-100 text-pink-700 font-bold rounded-2xl text-xs transition-all border border-pink-200/80 flex items-center gap-1.5 cursor-pointer shadow-2xs relative active:scale-95"
+                className="lg:hidden px-3.5 py-2 bg-gradient-to-r from-pink-500 to-rose-600 text-white font-black rounded-2xl text-xs transition-all shadow-md shadow-pink-500/20 flex items-center gap-1.5 cursor-pointer active:scale-95"
                 title="មើលកន្ត្រក"
               >
                 <ShoppingBag className="w-4 h-4" />
                 <span>កន្ត្រក</span>
                 {totalCartItems > 0 && (
-                  <span className="px-1.5 py-0.2 bg-rose-600 text-white rounded-full text-[10px] font-black">
+                  <span className="px-1.5 py-0.2 bg-white text-rose-600 rounded-full text-[10px] font-black">
                     {totalCartItems}
                   </span>
                 )}
               </button>
 
-              <div className="hidden sm:flex items-center gap-2 text-xs font-bold text-slate-500">
+              <div className="hidden sm:flex items-center gap-2 text-xs font-black text-slate-600 bg-white px-3 py-2 rounded-2xl border border-slate-200">
                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
-                <span>{filteredProducts.length} មុខ</span>
+                <span>{filteredProducts.length} មុខទំនិញ</span>
               </div>
 
               <button
@@ -144,9 +144,9 @@ export const PosTerminal: React.FC = () => {
                   soundFx.playPop();
                   setIsAddProductOpen(true);
                 }}
-                className="px-3 sm:px-4 py-2 sm:py-2.5 bg-pink-50 hover:bg-pink-100 text-pink-700 font-bold rounded-2xl text-xs transition-all shadow-2xs border border-pink-200/80 flex items-center gap-1.5 active:scale-95 cursor-pointer"
+                className="px-3.5 sm:px-4 py-2 sm:py-2.5 bg-gradient-to-r from-rose-600 via-pink-600 to-rose-500 hover:from-rose-700 hover:to-pink-700 text-white font-black rounded-2xl text-xs transition-all shadow-md shadow-rose-500/25 flex items-center gap-1.5 active:scale-95 cursor-pointer"
               >
-                <Plus className="w-4 h-4 stroke-[2.5]" />
+                <Plus className="w-4 h-4 stroke-[3]" />
                 <span className="hidden sm:inline">+ Upload រូបភាពនំថ្មី</span>
                 <span className="sm:hidden">+ នំថ្មី</span>
               </button>
@@ -165,10 +165,10 @@ export const PosTerminal: React.FC = () => {
                     soundFx.playPop();
                     setSelectedCategory(cat.id);
                   }}
-                  className={`px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-2xl text-xs font-bold whitespace-nowrap transition-all duration-200 flex items-center gap-2 shadow-2xs active:scale-95 cursor-pointer ${
+                  className={`px-4 py-2 sm:py-2.5 rounded-2xl text-xs font-black whitespace-nowrap transition-all duration-200 flex items-center gap-2 shadow-2xs active:scale-95 cursor-pointer ${
                     isActive
-                      ? 'bg-gradient-to-r from-pink-600 to-rose-500 text-white shadow-md shadow-pink-500/25 scale-102'
-                      : 'bg-white/90 text-slate-600 hover:bg-white hover:text-pink-600 border border-rose-100/80 hover:shadow-xs'
+                      ? 'bg-gradient-to-r from-rose-600 via-pink-600 to-rose-500 text-white shadow-md shadow-rose-500/30 scale-102 ring-2 ring-rose-400/30'
+                      : 'bg-white text-slate-700 hover:bg-rose-50 hover:text-rose-600 border border-slate-200/90 hover:border-rose-300 hover:shadow-xs'
                   }`}
                 >
                   {getCategoryIcon(cat.icon)}

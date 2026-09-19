@@ -173,12 +173,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <button
               key={item.id}
               onClick={() => handleTabClick(item.id, item.permission)}
-              className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-2xl font-bold text-xs tracking-wide transition-all duration-300 relative group cursor-pointer ${
+              className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-2xl font-black text-xs tracking-wide transition-all duration-200 relative group cursor-pointer ${
                 isActive
-                  ? 'bg-gradient-to-r from-pink-600 to-rose-500 text-white shadow-md shadow-pink-500/25 scale-[1.02]'
+                  ? 'bg-gradient-to-r from-rose-600 via-pink-600 to-rose-500 text-white shadow-md shadow-rose-500/30 scale-[1.02] ring-2 ring-rose-400/25'
                   : isAllowed
-                  ? 'text-slate-600 hover:bg-white hover:text-pink-600 hover:shadow-sm hover:scale-[1.01]'
-                  : 'text-slate-400 bg-slate-50/50 hover:bg-slate-100/80 cursor-not-allowed opacity-75'
+                  ? 'text-slate-700 hover:bg-white hover:text-rose-600 hover:shadow-xs hover:border hover:border-slate-200/90'
+                  : 'text-slate-400 opacity-60 hover:opacity-80'
               }`}
             >
               <div className="flex items-center gap-3">
