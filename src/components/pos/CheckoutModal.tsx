@@ -28,6 +28,11 @@ interface CheckoutModalProps {
   onSuccess: (sale: CompletedSale) => void;
   initialIsDeposit?: boolean;
   initialDepositKhr?: number;
+  initialCustomerName?: string;
+  initialCustomerPhone?: string;
+  initialPickupDate?: string;
+  initialPickupTime?: string;
+  initialNotes?: string;
 }
 
 export const CheckoutModal: React.FC<CheckoutModalProps> = ({
@@ -36,6 +41,11 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
   onSuccess,
   initialIsDeposit = false,
   initialDepositKhr,
+  initialCustomerName,
+  initialCustomerPhone,
+  initialPickupDate,
+  initialPickupTime,
+  initialNotes,
 }) => {
   const {
     lang,
@@ -59,15 +69,16 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
   );
 
   // Customer pre-order details
-  const [customerName, setCustomerName] = useState('');
-  const [customerPhone, setCustomerPhone] = useState('');
+  const [customerName, setCustomerName] = useState(initialCustomerName || '');
+  const [customerPhone, setCustomerPhone] = useState(initialCustomerPhone || '');
   const [pickupDate, setPickupDate] = useState(() => {
+    if (initialPickupDate) return initialPickupDate;
     const tmr = new Date();
     tmr.setDate(tmr.getDate() + 1);
     return tmr.toISOString().slice(0, 10);
   });
-  const [pickupTime, setPickupTime] = useState('15:00');
-  const [orderNotes, setOrderNotes] = useState('');
+  const [pickupTime, setPickupTime] = useState(initialPickupTime || '15:00');
+  const [orderNotes, setOrderNotes] = useState(initialNotes || '');
 
   // Payment method: CASH_KHR, CASH_USD, or KHQR_BAKONG
   const [paymentMethod, setPaymentMethod] = useState<'CASH_KHR' | 'CASH_USD' | 'KHQR_BAKONG'>('CASH_KHR');
@@ -83,11 +94,29 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
       const depKhr = initialDepositKhr || defaultDeposit50Pct;
       setDepositAmountKhr(depKhr.toString());
 
+      if (initialCustomerName !== undefined) setCustomerName(initialCustomerName);
+      if (initialCustomerPhone !== undefined) setCustomerPhone(initialCustomerPhone);
+      if (initialPickupDate !== undefined) setPickupDate(initialPickupDate);
+      if (initialPickupTime !== undefined) setPickupTime(initialPickupTime);
+      if (initialNotes !== undefined) setOrderNotes(initialNotes);
+
       const dueNow = activeDeposit ? depKhr : cartTotalKhr;
       setReceivedKhr(dueNow.toString());
       setReceivedUsd(Number((dueNow / exchangeRate).toFixed(2)).toString());
     }
-  }, [isOpen, initialIsDeposit, initialDepositKhr, cartTotalKhr, defaultDeposit50Pct, exchangeRate]);
+  }, [
+    isOpen,
+    initialIsDeposit,
+    initialDepositKhr,
+    initialCustomerName,
+    initialCustomerPhone,
+    initialPickupDate,
+    initialPickupTime,
+    initialNotes,
+    cartTotalKhr,
+    defaultDeposit50Pct,
+    exchangeRate,
+  ]);
 
   if (!isOpen) return null;
 
@@ -377,66 +406,71 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                   ))}
                 </div>
               </div>
+            </div>
+          )}
 
-              {/* Customer Pre-order Info Fields */}
-              <div className="p-3.5 bg-slate-50 border border-slate-200/80 rounded-2xl space-y-2.5">
-                <div className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
-                  <User className="w-3.5 h-3.5 text-pink-600" />
-                  <span>ព័ត៌មានអតិថិជន & កាលវិភាគមកយក</span>
-                </div>
+          {/* Customer Info & Pickup Schedule Fields (Always Available) */}
+          <div className="p-3.5 bg-slate-50 border border-slate-200/80 rounded-2xl space-y-2.5">
+            <div className="text-xs font-bold text-slate-700 flex items-center justify-between">
+              <div className="flex items-center gap-1.5">
+                <User className="w-3.5 h-3.5 text-pink-600" />
+                <span>ព័ត៌មានអ្នកទិញ & កាលវិភាគមកយក (Customer & Schedule)</span>
+              </div>
+              {!isDeposit && (
+                <span className="text-[10px] text-slate-400 font-normal">(ស្រេចចិត្ត / Optional)</span>
+              )}
+            </div>
 
-                <div className="grid grid-cols-2 gap-2">
-                  <input
-                    type="text"
-                    placeholder="ឈ្មោះអតិថិជន *"
-                    value={customerName}
-                    onChange={(e) => setCustomerName(e.target.value)}
-                    className="px-3 py-1.5 text-xs border border-slate-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500 font-bold"
-                  />
-                  <input
-                    type="tel"
-                    placeholder="លេខទូរស័ព្ទ *"
-                    value={customerPhone}
-                    onChange={(e) => setCustomerPhone(e.target.value)}
-                    className="px-3 py-1.5 text-xs border border-slate-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500 font-bold"
-                  />
-                </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <input
+                type="text"
+                placeholder="ឈ្មោះអ្នកទិញ (Customer Name)"
+                value={customerName}
+                onChange={(e) => setCustomerName(e.target.value)}
+                className="px-3 py-1.5 text-xs border border-slate-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500 font-bold"
+              />
+              <input
+                type="tel"
+                placeholder="លេខទូរស័ព្ទ (Phone Number)"
+                value={customerPhone}
+                onChange={(e) => setCustomerPhone(e.target.value)}
+                className="px-3 py-1.5 text-xs border border-slate-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500 font-bold"
+              />
+            </div>
 
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <label className="text-[10px] font-bold text-slate-500 block mb-0.5">
-                      កាលបរិច្ឆេទមកយក
-                    </label>
-                    <input
-                      type="date"
-                      value={pickupDate}
-                      onChange={(e) => setPickupDate(e.target.value)}
-                      className="w-full px-2.5 py-1.5 text-xs border border-slate-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500 font-bold"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[10px] font-bold text-slate-500 block mb-0.5">
-                      ម៉ោងមកយក
-                    </label>
-                    <input
-                      type="time"
-                      value={pickupTime}
-                      onChange={(e) => setPickupTime(e.target.value)}
-                      className="w-full px-2.5 py-1.5 text-xs border border-slate-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500 font-bold"
-                    />
-                  </div>
-                </div>
-
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="text-[10px] font-bold text-slate-500 block mb-0.5">
+                  កាលបរិច្ឆេទមកយក (Pickup Date)
+                </label>
                 <input
-                  type="text"
-                  placeholder="ចំណាំបន្ថែម (ឧ. នំខួបកំណើត, ថែមទៀន ៥ ដើម...)"
-                  value={orderNotes}
-                  onChange={(e) => setOrderNotes(e.target.value)}
-                  className="w-full px-3 py-1.5 text-xs border border-slate-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500"
+                  type="date"
+                  value={pickupDate}
+                  onChange={(e) => setPickupDate(e.target.value)}
+                  className="w-full px-2.5 py-1.5 text-xs border border-slate-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500 font-bold"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] font-bold text-slate-500 block mb-0.5">
+                  ម៉ោងមកយក (Pickup Time)
+                </label>
+                <input
+                  type="time"
+                  value={pickupTime}
+                  onChange={(e) => setPickupTime(e.target.value)}
+                  className="w-full px-2.5 py-1.5 text-xs border border-slate-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500 font-bold"
                 />
               </div>
             </div>
-          )}
+
+            <input
+              type="text"
+              placeholder="ចំណាំបន្ថែម / សរសេរលើនំ (ឧ. Happy Birthday, ទៀន ៥ដើម...)"
+              value={orderNotes}
+              onChange={(e) => setOrderNotes(e.target.value)}
+              className="w-full px-3 py-1.5 text-xs border border-slate-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500"
+            />
+          </div>
 
           {/* Payment Method Selector */}
           <div>

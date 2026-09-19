@@ -16,6 +16,11 @@ import {
   PlusCircle,
   Cake,
   Pencil,
+  User,
+  Phone,
+  Calendar,
+  Clock,
+  FileText,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { useBakery } from '../../context/BakeryContext';
@@ -24,7 +29,15 @@ import { soundFx } from '../../utils/audio';
 import { Product, PartyAddon } from '../../types';
 
 interface CartPanelProps {
-  onCheckout: (options?: { isDeposit?: boolean; depositKhr?: number }) => void;
+  onCheckout: (options?: {
+    isDeposit?: boolean;
+    depositKhr?: number;
+    customerName?: string;
+    customerPhone?: string;
+    pickupDate?: string;
+    pickupTime?: string;
+    notes?: string;
+  }) => void;
   onClose?: () => void;
   isMobileSheet?: boolean;
 }
@@ -55,6 +68,17 @@ export const CartPanel: React.FC<CartPanelProps> = ({ onCheckout, onClose, isMob
   const [promoMessage, setPromoMessage] = useState('');
   const [isDepositMode, setIsDepositMode] = useState(false);
   const [depositAmountKhr, setDepositAmountKhr] = useState('');
+
+  // Customer pre-order & schedule details
+  const [customerName, setCustomerName] = useState('');
+  const [customerPhone, setCustomerPhone] = useState('');
+  const [pickupDate, setPickupDate] = useState(() => {
+    const tmr = new Date();
+    tmr.setDate(tmr.getDate() + 1);
+    return tmr.toISOString().slice(0, 10);
+  });
+  const [pickupTime, setPickupTime] = useState('15:00');
+  const [orderNotes, setOrderNotes] = useState('');
 
   // Party Add-on Add / Edit state
   const [isAddingNewAddon, setIsAddingNewAddon] = useState(false);
@@ -815,6 +839,84 @@ export const CartPanel: React.FC<CartPanelProps> = ({ onCheckout, onClose, isMob
             </div>
           </div>
         )}
+
+        {/* Customer Info & Pickup Schedule Section */}
+        {cart.length > 0 && (
+          <div className="p-3 sm:p-3.5 bg-gradient-to-br from-rose-50/80 via-pink-50/50 to-amber-50/60 border-t border-rose-100/80 space-y-2.5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5 text-xs font-black text-slate-800">
+                <User className="w-3.5 h-3.5 text-pink-600" />
+                <span>ព័ត៌មានអ្នកទិញ & ថ្ងៃមកយក (Customer & Schedule)</span>
+              </div>
+              {isDepositMode && (
+                <span className="text-[10px] font-black bg-amber-500 text-white px-2 py-0.5 rounded-full shadow-2xs">
+                  កក់ប្រាក់
+                </span>
+              )}
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <div className="relative">
+                <User className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="ឈ្មោះអ្នកទិញ (Customer Name)"
+                  value={customerName}
+                  onChange={(e) => setCustomerName(e.target.value)}
+                  className="w-full pl-8 pr-2.5 py-1.5 bg-white border border-rose-200/80 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500"
+                />
+              </div>
+              <div className="relative">
+                <Phone className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  type="tel"
+                  placeholder="លេខទូរស័ព្ទ (Phone Number)"
+                  value={customerPhone}
+                  onChange={(e) => setCustomerPhone(e.target.value)}
+                  className="w-full pl-8 pr-2.5 py-1.5 bg-white border border-rose-200/80 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="text-[10px] font-bold text-slate-600 flex items-center gap-1 mb-0.5">
+                  <Calendar className="w-3 h-3 text-pink-600" />
+                  <span>កាលបរិច្ឆេទមកយក (Date)</span>
+                </label>
+                <input
+                  type="date"
+                  value={pickupDate}
+                  onChange={(e) => setPickupDate(e.target.value)}
+                  className="w-full px-2.5 py-1.5 bg-white border border-rose-200/80 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] font-bold text-slate-600 flex items-center gap-1 mb-0.5">
+                  <Clock className="w-3 h-3 text-pink-600" />
+                  <span>ម៉ោងមកយក (Time)</span>
+                </label>
+                <input
+                  type="time"
+                  value={pickupTime}
+                  onChange={(e) => setPickupTime(e.target.value)}
+                  className="w-full px-2.5 py-1.5 bg-white border border-rose-200/80 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500"
+                />
+              </div>
+            </div>
+
+            <div className="relative">
+              <FileText className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input
+                type="text"
+                placeholder="ចំណាំបន្ថែម / សរសេរលើនំ (ឧ. Happy Birthday, ទៀន ៥ដើម...)"
+                value={orderNotes}
+                onChange={(e) => setOrderNotes(e.target.value)}
+                className="w-full pl-8 pr-2.5 py-1.5 bg-white border border-rose-200/80 rounded-xl text-xs font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500"
+              />
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Cart Summary & Checkout (KHR ៛ FIRST) */}
@@ -978,7 +1080,15 @@ export const CartPanel: React.FC<CartPanelProps> = ({ onCheckout, onClose, isMob
               type="button"
               onClick={() => {
                 soundFx.playChime();
-                onCheckout({ isDeposit: false, depositKhr: finalTotalKhr });
+                onCheckout({
+                  isDeposit: false,
+                  depositKhr: finalTotalKhr,
+                  customerName: customerName.trim() || undefined,
+                  customerPhone: customerPhone.trim() || undefined,
+                  pickupDate: pickupDate || undefined,
+                  pickupTime: pickupTime || undefined,
+                  notes: orderNotes.trim() || undefined,
+                });
               }}
               className="w-full py-3.5 bg-pink-600 bg-gradient-to-r from-pink-600 via-rose-500 to-pink-600 hover:from-pink-700 hover:via-rose-600 hover:to-pink-700 shimmer-btn animate-pulse-glow text-white font-black rounded-2xl shadow-xl shadow-pink-500/30 flex items-center justify-center gap-2 text-sm transition-all duration-300 active:scale-[0.98] hover:scale-[1.01] cursor-pointer"
             >
@@ -993,7 +1103,15 @@ export const CartPanel: React.FC<CartPanelProps> = ({ onCheckout, onClose, isMob
               type="button"
               onClick={() => {
                 soundFx.playChime();
-                onCheckout({ isDeposit: true, depositKhr: numDepositKhr });
+                onCheckout({
+                  isDeposit: true,
+                  depositKhr: numDepositKhr,
+                  customerName: customerName.trim() || undefined,
+                  customerPhone: customerPhone.trim() || undefined,
+                  pickupDate: pickupDate || undefined,
+                  pickupTime: pickupTime || undefined,
+                  notes: orderNotes.trim() || undefined,
+                });
               }}
               className="w-full py-3.5 bg-amber-500 bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 hover:from-amber-600 hover:via-orange-600 hover:to-amber-700 shimmer-btn text-white font-black rounded-2xl shadow-xl shadow-amber-500/30 flex items-center justify-center gap-2 text-sm transition-all duration-300 active:scale-[0.98] hover:scale-[1.01] cursor-pointer"
             >

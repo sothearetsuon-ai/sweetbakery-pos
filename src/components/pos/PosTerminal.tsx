@@ -28,7 +28,15 @@ export const PosTerminal: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
-  const [checkoutOptions, setCheckoutOptions] = useState<{ isDeposit?: boolean; depositKhr?: number }>({});
+  const [checkoutOptions, setCheckoutOptions] = useState<{
+    isDeposit?: boolean;
+    depositKhr?: number;
+    customerName?: string;
+    customerPhone?: string;
+    pickupDate?: string;
+    pickupTime?: string;
+    notes?: string;
+  }>({});
   const [isAddProductOpen, setIsAddProductOpen] = useState(false);
   const [isMobileCartOpen, setIsMobileCartOpen] = useState(false);
   const [activeReceiptSale, setActiveReceiptSale] = useState<CompletedSale | null>(null);
@@ -272,6 +280,11 @@ export const PosTerminal: React.FC = () => {
         onSuccess={(sale) => setActiveReceiptSale(sale)}
         initialIsDeposit={checkoutOptions.isDeposit}
         initialDepositKhr={checkoutOptions.depositKhr}
+        initialCustomerName={checkoutOptions.customerName}
+        initialCustomerPhone={checkoutOptions.customerPhone}
+        initialPickupDate={checkoutOptions.pickupDate}
+        initialPickupTime={checkoutOptions.pickupTime}
+        initialNotes={checkoutOptions.notes}
       />
 
       {/* Receipt Print Modal */}
