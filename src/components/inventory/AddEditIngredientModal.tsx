@@ -33,6 +33,7 @@ export const AddEditIngredientModal: React.FC<AddEditIngredientModalProps> = ({
   const [nameKh, setNameKh] = useState('');
   const [nameEn, setNameEn] = useState('');
   const [currentStock, setCurrentStock] = useState('10');
+  const [totalUsed, setTotalUsed] = useState('0');
   const [unit, setUnit] = useState('kg');
   const [customUnit, setCustomUnit] = useState('');
   const [minAlertStock, setMinAlertStock] = useState('5');
@@ -44,6 +45,7 @@ export const AddEditIngredientModal: React.FC<AddEditIngredientModalProps> = ({
       setNameKh(ingredientToEdit.nameKh || '');
       setNameEn(ingredientToEdit.nameEn || '');
       setCurrentStock(String(ingredientToEdit.currentStock ?? 0));
+      setTotalUsed(String(ingredientToEdit.totalUsed ?? 0));
       const matchedUnit = COMMON_UNITS.find((u) => u.value === ingredientToEdit.unit);
       if (matchedUnit) {
         setUnit(ingredientToEdit.unit);
@@ -59,6 +61,7 @@ export const AddEditIngredientModal: React.FC<AddEditIngredientModalProps> = ({
       setNameKh('');
       setNameEn('');
       setCurrentStock('10');
+      setTotalUsed('0');
       setUnit('kg');
       setCustomUnit('');
       setMinAlertStock('5');
@@ -76,6 +79,7 @@ export const AddEditIngredientModal: React.FC<AddEditIngredientModalProps> = ({
 
     const finalUnit = unit === 'custom' ? customUnit.trim() || 'kg' : unit;
     const parsedStock = parseFloat(currentStock) || 0;
+    const parsedUsed = parseFloat(totalUsed) || 0;
     const parsedMinAlert = parseFloat(minAlertStock) || 0;
     const parsedCostUsd = parseFloat(costPerUnitUsd) || 0;
 
@@ -85,6 +89,7 @@ export const AddEditIngredientModal: React.FC<AddEditIngredientModalProps> = ({
         nameKh: nameKh.trim(),
         nameEn: nameEn.trim() || nameKh.trim(),
         currentStock: parsedStock,
+        totalUsed: parsedUsed,
         unit: finalUnit,
         minAlertStock: parsedMinAlert,
         costPerUnitUsd: parsedCostUsd,
@@ -96,6 +101,7 @@ export const AddEditIngredientModal: React.FC<AddEditIngredientModalProps> = ({
         nameKh: nameKh.trim(),
         nameEn: nameEn.trim() || nameKh.trim(),
         currentStock: parsedStock,
+        totalUsed: parsedUsed,
         unit: finalUnit,
         minAlertStock: parsedMinAlert,
         costPerUnitUsd: parsedCostUsd,
@@ -233,39 +239,54 @@ export const AddEditIngredientModal: React.FC<AddEditIngredientModalProps> = ({
             )}
           </div>
 
-          {/* Stock & Alert */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div className="p-3.5 bg-slate-50 border border-slate-200/80 rounded-2xl space-y-1.5">
-              <label className="block font-black text-slate-700">
-                ស្តុកបច្ចុប្បន្ន ({unit === 'custom' ? customUnit || 'ឯកតា' : unit})
+          {/* Stock, Usage & Alert */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+            <div className="p-3 bg-slate-50 border border-slate-200/80 rounded-2xl space-y-1">
+              <label className="block font-black text-slate-700 text-[11px]">
+                ស្តុកនៅសល់ ({unit === 'custom' ? customUnit || 'ឯកតា' : unit}) <span className="text-rose-500">*</span>
               </label>
               <input
                 type="number"
-                step="0.1"
+                step="0.01"
                 required
                 min="0"
                 value={currentStock}
                 onChange={(e) => setCurrentStock(e.target.value)}
-                className="w-full px-3 py-2 text-base font-black bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500"
+                className="w-full px-2.5 py-1.5 text-sm font-black bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500 text-slate-800"
               />
-              <span className="text-[10px] text-slate-400">បរិមាណដែលមានក្នុងឃ្លាំងជាក់ស្តែង</span>
+              <span className="text-[10px] text-slate-400 block">ចំនួនជាក់ស្តែងក្នុងឃ្លាំង</span>
             </div>
 
-            <div className="p-3.5 bg-rose-50/50 border border-rose-100 rounded-2xl space-y-1.5">
-              <label className="block font-black text-rose-800 flex items-center gap-1">
-                <AlertTriangle className="w-3.5 h-3.5 text-rose-600" />
-                <span>កម្រិតដាស់តឿនជិតអស់</span>
+            <div className="p-3 bg-purple-50/50 border border-purple-100 rounded-2xl space-y-1">
+              <label className="block font-black text-purple-800 text-[11px]">
+                ចំនួនប្រើប្រាស់ ({unit === 'custom' ? customUnit || 'ឯកតា' : unit})
               </label>
               <input
                 type="number"
-                step="0.1"
+                step="0.01"
+                min="0"
+                value={totalUsed}
+                onChange={(e) => setTotalUsed(e.target.value)}
+                className="w-full px-2.5 py-1.5 text-sm font-black bg-white border border-purple-200 rounded-xl text-purple-900 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500"
+              />
+              <span className="text-[10px] text-purple-600/80 block">បានយកទៅធ្វើនំកន្លងមក</span>
+            </div>
+
+            <div className="p-3 bg-rose-50/50 border border-rose-100 rounded-2xl space-y-1">
+              <label className="block font-black text-rose-800 text-[11px] flex items-center gap-1">
+                <AlertTriangle className="w-3 h-3 text-rose-600" />
+                <span>កម្រិតដាស់តឿន</span>
+              </label>
+              <input
+                type="number"
+                step="0.01"
                 required
                 min="0"
                 value={minAlertStock}
                 onChange={(e) => setMinAlertStock(e.target.value)}
-                className="w-full px-3 py-2 text-base font-black bg-white border border-rose-200 rounded-xl text-rose-700 focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500"
+                className="w-full px-2.5 py-1.5 text-sm font-black bg-white border border-rose-200 rounded-xl text-rose-700 focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500"
               />
-              <span className="text-[10px] text-rose-600/80">ប្រព័ន្ធនឹង Alert ពេលស្តុកធ្លាក់ក្រោមចំនួននេះ</span>
+              <span className="text-[10px] text-rose-600/80 block">Alert ពេលទាបជាងនេះ</span>
             </div>
           </div>
 

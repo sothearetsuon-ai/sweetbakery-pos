@@ -1,9 +1,10 @@
 import React, { useState, useRef } from 'react';
-import { X, Cake, Calendar, User, Phone, DollarSign, Sparkles, Upload, Image as ImageIcon, Plus, Minus, Check, Pencil, Trash2 } from 'lucide-react';
+import { X, Cake, Calendar, User, Phone, DollarSign, Sparkles, Upload, Image as ImageIcon, Plus, Minus, Check, Pencil, Trash2, Camera } from 'lucide-react';
 import { useBakery } from '../../context/BakeryContext';
 import { t } from '../../utils/translations';
 import { soundFx } from '../../utils/audio';
 import { PartyAddon } from '../../types';
+import { CameraCaptureModal } from '../common/CameraCaptureModal';
 
 interface NewCustomOrderModalProps {
   isOpen: boolean;
@@ -33,6 +34,7 @@ export const NewCustomOrderModal: React.FC<NewCustomOrderModalProps> = ({ isOpen
   const [inscription, setInscription] = useState('');
   const [themeNotes, setThemeNotes] = useState('');
   const [referenceImage, setReferenceImage] = useState('');
+  const [isCameraOpen, setIsCameraOpen] = useState(false);
 
   // Selected party add-ons with quantities
   const [selectedAddonQuantities, setSelectedAddonQuantities] = useState<Record<string, number>>({});
@@ -246,13 +248,34 @@ export const NewCustomOrderModal: React.FC<NewCustomOrderModalProps> = ({ isOpen
 
           {/* Reference Image Upload */}
           <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1">
-              រូបភាពគំរូនំដែលភ្ញៀវចង់បាន (Upload Reference Photo)
-            </label>
-            <div
-              onClick={() => fileInputRef.current?.click()}
-              className="w-full h-28 rounded-2xl border-2 border-dashed border-rose-200 hover:border-pink-500 bg-rose-50/30 hover:bg-rose-50/60 transition-all cursor-pointer flex items-center justify-center overflow-hidden relative group"
-            >
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="text-xs font-bold text-slate-700">
+                រូបភាពគំរូនំដែលភ្ញៀវចង់បាន (Reference Photo)
+              </label>
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    soundFx.playPop();
+                    setIsCameraOpen(true);
+                  }}
+                  className="px-2.5 py-1 bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 rounded-lg text-[11px] font-bold flex items-center gap-1 cursor-pointer transition-colors"
+                >
+                  <Camera className="w-3.5 h-3.5" />
+                  <span>📸 ថតរូបពីកាម៉េរ៉ា</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="px-2.5 py-1 bg-pink-50 hover:bg-pink-100 text-pink-700 border border-pink-200 rounded-lg text-[11px] font-bold flex items-center gap-1 cursor-pointer transition-colors"
+                >
+                  <Upload className="w-3.5 h-3.5" />
+                  <span>Upload File</span>
+                </button>
+              </div>
+            </div>
+
+            <div className="w-full h-32 rounded-2xl border-2 border-dashed border-rose-200 hover:border-pink-500 bg-rose-50/30 hover:bg-rose-50/60 transition-all cursor-pointer flex items-center justify-center overflow-hidden relative group">
               {referenceImage ? (
                 <>
                   <img
@@ -260,21 +283,64 @@ export const NewCustomOrderModal: React.FC<NewCustomOrderModalProps> = ({ isOpen
                     alt="Custom Cake Reference"
                     className="w-full h-full object-cover"
                   />
-                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-bold gap-1.5">
-                    <Upload className="w-4 h-4" />
-                    <span>ចុចដើម្បីប្តូររូបភាពគំរូ</span>
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-bold gap-2">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        soundFx.playPop();
+                        setIsCameraOpen(true);
+                      }}
+                      className="px-3 py-1.5 bg-purple-600 hover:bg-purple-700 rounded-xl flex items-center gap-1 cursor-pointer"
+                    >
+                      <Camera className="w-3.5 h-3.5" />
+                      <span>ថតរូបថ្មី</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        fileInputRef.current?.click();
+                      }}
+                      className="px-3 py-1.5 bg-pink-600 hover:bg-pink-700 rounded-xl flex items-center gap-1 cursor-pointer"
+                    >
+                      <Upload className="w-3.5 h-3.5" />
+                      <span>ប្តូររូប</span>
+                    </button>
                   </div>
                 </>
               ) : (
-                <div className="text-center p-2">
-                  <ImageIcon className="w-6 h-6 text-pink-500 mx-auto mb-1 group-hover:scale-110 transition-transform" />
-                  <span className="text-xs font-bold text-slate-700">
-                    Upload រូបភាពគំរូនំពីកុំព្យូទ័រ
-                  </span>
-                  <p className="text-[10px] text-slate-400">សម្រាប់ចុងភៅ និងជាងតែងនំមើលតាមពេលផលិត</p>
+                <div className="flex items-center justify-center gap-3 p-3">
+                  <div
+                    onClick={() => {
+                      soundFx.playPop();
+                      setIsCameraOpen(true);
+                    }}
+                    className="flex flex-col items-center p-2 rounded-xl hover:bg-purple-100/60 transition-colors"
+                  >
+                    <div className="p-2 bg-gradient-to-tr from-purple-600 to-pink-500 text-white rounded-xl mb-1 shadow-xs">
+                      <Camera className="w-5 h-5" />
+                    </div>
+                    <span className="text-xs font-black text-purple-900">ថតរូបផ្ទាល់ពីកាម៉េរ៉ា</span>
+                    <span className="text-[10px] text-purple-600/80">កាម៉េរ៉ាទូរស័ព្ទ / WebCam</span>
+                  </div>
+
+                  <div className="w-[1px] h-12 bg-rose-200" />
+
+                  <div
+                    onClick={() => fileInputRef.current?.click()}
+                    className="flex flex-col items-center p-2 rounded-xl hover:bg-pink-100/60 transition-colors"
+                  >
+                    <div className="p-2 bg-pink-100 text-pink-600 rounded-xl mb-1">
+                      <Upload className="w-5 h-5" />
+                    </div>
+                    <span className="text-xs font-bold text-slate-700">Upload ពីកុំព្យូទ័រ/File</span>
+                    <span className="text-[10px] text-slate-400">សម្រាប់ចុងភៅមើលតាម</span>
+                  </div>
                 </div>
               )}
             </div>
+
             <input
               ref={fileInputRef}
               type="file"
@@ -826,6 +892,17 @@ export const NewCustomOrderModal: React.FC<NewCustomOrderModalProps> = ({ isOpen
           </div>
         </form>
       </div>
+
+      {/* Live Camera Modal for Custom Cake Reference */}
+      <CameraCaptureModal
+        isOpen={isCameraOpen}
+        onClose={() => setIsCameraOpen(false)}
+        onCapture={(img) => {
+          setReferenceImage(img);
+        }}
+        title="ថតរូបគំរូនំខួបកំណើត (Cake Reference)"
+        subtitle="ថតរូបគំរូនំពីកាម៉េរ៉ាដើម្បីឱ្យជាងដុតនំ និងតែងនំមើលតាម"
+      />
     </div>
   );
 };

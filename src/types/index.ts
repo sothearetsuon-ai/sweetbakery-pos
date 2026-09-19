@@ -85,6 +85,7 @@ export interface Ingredient {
   nameKh: string;
   nameEn: string;
   currentStock: number;
+  totalUsed?: number;
   unit: string; // 'kg', 'g', 'ml', 'pcs', 'box'
   minAlertStock: number;
   costPerUnitUsd: number;

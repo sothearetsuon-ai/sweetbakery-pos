@@ -28,6 +28,7 @@ import {
   Send,
   Loader2,
   Bell,
+  Camera,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { useBakery } from '../../context/BakeryContext';
@@ -39,6 +40,7 @@ import { StaffManagement } from '../staff/StaffManagement';
 import { FirebaseSettingsTab } from './FirebaseSettingsTab';
 import { TelegramSettingsTab } from './TelegramSettingsTab';
 import { NotificationSettingsTab } from './NotificationSettingsTab';
+import { CameraCaptureModal } from '../common/CameraCaptureModal';
 
 export type SettingsTab = 'store' | 'khqr' | 'staff' | 'backup' | 'firebase' | 'currency' | 'telegram' | 'notifications';
 
@@ -100,6 +102,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [isSaving, setIsSaving] = useState(false);
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
   const [isUploadingKhqr, setIsUploadingKhqr] = useState(false);
+  const [cameraTarget, setCameraTarget] = useState<'logo' | 'khqr' | null>(null);
 
   const isInitializedRef = useRef(false);
 
@@ -661,7 +664,19 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                             className="px-3.5 py-2 bg-gradient-to-r from-pink-600 to-rose-500 hover:from-pink-700 hover:to-rose-600 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-pink-500/20 flex items-center gap-1.5 active:scale-95 cursor-pointer"
                           >
                             <Upload className="w-3.5 h-3.5" />
-                            <span>Upload Logo ថ្មី (ពី PC/Phone)</span>
+                            <span>Upload Logo (File)</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              soundFx.playPop();
+                              setCameraTarget('logo');
+                            }}
+                            className="px-3.5 py-2 bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 active:scale-95 cursor-pointer"
+                          >
+                            <Camera className="w-3.5 h-3.5" />
+                            <span>📸 ថត Logo</span>
                           </button>
 
                           {logoUrl && (
@@ -829,6 +844,18 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                         >
                           <Upload className="w-3.5 h-3.5" />
                           <span>Upload រូបភាព KHQR (ពីធនាគារ)</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            soundFx.playPop();
+                            setCameraTarget('khqr');
+                          }}
+                          className="px-3.5 py-2 bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 active:scale-95 cursor-pointer"
+                        >
+                          <Camera className="w-3.5 h-3.5" />
+                          <span>📸 ថតរូប QR</span>
                         </button>
 
                         {khqrQrImage && (
@@ -1039,6 +1066,23 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       <KhqrStandeeModal
         isOpen={isStandeeOpen}
         onClose={() => setIsStandeeOpen(false)}
+      />
+
+      {/* Live Camera Capture Modal for Logo & KHQR */}
+      <CameraCaptureModal
+        isOpen={Boolean(cameraTarget)}
+        onClose={() => setCameraTarget(null)}
+        onCapture={(img) => {
+          if (cameraTarget === 'logo') {
+            setLogoUrl(img);
+            updateStoreInfo({ logoUrl: img });
+          } else if (cameraTarget === 'khqr') {
+            setKhqrQrImage(img);
+            updateStoreInfo({ khqrQrImage: img });
+          }
+        }}
+        title={cameraTarget === 'logo' ? 'ថតរូប Logo ហាង (Store Logo)' : 'ថតរូបភាព KHQR ធនាគារ'}
+        subtitle="ថតរូបភាពពីកាម៉េរ៉ាដើម្បីបញ្ចូលក្នុងប្រព័ន្ធភ្លាមៗ"
       />
     </div>
   );

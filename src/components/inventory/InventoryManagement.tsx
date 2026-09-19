@@ -20,7 +20,9 @@ import {
   Sparkles,
   Box,
   TrendingUp,
+  TrendingDown,
   CheckCircle2,
+  MinusCircle,
 } from 'lucide-react';
 import { useBakery } from '../../context/BakeryContext';
 import { t } from '../../utils/translations';
@@ -30,6 +32,7 @@ import { AddProductModal } from '../pos/AddProductModal';
 import { AddEditIngredientModal } from './AddEditIngredientModal';
 import { AddEditRecipeModal } from './AddEditRecipeModal';
 import { RecipeDetailModal } from './RecipeDetailModal';
+import { RecordIngredientUsageModal } from './RecordIngredientUsageModal';
 
 export const InventoryManagement: React.FC = () => {
   const {
@@ -66,6 +69,7 @@ export const InventoryManagement: React.FC = () => {
   const [isAddIngredientOpen, setIsAddIngredientOpen] = useState(false);
   const [editingIngredient, setEditingIngredient] = useState<Ingredient | null>(null);
   const [ingredientToDelete, setIngredientToDelete] = useState<Ingredient | null>(null);
+  const [usageIngredient, setUsageIngredient] = useState<Ingredient | null>(null);
 
   // Recipe & BOM modal states
   const [isAddRecipeOpen, setIsAddRecipeOpen] = useState(false);
@@ -460,110 +464,221 @@ export const InventoryManagement: React.FC = () => {
           </div>
         </div>
       ) : activeTab === 'stock' ? (
-        /* Inventory Table */
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex-1 flex flex-col">
-          <div className="overflow-y-auto flex-1">
-            <table className="w-full text-left text-xs text-slate-600">
-              <thead className="bg-slate-50 text-slate-700 font-bold border-b border-slate-200 sticky top-0 z-10">
-                <tr>
-                  <th className="p-4">ឈ្មោះគ្រឿងផ្សំ (Ingredient)</th>
-                  <th className="p-4">ស្តុកបច្ចុប្បន្ន</th>
-                  <th className="p-4">កម្រិតដាស់តឿន</th>
-                  <th className="p-4">ថ្លៃដើម/ឯកតា</th>
-                  <th className="p-4">ប្រភពផ្គត់ផ្គង់</th>
-                  <th className="p-4 text-center">សកម្មភាព</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 font-medium">
-                {filteredIngredients.map((ing) => {
-                  const isLow = ing.currentStock <= ing.minAlertStock;
-                  return (
-                    <tr key={ing.id} className="hover:bg-slate-50/70 transition-colors">
-                      <td className="p-4">
-                        <div className="font-bold text-slate-900">{ing.nameKh}</div>
-                        <div className="text-[11px] text-slate-400">{ing.nameEn}</div>
-                      </td>
+        /* Inventory Table & Stats */
+        <div className="flex-1 flex flex-col space-y-3 overflow-hidden">
+          {/* Ingredient Summary Stats Cards */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3 shrink-0">
+            <div className="bg-white rounded-2xl p-3 sm:p-3.5 border border-slate-200 shadow-2xs flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
+                <Package className="w-5 h-5" />
+              </div>
+              <div className="min-w-0">
+                <div className="text-[10px] text-slate-400 font-bold uppercase">គ្រឿងផ្សំសរុប</div>
+                <div className="text-base font-black text-slate-800 truncate">
+                  {ingredients.length} <span className="text-xs font-semibold text-slate-400">មុខ</span>
+                </div>
+              </div>
+            </div>
 
-                      <td className="p-4">
-                        <div className="flex items-center gap-2">
-                          <span
-                            className={`text-sm font-black ${
-                              isLow ? 'text-rose-600' : 'text-slate-800'
-                            }`}
-                          >
-                            {ing.currentStock} {ing.unit}
-                          </span>
-                          {isLow && (
-                            <span className="inline-flex items-center gap-1 bg-rose-50 text-rose-600 border border-rose-200 text-[10px] font-bold px-2 py-0.5 rounded-full">
-                              <AlertTriangle className="w-3 h-3" />
-                              ជិតអស់
-                            </span>
-                          )}
-                        </div>
-                      </td>
+            <div className="bg-white rounded-2xl p-3 sm:p-3.5 border border-slate-200 shadow-2xs flex items-center gap-3">
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
+                lowStockCount > 0 ? 'bg-rose-50 text-rose-600 animate-pulse' : 'bg-emerald-50 text-emerald-600'
+              }`}>
+                <AlertTriangle className="w-5 h-5" />
+              </div>
+              <div className="min-w-0">
+                <div className="text-[10px] text-slate-400 font-bold uppercase">ជិតអស់ពីស្តុក</div>
+                <div className={`text-base font-black truncate ${
+                  lowStockCount > 0 ? 'text-rose-600' : 'text-emerald-700'
+                }`}>
+                  {lowStockCount} <span className="text-xs font-semibold text-slate-400">មុខ</span>
+                </div>
+              </div>
+            </div>
 
-                      <td className="p-4 text-slate-500 font-medium">
-                        {ing.minAlertStock} {ing.unit}
-                      </td>
+            <div className="bg-white rounded-2xl p-3 sm:p-3.5 border border-slate-200 shadow-2xs flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center shrink-0">
+                <TrendingDown className="w-5 h-5" />
+              </div>
+              <div className="min-w-0">
+                <div className="text-[10px] text-slate-400 font-bold uppercase">មុខទំនិញមានការប្រើប្រាស់</div>
+                <div className="text-base font-black text-purple-700 truncate">
+                  {ingredients.filter((i) => (i.totalUsed ?? 0) > 0).length} <span className="text-xs font-semibold text-slate-400">មុខ</span>
+                </div>
+              </div>
+            </div>
 
-                      <td className="p-4">
-                        <div className="font-bold text-slate-900">
-                          {Math.round(ing.costPerUnitUsd * exchangeRate).toLocaleString()} ៛/{ing.unit}
-                        </div>
-                        <div className="text-[10px] text-slate-400">
-                          ~ ${ing.costPerUnitUsd.toFixed(2)}
-                        </div>
-                      </td>
+            <div className="bg-white rounded-2xl p-3 sm:p-3.5 border border-slate-200 shadow-2xs flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+                <DollarSign className="w-5 h-5" />
+              </div>
+              <div className="min-w-0">
+                <div className="text-[10px] text-slate-400 font-bold uppercase">តម្លៃស្តុកនៅសល់សរុប</div>
+                <div className="text-base font-black text-emerald-700 truncate">
+                  ${ingredients
+                    .reduce((sum, i) => sum + i.currentStock * i.costPerUnitUsd, 0)
+                    .toFixed(2)}
+                </div>
+              </div>
+            </div>
+          </div>
 
-                      <td className="p-4 text-slate-500">
-                        {ing.supplier || 'N/A'}
-                      </td>
-
-                      <td className="p-4 text-center">
-                        <div className="flex items-center justify-center gap-1.5 flex-wrap">
-                          <button
-                            onClick={() => {
-                              soundFx.playPop();
-                              setSelectedIngredient(ing);
-                            }}
-                            title="បញ្ចូលស្តុកគ្រឿងផ្សំបន្ថែម"
-                            className="px-2.5 py-1.5 bg-pink-50 hover:bg-pink-600 text-pink-600 hover:text-white font-bold rounded-xl text-xs transition-all shadow-2xs inline-flex items-center gap-1 cursor-pointer active:scale-95"
-                          >
-                            <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
-                            <span>+ ស្តុក</span>
-                          </button>
-
-                          <button
-                            onClick={() => {
-                              soundFx.playPop();
-                              setEditingIngredient(ing);
-                              setIsAddIngredientOpen(true);
-                            }}
-                            title="កែប្រែព័ត៌មានគ្រឿងផ្សំ"
-                            className="px-2.5 py-1.5 font-bold rounded-xl text-xs transition-all bg-amber-50 hover:bg-amber-500 text-amber-700 hover:text-white border border-amber-200 hover:border-amber-500 inline-flex items-center gap-1 cursor-pointer active:scale-95"
-                          >
-                            <Pencil className="w-3.5 h-3.5" />
-                            <span>កែប្រែ</span>
-                          </button>
-
-                          <button
-                            onClick={() => {
-                              soundFx.playPop();
-                              setIngredientToDelete(ing);
-                            }}
-                            title="លុបគ្រឿងផ្សំចេញពីប្រព័ន្ធ"
-                            className="px-2 py-1.5 font-bold rounded-xl text-xs transition-all bg-slate-100 hover:bg-rose-600 text-slate-500 hover:text-white border border-slate-200 hover:border-rose-600 inline-flex items-center gap-1 cursor-pointer active:scale-95"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                            <span className="hidden sm:inline">លុប</span>
-                          </button>
-                        </div>
+          {/* Inventory Table */}
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex-1 flex flex-col">
+            <div className="overflow-y-auto flex-1">
+              <table className="w-full text-left text-xs text-slate-600">
+                <thead className="bg-slate-50 text-slate-700 font-bold border-b border-slate-200 sticky top-0 z-10">
+                  <tr>
+                    <th className="p-3.5 sm:p-4">ឈ្មោះគ្រឿងផ្សំ (Ingredient)</th>
+                    <th className="p-3.5 sm:p-4 text-purple-800">ចំនួនប្រើប្រាស់ (Used)</th>
+                    <th className="p-3.5 sm:p-4 text-slate-900">ស្តុកនៅសល់ (Remaining)</th>
+                    <th className="p-3.5 sm:p-4">កម្រិតដាស់តឿន</th>
+                    <th className="p-3.5 sm:p-4">ថ្លៃដើម/ឯកតា</th>
+                    <th className="p-3.5 sm:p-4">ប្រភពផ្គត់ផ្គង់</th>
+                    <th className="p-3.5 sm:p-4 text-center">សកម្មភាព</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 font-medium">
+                  {filteredIngredients.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="p-8 text-center text-slate-400 font-medium">
+                        មិនមានទិន្នន័យគ្រឿងផ្សំត្រូវនឹងការស្វែងរកទេ
                       </td>
                     </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                  ) : (
+                    filteredIngredients.map((ing) => {
+                      const isOut = ing.currentStock <= 0;
+                      const isLow = ing.currentStock <= ing.minAlertStock && !isOut;
+                      const usedQty = ing.totalUsed ?? 0;
+
+                      return (
+                        <tr key={ing.id} className="hover:bg-slate-50/70 transition-colors">
+                          <td className="p-3.5 sm:p-4">
+                            <div className="font-bold text-slate-900 text-xs sm:text-sm">{ing.nameKh}</div>
+                            <div className="text-[11px] text-slate-400 font-medium">{ing.nameEn}</div>
+                          </td>
+
+                          {/* Used Qty */}
+                          <td className="p-3.5 sm:p-4">
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-purple-50 text-purple-700 border border-purple-100 font-black text-xs">
+                              <MinusCircle className="w-3.5 h-3.5 text-purple-500" />
+                              <span>{usedQty} {ing.unit}</span>
+                            </span>
+                          </td>
+
+                          {/* Remaining Stock */}
+                          <td className="p-3.5 sm:p-4">
+                            <div className="flex items-center gap-2">
+                              <span
+                                className={`text-sm font-black ${
+                                  isOut
+                                    ? 'text-rose-600'
+                                    : isLow
+                                    ? 'text-amber-600'
+                                    : 'text-slate-900'
+                                }`}
+                              >
+                                {ing.currentStock} {ing.unit}
+                              </span>
+                              {isOut ? (
+                                <span className="inline-flex items-center gap-1 bg-rose-50 text-rose-600 border border-rose-200 text-[10px] font-bold px-2 py-0.5 rounded-full">
+                                  <AlertTriangle className="w-3 h-3" />
+                                  អស់ពីស្តុក
+                                </span>
+                              ) : isLow ? (
+                                <span className="inline-flex items-center gap-1 bg-amber-50 text-amber-700 border border-amber-200 text-[10px] font-bold px-2 py-0.5 rounded-full">
+                                  <AlertTriangle className="w-3 h-3" />
+                                  ជិតអស់
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1 bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold px-2 py-0.5 rounded-full">
+                                  <Check className="w-3 h-3" />
+                                  គ្រប់គ្រាន់
+                                </span>
+                              )}
+                            </div>
+                          </td>
+
+                          <td className="p-3.5 sm:p-4 text-slate-500 font-medium">
+                            {ing.minAlertStock} {ing.unit}
+                          </td>
+
+                          <td className="p-3.5 sm:p-4">
+                            <div className="font-bold text-slate-900">
+                              {Math.round(ing.costPerUnitUsd * exchangeRate).toLocaleString()} ៛/{ing.unit}
+                            </div>
+                            <div className="text-[10px] text-slate-400">
+                              ~ ${ing.costPerUnitUsd.toFixed(2)}
+                            </div>
+                          </td>
+
+                          <td className="p-3.5 sm:p-4 text-slate-500">
+                            {ing.supplier || 'N/A'}
+                          </td>
+
+                          <td className="p-3.5 sm:p-4 text-center">
+                            <div className="flex items-center justify-center gap-1.5 flex-wrap">
+                              {/* Restock Button */}
+                              <button
+                                onClick={() => {
+                                  soundFx.playPop();
+                                  setSelectedIngredient(ing);
+                                }}
+                                title="បញ្ចូលស្តុកគ្រឿងផ្សំបន្ថែម"
+                                className="px-2.5 py-1.5 bg-pink-50 hover:bg-pink-600 text-pink-600 hover:text-white font-bold rounded-xl text-xs transition-all shadow-2xs inline-flex items-center gap-1 cursor-pointer active:scale-95"
+                              >
+                                <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+                                <span>+ ស្តុក</span>
+                              </button>
+
+                              {/* Record Usage Button */}
+                              <button
+                                onClick={() => {
+                                  soundFx.playPop();
+                                  setUsageIngredient(ing);
+                                }}
+                                title="កត់ត្រាការប្រើប្រាស់ / ដកស្តុក"
+                                className="px-2.5 py-1.5 bg-purple-50 hover:bg-purple-600 text-purple-700 hover:text-white border border-purple-200 hover:border-purple-600 font-bold rounded-xl text-xs transition-all shadow-2xs inline-flex items-center gap-1 cursor-pointer active:scale-95"
+                              >
+                                <MinusCircle className="w-3.5 h-3.5 stroke-[2.5]" />
+                                <span>- ប្រើប្រាស់</span>
+                              </button>
+
+                              {/* Edit Button */}
+                              <button
+                                onClick={() => {
+                                  soundFx.playPop();
+                                  setEditingIngredient(ing);
+                                  setIsAddIngredientOpen(true);
+                                }}
+                                title="កែប្រែព័ត៌មានគ្រឿងផ្សំ"
+                                className="px-2.5 py-1.5 font-bold rounded-xl text-xs transition-all bg-amber-50 hover:bg-amber-500 text-amber-700 hover:text-white border border-amber-200 hover:border-amber-500 inline-flex items-center gap-1 cursor-pointer active:scale-95"
+                              >
+                                <Pencil className="w-3.5 h-3.5" />
+                                <span>កែប្រែ</span>
+                              </button>
+
+                              {/* Delete Button */}
+                              <button
+                                onClick={() => {
+                                  soundFx.playPop();
+                                  setIngredientToDelete(ing);
+                                }}
+                                title="លុបគ្រឿងផ្សំចេញពីប្រព័ន្ធ"
+                                className="px-2 py-1.5 font-bold rounded-xl text-xs transition-all bg-slate-100 hover:bg-rose-600 text-slate-500 hover:text-white border border-slate-200 hover:border-rose-600 inline-flex items-center gap-1 cursor-pointer active:scale-95"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                                <span className="hidden sm:inline">លុប</span>
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       ) : (
@@ -1157,6 +1272,13 @@ export const InventoryManagement: React.FC = () => {
           setEditingIngredient(null);
         }}
         ingredientToEdit={editingIngredient}
+      />
+
+      {/* Record Ingredient Usage Modal */}
+      <RecordIngredientUsageModal
+        isOpen={Boolean(usageIngredient)}
+        onClose={() => setUsageIngredient(null)}
+        ingredient={usageIngredient}
       />
 
       {/* Add / Edit Recipe & BOM Costing Modal */}

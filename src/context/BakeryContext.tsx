@@ -112,6 +112,7 @@ interface BakeryContextType {
   updateIngredient: (ingredient: Ingredient) => void;
   deleteIngredient: (id: string) => void;
   restockIngredient: (id: string, amount: number) => void;
+  useIngredientStock: (id: string, usedAmount: number) => void;
   lowStockCount: number;
 
   recipes: Recipe[];
@@ -1332,7 +1333,23 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setIngredients((prev) =>
       prev.map((ing) => {
         if (ing.id === id) {
-          const updated = { ...ing, currentStock: Math.max(0, ing.currentStock + amount) };
+          const newStock = Math.max(0, Number((ing.currentStock + amount).toFixed(3)));
+          const updated = { ...ing, currentStock: newStock };
+          saveFirestoreDoc('ingredients', id, updated);
+          return updated;
+        }
+        return ing;
+      })
+    );
+  };
+
+  const useIngredientStock = (id: string, usedAmount: number) => {
+    setIngredients((prev) =>
+      prev.map((ing) => {
+        if (ing.id === id) {
+          const newStock = Math.max(0, Number((ing.currentStock - usedAmount).toFixed(3)));
+          const newUsed = Number(((ing.totalUsed || 0) + usedAmount).toFixed(3));
+          const updated = { ...ing, currentStock: newStock, totalUsed: newUsed };
           saveFirestoreDoc('ingredients', id, updated);
           return updated;
         }
@@ -2137,6 +2154,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         updateIngredient,
         deleteIngredient,
         restockIngredient,
+        useIngredientStock,
         lowStockCount,
         recipes,
         addRecipe,

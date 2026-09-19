@@ -418,16 +418,16 @@ export const initialProducts: Product[] = [
 export const initialOrders: CustomCakeOrder[] = [];
 
 export const initialIngredients: Ingredient[] = [
-  { id: 'ing-1', nameKh: 'ម្សៅខេកជប៉ុនពិសេស (Cake Flour)', nameEn: 'Japanese Cake Flour', currentStock: 45.5, unit: 'kg', minAlertStock: 15.0, costPerUnitUsd: 1.4, supplier: 'Khmer Food Supply Co.' },
-  { id: 'ing-2', nameKh: 'ប៊័រស្រស់បារាំង Elle & Vire', nameEn: 'Elle & Vire French Butter', currentStock: 18.0, unit: 'kg', minAlertStock: 8.0, costPerUnitUsd: 9.5, supplier: 'Euro Gourmet imports' },
-  { id: 'ing-3', nameKh: 'ស្ករសម៉ត់គុណភាពខ្ពស់ (Caster Sugar)', nameEn: 'Fine Caster Sugar', currentStock: 60.0, unit: 'kg', minAlertStock: 20.0, costPerUnitUsd: 0.9, supplier: 'Local Market' },
-  { id: 'ing-4', nameKh: 'ស៊ុតមាន់ស្រស់កសិដ្ឋាន CP', nameEn: 'Fresh Farm Eggs', currentStock: 180, unit: 'pcs', minAlertStock: 60, costPerUnitUsd: 0.12, supplier: 'CP Cambodia' },
-  { id: 'ing-5', nameKh: 'ក្រែមស្រស់ Anchor Whipping Cream', nameEn: 'Anchor Whipping Cream', currentStock: 22.0, unit: 'liter', minAlertStock: 10.0, costPerUnitUsd: 4.8, supplier: 'Fonterra Dairy' },
-  { id: 'ing-6', nameKh: 'សូកូឡាកាកាវ Callebaut 54.5%', nameEn: 'Callebaut Dark Chocolate', currentStock: 12.5, unit: 'kg', minAlertStock: 5.0, costPerUnitUsd: 14.2, supplier: 'Euro Gourmet imports' },
-  { id: 'ing-7', nameKh: 'ម្សៅតែបៃតង Uji Matcha', nameEn: 'Uji Matcha Green Tea Powder', currentStock: 3.2, unit: 'kg', minAlertStock: 2.0, costPerUnitUsd: 32.0, supplier: 'Japan Direct' },
-  { id: 'ing-8', nameKh: 'ឈីស Philadelphia Cream Cheese', nameEn: 'Philadelphia Cream Cheese', currentStock: 8.5, unit: 'kg', minAlertStock: 4.0, costPerUnitUsd: 11.0, supplier: 'Euro Gourmet imports' },
-  { id: 'ing-9', nameKh: 'ផ្លែស្ត្រប៊ែរីស្រស់នាំចូល', nameEn: 'Fresh Strawberries', currentStock: 4.0, unit: 'kg', minAlertStock: 3.0, costPerUnitUsd: 12.0, supplier: 'Royal Fresh Fruits' },
-  { id: 'ing-10', nameKh: 'ប្រអប់នំខេកកញ្ចក់ថ្លា ១.៥kg', nameEn: 'Clear Window Cake Box 1.5kg', currentStock: 38, unit: 'box', minAlertStock: 20, costPerUnitUsd: 0.65, supplier: 'Cambodia Packaging' },
+  { id: 'ing-1', nameKh: 'ម្សៅខេកជប៉ុនពិសេស (Cake Flour)', nameEn: 'Japanese Cake Flour', currentStock: 45.5, totalUsed: 28.5, unit: 'kg', minAlertStock: 15.0, costPerUnitUsd: 1.4, supplier: 'Khmer Food Supply Co.' },
+  { id: 'ing-2', nameKh: 'ប៊័រស្រស់បារាំង Elle & Vire', nameEn: 'Elle & Vire French Butter', currentStock: 18.0, totalUsed: 14.5, unit: 'kg', minAlertStock: 8.0, costPerUnitUsd: 9.5, supplier: 'Euro Gourmet imports' },
+  { id: 'ing-3', nameKh: 'ស្ករសម៉ត់គុណភាពខ្ពស់ (Caster Sugar)', nameEn: 'Fine Caster Sugar', currentStock: 60.0, totalUsed: 35.0, unit: 'kg', minAlertStock: 20.0, costPerUnitUsd: 0.9, supplier: 'Local Market' },
+  { id: 'ing-4', nameKh: 'ស៊ុតមាន់ស្រស់កសិដ្ឋាន CP', nameEn: 'Fresh Farm Eggs', currentStock: 180, totalUsed: 120, unit: 'pcs', minAlertStock: 60, costPerUnitUsd: 0.12, supplier: 'CP Cambodia' },
+  { id: 'ing-5', nameKh: 'ក្រែមស្រស់ Anchor Whipping Cream', nameEn: 'Anchor Whipping Cream', currentStock: 22.0, totalUsed: 16.0, unit: 'liter', minAlertStock: 10.0, costPerUnitUsd: 4.8, supplier: 'Fonterra Dairy' },
+  { id: 'ing-6', nameKh: 'សូកូឡាកាកាវ Callebaut 54.5%', nameEn: 'Callebaut Dark Chocolate', currentStock: 12.5, totalUsed: 9.0, unit: 'kg', minAlertStock: 5.0, costPerUnitUsd: 14.2, supplier: 'Euro Gourmet imports' },
+  { id: 'ing-7', nameKh: 'ម្សៅតែបៃតង Uji Matcha', nameEn: 'Uji Matcha Green Tea Powder', currentStock: 3.2, totalUsed: 1.8, unit: 'kg', minAlertStock: 2.0, costPerUnitUsd: 32.0, supplier: 'Japan Direct' },
+  { id: 'ing-8', nameKh: 'ឈីស Philadelphia Cream Cheese', nameEn: 'Philadelphia Cream Cheese', currentStock: 8.5, totalUsed: 6.5, unit: 'kg', minAlertStock: 4.0, costPerUnitUsd: 11.0, supplier: 'Euro Gourmet imports' },
+  { id: 'ing-9', nameKh: 'ផ្លែស្ត្រប៊ែរីស្រស់នាំចូល', nameEn: 'Fresh Strawberries', currentStock: 4.0, totalUsed: 8.0, unit: 'kg', minAlertStock: 3.0, costPerUnitUsd: 12.0, supplier: 'Royal Fresh Fruits' },
+  { id: 'ing-10', nameKh: 'ប្រអប់នំខេកកញ្ចក់ថ្លា ១.៥kg', nameEn: 'Clear Window Cake Box 1.5kg', currentStock: 38, totalUsed: 22, unit: 'box', minAlertStock: 20, costPerUnitUsd: 0.65, supplier: 'Cambodia Packaging' },
 ];
 
 export const initialSales: CompletedSale[] = [];

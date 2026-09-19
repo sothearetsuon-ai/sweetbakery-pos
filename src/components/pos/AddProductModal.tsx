@@ -1,12 +1,11 @@
 import React, { useState, useRef } from 'react';
-import { X, Upload, Image as ImageIcon, Plus, DollarSign, Sparkles, Trash2, Star, Check, Loader2 } from 'lucide-react';
+import { X, Upload, Image as ImageIcon, Plus, DollarSign, Sparkles, Trash2, Star, Check, Loader2, Camera } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { useBakery } from '../../context/BakeryContext';
 import { t } from '../../utils/translations';
 import { soundFx } from '../../utils/audio';
-
 import { compressImageFile } from '../../utils/imageCompressor';
-
+import { CameraCaptureModal } from '../common/CameraCaptureModal';
 import { Product } from '../../types';
 
 interface AddProductModalProps {
@@ -33,6 +32,7 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, onClos
   const [images, setImages] = useState<string[]>([]);
   const [primaryIndex, setPrimaryIndex] = useState<number>(0);
   const [isCompressing, setIsCompressing] = useState<boolean>(false);
+  const [isCameraOpen, setIsCameraOpen] = useState<boolean>(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -257,20 +257,42 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, onClos
               )}
             </div>
 
-            {/* Main Upload Drop Area */}
-            <div
-              onClick={() => fileInputRef.current?.click()}
-              className="relative w-full p-4 rounded-2xl border-2 border-dashed border-rose-300 hover:border-pink-500 bg-rose-50/40 hover:bg-rose-50/80 transition-all cursor-pointer flex flex-col items-center justify-center group shadow-2xs text-center"
-            >
-              <div className="w-11 h-11 rounded-2xl bg-white shadow-sm flex items-center justify-center mb-1.5 text-pink-500 group-hover:scale-110 transition-transform">
-                <Upload className="w-5 h-5" />
+            {/* Dual Upload Options: File Picker & Live Camera */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              {/* File Upload Button */}
+              <div
+                onClick={() => fileInputRef.current?.click()}
+                className="p-3.5 rounded-2xl border-2 border-dashed border-rose-300 hover:border-pink-500 bg-rose-50/40 hover:bg-rose-50/80 transition-all cursor-pointer flex flex-col items-center justify-center group shadow-2xs text-center"
+              >
+                <div className="w-10 h-10 rounded-2xl bg-white shadow-xs flex items-center justify-center mb-1 text-pink-500 group-hover:scale-110 transition-transform">
+                  <Upload className="w-5 h-5" />
+                </div>
+                <p className="text-xs font-black text-slate-800">
+                  Upload រូបភាពនំ
+                </p>
+                <p className="text-[10px] text-slate-500 mt-0.5">
+                  ជ្រើសរើសរូបភាពច្រើនសន្លឹកពី File
+                </p>
               </div>
-              <p className="text-xs font-black text-slate-800">
-                ចុចទីនេះដើម្បី Upload រូបភាពនំ (ជ្រើសរើស 1 ឬច្រើនរូបក្នុងពេលតែមួយ)
-              </p>
-              <p className="text-[11px] text-slate-500 mt-0.5">
-                អាចចុច Ctrl/Shift ដើម្បីជ្រើសរើសរូបច្រើនសន្លឹក • គាំទ្រ JPG, PNG, WEBP
-              </p>
+
+              {/* Live Camera Button */}
+              <div
+                onClick={() => {
+                  soundFx.playPop();
+                  setIsCameraOpen(true);
+                }}
+                className="p-3.5 rounded-2xl border-2 border-dashed border-purple-300 hover:border-purple-500 bg-purple-50/40 hover:bg-purple-50/80 transition-all cursor-pointer flex flex-col items-center justify-center group shadow-2xs text-center"
+              >
+                <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-purple-600 to-pink-500 shadow-xs flex items-center justify-center mb-1 text-white group-hover:scale-110 transition-transform">
+                  <Camera className="w-5 h-5" />
+                </div>
+                <p className="text-xs font-black text-purple-900 flex items-center gap-1">
+                  <span>📸 ថតរូបផ្ទាល់ពីកាម៉េរ៉ា</span>
+                </p>
+                <p className="text-[10px] text-purple-600/80 mt-0.5">
+                  បើកកាម៉េរ៉ាទូរស័ព្ទ ឬកុំព្យូទ័រថតភ្លាមៗ
+                </p>
+              </div>
             </div>
 
             <input
@@ -528,6 +550,17 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, onClos
           </div>
         </form>
       </div>
+
+      {/* Live Camera Capture Modal */}
+      <CameraCaptureModal
+        isOpen={isCameraOpen}
+        onClose={() => setIsCameraOpen(false)}
+        onCapture={(capturedBase64) => {
+          setImages((prev) => [...prev, capturedBase64]);
+        }}
+        title="ថតរូបភាពនំផ្ទាល់ (Cake Photo)"
+        subtitle="ថតរូបនំជាក់ស្តែងពីកាម៉េរ៉ាដើម្បីដាក់លក់ និងបង្ហាញក្នុងប្រព័ន្ធ"
+      />
     </div>
   );
 };
