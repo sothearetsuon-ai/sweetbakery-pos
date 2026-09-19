@@ -29,6 +29,7 @@ export const ExpenseManagement: React.FC = () => {
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
+  const [receiptFilter, setReceiptFilter] = useState<'ALL' | 'WITH_RECEIPT' | 'WITHOUT_RECEIPT'>('ALL');
   const [previewReceiptImage, setPreviewReceiptImage] = useState<string | null>(null);
   const [expenseToDelete, setExpenseToDelete] = useState<Expense | null>(null);
   const [isConfirmClearAll, setIsConfirmClearAll] = useState(false);
@@ -56,6 +57,10 @@ export const ExpenseManagement: React.FC = () => {
   const filteredExpenses = useMemo(() => {
     return expenses.filter((e) => {
       const matchCat = selectedCategory === 'ALL' || e.category === selectedCategory;
+      const matchReceipt =
+        receiptFilter === 'ALL' ||
+        (receiptFilter === 'WITH_RECEIPT' && !!e.receiptImage) ||
+        (receiptFilter === 'WITHOUT_RECEIPT' && !e.receiptImage);
       const q = searchQuery.toLowerCase().trim();
       const matchSearch =
         !q ||
@@ -63,9 +68,9 @@ export const ExpenseManagement: React.FC = () => {
         e.paidBy.toLowerCase().includes(q) ||
         (e.notes && e.notes.toLowerCase().includes(q));
 
-      return matchCat && matchSearch;
+      return matchCat && matchReceipt && matchSearch;
     });
-  }, [expenses, selectedCategory, searchQuery]);
+  }, [expenses, selectedCategory, receiptFilter, searchQuery]);
 
   // Export CSV
   const handleExportCsv = () => {
@@ -227,46 +232,98 @@ export const ExpenseManagement: React.FC = () => {
       </div>
 
       {/* Filter Tabs & Search */}
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        {/* Category Pills */}
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
-          <button
-            onClick={() => {
-              soundFx.playPop();
-              setSelectedCategory('ALL');
-            }}
-            className={`px-3.5 py-2 rounded-2xl text-xs font-bold whitespace-nowrap transition-all shadow-2xs ${
-              selectedCategory === 'ALL'
-                ? 'bg-slate-900 text-white shadow-xs'
-                : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
-            }`}
-          >
-            ទាំងអស់ ({expenses.length})
-          </button>
-          {Object.entries(categoryLabels).map(([catKey, catVal]) => {
-            const isActive = selectedCategory === catKey;
-            const count = expenses.filter((e) => e.category === catKey).length;
-            return (
-              <button
-                key={catKey}
-                onClick={() => {
-                  soundFx.playPop();
-                  setSelectedCategory(catKey);
-                }}
-                className={`px-3.5 py-2 rounded-2xl text-xs font-bold whitespace-nowrap transition-all shadow-2xs ${
-                  isActive
-                    ? 'bg-rose-600 text-white shadow-xs'
-                    : 'bg-white text-slate-600 hover:bg-rose-50 border border-slate-200'
-                }`}
-              >
-                {catVal.labelKh} {count > 0 ? `(${count})` : ''}
-              </button>
-            );
-          })}
+      <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
+        {/* Category & Receipt Pills */}
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Receipt Filter Bar */}
+          <div className="flex items-center bg-slate-100/80 p-1 rounded-2xl border border-slate-200/80 text-xs shadow-2xs">
+            <button
+              onClick={() => {
+                soundFx.playPop();
+                setReceiptFilter('ALL');
+              }}
+              className={`px-3 py-1.5 rounded-xl font-bold transition-all ${
+                receiptFilter === 'ALL'
+                  ? 'bg-white text-slate-800 shadow-xs'
+                  : 'text-slate-500 hover:text-slate-800'
+              }`}
+            >
+              ទាំងអស់ ({expenses.length})
+            </button>
+            <button
+              onClick={() => {
+                soundFx.playPop();
+                setReceiptFilter('WITH_RECEIPT');
+              }}
+              className={`px-3 py-1.5 rounded-xl font-bold transition-all flex items-center gap-1.5 ${
+                receiptFilter === 'WITH_RECEIPT'
+                  ? 'bg-white text-rose-600 shadow-xs'
+                  : 'text-slate-500 hover:text-rose-600'
+              }`}
+            >
+              <span>📷 មានវិក្កយបត្រ</span>
+              <span className="text-[10px] bg-rose-50 text-rose-600 px-1.5 py-0.2 rounded-full font-black">
+                {expenses.filter((e) => !!e.receiptImage).length}
+              </span>
+            </button>
+            <button
+              onClick={() => {
+                soundFx.playPop();
+                setReceiptFilter('WITHOUT_RECEIPT');
+              }}
+              className={`px-3 py-1.5 rounded-xl font-bold transition-all flex items-center gap-1.5 ${
+                receiptFilter === 'WITHOUT_RECEIPT'
+                  ? 'bg-white text-amber-600 shadow-xs'
+                  : 'text-slate-500 hover:text-amber-600'
+              }`}
+            >
+              <span>📄 គ្មានវិក្កយបត្រ</span>
+              <span className="text-[10px] bg-amber-50 text-amber-600 px-1.5 py-0.2 rounded-full font-black">
+                {expenses.filter((e) => !e.receiptImage).length}
+              </span>
+            </button>
+          </div>
+
+          {/* Category Pills */}
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+            <button
+              onClick={() => {
+                soundFx.playPop();
+                setSelectedCategory('ALL');
+              }}
+              className={`px-3 py-1.5 rounded-2xl text-xs font-bold whitespace-nowrap transition-all shadow-2xs ${
+                selectedCategory === 'ALL'
+                  ? 'bg-slate-900 text-white shadow-xs'
+                  : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+              }`}
+            >
+              គ្រប់ប្រភេទ
+            </button>
+            {Object.entries(categoryLabels).map(([catKey, catVal]) => {
+              const isActive = selectedCategory === catKey;
+              const count = expenses.filter((e) => e.category === catKey).length;
+              return (
+                <button
+                  key={catKey}
+                  onClick={() => {
+                    soundFx.playPop();
+                    setSelectedCategory(catKey);
+                  }}
+                  className={`px-3 py-1.5 rounded-2xl text-xs font-bold whitespace-nowrap transition-all shadow-2xs ${
+                    isActive
+                      ? 'bg-rose-600 text-white shadow-xs'
+                      : 'bg-white text-slate-600 hover:bg-rose-50 border border-slate-200'
+                  }`}
+                >
+                  {catVal.labelKh} {count > 0 ? `(${count})` : ''}
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         {/* Search Input */}
-        <div className="relative w-64">
+        <div className="relative w-full lg:w-64">
           <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
           <input
             type="text"
@@ -284,13 +341,13 @@ export const ExpenseManagement: React.FC = () => {
           <table className="w-full text-left text-xs text-slate-600">
             <thead className="bg-slate-50 text-slate-700 font-black border-b border-slate-200">
               <tr>
-                <th className="p-4">បរិយាយការចំណាយ</th>
-                <th className="p-4">ចំនួន & ខ្នាត</th>
-                <th className="p-4">តម្លៃរាយ (Unit Price)</th>
-                <th className="p-4">សរុប (៛ KHR & $)</th>
-                <th className="p-4">កាលបរិច្ឆេទ & អ្នកចំណាយ</th>
-                <th className="p-4 text-center">វិក្កយបត្រ</th>
-                <th className="p-4 text-center">សកម្មភាព</th>
+                <th className="py-3 px-4">បរិយាយការចំណាយ</th>
+                <th className="py-3 px-4">ចំនួន & ខ្នាត</th>
+                <th className="py-3 px-4">តម្លៃរាយ (Unit Price)</th>
+                <th className="py-3 px-4">សរុប (៛ KHR & $)</th>
+                <th className="py-3 px-4">កាលបរិច្ឆេទ & អ្នកចំណាយ</th>
+                <th className="py-3 px-4 text-center">វិក្កយបត្រ</th>
+                <th className="py-3 px-4 text-center">សកម្មភាព</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 font-medium">
@@ -298,9 +355,9 @@ export const ExpenseManagement: React.FC = () => {
                 <tr>
                   <td colSpan={7} className="p-12 text-center text-slate-400">
                     <Receipt className="w-8 h-8 text-rose-300 mx-auto mb-2" />
-                    <p className="font-bold text-slate-600">គ្មានទិន្នន័យការចំណាយក្នុងប្រភេទនេះទេ</p>
+                    <p className="font-bold text-slate-600">គ្មានទិន្នន័យការចំណាយក្នុងលក្ខខណ្ឌនេះទេ</p>
                     <p className="text-[11px] text-slate-400 mt-1">
-                      ចុចប៊ូតុង «+ កត់ត្រាការចំណាយថ្មី» ដើម្បីបន្ថែម
+                      ចុចប៊ូតុង «+ កត់ត្រាការចំណាយថ្មី» ឬជ្រើសរើស «ទាំងអស់»
                     </p>
                   </td>
                 </tr>
@@ -319,9 +376,9 @@ export const ExpenseManagement: React.FC = () => {
 
                   return (
                     <tr key={expense.id} className="hover:bg-rose-50/40 transition-colors">
-                      <td className="p-4">
+                      <td className="py-2.5 px-4">
                         <div className="font-black text-slate-900 text-sm">{expense.title}</div>
-                        <div className="flex items-center gap-2 mt-1">
+                        <div className="flex items-center gap-2 mt-0.5">
                           <span
                             className={`inline-flex items-center px-2 py-0.5 rounded-lg text-[10px] font-bold border ${catInfo.color}`}
                           >
@@ -338,7 +395,7 @@ export const ExpenseManagement: React.FC = () => {
                         </div>
                       </td>
 
-                      <td className="p-4">
+                      <td className="py-2.5 px-4">
                         <div className="flex items-center gap-1.5 font-black text-slate-900 text-sm">
                           <span>{displayQty}</span>
                           <span className="text-xs text-rose-700 font-bold bg-rose-50 px-2 py-0.5 rounded-lg border border-rose-100">
@@ -347,7 +404,7 @@ export const ExpenseManagement: React.FC = () => {
                         </div>
                       </td>
 
-                      <td className="p-4">
+                      <td className="py-2.5 px-4">
                         <div className="font-bold text-slate-800 text-xs">
                           {displayUnitPriceKhr.toLocaleString()} ៛
                         </div>
@@ -356,7 +413,7 @@ export const ExpenseManagement: React.FC = () => {
                         </div>
                       </td>
 
-                      <td className="p-4">
+                      <td className="py-2.5 px-4">
                         <div className="font-black text-rose-600 text-sm">
                           {expense.amountKhr.toLocaleString()} ៛
                         </div>
@@ -365,7 +422,7 @@ export const ExpenseManagement: React.FC = () => {
                         </div>
                       </td>
 
-                      <td className="p-4">
+                      <td className="py-2.5 px-4">
                         <div className="flex items-center gap-1.5 text-slate-700 font-semibold text-xs">
                           <Calendar className="w-3.5 h-3.5 text-slate-400" />
                           <span>{expense.date}</span>
@@ -382,7 +439,7 @@ export const ExpenseManagement: React.FC = () => {
                         </div>
                       </td>
 
-                      <td className="p-4 text-center">
+                      <td className="py-2.5 px-4 text-center">
                         {expense.receiptImage ? (
                           <button
                             type="button"
@@ -397,7 +454,7 @@ export const ExpenseManagement: React.FC = () => {
                         )}
                       </td>
 
-                      <td className="p-4 text-center">
+                      <td className="py-2.5 px-4 text-center">
                         <div className="flex items-center justify-center gap-1">
                           <button
                             type="button"
@@ -406,7 +463,7 @@ export const ExpenseManagement: React.FC = () => {
                               setEditingExpense(expense);
                               setIsAddExpenseOpen(true);
                             }}
-                            className="p-2 hover:bg-pink-50 text-slate-400 hover:text-pink-600 rounded-xl transition-colors cursor-pointer"
+                            className="p-1.5 hover:bg-pink-50 text-slate-400 hover:text-pink-600 rounded-xl transition-colors cursor-pointer"
                             title="កែប្រែការចំណាយនេះ (Edit Expense)"
                           >
                             <Edit2 className="w-4 h-4" />
@@ -417,7 +474,7 @@ export const ExpenseManagement: React.FC = () => {
                               soundFx.playPop();
                               setExpenseToDelete(expense);
                             }}
-                            className="p-2 hover:bg-rose-50 text-slate-400 hover:text-rose-600 rounded-xl transition-colors cursor-pointer"
+                            className="p-1.5 hover:bg-rose-50 text-slate-400 hover:text-rose-600 rounded-xl transition-colors cursor-pointer"
                             title="លុបការចំណាយនេះ (Delete)"
                           >
                             <Trash2 className="w-4 h-4" />
@@ -431,6 +488,21 @@ export const ExpenseManagement: React.FC = () => {
             </tbody>
           </table>
         </div>
+
+        {/* Table Footer Summary and Scroll Indicator */}
+        {filteredExpenses.length > 0 && (
+          <div className="bg-slate-50 px-4 py-2.5 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-slate-500 font-semibold">
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+              <span>
+                កំពុងបង្ហាញ <strong>{filteredExpenses.length}</strong> នៃ <strong>{expenses.length}</strong> ប្រតិបត្តិការចំណាយ
+              </span>
+            </div>
+            <span className="text-slate-400 text-[11px]">
+              💡 (លោកអ្នកអាច Scroll / ទាញចុះក្រោមដើម្បីមើលប្រតិបត្តិការទាំងអស់)
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Receipt Image Zoom Modal */}
