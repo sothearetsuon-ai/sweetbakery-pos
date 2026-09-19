@@ -347,20 +347,27 @@ export const NewExpenseModal: React.FC<NewExpenseModalProps> = ({
                   onChange={(e) => handleQuantityChange(e.target.value)}
                   className="w-full px-3 py-2 text-base font-black text-slate-800 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500"
                 />
-                <div className="flex gap-1 mt-1">
-                  {['+1', '+5', '+10'].map((inc) => (
-                    <button
-                      key={inc}
-                      type="button"
-                      onClick={() => {
-                        const nextVal = (parseFloat(quantity) || 0) + parseInt(inc.replace('+', ''), 10);
-                        handleQuantityChange(nextVal.toString());
-                      }}
-                      className="px-1.5 py-0.5 text-[9px] font-bold bg-white hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-md transition-colors cursor-pointer"
-                    >
-                      {inc}
-                    </button>
-                  ))}
+                <div className="flex items-center justify-between mt-1">
+                  <div className="flex gap-1">
+                    {['+1', '+5', '+10'].map((inc) => (
+                      <button
+                        key={inc}
+                        type="button"
+                        onClick={() => {
+                          const nextVal = (parseFloat(quantity) || 0) + parseInt(inc.replace('+', ''), 10);
+                          handleQuantityChange(nextVal.toString());
+                        }}
+                        className="px-1.5 py-0.5 text-[9px] font-bold bg-white hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-md transition-colors cursor-pointer"
+                      >
+                        {inc}
+                      </button>
+                    ))}
+                  </div>
+                  {numQuantity > 0 && (
+                    <span className="text-[10px] font-bold text-slate-500 font-mono">
+                      {numQuantity.toLocaleString()}
+                    </span>
+                  )}
                 </div>
               </div>
 
@@ -407,8 +414,13 @@ export const NewExpenseModal: React.FC<NewExpenseModalProps> = ({
                     ៛
                   </span>
                 </div>
-                <div className="text-[10px] text-slate-400 font-semibold mt-1">
-                  {numUnitPriceKhr > 0 ? `~ $${numUnitPriceUsd.toFixed(2)} USD` : '៛ / ខ្នាត'}
+                <div className="flex items-center justify-between text-[10px] text-slate-400 font-semibold mt-1">
+                  <span>{numUnitPriceKhr > 0 ? `~ $${numUnitPriceUsd.toFixed(2)} USD` : '៛ / ខ្នាត'}</span>
+                  {numUnitPriceKhr > 0 && (
+                    <span className="font-bold text-slate-600 font-mono">
+                      {numUnitPriceKhr.toLocaleString()} ៛
+                    </span>
+                  )}
                 </div>
               </div>
 
@@ -432,8 +444,8 @@ export const NewExpenseModal: React.FC<NewExpenseModalProps> = ({
                   </span>
                 </div>
                 <div className="flex items-center justify-between mt-1">
-                  <span className="text-[10px] text-rose-700 font-bold">
-                    ~ ${numAmountUsd.toFixed(2)} USD
+                  <span className="text-[10px] text-rose-700 font-bold font-mono">
+                    {numAmountKhr > 0 ? `${numAmountKhr.toLocaleString()} ៛` : ''} (~ ${numAmountUsd.toFixed(2)})
                   </span>
                   {numAmountKhr > 0 && numAmountKhr % 100 !== 0 && (
                     <button
