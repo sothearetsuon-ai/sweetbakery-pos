@@ -553,7 +553,7 @@ function lanSyncPlugin(): Plugin {
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  base: '/sweetbakery-pos/',
+  base: './',
   plugins: [react(), lanSyncPlugin()],
   server: {
     host: true, // Expose to local network (0.0.0.0) for phone connections
