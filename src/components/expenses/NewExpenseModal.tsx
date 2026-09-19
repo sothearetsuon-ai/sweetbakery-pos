@@ -24,6 +24,7 @@ import confetti from 'canvas-confetti';
 import { useBakery } from '../../context/BakeryContext';
 import { Expense, ExpenseCategory } from '../../types';
 import { soundFx } from '../../utils/audio';
+import { compressImageFile } from '../../utils/imageCompressor';
 
 interface NewExpenseModalProps {
   isOpen: boolean;
@@ -165,15 +166,20 @@ export const NewExpenseModal: React.FC<NewExpenseModalProps> = ({
   const numAmountKhr = parseInt(amountKhr, 10) || Math.round(numQuantity * numUnitPriceKhr);
   const numAmountUsd = Number((numAmountKhr / exchangeRate).toFixed(2));
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       soundFx.playPop();
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setReceiptImage(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+      try {
+        const compressedBase64 = await compressImageFile(file, 800, 800, 0.7);
+        setReceiptImage(compressedBase64);
+      } catch (err) {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setReceiptImage(reader.result as string);
+        };
+        reader.readAsDataURL(file);
+      }
     }
   };
 

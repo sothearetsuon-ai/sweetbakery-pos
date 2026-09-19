@@ -371,12 +371,19 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     } catch (err: any) {
       console.warn(`[LocalStorage Quota Handled] Failed to write "${key}":`, err);
       try {
-        // If products quota error, strip duplicate extra images
         if (key === 'bakery_products') {
           const parsed = JSON.parse(value);
           const slim = parsed.map((p: any) => ({
             ...p,
             images: undefined,
+          }));
+          localStorage.setItem(key, JSON.stringify(slim));
+        } else if (key === 'bakery_expenses') {
+          const parsed = JSON.parse(value);
+          // If quota reached, trim excessively large raw data URLs while preserving expense records
+          const slim = parsed.map((e: any) => ({
+            ...e,
+            receiptImage: e.receiptImage && e.receiptImage.length > 80000 ? undefined : e.receiptImage,
           }));
           localStorage.setItem(key, JSON.stringify(slim));
         }
@@ -870,7 +877,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
     setExpenses((prev) => {
       const updated = [newExpense, ...prev];
-      try { localStorage.setItem('bakery_expenses', JSON.stringify(updated)); } catch (e) {}
+      safeSetStorage('bakery_expenses', JSON.stringify(updated));
       saveToLanSync({
         products,
         sales,
@@ -900,7 +907,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           body: JSON.stringify({ expense: target }),
         }).catch(() => {});
       }
-      try { localStorage.setItem('bakery_expenses', JSON.stringify(updated)); } catch (e) {}
+      safeSetStorage('bakery_expenses', JSON.stringify(updated));
       saveToLanSync({
         products,
         sales,
@@ -930,7 +937,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     // 2. Optimistically update local React state & LocalStorage
     setExpenses((prev) => {
       const updated = prev.filter((exp) => exp.id !== id);
-      try { localStorage.setItem('bakery_expenses', JSON.stringify(updated)); } catch (e) {}
+      safeSetStorage('bakery_expenses', JSON.stringify(updated));
       saveToLanSync({
         products,
         sales,
@@ -960,7 +967,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
     // 2. Clear local state
     setExpenses([]);
-    try { localStorage.setItem('bakery_expenses', JSON.stringify([])); } catch (e) {}
+    safeSetStorage('bakery_expenses', JSON.stringify([]));
     saveToLanSync({
       products,
       sales,
