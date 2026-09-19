@@ -13,8 +13,8 @@ export interface TelegramConfig {
 const STORAGE_KEY = 'bakery_telegram_config';
 
 export const DEFAULT_TELEGRAM_CONFIG: TelegramConfig = {
-  botToken: '',
-  chatId: '',
+  botToken: '8544004471:AAFsyBJbtmKR6W46zGtqGhNVWjE2AIvzWC4',
+  chatId: '8970210109',
   enabled: true,
   notifySales: true,
   notifyCustomOrders: true,
@@ -411,11 +411,18 @@ export const notifyTelegramSale = async (
     `━━━━━━━━━━━━━━━━━━\n` +
     `🧾 <b>លេខវិក្កយបត្រ៖</b> <code>#${sale.orderNumber}</code>\n` +
     `⏰ <b>ម៉ោង៖</b> ${timeStr} • ${dateStr}\n` +
-    `👤 <b>អ្នកគិតប្រាក់៖</b> ${escapeHtml(sale.cashierName || 'Cashier')}\n\n` +
-    `🛒 <b>មុខទំនិញដែលបានលក់៖</b>\n` +
+    `👤 <b>អ្នកគិតប្រាក់៖</b> ${escapeHtml(sale.cashierName || 'Cashier')}\n` +
+    (sale.customerName ? `🧑‍💼 <b>អតិថិជន៖</b> <b>${escapeHtml(sale.customerName)}</b>\n` : '') +
+    (sale.customerPhone ? `📞 <b>ទូរស័ព្ទ៖</b> <a href="tel:${sale.customerPhone}">${sale.customerPhone}</a>\n` : '') +
+    (sale.pickupDate ? `📅 <b>ថ្ងៃ & ម៉ោងមកយក៖</b> <b>${sale.pickupDate} ${sale.pickupTime ? `វេលាម៉ោង ${sale.pickupTime}` : ''}</b>\n` : '') +
+    (sale.notes ? `✍️ <b>ចំណាំ/សរសេរលើនំ៖</b> <i>"${escapeHtml(sale.notes)}"</i>\n` : '') +
+    `\n🛒 <b>មុខទំនិញដែលបានលក់៖</b>\n` +
     `${itemsList}\n` +
     `━━━━━━━━━━━━━━━━━━\n` +
     `💰 <b>ទឹកប្រាក់សរុប៖</b> <b>${totalKhr.toLocaleString()} ៛</b>  <i>($${sale.totalUsd.toFixed(2)})</i>\n` +
+    (sale.isDeposit
+      ? `👛 <b>បានកក់ប្រាក់៖</b> <b>${(sale.depositKhr || 0).toLocaleString()} ៛</b>\n⚠️ <b>នៅខ្វះពេលមកយក៖</b> <b>${(sale.remainingKhr || 0).toLocaleString()} ៛</b>\n`
+      : '') +
     `💳 <b>វិធីទូទាត់៖</b> ${paymentText}\n` +
     `✨ <i>សូមអរគុណ! សូមហាងរកស៊ីកាន់តែមានបាន!</i>`;
 
