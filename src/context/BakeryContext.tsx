@@ -365,8 +365,29 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     return initialPartyAddons;
   });
 
+  const safeSetStorage = (key: string, value: string) => {
+    try {
+      localStorage.setItem(key, value);
+    } catch (err: any) {
+      console.warn(`[LocalStorage Quota Handled] Failed to write "${key}":`, err);
+      try {
+        // If products quota error, strip duplicate extra images
+        if (key === 'bakery_products') {
+          const parsed = JSON.parse(value);
+          const slim = parsed.map((p: any) => ({
+            ...p,
+            images: undefined,
+          }));
+          localStorage.setItem(key, JSON.stringify(slim));
+        }
+      } catch (fallbackErr) {
+        console.warn('Fallback storage could not save:', fallbackErr);
+      }
+    }
+  };
+
   useEffect(() => {
-    localStorage.setItem('bakery_party_addons', JSON.stringify(partyAddons));
+    safeSetStorage('bakery_party_addons', JSON.stringify(partyAddons));
   }, [partyAddons]);
 
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -402,39 +423,39 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   // Sync to local storage
   useEffect(() => {
-    localStorage.setItem('bakery_lang', lang);
+    safeSetStorage('bakery_lang', lang);
   }, [lang]);
 
   useEffect(() => {
-    localStorage.setItem('bakery_exchange_rate', exchangeRate.toString());
+    safeSetStorage('bakery_exchange_rate', exchangeRate.toString());
   }, [exchangeRate]);
 
   useEffect(() => {
-    localStorage.setItem('bakery_products', JSON.stringify(products));
+    safeSetStorage('bakery_products', JSON.stringify(products));
   }, [products]);
 
   useEffect(() => {
-    localStorage.setItem('bakery_flavors', JSON.stringify(flavors));
+    safeSetStorage('bakery_flavors', JSON.stringify(flavors));
   }, [flavors]);
 
   useEffect(() => {
-    localStorage.setItem('bakery_custom_orders', JSON.stringify(customOrders));
+    safeSetStorage('bakery_custom_orders', JSON.stringify(customOrders));
   }, [customOrders]);
 
   useEffect(() => {
-    localStorage.setItem('bakery_ingredients', JSON.stringify(ingredients));
+    safeSetStorage('bakery_ingredients', JSON.stringify(ingredients));
   }, [ingredients]);
 
   useEffect(() => {
-    localStorage.setItem('bakery_expenses', JSON.stringify(expenses));
+    safeSetStorage('bakery_expenses', JSON.stringify(expenses));
   }, [expenses]);
 
   useEffect(() => {
-    localStorage.setItem('bakery_sales', JSON.stringify(sales));
+    safeSetStorage('bakery_sales', JSON.stringify(sales));
   }, [sales]);
 
   useEffect(() => {
-    localStorage.setItem('bakery_shift', JSON.stringify(currentShift));
+    safeSetStorage('bakery_shift', JSON.stringify(currentShift));
   }, [currentShift]);
 
   // Auto-sync any DELIVERED custom orders that are not yet recorded in sales (e.g. historical/existing orders)
