@@ -92,15 +92,39 @@ export interface Ingredient {
 }
 
 export interface RecipeItem {
-  ingredientId: string;
-  quantity: number; // e.g., 250 (grams)
+  ingredientId?: string;
+  nameKh: string;
+  nameEn?: string;
+  quantity: number; // e.g., 250
+  unit: string; // 'g', 'kg', 'ml', 'L', 'pcs', 'box'
+  costPerUnitUsd?: number;
+  itemCostUsd: number;
+  itemCostKhr?: number;
 }
 
 export interface Recipe {
   id: string;
-  productId: string;
+  productId?: string;
+  cakeNameKh: string;
+  cakeNameEn?: string;
+  yieldQty: number; // e.g. 1
+  yieldUnit: string; // 'នំ', 'ដុំ', 'ប្រអប់', 'pcs'
   items: RecipeItem[];
+  packagingCostUsd?: number;
+  packagingCostKhr?: number;
+  laborCostUsd?: number;
+  laborCostKhr?: number;
+  overheadCostUsd?: number;
+  overheadCostKhr?: number;
+  totalCostUsd: number;
+  totalCostKhr: number;
+  costPerUnitUsd: number;
+  costPerUnitKhr: number;
+  sellingPriceUsd?: number;
+  sellingPriceKhr?: number;
+  profitMarginPercent?: number;
   instructions?: string;
+  updatedAt?: string;
 }
 
 export interface CompletedSale {
@@ -247,4 +271,6 @@ export interface BakeryBackupData {
   sales: CompletedSale[];
   staffMembers: StaffMember[];
   currentShift: Shift | null;
+  recipes?: Recipe[];
+  partyAddons?: PartyAddon[];
 }

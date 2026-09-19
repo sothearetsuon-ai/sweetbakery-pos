@@ -16,6 +16,7 @@ import {
   StaffPermissions,
   BakeryBackupData,
   PartyAddon,
+  Recipe,
 } from '../types';
 import {
   initialCategories,
@@ -27,6 +28,7 @@ import {
   initialFlavors,
   initialExpenses,
   initialStaffMembers,
+  initialRecipes,
 } from '../data/mockData';
 import {
   getStoredFirebaseConfig,
@@ -111,6 +113,11 @@ interface BakeryContextType {
   deleteIngredient: (id: string) => void;
   restockIngredient: (id: string, amount: number) => void;
   lowStockCount: number;
+
+  recipes: Recipe[];
+  addRecipe: (recipe: Omit<Recipe, 'id'>) => Recipe;
+  updateRecipe: (recipe: Recipe) => void;
+  deleteRecipe: (id: string) => void;
 
   expenses: Expense[];
   addExpense: (expense: Omit<Expense, 'id' | 'createdAt'>) => void;
@@ -409,6 +416,11 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     return saved ? JSON.parse(saved) : initialIngredients;
   });
 
+  const [recipes, setRecipes] = useState<Recipe[]>(() => {
+    const saved = localStorage.getItem('bakery_recipes');
+    return saved ? JSON.parse(saved) : initialRecipes;
+  });
+
   // Expenses management
   const [expenses, setExpenses] = useState<Expense[]>(() => {
     const saved = localStorage.getItem('bakery_expenses');
@@ -452,6 +464,10 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   useEffect(() => {
     safeSetStorage('bakery_ingredients', JSON.stringify(ingredients));
   }, [ingredients]);
+
+  useEffect(() => {
+    safeSetStorage('bakery_recipes', JSON.stringify(recipes));
+  }, [recipes]);
 
   useEffect(() => {
     safeSetStorage('bakery_expenses', JSON.stringify(expenses));
@@ -857,6 +873,14 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       }
     });
 
+    // Subscribe to recipes
+    const unsubRecipes = subscribeToFirestoreCollection<Recipe>('recipes', (cloudRecipes) => {
+      if (Array.isArray(cloudRecipes)) {
+        setRecipes(cloudRecipes);
+        safeSetStorage('bakery_recipes', JSON.stringify(cloudRecipes));
+      }
+    });
+
     // Subscribe to store info
     const unsubStoreInfo = subscribeToFirestoreDoc<StoreInfo>('settings', 'storeInfo', (cloudStoreInfo) => {
       if (cloudStoreInfo && cloudStoreInfo.nameKh) {
@@ -875,6 +899,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       unsubExpenses();
       unsubStaff();
       unsubIngredients();
+      unsubRecipes();
       unsubStoreInfo();
     };
   }, []);
@@ -1317,6 +1342,58 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   };
 
   const lowStockCount = ingredients.filter((ing) => ing.currentStock <= ing.minAlertStock).length;
+
+  // Recipe & BOM Costing actions
+  const addRecipe = (recipeData: Omit<Recipe, 'id'>): Recipe => {
+    isUpdatingFromLan.current = false;
+    const newRecipe: Recipe = {
+      ...recipeData,
+      id: `recipe-${Date.now()}`,
+      updatedAt: new Date().toISOString(),
+    };
+
+    setRecipes((prev) => {
+      const updated = [newRecipe, ...prev];
+      try {
+        localStorage.setItem('bakery_recipes', JSON.stringify(updated));
+      } catch (e) {}
+      return updated;
+    });
+
+    saveFirestoreDoc('recipes', newRecipe.id, newRecipe);
+    return newRecipe;
+  };
+
+  const updateRecipe = (updatedRecipe: Recipe) => {
+    isUpdatingFromLan.current = false;
+    const recipeWithTime: Recipe = {
+      ...updatedRecipe,
+      updatedAt: new Date().toISOString(),
+    };
+
+    setRecipes((prev) => {
+      const updated = prev.map((r) => (r.id === updatedRecipe.id ? recipeWithTime : r));
+      try {
+        localStorage.setItem('bakery_recipes', JSON.stringify(updated));
+      } catch (e) {}
+      return updated;
+    });
+
+    saveFirestoreDoc('recipes', updatedRecipe.id, recipeWithTime);
+  };
+
+  const deleteRecipe = (id: string) => {
+    isUpdatingFromLan.current = false;
+    setRecipes((prev) => {
+      const updated = prev.filter((r) => r.id !== id);
+      try {
+        localStorage.setItem('bakery_recipes', JSON.stringify(updated));
+      } catch (e) {}
+      return updated;
+    });
+
+    deleteFirestoreDoc('recipes', id);
+  };
 
   // Complete Live Sale
   const completeSale = (saleData: Omit<CompletedSale, 'id' | 'orderNumber' | 'createdAt'>): CompletedSale => {
@@ -1831,6 +1908,8 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       flavors,
       customOrders,
       ingredients,
+      recipes,
+      partyAddons,
       expenses,
       sales,
       staffMembers,
@@ -1891,6 +1970,14 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         setIngredients(data.ingredients);
         localStorage.setItem('bakery_ingredients', JSON.stringify(data.ingredients));
       }
+      if (Array.isArray(data.recipes)) {
+        setRecipes(data.recipes);
+        localStorage.setItem('bakery_recipes', JSON.stringify(data.recipes));
+      }
+      if (Array.isArray(data.partyAddons)) {
+        setPartyAddons(data.partyAddons);
+        localStorage.setItem('bakery_party_addons', JSON.stringify(data.partyAddons));
+      }
       if (Array.isArray(data.expenses)) {
         setExpenses(data.expenses);
         localStorage.setItem('bakery_expenses', JSON.stringify(data.expenses));
@@ -1917,6 +2004,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           ordersCount: data.customOrders?.length || 0,
           expensesCount: data.expenses?.length || 0,
           staffCount: data.staffMembers?.length || 0,
+          recipesCount: data.recipes?.length || 0,
         },
       };
     } catch (err: any) {
@@ -2050,6 +2138,10 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         deleteIngredient,
         restockIngredient,
         lowStockCount,
+        recipes,
+        addRecipe,
+        updateRecipe,
+        deleteRecipe,
         expenses,
         addExpense,
         updateExpense,

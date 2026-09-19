@@ -1,11 +1,35 @@
 import React, { useState } from 'react';
-import { Package, AlertTriangle, Plus, Search, ArrowUpRight, Check, DollarSign, Layers, Cake, RefreshCw, X, Trash2, Pencil } from 'lucide-react';
+import {
+  Package,
+  AlertTriangle,
+  Plus,
+  Search,
+  ArrowUpRight,
+  Check,
+  DollarSign,
+  Layers,
+  Cake,
+  RefreshCw,
+  X,
+  Trash2,
+  Pencil,
+  Printer,
+  Eye,
+  BookOpen,
+  Calculator,
+  Sparkles,
+  Box,
+  TrendingUp,
+  CheckCircle2,
+} from 'lucide-react';
 import { useBakery } from '../../context/BakeryContext';
 import { t } from '../../utils/translations';
-import { Ingredient, Product } from '../../types';
+import { Ingredient, Product, Recipe } from '../../types';
 import { soundFx } from '../../utils/audio';
 import { AddProductModal } from '../pos/AddProductModal';
 import { AddEditIngredientModal } from './AddEditIngredientModal';
+import { AddEditRecipeModal } from './AddEditRecipeModal';
+import { RecipeDetailModal } from './RecipeDetailModal';
 
 export const InventoryManagement: React.FC = () => {
   const {
@@ -18,8 +42,11 @@ export const InventoryManagement: React.FC = () => {
     lowStockCount,
     exchangeRate,
     products,
+    updateProduct,
     restockProduct,
     deleteProduct,
+    recipes,
+    deleteRecipe,
   } = useBakery();
   const text = t[lang];
 
@@ -40,6 +67,13 @@ export const InventoryManagement: React.FC = () => {
   const [editingIngredient, setEditingIngredient] = useState<Ingredient | null>(null);
   const [ingredientToDelete, setIngredientToDelete] = useState<Ingredient | null>(null);
 
+  // Recipe & BOM modal states
+  const [isAddRecipeOpen, setIsAddRecipeOpen] = useState(false);
+  const [editingRecipe, setEditingRecipe] = useState<Recipe | null>(null);
+  const [viewingRecipe, setViewingRecipe] = useState<Recipe | null>(null);
+  const [recipeToDelete, setRecipeToDelete] = useState<Recipe | null>(null);
+  const [syncSuccessRecipeId, setSyncSuccessRecipeId] = useState<string | null>(null);
+
   const filteredIngredients = ingredients.filter((ing) => {
     const q = searchQuery.toLowerCase().trim();
     return (
@@ -47,6 +81,16 @@ export const InventoryManagement: React.FC = () => {
       ing.nameKh.toLowerCase().includes(q) ||
       ing.nameEn.toLowerCase().includes(q) ||
       (ing.supplier && ing.supplier.toLowerCase().includes(q))
+    );
+  });
+
+  const filteredRecipes = recipes.filter((rec) => {
+    const q = searchQuery.toLowerCase().trim();
+    return (
+      !q ||
+      rec.cakeNameKh.toLowerCase().includes(q) ||
+      (rec.cakeNameEn && rec.cakeNameEn.toLowerCase().includes(q)) ||
+      rec.items.some((i) => i.nameKh.toLowerCase().includes(q))
     );
   });
 
@@ -84,13 +128,30 @@ export const InventoryManagement: React.FC = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 mb-4 sm:mb-6 shrink-0">
         <div>
-          <h2 className="text-lg sm:text-xl font-bold text-slate-800">
-            {activeTab === 'products' ? 'ស្តុកនំ និងទំនិញលក់ (Bakery Stock)' : text.ingredientsTitle}
+          <h2 className="text-lg sm:text-xl font-black text-slate-800 flex items-center gap-2">
+            {activeTab === 'products' ? (
+              <>
+                <Cake className="w-5 h-5 text-pink-600" />
+                <span>ស្តុកនំ និងទំនិញលក់ (Bakery Stock)</span>
+              </>
+            ) : activeTab === 'stock' ? (
+              <>
+                <Package className="w-5 h-5 text-amber-500" />
+                <span>{text.ingredientsTitle}</span>
+              </>
+            ) : (
+              <>
+                <Layers className="w-5 h-5 text-rose-600" />
+                <span>គណនាថ្លៃដើមរូបមន្តនំ (BOM Recipe Costing)</span>
+              </>
+            )}
           </h2>
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-slate-500 mt-0.5">
             {activeTab === 'products'
               ? 'ពិនិត្យមើលចំនួននំដែលនៅសល់ នំអស់ពីស្តុក និងបន្ថែមស្តុកថ្មីភ្លាមៗ'
-              : 'គ្រប់គ្រងស្តុកគ្រឿងផ្សំដើម និងរូបមន្តនំ (Recipe & BOM Costing)'}
+              : activeTab === 'stock'
+              ? 'គ្រប់គ្រងស្តុកគ្រឿងផ្សំដើម តម្លៃទិញចូល និងការជូនដំណឹងពេលជិតអស់'
+              : 'ទម្រង់គណនាថ្លៃដើមគ្រឿងផ្សំ (BOM) ថ្លៃប្រអប់ ពលកម្ម និងវិភាគប្រាក់ចំណេញសុទ្ធ'}
           </p>
         </div>
 
@@ -119,14 +180,32 @@ export const InventoryManagement: React.FC = () => {
               <Plus className="w-4 h-4 stroke-[3]" />
               <span>+ បន្ថែមគ្រឿងផ្សំថ្មី</span>
             </button>
-          ) : null}
+          ) : (
+            <button
+              onClick={() => {
+                soundFx.playPop();
+                setEditingRecipe(null);
+                setIsAddRecipeOpen(true);
+              }}
+              className="px-3.5 py-2 bg-gradient-to-r from-rose-600 via-pink-600 to-rose-500 hover:from-rose-700 hover:to-pink-700 text-white rounded-xl text-xs font-black shadow-md shadow-rose-600/20 flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all"
+            >
+              <Plus className="w-4 h-4 stroke-[3]" />
+              <span>+ បង្កើតរូបមន្ត & គណនាថ្លៃដើម BOM</span>
+            </button>
+          )}
 
           {/* Search bar */}
           <div className="relative flex-1 sm:flex-initial">
             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
               type="text"
-              placeholder={activeTab === 'products' ? "ស្វែងរកនំ ឬទំនិញ..." : "ស្វែងរកគ្រឿងផ្សំ..."}
+              placeholder={
+                activeTab === 'products'
+                  ? 'ស្វែងរកនំ ឬទំនិញ...'
+                  : activeTab === 'stock'
+                  ? 'ស្វែងរកគ្រឿងផ្សំ...'
+                  : 'ស្វែងរកឈ្មោះរូបមន្តនំ BOM...'
+              }
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-9 pr-3 py-2 text-xs bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500 w-full sm:w-56 shadow-xs font-medium"
@@ -142,12 +221,12 @@ export const InventoryManagement: React.FC = () => {
               }}
               className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${
                 activeTab === 'products'
-                  ? 'bg-gradient-to-r from-pink-600 to-rose-500 text-white shadow-xs'
+                  ? 'bg-gradient-to-r from-pink-600 to-rose-500 text-white shadow-xs font-bold'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
               <Cake className="w-3.5 h-3.5" />
-              <span>ស្តុកនំដែលលក់ ({products.length})</span>
+              <span>ស្តុកនំ ({products.length})</span>
               {outOfStockProductsCount > 0 && (
                 <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-black ${
                   activeTab === 'products' ? 'bg-white text-rose-600' : 'bg-rose-600 text-white'
@@ -163,12 +242,12 @@ export const InventoryManagement: React.FC = () => {
               }}
               className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${
                 activeTab === 'stock'
-                  ? 'bg-gradient-to-r from-pink-600 to-rose-500 text-white shadow-xs'
+                  ? 'bg-gradient-to-r from-pink-600 to-rose-500 text-white shadow-xs font-bold'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
               <Package className="w-3.5 h-3.5" />
-              <span>ស្តុកគ្រឿងផ្សំ</span>
+              <span>ស្តុកគ្រឿងផ្សំ ({ingredients.length})</span>
             </button>
             <button
               onClick={() => {
@@ -177,12 +256,12 @@ export const InventoryManagement: React.FC = () => {
               }}
               className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${
                 activeTab === 'costing'
-                  ? 'bg-gradient-to-r from-pink-600 to-rose-500 text-white shadow-xs'
+                  ? 'bg-gradient-to-r from-pink-600 to-rose-500 text-white shadow-xs font-bold'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
               <Layers className="w-3.5 h-3.5" />
-              <span>គណនាថ្លៃដើម (BOM)</span>
+              <span>គណនាថ្លៃដើម BOM ({recipes.length})</span>
             </button>
           </div>
         </div>
@@ -489,121 +568,303 @@ export const InventoryManagement: React.FC = () => {
         </div>
       ) : (
         /* Recipe & BOM Costing Tab */
-        <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm overflow-y-auto flex-1 space-y-6">
-          <div className="border-b border-slate-100 pb-4">
-            <h3 className="font-bold text-slate-800 text-base">
-              រូបមន្តនំ និងការគណនាប្រាក់ចំណេញ (Recipe Costing / BOM)
-            </h3>
-            <p className="text-xs text-slate-500">
-              ប្រព័ន្ធនឹងកាត់គ្រឿងផ្សំខាងក្រោមដោយស្វ័យប្រវត្តិ នៅពេលនំត្រូវបានដុតផលិតរួច
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Cake Recipe Card 1 */}
-            <div className="p-5 bg-slate-50 rounded-2xl border border-slate-200 space-y-4">
-              <div className="flex items-start justify-between">
-                <div>
-                  <h4 className="font-bold text-slate-800 text-sm">
-                    🎂 នំខេក សូកូឡាហ្វាដ Belgian (1.5 kg)
-                  </h4>
-                  <span className="text-xs text-slate-500">តម្លៃលក់៖ 98,400 ៛ ($24.00)</span>
-                </div>
-                <span className="px-2.5 py-1 bg-emerald-100 text-emerald-800 font-bold text-xs rounded-lg">
-                  ចំណេញ 52%
-                </span>
-              </div>
-
-              <div className="space-y-2 text-xs">
-                <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                  គ្រឿងផ្សំក្នុងរូបមន្ត (BOM):
-                </div>
-                <div className="flex justify-between text-slate-600 py-1 border-b border-slate-200/60">
-                  <span>• ម្សៅខេកជប៉ុនពិសេស</span>
-                  <span className="font-semibold">350g (~$0.49)</span>
-                </div>
-                <div className="flex justify-between text-slate-600 py-1 border-b border-slate-200/60">
-                  <span>• ប៊័រស្រស់បារាំង Elle & Vire</span>
-                  <span className="font-semibold">250g (~$2.37)</span>
-                </div>
-                <div className="flex justify-between text-slate-600 py-1 border-b border-slate-200/60">
-                  <span>• សូកូឡាកាកាវ Callebaut 54.5%</span>
-                  <span className="font-semibold">300g (~$4.26)</span>
-                </div>
-                <div className="flex justify-between text-slate-600 py-1 border-b border-slate-200/60">
-                  <span>• ស៊ុតមាន់ស្រស់ CP</span>
-                  <span className="font-semibold">6 គ្រាប់ (~$0.72)</span>
-                </div>
-                <div className="flex justify-between text-slate-600 py-1 border-b border-slate-200/60">
-                  <span>• ស្ករសម៉ត់ Fine Caster Sugar</span>
-                  <span className="font-semibold">200g (~$0.18)</span>
-                </div>
-                <div className="flex justify-between text-slate-600 py-1 border-b border-slate-200/60">
-                  <span>• ក្រែមស្រស់ Anchor Whipping Cream</span>
-                  <span className="font-semibold">400ml (~$1.92)</span>
-                </div>
-                <div className="flex justify-between text-slate-600 py-1 border-b border-slate-200/60">
-                  <span>• ប្រអប់នំខេកកញ្ចក់ថ្លា ១.៥kg</span>
-                  <span className="font-semibold">1 ប្រអប់ (~$0.65)</span>
-                </div>
-              </div>
-
-              <div className="pt-2 border-t border-slate-200 flex justify-between items-center text-xs">
-                <span className="font-bold text-slate-700">ថ្លៃដើមគ្រឿងផ្សំសរុប (COGS):</span>
-                <span className="font-black text-rose-600 text-sm">43,400 ៛ / នំ ($10.59)</span>
-              </div>
+        <div className="bg-white rounded-2xl border border-slate-200 p-4 sm:p-6 shadow-sm overflow-y-auto flex-1 space-y-5">
+          {/* Costing Header & Stats */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
+            <div>
+              <h3 className="font-black text-slate-800 text-base flex items-center gap-2">
+                <Layers className="w-5 h-5 text-rose-600" />
+                <span>រូបមន្តនំ និងការគណនាថ្លៃដើម BOM (Recipe Costing / Bill of Materials)</span>
+              </h3>
+              <p className="text-xs text-slate-500 mt-0.5">
+                គណនាថ្លៃដើមគ្រឿងផ្សំ ថ្លៃប្រអប់ ពលកម្ម និងវិភាគប្រាក់ចំណេញសុទ្ធនៃមុខនំនីមួយៗ
+              </p>
             </div>
 
-            {/* Cake Recipe Card 2 */}
-            <div className="p-5 bg-slate-50 rounded-2xl border border-slate-200 space-y-4">
-              <div className="flex items-start justify-between">
-                <div>
-                  <h4 className="font-bold text-slate-800 text-sm">
-                    🍓 នំខេក ស្ត្រប៊ែរី ក្រែមស្រស់ (1.5 kg)
-                  </h4>
-                  <span className="text-xs text-slate-500">តម្លៃលក់៖ 106,600 ៛ ($26.00)</span>
-                </div>
-                <span className="px-2.5 py-1 bg-emerald-100 text-emerald-800 font-bold text-xs rounded-lg">
-                  ចំណេញ 56%
+            <div className="flex items-center gap-2 flex-wrap">
+              <div className="px-3 py-1.5 bg-rose-50 border border-rose-100 rounded-xl text-xs font-bold text-rose-700 flex items-center gap-1.5">
+                <span>🧁 រូបមន្តសរុប៖</span>
+                <span className="font-black text-rose-900">{recipes.length}</span>
+              </div>
+              <div className="px-3 py-1.5 bg-emerald-50 border border-emerald-100 rounded-xl text-xs font-bold text-emerald-700 flex items-center gap-1.5">
+                <span>📈 មធ្យមផលចំណេញ៖</span>
+                <span className="font-black text-emerald-900">
+                  {recipes.length > 0
+                    ? Math.round(
+                        recipes.reduce((sum, r) => sum + (r.profitMarginPercent || 0), 0) /
+                          recipes.length
+                      )
+                    : 0}
+                  %
                 </span>
-              </div>
-
-              <div className="space-y-2 text-xs">
-                <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                  គ្រឿងផ្សំក្នុងរូបមន្ត (BOM):
-                </div>
-                <div className="flex justify-between text-slate-600 py-1 border-b border-slate-200/60">
-                  <span>• ម្សៅខេកជប៉ុនពិសេស</span>
-                  <span className="font-semibold">300g (~$0.42)</span>
-                </div>
-                <div className="flex justify-between text-slate-600 py-1 border-b border-slate-200/60">
-                  <span>• ផ្លែស្ត្រប៊ែរីស្រស់នាំចូល</span>
-                  <span className="font-semibold">350g (~$4.20)</span>
-                </div>
-                <div className="flex justify-between text-slate-600 py-1 border-b border-slate-200/60">
-                  <span>• ក្រែមស្រស់ Anchor Whipping Cream</span>
-                  <span className="font-semibold">500ml (~$2.40)</span>
-                </div>
-                <div className="flex justify-between text-slate-600 py-1 border-b border-slate-200/60">
-                  <span>• ស៊ុតមាន់ស្រស់ CP</span>
-                  <span className="font-semibold">5 គ្រាប់ (~$0.60)</span>
-                </div>
-                <div className="flex justify-between text-slate-600 py-1 border-b border-slate-200/60">
-                  <span>• ស្ករសម៉ត់ Fine Caster Sugar</span>
-                  <span className="font-semibold">180g (~$0.16)</span>
-                </div>
-                <div className="flex justify-between text-slate-600 py-1 border-b border-slate-200/60">
-                  <span>• ប្រអប់នំខេកកញ្ចក់ថ្លា</span>
-                  <span className="font-semibold">1 ប្រអប់ (~$0.65)</span>
-                </div>
-              </div>
-
-              <div className="pt-2 border-t border-slate-200 flex justify-between items-center text-xs">
-                <span className="font-bold text-slate-700">ថ្លៃដើមគ្រឿងផ្សំសរុប (COGS):</span>
-                <span className="font-black text-rose-600 text-sm">34,500 ៛ / នំ ($8.43)</span>
               </div>
             </div>
           </div>
+
+          {/* Quick Success Toast when Cost is Applied to POS */}
+          {syncSuccessRecipeId && (
+            <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-2xl text-xs font-bold text-emerald-800 flex items-center justify-between animate-in fade-in zoom-in-95 duration-150">
+              <span className="flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                <span>បានធ្វើបច្ចុប្បន្នភាពថ្លៃដើម (Cost Price) ទៅក្នុងទំនិញលក់ POS ដោយជោគជ័យ! 🎉</span>
+              </span>
+              <button
+                type="button"
+                onClick={() => setSyncSuccessRecipeId(null)}
+                className="text-slate-400 hover:text-slate-600 p-1 cursor-pointer"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
+
+          {/* Dynamic Recipes Grid */}
+          {filteredRecipes.length === 0 ? (
+            <div className="p-10 text-center space-y-3 bg-slate-50/60 rounded-3xl border border-dashed border-slate-200">
+              <div className="w-14 h-14 mx-auto rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center">
+                <Layers className="w-7 h-7" />
+              </div>
+              <h4 className="font-black text-slate-800 text-base">មិនទាន់មានរូបមន្តនំនៅឡើយទេ</h4>
+              <p className="text-xs text-slate-500 max-w-md mx-auto">
+                បង្កើតរូបមន្តនំដំបូងរបស់អ្នក ដើម្បីគណនាថ្លៃដើមគ្រឿងផ្សំ (BOM) និងដឹងពីភាគរយចំណេញសុទ្ធភ្លាមៗ។
+              </p>
+              <button
+                type="button"
+                onClick={() => {
+                  soundFx.playPop();
+                  setEditingRecipe(null);
+                  setIsAddRecipeOpen(true);
+                }}
+                className="px-5 py-2.5 bg-gradient-to-r from-pink-600 to-rose-500 hover:from-pink-700 hover:to-rose-600 text-white rounded-xl text-xs font-black shadow-md shadow-pink-600/20 inline-flex items-center gap-2 cursor-pointer transition-all active:scale-95"
+              >
+                <Plus className="w-4 h-4 stroke-[3]" />
+                <span>+ បង្កើតរូបមន្ត & គណនាថ្លៃដើម BOM ដំបូង</span>
+              </button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+              {filteredRecipes.map((recipe) => {
+                const totalCostKhr =
+                  recipe.totalCostKhr ?? Math.round(recipe.totalCostUsd * exchangeRate);
+                const costPerUnitKhr =
+                  recipe.costPerUnitKhr ??
+                  Math.round(
+                    (recipe.costPerUnitUsd || recipe.totalCostUsd / Math.max(1, recipe.yieldQty)) *
+                      exchangeRate
+                  );
+                const costPerUnitUsd =
+                  recipe.costPerUnitUsd ??
+                  Number((recipe.totalCostUsd / Math.max(1, recipe.yieldQty)).toFixed(2));
+                const sellingPriceKhr =
+                  recipe.sellingPriceKhr ??
+                  (recipe.sellingPriceUsd
+                    ? Math.round(recipe.sellingPriceUsd * exchangeRate)
+                    : 0);
+                const sellingPriceUsd =
+                  recipe.sellingPriceUsd ?? Number((sellingPriceKhr / exchangeRate).toFixed(2));
+                const grossProfitKhr = sellingPriceKhr - costPerUnitKhr;
+                const margin = recipe.profitMarginPercent ?? (
+                  sellingPriceKhr > 0
+                    ? Number(((grossProfitKhr / sellingPriceKhr) * 100).toFixed(1))
+                    : 0
+                );
+
+                const linkedProduct = products.find((p) => p.id === recipe.productId);
+
+                const handleApplyCostToProduct = () => {
+                  if (!recipe.productId) return;
+                  const prod = products.find((p) => p.id === recipe.productId);
+                  if (prod) {
+                    soundFx.playSuccess();
+                    updateProduct({
+                      ...prod,
+                      costPriceUsd: costPerUnitUsd,
+                      costPriceKhr: costPerUnitKhr,
+                    });
+                    setSyncSuccessRecipeId(recipe.id);
+                    setTimeout(() => setSyncSuccessRecipeId(null), 3500);
+                  }
+                };
+
+                return (
+                  <div
+                    key={recipe.id}
+                    className="p-4 sm:p-5 bg-white hover:bg-rose-50/20 rounded-3xl border border-slate-200/90 hover:border-pink-300 shadow-sm hover:shadow-lg transition-all duration-200 space-y-3.5 flex flex-col justify-between"
+                  >
+                    {/* Card Header */}
+                    <div className="space-y-1.5">
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <h4 className="font-black text-slate-900 text-sm">
+                              🎂 {recipe.cakeNameKh}
+                            </h4>
+                            <span className="text-[10px] font-black bg-slate-100 text-slate-700 px-2 py-0.5 rounded-md">
+                              {recipe.yieldQty} {recipe.yieldUnit}
+                            </span>
+                          </div>
+                          {recipe.cakeNameEn && (
+                            <p className="text-[11px] text-slate-500 font-medium">{recipe.cakeNameEn}</p>
+                          )}
+                        </div>
+
+                        {/* Profit Margin Badge */}
+                        <span
+                          className={`px-2.5 py-1 rounded-xl text-xs font-black border shrink-0 ${
+                            margin >= 50
+                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                              : margin >= 30
+                              ? 'bg-amber-50 text-amber-700 border-amber-200'
+                              : 'bg-rose-50 text-rose-700 border-rose-200'
+                          }`}
+                        >
+                          ចំណេញ {margin}%
+                        </span>
+                      </div>
+
+                      {/* Linked Product Status */}
+                      {linkedProduct ? (
+                        <div className="flex items-center gap-1.5 text-[10px] font-bold text-pink-600 bg-pink-50/70 px-2 py-0.5 rounded-lg w-fit">
+                          <CheckCircle2 className="w-3 h-3 text-pink-500" />
+                          <span>ភ្ជាប់ជាមួយទំនិញ៖ {linkedProduct.nameKh}</span>
+                        </div>
+                      ) : (
+                        <div className="text-[10px] text-slate-400 font-medium">
+                          រូបមន្តទូទៅ (មិនទាន់ភ្ជាប់ទៅទំនិញលក់)
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Ingredients List Summary */}
+                    <div className="space-y-1 text-xs bg-slate-50/70 p-3 rounded-2xl border border-slate-100">
+                      <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center justify-between">
+                        <span>គ្រឿងផ្សំក្នុងរូបមន្ត ({recipe.items.length} មុខ):</span>
+                        <span className="text-slate-500">
+                          {recipe.items.reduce((sum, i) => sum + (i.itemCostKhr ?? Math.round(i.itemCostUsd * exchangeRate)), 0).toLocaleString()} ៛
+                        </span>
+                      </div>
+                      <div className="space-y-1 pt-1">
+                        {recipe.items.slice(0, 4).map((item, idx) => (
+                          <div
+                            key={idx}
+                            className="flex justify-between text-slate-600 py-0.5 border-b border-slate-100 last:border-0"
+                          >
+                            <span className="truncate pr-2 font-medium">• {item.nameKh}</span>
+                            <span className="font-bold text-slate-700 shrink-0">
+                              {item.quantity}
+                              {item.unit} (~${item.itemCostUsd.toFixed(2)})
+                            </span>
+                          </div>
+                        ))}
+                        {recipe.items.length > 4 && (
+                          <div className="text-[10px] text-pink-600 font-bold pt-0.5">
+                            + {recipe.items.length - 4} មុខគ្រឿងផ្សំទៀត...
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Overhead Summary */}
+                      <div className="pt-1.5 flex items-center justify-between text-[10px] text-slate-500 border-t border-slate-200">
+                        <span>ថ្លៃប្រអប់/ពលកម្ម/ភ្លើង៖</span>
+                        <span className="font-bold text-slate-700">
+                          {(
+                            (recipe.packagingCostKhr ?? 0) +
+                            (recipe.laborCostKhr ?? 0) +
+                            (recipe.overheadCostKhr ?? 0)
+                          ).toLocaleString()} ៛
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Cost & Price Summary */}
+                    <div className="p-3 bg-gradient-to-r from-rose-50/60 via-pink-50/40 to-slate-50 rounded-2xl border border-rose-100 flex items-center justify-between text-xs">
+                      <div>
+                        <span className="text-[10px] font-bold text-slate-500 block">
+                          ថ្លៃដើម/១ {recipe.yieldUnit} (COGS):
+                        </span>
+                        <span className="font-black text-rose-600 text-sm">
+                          {costPerUnitKhr.toLocaleString()} ៛
+                          <span className="text-[10px] text-slate-400 font-bold ml-1">
+                            (${costPerUnitUsd.toFixed(2)})
+                          </span>
+                        </span>
+                      </div>
+
+                      <div className="text-right">
+                        <span className="text-[10px] font-bold text-slate-500 block">
+                          តម្លៃលក់ (Selling Price):
+                        </span>
+                        <span className="font-black text-slate-900 text-sm">
+                          {sellingPriceKhr.toLocaleString()} ៛
+                          <span className="text-[10px] text-slate-400 font-bold ml-1">
+                            (${sellingPriceUsd.toFixed(2)})
+                          </span>
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Card Actions */}
+                    <div className="flex items-center justify-between gap-1.5 pt-1 border-t border-slate-100">
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            soundFx.playPop();
+                            setViewingRecipe(recipe);
+                          }}
+                          className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-colors flex items-center gap-1 cursor-pointer"
+                          title="មើល & បោះពុម្ពសន្លឹករូបមន្ត"
+                        >
+                          <Printer className="w-3.5 h-3.5 text-slate-500" />
+                          <span>សន្លឹករូបមន្ត</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            soundFx.playPop();
+                            setEditingRecipe(recipe);
+                            setIsAddRecipeOpen(true);
+                          }}
+                          className="px-2.5 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 rounded-xl text-xs font-bold transition-colors flex items-center gap-1 cursor-pointer"
+                          title="កែប្រែរូបមន្ត & ថ្លៃដើម"
+                        >
+                          <Pencil className="w-3.5 h-3.5 text-amber-600" />
+                          <span>កែប្រែ</span>
+                        </button>
+                      </div>
+
+                      <div className="flex items-center gap-1">
+                        {linkedProduct && (
+                          <button
+                            type="button"
+                            onClick={handleApplyCostToProduct}
+                            className="px-2.5 py-1.5 bg-pink-50 hover:bg-pink-100 text-pink-700 border border-pink-200 rounded-xl text-xs font-bold transition-colors flex items-center gap-1 cursor-pointer"
+                            title="អាប់ដេតថ្លៃដើមនេះទៅក្នុងទំនិញលក់ POS"
+                          >
+                            <RefreshCw className="w-3 h-3 text-pink-600" />
+                            <span className="hidden sm:inline">ដាក់ចូល POS</span>
+                          </button>
+                        )}
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            soundFx.playPop();
+                            setRecipeToDelete(recipe);
+                          }}
+                          className="p-1.5 bg-slate-100 hover:bg-rose-50 text-slate-400 hover:text-rose-600 border border-slate-200 hover:border-rose-200 rounded-xl transition-colors cursor-pointer"
+                          title="លុបរូបមន្តនេះ"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
 
@@ -839,6 +1100,45 @@ export const InventoryManagement: React.FC = () => {
         </div>
       )}
 
+      {/* Delete Recipe Confirmation Modal */}
+      {recipeToDelete && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-150">
+          <div className="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl border border-rose-100 text-center space-y-4">
+            <div className="w-14 h-14 mx-auto rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center shadow-inner">
+              <Trash2 className="w-7 h-7 stroke-[2.5]" />
+            </div>
+            <div>
+              <h3 className="text-base font-black text-slate-900">
+                តើអ្នកពិតជាចង់លុបរូបមន្តនំនេះមែនទេ?
+              </h3>
+              <p className="text-xs text-slate-500 mt-1">
+                សកម្មភាពនេះនឹងលុបរូបមន្ត <span className="font-bold text-slate-800">"{recipeToDelete.cakeNameKh}"</span> ចេញពីប្រព័ន្ធទាំងស្រុង។
+              </p>
+            </div>
+            <div className="flex items-center justify-center gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setRecipeToDelete(null)}
+                className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs transition-colors cursor-pointer"
+              >
+                បោះបង់
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  soundFx.playPop();
+                  deleteRecipe(recipeToDelete.id);
+                  setRecipeToDelete(null);
+                }}
+                className="flex-1 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl text-xs shadow-md shadow-rose-600/20 transition-colors cursor-pointer active:scale-95"
+              >
+                យល់ព្រមលុប
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Add / Edit Product Modal */}
       <AddProductModal
         isOpen={isAddProductOpen}
@@ -857,6 +1157,31 @@ export const InventoryManagement: React.FC = () => {
           setEditingIngredient(null);
         }}
         ingredientToEdit={editingIngredient}
+      />
+
+      {/* Add / Edit Recipe & BOM Costing Modal */}
+      <AddEditRecipeModal
+        isOpen={isAddRecipeOpen}
+        onClose={() => {
+          setIsAddRecipeOpen(false);
+          setEditingRecipe(null);
+        }}
+        recipeToEdit={editingRecipe}
+      />
+
+      {/* View / Print Recipe Detail Sheet Modal */}
+      <RecipeDetailModal
+        recipe={viewingRecipe}
+        onClose={() => setViewingRecipe(null)}
+        onEdit={(r) => {
+          setViewingRecipe(null);
+          setEditingRecipe(r);
+          setIsAddRecipeOpen(true);
+        }}
+        onDelete={(r) => {
+          setViewingRecipe(null);
+          setRecipeToDelete(r);
+        }}
       />
     </div>
   );
