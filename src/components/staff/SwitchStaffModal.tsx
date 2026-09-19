@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Users, Sparkles, ArrowRight, ShieldCheck, Check, KeyRound } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { useBakery } from '../../context/BakeryContext';
@@ -109,13 +110,13 @@ export const SwitchStaffModal: React.FC<SwitchStaffModalProps> = ({ isOpen, onCl
   const roleLabel = (role: string) => {
     switch (role) {
       case 'ADMIN':
-        return { labelKh: 'ម្ចាស់ហាង (Admin)', badgeStyle: 'bg-amber-100 text-amber-900 border-amber-300' };
+        return { labelKh: 'ម្ចាស់ហាង (Admin)', badgeStyle: 'bg-amber-100 text-amber-800 border-amber-300' };
+      case 'MANAGER':
+        return { labelKh: 'ប្រធានហាង (Manager)', badgeStyle: 'bg-purple-100 text-purple-800 border-purple-300' };
       case 'CASHIER':
-        return { labelKh: 'បេឡាធិការ (Cashier)', badgeStyle: 'bg-pink-100 text-pink-900 border-pink-300' };
+        return { labelKh: 'អ្នកគិតលុយ (Cashier)', badgeStyle: 'bg-blue-100 text-blue-800 border-blue-300' };
       case 'BAKER':
-        return { labelKh: 'មេចុងភៅដុតនំ (Baker)', badgeStyle: 'bg-orange-100 text-orange-900 border-orange-300' };
-      case 'INVENTORY':
-        return { labelKh: 'គ្រប់គ្រងស្តុក (Stock)', badgeStyle: 'bg-blue-100 text-blue-900 border-blue-300' };
+        return { labelKh: 'ចុងភៅនំ (Baker)', badgeStyle: 'bg-rose-100 text-rose-800 border-rose-300' };
       default:
         return { labelKh: role, badgeStyle: 'bg-slate-100 text-slate-800 border-slate-300' };
     }
@@ -124,8 +125,8 @@ export const SwitchStaffModal: React.FC<SwitchStaffModalProps> = ({ isOpen, onCl
   const activeTarget = selectedStaff || currentStaff;
   const { labelKh: targetRoleLabel, badgeStyle: targetBadgeStyle } = roleLabel(activeTarget.role);
 
-  return (
-    <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-start justify-center pt-3 sm:pt-6 pb-6 px-3 sm:px-4 overflow-y-auto animate-in fade-in duration-200">
+  const modalContent = (
+    <div className="fixed inset-0 z-[100] bg-slate-950/70 backdrop-blur-xs flex items-start justify-center pt-3 sm:pt-6 pb-6 px-3 sm:px-4 overflow-y-auto animate-in fade-in duration-200">
       <div className="bg-white rounded-3xl max-w-3xl w-full shadow-2xl border border-rose-100 overflow-hidden flex flex-col max-h-[92vh]">
         {/* Header */}
         <div className="px-5 py-3.5 border-b border-rose-100 flex items-center justify-between bg-gradient-to-r from-rose-50/80 via-pink-50/50 to-amber-50/30">
@@ -342,4 +343,9 @@ export const SwitchStaffModal: React.FC<SwitchStaffModalProps> = ({ isOpen, onCl
       </div>
     </div>
   );
+
+  if (typeof document !== 'undefined') {
+    return createPortal(modalContent, document.body);
+  }
+  return modalContent;
 };

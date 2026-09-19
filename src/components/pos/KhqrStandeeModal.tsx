@@ -1,4 +1,5 @@
 import React from 'react';
+import { createPortal } from 'react-dom';
 import { X, Printer, QrCode, Sparkles, Download, CheckCircle2 } from 'lucide-react';
 import { useBakery } from '../../context/BakeryContext';
 import { soundFx } from '../../utils/audio';
@@ -38,8 +39,8 @@ export const KhqrStandeeModal: React.FC<KhqrStandeeModalProps> = ({
   const displayQrSrc = storeInfo.khqrQrImage || fallbackQrUrl;
   const isUploadedFullPoster = !!storeInfo.khqrQrImage;
 
-  return (
-    <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md overflow-y-auto flex items-start sm:items-center justify-center p-3 sm:p-5 animate-in fade-in duration-200">
+  const modalContent = (
+    <div className="fixed inset-0 z-[100] bg-slate-950/80 backdrop-blur-md overflow-y-auto flex items-start sm:items-center justify-center p-3 sm:p-5 animate-in fade-in duration-200">
       <div className="bg-white rounded-3xl max-w-sm sm:max-w-md w-full shadow-2xl border border-rose-100 overflow-hidden flex flex-col my-auto max-h-[94vh] animate-in zoom-in-95 duration-200">
         {/* Top Header */}
         <div className="px-4 sm:px-6 py-3 border-b border-slate-100 flex items-center justify-between bg-slate-50 shrink-0">
@@ -200,5 +201,10 @@ export const KhqrStandeeModal: React.FC<KhqrStandeeModalProps> = ({
       </div>
     </div>
   );
+
+  if (typeof document !== 'undefined') {
+    return createPortal(modalContent, document.body);
+  }
+  return modalContent;
 };
 
