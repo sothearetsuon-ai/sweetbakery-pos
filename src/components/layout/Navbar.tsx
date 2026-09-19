@@ -15,6 +15,7 @@ import {
   Menu,
   Music,
   Cloud,
+  Bell,
 } from 'lucide-react';
 import { useBakery } from '../../context/BakeryContext';
 import { useMusic } from '../../context/MusicContext';
@@ -268,6 +269,20 @@ export const Navbar: React.FC<NavbarProps> = ({
                 isFirebaseConnected ? 'bg-emerald-500 shadow-xs' : 'bg-slate-300'
               }`}
             />
+          </button>
+
+          {/* Push Notification & Reminder Settings Button */}
+          <button
+            type="button"
+            onClick={() => {
+              soundFx.playPop();
+              onOpenSettingsModal('notifications');
+            }}
+            title="ការដាស់តឿនលើទូរសព្ទ (Staff Reminders & Push Notifications)"
+            className="w-8 h-8 sm:w-9 sm:h-9 rounded-2xl border border-slate-200/80 bg-white hover:bg-pink-50 hover:border-pink-300 text-slate-600 hover:text-pink-600 flex items-center justify-center transition-all shadow-2xs cursor-pointer relative"
+          >
+            <Bell className="w-4 h-4 text-pink-500" />
+            <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-pink-500 animate-pulse" />
           </button>
 
           {/* Settings Button */}

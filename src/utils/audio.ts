@@ -92,6 +92,39 @@ class SoundEffects {
       osc.stop(this.ctx.currentTime + 0.15);
     } catch (e) {}
   }
+
+  // Double-tone pleasant notification chime for alerts & reminders
+  playNotificationAlert() {
+    if (!this.enabled) return;
+    try {
+      this.initCtx();
+      if (!this.ctx) return;
+
+      const t0 = this.ctx.currentTime;
+      const osc1 = this.ctx.createOscillator();
+      const gain1 = this.ctx.createGain();
+      osc1.type = 'sine';
+      osc1.frequency.setValueAtTime(587.33, t0); // D5
+      gain1.gain.setValueAtTime(0.2, t0);
+      gain1.gain.exponentialRampToValueAtTime(0.001, t0 + 0.35);
+      osc1.connect(gain1);
+      gain1.connect(this.ctx.destination);
+      osc1.start(t0);
+      osc1.stop(t0 + 0.35);
+
+      const t1 = t0 + 0.15;
+      const osc2 = this.ctx.createOscillator();
+      const gain2 = this.ctx.createGain();
+      osc2.type = 'triangle';
+      osc2.frequency.setValueAtTime(880, t1); // A5
+      gain2.gain.setValueAtTime(0.22, t1);
+      gain2.gain.exponentialRampToValueAtTime(0.001, t1 + 0.5);
+      osc2.connect(gain2);
+      gain2.connect(this.ctx.destination);
+      osc2.start(t1);
+      osc2.stop(t1 + 0.5);
+    } catch (e) {}
+  }
 }
 
 export const soundFx = new SoundEffects();

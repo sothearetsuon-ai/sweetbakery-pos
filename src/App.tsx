@@ -14,6 +14,7 @@ import { SettingsModal, SettingsTab } from './components/settings/SettingsModal'
 import { StaffManagement } from './components/staff/StaffManagement';
 import { MusicPlayerModal } from './components/music/MusicPlayerModal';
 import { MiniMusicPlayer } from './components/music/MiniMusicPlayer';
+import { NotificationReminderScheduler } from './components/layout/NotificationReminderScheduler';
 
 export const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabType>('pos');
@@ -39,6 +40,9 @@ export const App: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-[#FAF8F5] flex flex-col font-sans selection:bg-pink-100 selection:text-pink-700 overflow-x-hidden">
+      {/* Background Notification Scheduler & Polite Banner */}
+      <NotificationReminderScheduler />
+
       {/* Top Navigation */}
       <Navbar
         onOpenShiftModal={() => setIsShiftModalOpen(true)}

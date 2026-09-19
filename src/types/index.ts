@@ -221,6 +221,18 @@ export interface AudioTrack {
   isCloudSynced?: boolean;
 }
 
+export interface NotificationConfig {
+  enabled: boolean;
+  remindExpenses: boolean;
+  expenseReminderTime1: string; // "12:00"
+  expenseReminderTime2: string; // "18:00"
+  expenseReminderTime3: string; // "20:30"
+  remindCakePickup: boolean;
+  cakePickupAdvanceMins: number; // 60
+  remindLowStock: boolean;
+  soundEnabled: boolean;
+}
+
 export interface BakeryBackupData {
   version: string;
   backupDate: string;

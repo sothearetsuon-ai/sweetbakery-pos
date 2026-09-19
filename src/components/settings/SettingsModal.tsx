@@ -27,6 +27,7 @@ import {
   Cloud,
   Send,
   Loader2,
+  Bell,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { useBakery } from '../../context/BakeryContext';
@@ -37,8 +38,9 @@ import { KhqrStandeeModal } from '../pos/KhqrStandeeModal';
 import { StaffManagement } from '../staff/StaffManagement';
 import { FirebaseSettingsTab } from './FirebaseSettingsTab';
 import { TelegramSettingsTab } from './TelegramSettingsTab';
+import { NotificationSettingsTab } from './NotificationSettingsTab';
 
-export type SettingsTab = 'store' | 'khqr' | 'staff' | 'backup' | 'firebase' | 'currency' | 'telegram';
+export type SettingsTab = 'store' | 'khqr' | 'staff' | 'backup' | 'firebase' | 'currency' | 'telegram' | 'notifications';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -358,6 +360,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     { id: 'firebase', label: 'Google Firebase ☁️', icon: Cloud },
     { id: 'currency', label: 'អត្រាប្តូរប្រាក់ & ប្រព័ន្ធ', icon: DollarSign },
     { id: 'telegram', label: 'Telegram Bot 📬', icon: Send },
+    { id: 'notifications', label: 'ការដាស់តឿន 🔔', icon: Bell },
   ];
 
   return (
@@ -618,6 +621,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           ) : activeTab === 'telegram' ? (
             /* Telegram Bot Tab */
             <TelegramSettingsTab />
+          ) : activeTab === 'notifications' ? (
+            /* Device Notifications & Reminders Tab */
+            <NotificationSettingsTab />
           ) : (
             /* Other Settings Tabs in Form */
             <form onSubmit={handleSave} id="settings-form" className="space-y-5">
@@ -966,10 +972,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
         {/* Footer */}
         <div className="px-6 py-3.5 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
-          {activeTab === 'staff' || activeTab === 'backup' || activeTab === 'firebase' || activeTab === 'telegram' ? (
+          {activeTab === 'staff' || activeTab === 'backup' || activeTab === 'firebase' || activeTab === 'telegram' || activeTab === 'notifications' ? (
             <div className="flex items-center justify-between w-full">
               <span className="text-xs text-slate-400">
-                {activeTab === 'firebase'
+                {activeTab === 'notifications'
+                  ? '💡 ការកំណត់ការជូនដំណឹងត្រូវបានរក្សាទុកដោយស្វ័យប្រវត្តិ'
+                  : activeTab === 'firebase'
                   ? '💡 ការកំណត់ Google Firebase ត្រូវបានរក្សាទុកដោយស្វ័យប្រវត្តិ'
                   : activeTab === 'telegram'
                   ? '💡 ការកំណត់ Telegram Bot ត្រូវបានរក្សាទុកដោយស្វ័យប្រវត្តិ'
