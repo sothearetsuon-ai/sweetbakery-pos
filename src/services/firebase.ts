@@ -230,6 +230,24 @@ export const testFirebaseConnection = async (
 };
 
 /**
+ * Strip undefined fields from object to prevent Firestore errors
+ */
+export const sanitizeForFirestore = (obj: any): any => {
+  if (obj === null || obj === undefined) return null;
+  if (Array.isArray(obj)) return obj.map(sanitizeForFirestore);
+  if (typeof obj === 'object') {
+    const clean: any = {};
+    for (const key of Object.keys(obj)) {
+      if (obj[key] !== undefined) {
+        clean[key] = sanitizeForFirestore(obj[key]);
+      }
+    }
+    return clean;
+  }
+  return obj;
+};
+
+/**
  * Save single document to a collection
  */
 export const saveFirestoreDoc = async (
@@ -240,8 +258,9 @@ export const saveFirestoreDoc = async (
   const db = getFirestoreDb();
   if (!db) return;
   try {
+    const cleanData = sanitizeForFirestore(data);
     const docRef = doc(db, collectionName, docId);
-    await setDoc(docRef, data, { merge: true });
+    await setDoc(docRef, cleanData, { merge: true });
   } catch (e) {
     console.error(`Error saving document to ${collectionName}/${docId}:`, e);
   }

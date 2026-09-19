@@ -194,7 +194,7 @@ export const NewExpenseModal: React.FC<NewExpenseModalProps> = ({
       origin: { y: 0.7 },
     });
 
-    const expensePayload = {
+    const expensePayload: Omit<Expense, 'id' | 'createdAt'> = {
       title: title.trim(),
       category,
       quantity: numQuantity,
@@ -205,7 +205,7 @@ export const NewExpenseModal: React.FC<NewExpenseModalProps> = ({
       amountKhr: numAmountKhr,
       paidBy,
       paymentMethod,
-      receiptImage: receiptImage || undefined,
+      receiptImage: receiptImage.trim() ? receiptImage : '',
       notes: notes.trim(),
       date,
     };
