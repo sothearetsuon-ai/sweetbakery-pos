@@ -619,25 +619,14 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       try { localStorage.setItem('bakery_custom_orders', JSON.stringify(data.customOrders)); } catch (e) {}
     }
     if (Array.isArray(data.expenses)) {
-      setExpenses((prev) => {
-        const expenseMap = new Map();
-        data.expenses.forEach((e: any) => {
-          if (e && e.id && !deletedExpenseIds.current.has(e.id)) {
-            expenseMap.set(e.id, e);
-          }
-        });
-        prev.forEach((e: any) => {
-          if (e && e.id && !deletedExpenseIds.current.has(e.id) && !expenseMap.has(e.id)) {
-            expenseMap.set(e.id, e);
-          }
-        });
-        const merged = Array.from(expenseMap.values()).sort(
+      const filtered = data.expenses
+        .filter((e: any) => e && e.id && !deletedExpenseIds.current.has(e.id))
+        .sort(
           (a: any, b: any) =>
             new Date(b.createdAt || b.date).getTime() - new Date(a.createdAt || a.date).getTime()
         );
-        safeSetStorage('bakery_expenses', JSON.stringify(merged));
-        return merged;
-      });
+      setExpenses(filtered);
+      safeSetStorage('bakery_expenses', JSON.stringify(filtered));
     }
     if (data.storeInfo) {
       setStoreInfo((prev) => {
@@ -797,51 +786,44 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
     // Subscribe to products
     const unsubProducts = subscribeToFirestoreCollection<Product>('products', (cloudProducts) => {
-      if (cloudProducts && cloudProducts.length > 0) {
-        setProducts(cloudProducts);
+      if (Array.isArray(cloudProducts)) {
+        const filtered = cloudProducts.filter((p) => p && p.id && !deletedProductIds.current.has(p.id));
+        setProducts(filtered);
+        safeSetStorage('bakery_products', JSON.stringify(filtered));
       }
     });
 
     // Subscribe to sales
     const unsubSales = subscribeToFirestoreCollection<CompletedSale>('sales', (cloudSales) => {
-      if (cloudSales && cloudSales.length > 0) {
-        setSales(cloudSales.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
+      if (Array.isArray(cloudSales)) {
+        const filtered = cloudSales
+          .filter((s) => s && s.id && !deletedSaleIds.current.has(s.id))
+          .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        setSales(filtered);
+        try { localStorage.setItem('bakery_sales', JSON.stringify(filtered)); } catch (e) {}
       }
     });
 
     // Subscribe to custom orders
     const unsubOrders = subscribeToFirestoreCollection<CustomCakeOrder>('customOrders', (cloudOrders) => {
-      if (cloudOrders && cloudOrders.length > 0) {
-        setCustomOrders(cloudOrders.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
+      if (Array.isArray(cloudOrders)) {
+        const sorted = [...cloudOrders].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        setCustomOrders(sorted);
+        try { localStorage.setItem('bakery_custom_orders', JSON.stringify(sorted)); } catch (e) {}
       }
     });
 
     // Subscribe to expenses
     const unsubExpenses = subscribeToFirestoreCollection<Expense>('expenses', (cloudExpenses) => {
-      if (cloudExpenses && cloudExpenses.length > 0) {
-        setExpenses((prev) => {
-          const expenseMap = new Map();
-          // 1. Put cloud expenses
-          cloudExpenses.forEach((e) => {
-            if (e && e.id && !deletedExpenseIds.current.has(e.id)) {
-              expenseMap.set(e.id, e);
-            }
-          });
-          // 2. Preserve any local expenses that might not be in cloud yet
-          prev.forEach((e) => {
-            if (e && e.id && !deletedExpenseIds.current.has(e.id) && !expenseMap.has(e.id)) {
-              expenseMap.set(e.id, e);
-              // Re-upload to cloud
-              saveFirestoreDoc('expenses', e.id, e);
-            }
-          });
-          const merged = Array.from(expenseMap.values()).sort(
-            (a: any, b: any) =>
+      if (Array.isArray(cloudExpenses)) {
+        const sorted = cloudExpenses
+          .filter((e) => e && e.id && !deletedExpenseIds.current.has(e.id))
+          .sort(
+            (a, b) =>
               new Date(b.createdAt || b.date).getTime() - new Date(a.createdAt || a.date).getTime()
           );
-          safeSetStorage('bakery_expenses', JSON.stringify(merged));
-          return merged;
-        });
+        setExpenses(sorted);
+        safeSetStorage('bakery_expenses', JSON.stringify(sorted));
       }
     });
 
@@ -869,8 +851,9 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
     // Subscribe to ingredients
     const unsubIngredients = subscribeToFirestoreCollection<Ingredient>('ingredients', (cloudIngredients) => {
-      if (cloudIngredients && cloudIngredients.length > 0) {
+      if (Array.isArray(cloudIngredients)) {
         setIngredients(cloudIngredients);
+        safeSetStorage('bakery_ingredients', JSON.stringify(cloudIngredients));
       }
     });
 
@@ -995,7 +978,10 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const clearAllExpenses = () => {
     isUpdatingFromLan.current = false;
     if (lanSyncTimer.current) clearTimeout(lanSyncTimer.current);
-    expenses.forEach((e) => deletedExpenseIds.current.add(e.id));
+    expenses.forEach((e) => {
+      deletedExpenseIds.current.add(e.id);
+      deleteFirestoreDoc('expenses', e.id);
+    });
 
     // 1. Call atomic server clear endpoint
     fetch('/api/clear-all-expenses', {
