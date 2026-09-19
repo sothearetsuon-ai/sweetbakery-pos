@@ -1,0 +1,9 @@
+﻿node_modules
+dist
+dist-ssr
+*.local
+local_bakery_db.json
+local_bakery_songs.json
+public/uploads
+.env
+.DS_Store
