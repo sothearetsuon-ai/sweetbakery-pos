@@ -19,6 +19,7 @@ import {
 import confetti from 'canvas-confetti';
 import {
   FirebaseConfig,
+  DEFAULT_FIREBASE_CONFIG,
   getStoredFirebaseConfig,
   saveStoredFirebaseConfig,
   clearStoredFirebaseConfig,
@@ -222,6 +223,15 @@ export const FirebaseSettingsTab: React.FC = () => {
     }
   };
 
+  // Reset to Default Cloud Config
+  const handleResetToDefault = () => {
+    saveStoredFirebaseConfig(DEFAULT_FIREBASE_CONFIG);
+    setCurrentConfig(DEFAULT_FIREBASE_CONFIG);
+    soundFx.playSuccess();
+    confetti({ particleCount: 60, spread: 70, origin: { y: 0.6 } });
+    setTimeout(() => window.location.reload(), 400);
+  };
+
   // Disconnect Firebase
   const handleDisconnect = () => {
     if (
@@ -398,6 +408,25 @@ export const FirebaseSettingsTab: React.FC = () => {
         ) : (
           /* If Not Connected: Input Config Form */
           <div className="pt-4 space-y-4">
+            {/* Quick Auto-Connect SweetBakery Cloud */}
+            <div className="p-4 bg-gradient-to-r from-orange-500/10 via-pink-500/10 to-amber-500/10 border border-orange-200 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-3">
+              <div>
+                <p className="text-xs font-black text-slate-800">
+                  ⚡ តភ្ជាប់ទៅកាន់ Google Cloud ផ្លូវការ (SweetBakery Cloud)
+                </p>
+                <p className="text-[11px] text-slate-500 mt-0.5">
+                  ចុចត្រង់នេះដើម្បីភ្ជាប់ទូរសព្ទ/ឧបករណ៍នេះទៅ Cloud រួមរបស់ហាងដោយស្វ័យប្រវត្តិ មិនបាច់ចម្លងកូដឡើយ។
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={handleResetToDefault}
+                className="px-4 py-2.5 bg-gradient-to-r from-orange-500 to-pink-600 hover:from-orange-600 hover:to-pink-700 text-white rounded-xl text-xs font-black shadow-md shadow-orange-500/20 whitespace-nowrap cursor-pointer transition-all"
+              >
+                តភ្ជាប់ Cloud ស្វ័យប្រវត្តិ (Auto-Connect)
+              </button>
+            </div>
+
             <form onSubmit={handleConnectFromInput} className="space-y-4">
               {!showManualFields ? (
                 <div>

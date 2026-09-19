@@ -44,11 +44,8 @@ export const DEFAULT_FIREBASE_CONFIG: FirebaseConfig = {
 /**
  * Retrieve saved Firebase config from localStorage or default
  */
-export const getStoredFirebaseConfig = (): FirebaseConfig | null => {
+export const getStoredFirebaseConfig = (): FirebaseConfig => {
   try {
-    if (localStorage.getItem(DISABLED_KEY) === 'true') {
-      return null;
-    }
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
       const parsed = JSON.parse(saved);
@@ -66,8 +63,10 @@ export const getStoredFirebaseConfig = (): FirebaseConfig | null => {
  * Save Firebase config to localStorage
  */
 export const saveStoredFirebaseConfig = (config: FirebaseConfig): void => {
-  localStorage.removeItem(DISABLED_KEY);
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
+  try {
+    localStorage.removeItem(DISABLED_KEY);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
+  } catch (e) {}
 };
 
 /**
