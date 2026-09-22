@@ -5,6 +5,15 @@ import { BakeryProvider } from './context/BakeryContext';
 import { MusicProvider } from './context/MusicContext';
 import './index.css';
 
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    const serviceWorkerUrl = new URL('sw.js', document.baseURI).toString();
+    navigator.serviceWorker.register(serviceWorkerUrl).catch((error) => {
+      console.warn('Offline cache registration failed:', error);
+    });
+  });
+}
+
 interface Props {
   children: ReactNode;
 }

@@ -16,6 +16,8 @@ import {
   Music,
   Cloud,
   Bell,
+  Wifi,
+  WifiOff,
 } from 'lucide-react';
 import { useBakery } from '../../context/BakeryContext';
 import { useMusic } from '../../context/MusicContext';
@@ -59,6 +61,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   const [isSwitchStaffOpen, setIsSwitchStaffOpen] = useState(false);
   const [isStaffDropdownOpen, setIsStaffDropdownOpen] = useState(false);
   const [isMobileConnectOpen, setIsMobileConnectOpen] = useState(false);
+  const [isOnline, setIsOnline] = useState(() => navigator.onLine);
 
   // Live real-time clock
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -66,6 +69,17 @@ export const Navbar: React.FC<NavbarProps> = ({
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
   }, []);
 
   const toggleSound = () => {
@@ -177,6 +191,18 @@ export const Navbar: React.FC<NavbarProps> = ({
           <div className="hidden sm:flex items-center gap-2 bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-amber-300 px-3 py-1.5 rounded-2xl text-xs shadow-2xs">
             <span className="text-amber-800 font-bold">{text.exchangeRateLabel}:</span>
             <strong className="text-amber-950 font-black">$1 = {exchangeRate.toLocaleString()} ៛</strong>
+          </div>
+
+          <div
+            className={`hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-2xl border text-xs font-bold ${
+              isOnline
+                ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                : 'bg-amber-50 border-amber-200 text-amber-700'
+            }`}
+            title={isOnline ? 'កំពុងភ្ជាប់អ៊ីនធឺណិត' : 'កំពុងប្រើទម្រង់ Offline'}
+          >
+            {isOnline ? <Wifi className="w-3.5 h-3.5" /> : <WifiOff className="w-3.5 h-3.5" />}
+            <span>{isOnline ? 'Online' : 'Offline'}</span>
           </div>
 
           {/* Low Stock Badge */}
