@@ -180,6 +180,31 @@ export const Navbar: React.FC<NavbarProps> = ({
               </p>
             </div>
           </div>
+
+          {/* Bakery Music Player Button (Left Side) */}
+          <button
+            type="button"
+            onClick={() => {
+              soundFx.playPop();
+              setIsMusicPlayerOpen(true);
+            }}
+            title="ម៉ាស៊ីនចាក់ភ្លេងហាងនំ (Bakery Music Player & Upload)"
+            className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-2xl text-xs font-bold transition-all shadow-2xs border cursor-pointer active:scale-95 shrink-0 ${
+              isMusicPlaying
+                ? 'bg-gradient-to-r from-pink-600 to-rose-500 text-white border-pink-500 shadow-pink-500/25'
+                : 'bg-white/90 border-slate-200/80 hover:bg-pink-50 hover:border-pink-300 text-slate-700 hover:text-pink-600'
+            }`}
+          >
+            <Music className={`w-3.5 h-3.5 ${isMusicPlaying ? 'text-white animate-bounce' : 'text-pink-500'}`} />
+            <span className="hidden sm:inline">ភ្លេងហាងនំ</span>
+            {isMusicPlaying && (
+              <span className="flex items-end gap-0.5 h-3">
+                <span className="w-0.5 h-2 bg-white rounded-full animate-pulse" />
+                <span className="w-0.5 h-3 bg-white rounded-full animate-pulse delay-75" />
+                <span className="w-0.5 h-1.5 bg-white rounded-full animate-pulse delay-150" />
+              </span>
+            )}
+          </button>
         </div>
 
         {/* Right Side: Live Clock & Actions */}
@@ -240,31 +265,6 @@ export const Navbar: React.FC<NavbarProps> = ({
           >
             <QrCode className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
             <span className="hidden sm:inline">KHQR លើតុ</span>
-          </button>
-
-          {/* Bakery Music Player Button */}
-          <button
-            type="button"
-            onClick={() => {
-              soundFx.playPop();
-              setIsMusicPlayerOpen(true);
-            }}
-            title="ម៉ាស៊ីនចាក់ភ្លេងហាងនំ (Bakery Music Player & Upload)"
-            className={`flex items-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-2xl text-xs font-bold transition-all shadow-2xs border cursor-pointer active:scale-95 ${
-              isMusicPlaying
-                ? 'bg-gradient-to-r from-pink-600 to-rose-500 text-white border-pink-500 shadow-pink-500/25'
-                : 'bg-white border-slate-200/80 hover:bg-pink-50 hover:border-pink-300 text-slate-700 hover:text-pink-600'
-            }`}
-          >
-            <Music className={`w-3.5 h-3.5 ${isMusicPlaying ? 'text-white animate-bounce' : 'text-pink-500'}`} />
-            <span className="hidden md:inline">ភ្លេងហាងនំ</span>
-            {isMusicPlaying && (
-              <span className="flex items-end gap-0.5 h-3">
-                <span className="w-0.5 h-2 bg-white rounded-full animate-pulse" />
-                <span className="w-0.5 h-3 bg-white rounded-full animate-pulse delay-75" />
-                <span className="w-0.5 h-1.5 bg-white rounded-full animate-pulse delay-150" />
-              </span>
-            )}
           </button>
 
           {/* Background Theme Switcher Button */}

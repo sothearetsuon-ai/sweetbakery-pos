@@ -40,7 +40,7 @@ export const MiniMusicPlayer: React.FC = () => {
   // Minimized Compact Floating Bubble (Doesn't block buttons!)
   if (isMinimized) {
     return (
-      <div className="fixed bottom-20 md:bottom-4 right-3 z-20 flex items-center gap-1.5 animate-in fade-in zoom-in duration-200">
+      <div className="fixed bottom-20 md:bottom-4 left-3 md:left-[17.5rem] z-20 flex items-center gap-1.5 animate-in fade-in zoom-in duration-200">
         <button
           type="button"
           onClick={() => {
@@ -79,7 +79,7 @@ export const MiniMusicPlayer: React.FC = () => {
         if (autoCollapseTimerRef.current) clearTimeout(autoCollapseTimerRef.current);
       }}
       onMouseLeave={() => resetAutoCollapseTimer()}
-      className="fixed bottom-20 md:bottom-4 right-3 z-20 flex items-center gap-2 bg-slate-900/95 backdrop-blur-md text-white px-3 py-2 rounded-2xl border border-pink-500/30 shadow-xl shadow-pink-950/20 max-w-[280px] sm:max-w-[320px] transition-all animate-in fade-in zoom-in duration-200"
+      className="fixed bottom-20 md:bottom-4 left-3 md:left-[17.5rem] z-20 flex items-center gap-2 bg-slate-900/95 backdrop-blur-md text-white px-3 py-2 rounded-2xl border border-pink-500/30 shadow-xl shadow-pink-950/20 max-w-[280px] sm:max-w-[320px] transition-all animate-in fade-in zoom-in duration-200"
     >
       {/* Clickable Area to Open Full Music Modal */}
       <div
