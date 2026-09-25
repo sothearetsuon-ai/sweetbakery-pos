@@ -31,6 +31,7 @@ import {
   initialRecipes,
 } from '../data/mockData';
 import { sortProductsNewestFirst } from '../utils/productUtils';
+import { idbGet, idbSet } from '../utils/idbStorage';
 import {
   getStoredFirebaseConfig,
   getFirestoreDb,
@@ -374,30 +375,87 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     return initialPartyAddons;
   });
 
+  const trimLocalStorageCache = () => {
+    try {
+      // 1. Trim sales cache in localStorage to last 30 if large
+      const salesRaw = localStorage.getItem('bakery_sales');
+      if (salesRaw && salesRaw.length > 250000) {
+        try {
+          const sales = JSON.parse(salesRaw);
+          if (Array.isArray(sales)) {
+            localStorage.setItem('bakery_sales', JSON.stringify(sales.slice(-30)));
+          }
+        } catch (e) {}
+      }
+
+      // 2. Strip heavy base64 images from bakery_products in localStorage cache
+      const prodRaw = localStorage.getItem('bakery_products');
+      if (prodRaw && prodRaw.length > 600000) {
+        try {
+          const prods = JSON.parse(prodRaw);
+          if (Array.isArray(prods)) {
+            const slim = prods.map((p: any) => ({
+              ...p,
+              images: undefined,
+              imageUrl: (p.imageUrl && p.imageUrl.startsWith('data:') && p.imageUrl.length > 30000) ? undefined : p.imageUrl,
+            }));
+            localStorage.setItem('bakery_products', JSON.stringify(slim));
+          }
+        } catch (e) {}
+      }
+
+      // 3. Strip large receipt images from bakery_expenses in localStorage cache
+      const expRaw = localStorage.getItem('bakery_expenses');
+      if (expRaw && expRaw.length > 250000) {
+        try {
+          const exps = JSON.parse(expRaw);
+          if (Array.isArray(exps)) {
+            const slim = exps.map((e: any) => ({ ...e, receiptImage: undefined }));
+            localStorage.setItem('bakery_expenses', JSON.stringify(slim));
+          }
+        } catch (e) {}
+      }
+    } catch (e) {
+      console.warn('LocalStorage trimming error:', e);
+    }
+  };
+
   const safeSetStorage = (key: string, value: string) => {
+    // 1. Always persist full durable data to IndexedDB (asynchronously, unlimited capacity)
+    idbSet(key, value).catch(() => {});
+
+    // 2. Persist to localStorage for instant synchronous boots
     try {
       localStorage.setItem(key, value);
     } catch (err: any) {
-      console.warn(`[LocalStorage Quota Handled] Failed to write "${key}":`, err);
+      console.warn(`[LocalStorage Quota Handled] "${key}" exceeded quota. Using IndexedDB and compacting localStorage:`, err);
+      trimLocalStorageCache();
       try {
         if (key === 'bakery_products') {
           const parsed = JSON.parse(value);
           const slim = parsed.map((p: any) => ({
             ...p,
             images: undefined,
+            imageUrl: (p.imageUrl && p.imageUrl.startsWith('data:') && p.imageUrl.length > 30000) ? undefined : p.imageUrl,
           }));
           localStorage.setItem(key, JSON.stringify(slim));
         } else if (key === 'bakery_expenses') {
           const parsed = JSON.parse(value);
-          // If quota reached, trim excessively large raw data URLs while preserving expense records
           const slim = parsed.map((e: any) => ({
             ...e,
-            receiptImage: e.receiptImage && e.receiptImage.length > 80000 ? undefined : e.receiptImage,
+            receiptImage: undefined,
           }));
           localStorage.setItem(key, JSON.stringify(slim));
+        } else if (key === 'bakery_sales') {
+          const parsed = JSON.parse(value);
+          const slim = Array.isArray(parsed) ? parsed.slice(-30) : parsed;
+          localStorage.setItem(key, JSON.stringify(slim));
+        } else {
+          localStorage.setItem(key, value);
         }
       } catch (fallbackErr) {
-        console.warn('Fallback storage could not save:', fallbackErr);
+        // Safe to ignore because IndexedDB holds 100% of the data
+        console.warn(`LocalStorage fallback for "${key}" skipped. Safe in IndexedDB:`, fallbackErr);
       }
     }
   };
@@ -482,6 +540,81 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   useEffect(() => {
     safeSetStorage('bakery_shift', JSON.stringify(currentShift));
   }, [currentShift]);
+
+  // Initial mount: Hydrate complete dataset from IndexedDB (preserves all high-res photos and full collections)
+  const isIdbHydrated = useRef(false);
+  useEffect(() => {
+    if (isIdbHydrated.current) return;
+    isIdbHydrated.current = true;
+
+    const hydrateFromIdb = async () => {
+      try {
+        const idbProductsStr = await idbGet('bakery_products');
+        if (idbProductsStr) {
+          try {
+            const parsed = JSON.parse(idbProductsStr);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              setProducts(sortProductsNewestFirst(parsed));
+            }
+          } catch (e) {}
+        }
+
+        const idbSalesStr = await idbGet('bakery_sales');
+        if (idbSalesStr) {
+          try {
+            const parsed = JSON.parse(idbSalesStr);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              setSales(parsed);
+            }
+          } catch (e) {}
+        }
+
+        const idbOrdersStr = await idbGet('bakery_custom_orders');
+        if (idbOrdersStr) {
+          try {
+            const parsed = JSON.parse(idbOrdersStr);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              setCustomOrders(parsed);
+            }
+          } catch (e) {}
+        }
+
+        const idbExpensesStr = await idbGet('bakery_expenses');
+        if (idbExpensesStr) {
+          try {
+            const parsed = JSON.parse(idbExpensesStr);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              setExpenses(parsed);
+            }
+          } catch (e) {}
+        }
+
+        const idbIngredientsStr = await idbGet('bakery_ingredients');
+        if (idbIngredientsStr) {
+          try {
+            const parsed = JSON.parse(idbIngredientsStr);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              setIngredients(parsed);
+            }
+          } catch (e) {}
+        }
+
+        const idbRecipesStr = await idbGet('bakery_recipes');
+        if (idbRecipesStr) {
+          try {
+            const parsed = JSON.parse(idbRecipesStr);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              setRecipes(parsed);
+            }
+          } catch (e) {}
+        }
+      } catch (err) {
+        console.warn('IndexedDB initial hydration error:', err);
+      }
+    };
+
+    hydrateFromIdb();
+  }, []);
 
   // Auto-sync any DELIVERED custom orders that are not yet recorded in sales (e.g. historical/existing orders)
   useEffect(() => {
@@ -1127,7 +1260,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     };
     setProducts((prev) => {
       const updated = sortProductsNewestFirst([newProduct, ...prev.filter((p) => p.id !== newProduct.id)]);
-      try { localStorage.setItem('bakery_products', JSON.stringify(updated)); } catch (e) {}
+      safeSetStorage('bakery_products', JSON.stringify(updated));
       return updated;
     });
 
@@ -1148,7 +1281,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     };
     setProducts((prev) => {
       const updated = prev.map((p) => (p.id === updatedProd.id ? updatedProd : p));
-      try { localStorage.setItem('bakery_products', JSON.stringify(updated)); } catch (e) {}
+      safeSetStorage('bakery_products', JSON.stringify(updated));
       return updated;
     });
 
@@ -1168,7 +1301,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
     setProducts((prev) => {
       const updated = prev.filter((p) => p.id !== productId);
-      try { localStorage.setItem('bakery_products', JSON.stringify(updated)); } catch (e) {}
+      safeSetStorage('bakery_products', JSON.stringify(updated));
       return updated;
     });
 
@@ -1196,7 +1329,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         }
         return p;
       });
-      try { localStorage.setItem('bakery_products', JSON.stringify(updated)); } catch (e) {}
+      safeSetStorage('bakery_products', JSON.stringify(updated));
       return updated;
     });
 
@@ -1970,55 +2103,58 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         return { success: false, message: 'ឯកសារនេះមិនមែនជាទិន្នន័យបម្រុងទុករបស់ SweetBakery ឡើយ' };
       }
 
+      // Proactively trim old cache in localStorage before importing
+      trimLocalStorageCache();
+
       if (data.storeInfo) {
         setStoreInfo(data.storeInfo);
-        localStorage.setItem('bakery_store_info', JSON.stringify(data.storeInfo));
+        safeSetStorage('bakery_store_info', JSON.stringify(data.storeInfo));
       }
       if (data.exchangeRate) {
         const rate = Number(data.exchangeRate);
         setExchangeRate(rate);
-        localStorage.setItem('bakery_exchange_rate', String(rate));
+        safeSetStorage('bakery_exchange_rate', String(rate));
       }
       if (Array.isArray(data.products)) {
         const sorted = sortProductsNewestFirst(data.products);
         setProducts(sorted);
-        localStorage.setItem('bakery_products', JSON.stringify(sorted));
+        safeSetStorage('bakery_products', JSON.stringify(sorted));
       }
       if (Array.isArray(data.flavors)) {
         setFlavors(data.flavors);
-        localStorage.setItem('bakery_flavors', JSON.stringify(data.flavors));
+        safeSetStorage('bakery_flavors', JSON.stringify(data.flavors));
       }
       if (Array.isArray(data.customOrders)) {
         setCustomOrders(data.customOrders);
-        localStorage.setItem('bakery_custom_orders', JSON.stringify(data.customOrders));
+        safeSetStorage('bakery_custom_orders', JSON.stringify(data.customOrders));
       }
       if (Array.isArray(data.ingredients)) {
         setIngredients(data.ingredients);
-        localStorage.setItem('bakery_ingredients', JSON.stringify(data.ingredients));
+        safeSetStorage('bakery_ingredients', JSON.stringify(data.ingredients));
       }
       if (Array.isArray(data.recipes)) {
         setRecipes(data.recipes);
-        localStorage.setItem('bakery_recipes', JSON.stringify(data.recipes));
+        safeSetStorage('bakery_recipes', JSON.stringify(data.recipes));
       }
       if (Array.isArray(data.partyAddons)) {
         setPartyAddons(data.partyAddons);
-        localStorage.setItem('bakery_party_addons', JSON.stringify(data.partyAddons));
+        safeSetStorage('bakery_party_addons', JSON.stringify(data.partyAddons));
       }
       if (Array.isArray(data.expenses)) {
         setExpenses(data.expenses);
-        localStorage.setItem('bakery_expenses', JSON.stringify(data.expenses));
+        safeSetStorage('bakery_expenses', JSON.stringify(data.expenses));
       }
       if (Array.isArray(data.sales)) {
         setSales(data.sales);
-        localStorage.setItem('bakery_sales', JSON.stringify(data.sales));
+        safeSetStorage('bakery_sales', JSON.stringify(data.sales));
       }
       if (Array.isArray(data.staffMembers)) {
         setStaffMembers(data.staffMembers);
-        localStorage.setItem('bakery_staff_members', JSON.stringify(data.staffMembers));
+        safeSetStorage('bakery_staff_members', JSON.stringify(data.staffMembers));
       }
       if (data.currentShift !== undefined) {
         setCurrentShift(data.currentShift);
-        localStorage.setItem('bakery_shift', JSON.stringify(data.currentShift));
+        safeSetStorage('bakery_shift', JSON.stringify(data.currentShift));
       }
 
       return {
