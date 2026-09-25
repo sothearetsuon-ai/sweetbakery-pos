@@ -97,11 +97,21 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart }
             />
           </button>
 
-          {/* Stock remaining tag */}
+          {/* Stock remaining tag - Clickable for quick restock on phone & desktop */}
           {product.stockQty <= 5 && product.stockQty > 0 && (
-            <span className="absolute bottom-1.5 left-2 bg-rose-600 text-white text-[10px] font-black px-2 py-0.5 rounded-md shadow-sm">
-              សល់ {product.stockQty} {product.unit}
-            </span>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                soundFx.playPop();
+                setIsRestockOpen(true);
+              }}
+              title="ចុចដើម្បីបន្ថែមស្តុក"
+              className="absolute bottom-1.5 left-2 bg-rose-600 hover:bg-rose-700 text-white text-[10px] font-black px-2 py-0.5 rounded-md shadow-sm flex items-center gap-1 active:scale-95 cursor-pointer z-10"
+            >
+              <span>សល់ {product.stockQty} {product.unit}</span>
+              <span className="underline opacity-90">+ថែមស្តុក</span>
+            </button>
           )}
 
           {product.stockQty === 0 && (
@@ -191,9 +201,9 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart }
       {isRestockOpen && (
         <div
           onClick={(e) => e.stopPropagation()}
-          className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4"
+          className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto"
         >
-          <div className="bg-white rounded-3xl max-w-sm w-full p-5 shadow-2xl border border-rose-100 space-y-4 animate-in fade-in zoom-in-95 duration-150">
+          <div className="bg-white rounded-3xl max-w-sm w-full p-5 shadow-2xl border border-rose-100 space-y-4 animate-in fade-in zoom-in-95 duration-150 my-auto max-h-[92vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-rose-100/70 pb-3">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-xl bg-pink-50 text-pink-600 flex items-center justify-center font-bold">
@@ -207,7 +217,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart }
               <button
                 type="button"
                 onClick={() => setIsRestockOpen(false)}
-                className="w-7 h-7 rounded-full hover:bg-slate-100 text-slate-400 flex items-center justify-center"
+                className="w-7 h-7 rounded-full hover:bg-slate-100 text-slate-400 flex items-center justify-center cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -216,8 +226,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart }
             <div className="space-y-3">
               <div className="bg-rose-50/60 border border-rose-100 rounded-2xl p-3 flex items-center justify-between text-xs">
                 <span className="text-slate-600">ស្តុកបច្ចុប្បន្ន៖</span>
-                <span className="font-black text-rose-600 text-sm">
-                  {product.stockQty} {product.unit} (អស់ពីស្តុក)
+                <span className={`font-black text-sm ${product.stockQty === 0 ? 'text-rose-600' : 'text-slate-800'}`}>
+                  {product.stockQty} {product.unit} {product.stockQty === 0 ? '(អស់ពីស្តុក)' : ''}
                 </span>
               </div>
 
@@ -244,7 +254,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart }
                       soundFx.playPop();
                       setAddQty(val.toString());
                     }}
-                    className="py-1.5 bg-slate-100 hover:bg-pink-50 hover:text-pink-600 text-slate-700 font-bold rounded-xl text-xs transition-colors"
+                    className="py-1.5 bg-slate-100 hover:bg-pink-50 hover:text-pink-600 text-slate-700 font-bold rounded-xl text-xs transition-colors cursor-pointer active:scale-95"
                   >
                     +{val}
                   </button>
@@ -256,7 +266,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart }
               <button
                 type="button"
                 onClick={() => setIsRestockOpen(false)}
-                className="px-4 py-2 text-xs font-bold text-slate-500 hover:bg-slate-100 rounded-xl"
+                className="px-4 py-2.5 text-xs font-bold text-slate-500 hover:bg-slate-100 rounded-xl cursor-pointer"
               >
                 បោះបង់
               </button>
@@ -270,7 +280,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart }
                     setIsRestockOpen(false);
                   }
                 }}
-                className="px-5 py-2.5 bg-gradient-to-r from-pink-600 to-rose-500 hover:from-pink-700 hover:to-rose-600 text-white font-bold text-xs rounded-xl shadow-md shadow-pink-600/20 active:scale-95 transition-all"
+                className="flex-1 sm:flex-initial px-5 py-2.5 bg-gradient-to-r from-pink-600 to-rose-500 hover:from-pink-700 hover:to-rose-600 text-white font-bold text-xs rounded-xl shadow-md shadow-pink-600/20 active:scale-95 transition-all text-center cursor-pointer"
               >
                 ✓ បញ្ជាក់ការថែមស្តុក
               </button>
