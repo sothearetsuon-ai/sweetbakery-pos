@@ -48,12 +48,14 @@ interface SettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
   initialTab?: SettingsTab;
+  onOpenLicenseModal?: () => void;
 }
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({
   isOpen,
   onClose,
   initialTab = 'store',
+  onOpenLicenseModal,
 }) => {
   const {
     lang,
@@ -382,15 +384,33 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               <p className="text-xs text-slate-500">កំណត់ឈ្មោះហាង, Logo, ប្រព័ន្ធ KHQR, សិទ្ធិបុគ្គលិក និងអត្រាប្តូរប្រាក់</p>
             </div>
           </div>
-          <button
-            onClick={() => {
-              soundFx.playPop();
-              onClose();
-            }}
-            className="w-8 h-8 rounded-full hover:bg-slate-200 text-slate-400 hover:text-slate-600 flex items-center justify-center transition-colors cursor-pointer"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-2">
+            {onOpenLicenseModal && (
+              <button
+                type="button"
+                onClick={() => {
+                  soundFx.playPop();
+                  onOpenLicenseModal();
+                }}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-800 rounded-xl text-xs font-black transition-all cursor-pointer shadow-2xs"
+                title="ពិនិត្យមើលសុពលភាព ឬបញ្ចូលកូដបន្តសុពលភាព"
+              >
+                <ShieldCheck className="w-3.5 h-3.5 text-amber-600" />
+                <span className="hidden sm:inline">សុពលភាព App (35 ថ្ងៃ)</span>
+                <span className="sm:hidden">សុពលភាព</span>
+              </button>
+            )}
+
+            <button
+              onClick={() => {
+                soundFx.playPop();
+                onClose();
+              }}
+              className="w-8 h-8 rounded-full hover:bg-slate-200 text-slate-400 hover:text-slate-600 flex items-center justify-center transition-colors cursor-pointer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         {/* Tab Navigation */}

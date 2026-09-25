@@ -17,6 +17,10 @@ import { MiniMusicPlayer } from './components/music/MiniMusicPlayer';
 import { NotificationReminderScheduler } from './components/layout/NotificationReminderScheduler';
 import { getSavedTheme, saveTheme, AppTheme } from './utils/themeManager';
 import { ThemePickerModal } from './components/common/ThemePickerModal';
+import { getLicenseInfo, syncLicenseFromStorage, LicenseInfo } from './utils/licenseManager';
+import { LicenseExpiredModal } from './components/license/LicenseExpiredModal';
+import { LicenseWarningBanner } from './components/license/LicenseWarningBanner';
+import { LicenseRenewalModal } from './components/license/LicenseRenewalModal';
 
 export const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabType>('pos');
@@ -26,6 +30,20 @@ export const App: React.FC = () => {
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
   const [currentTheme, setCurrentTheme] = useState<AppTheme>(() => getSavedTheme());
   const [isThemePickerOpen, setIsThemePickerOpen] = useState(false);
+
+  // 35-Day Trial License State
+  const [licenseInfo, setLicenseInfo] = useState<LicenseInfo>(() => getLicenseInfo());
+  const [isRenewModalOpen, setIsRenewModalOpen] = useState(false);
+
+  const refreshLicense = () => {
+    setLicenseInfo(getLicenseInfo());
+  };
+
+  React.useEffect(() => {
+    syncLicenseFromStorage().then(() => {
+      refreshLicense();
+    });
+  }, []);
 
   const handleSelectTheme = (theme: AppTheme) => {
     setCurrentTheme(theme);
@@ -54,6 +72,14 @@ export const App: React.FC = () => {
     >
       {/* Background Notification Scheduler & Polite Banner */}
       <NotificationReminderScheduler />
+
+      {/* 35-Day Trial Expiring Soon Warning Banner (<= 5 days) */}
+      {licenseInfo.isWarning && !licenseInfo.isExpired && (
+        <LicenseWarningBanner
+          daysRemaining={licenseInfo.daysRemaining}
+          onOpenRenewModal={() => setIsRenewModalOpen(true)}
+        />
+      )}
 
       {/* Top Navigation */}
       <Navbar
@@ -105,6 +131,7 @@ export const App: React.FC = () => {
         isOpen={isSettingsModalOpen}
         onClose={() => setIsSettingsModalOpen(false)}
         initialTab={settingsTab}
+        onOpenLicenseModal={() => setIsRenewModalOpen(true)}
       />
 
       {/* Bakery Music Player Modal & Floating Mini Player */}
@@ -117,6 +144,21 @@ export const App: React.FC = () => {
         onClose={() => setIsThemePickerOpen(false)}
         currentTheme={currentTheme}
         onSelectTheme={handleSelectTheme}
+      />
+
+      {/* 35-Day Expiration Lock Modal */}
+      <LicenseExpiredModal
+        isOpen={licenseInfo.isExpired}
+        onRenewSuccess={refreshLicense}
+        isTamper={licenseInfo.tamperDetected}
+      />
+
+      {/* Manual License Renewal Modal */}
+      <LicenseRenewalModal
+        isOpen={isRenewModalOpen}
+        onClose={() => setIsRenewModalOpen(false)}
+        onRenewSuccess={refreshLicense}
+        licenseInfo={licenseInfo}
       />
     </div>
   );
