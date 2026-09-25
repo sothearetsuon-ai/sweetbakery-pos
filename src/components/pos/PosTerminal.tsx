@@ -20,6 +20,7 @@ import { ReceiptModal } from './ReceiptModal';
 import { AddProductModal } from './AddProductModal';
 import { Product, CompletedSale } from '../../types';
 import { soundFx } from '../../utils/audio';
+import { sortProductsNewestFirst } from '../../utils/productUtils';
 
 export const PosTerminal: React.FC = () => {
   const { lang, categories, products, addToCart, cart, cartTotalKhr, cartTotalUsd } = useBakery();
@@ -56,9 +57,9 @@ export const PosTerminal: React.FC = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  // Filter products
+  // Filter products (newest first)
   const filteredProducts = useMemo(() => {
-    return products.filter((p) => {
+    const list = products.filter((p) => {
       const matchesCategory =
         selectedCategory === 'all' || p.categoryId === selectedCategory;
 
@@ -71,6 +72,7 @@ export const PosTerminal: React.FC = () => {
 
       return matchesCategory && matchesSearch;
     });
+    return sortProductsNewestFirst(list);
   }, [products, selectedCategory, searchQuery]);
 
   const getCategoryIcon = (iconName: string) => {

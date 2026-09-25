@@ -27,6 +27,7 @@ import { AddProductModal } from '../pos/AddProductModal';
 import { KioskSlideshowModal } from './KioskSlideshowModal';
 import { SelectDesignPriceModal } from './SelectDesignPriceModal';
 import { NewCustomOrderModal } from '../custom-orders/NewCustomOrderModal';
+import { sortProductsNewestFirst } from '../../utils/productUtils';
 
 // Animated Individual Cake Card with Auto-Transitions
 interface ShowcaseCardProps {
@@ -219,7 +220,7 @@ export const CustomerShowcase: React.FC = () => {
   }, [previewProduct, isLightboxAutoPlay, previewImages.length]);
 
   const filteredProducts = useMemo(() => {
-    return products.filter((p) => {
+    const list = products.filter((p) => {
       const matchCategory = selectedCategory === 'all' || p.categoryId === selectedCategory;
       const q = searchQuery.toLowerCase().trim();
       const matchSearch =
@@ -230,6 +231,7 @@ export const CustomerShowcase: React.FC = () => {
 
       return matchCategory && matchSearch;
     });
+    return sortProductsNewestFirst(list);
   }, [products, selectedCategory, searchQuery]);
 
   // Open custom price setup modal

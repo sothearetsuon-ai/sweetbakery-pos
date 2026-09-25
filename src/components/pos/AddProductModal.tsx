@@ -86,7 +86,8 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, onClos
     try {
       const compressionPromises = files.map((file) => compressImageFile(file, 800, 800, 0.82));
       const compressedImages = await Promise.all(compressionPromises);
-      setImages((prev) => [...prev, ...compressedImages]);
+      setImages((prev) => [...compressedImages, ...prev]);
+      setPrimaryIndex(0);
       if (files.length > 1) {
         confetti({
           particleCount: 40,
@@ -556,7 +557,8 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, onClos
         isOpen={isCameraOpen}
         onClose={() => setIsCameraOpen(false)}
         onCapture={(capturedBase64) => {
-          setImages((prev) => [...prev, capturedBase64]);
+          setImages((prev) => [capturedBase64, ...prev]);
+          setPrimaryIndex(0);
         }}
         title="ថតរូបភាពនំផ្ទាល់ (Cake Photo)"
         subtitle="ថតរូបនំជាក់ស្តែងពីកាម៉េរ៉ាដើម្បីដាក់លក់ និងបង្ហាញក្នុងប្រព័ន្ធ"

@@ -37,6 +37,8 @@ export interface Product {
   isCustom?: boolean;
   description?: string;
   recipeId?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface CartItem {

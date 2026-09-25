@@ -30,6 +30,7 @@ import {
   initialStaffMembers,
   initialRecipes,
 } from '../data/mockData';
+import { sortProductsNewestFirst } from '../utils/productUtils';
 import {
   getStoredFirebaseConfig,
   getFirestoreDb,
@@ -329,7 +330,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   const [categories] = useState<Category[]>(initialCategories);
 
-  // Products with seamless merge for party supplies
+  // Products with seamless merge for party supplies (newest images/products first)
   const [products, setProducts] = useState<Product[]>(() => {
     const saved = localStorage.getItem('bakery_products');
     if (saved) {
@@ -339,12 +340,12 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         const missingPartyItems = partyItems.filter(
           (pi) => !parsed.some((existing) => existing.id === pi.id)
         );
-        return [...parsed, ...missingPartyItems];
+        return sortProductsNewestFirst([...parsed, ...missingPartyItems]);
       } catch (e) {
-        return initialProducts;
+        return sortProductsNewestFirst(initialProducts);
       }
     }
-    return initialProducts;
+    return sortProductsNewestFirst(initialProducts);
   });
 
   // Dynamic Flavors list
@@ -598,7 +599,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             }).catch(() => {});
           }
         });
-        const merged = Array.from(prodMap.values());
+        const merged = sortProductsNewestFirst(Array.from(prodMap.values()));
         try { localStorage.setItem('bakery_products', JSON.stringify(merged)); } catch (e) {}
         return merged;
       });
@@ -804,7 +805,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     // Subscribe to products
     const unsubProducts = subscribeToFirestoreCollection<Product>('products', (cloudProducts) => {
       if (Array.isArray(cloudProducts)) {
-        const filtered = cloudProducts.filter((p) => p && p.id && !deletedProductIds.current.has(p.id));
+        const filtered = sortProductsNewestFirst(cloudProducts.filter((p) => p && p.id && !deletedProductIds.current.has(p.id)));
         setProducts(filtered);
         safeSetStorage('bakery_products', JSON.stringify(filtered));
       }
@@ -1117,12 +1118,15 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     isUpdatingFromLan.current = false;
     if (lanSyncTimer.current) clearTimeout(lanSyncTimer.current);
 
+    const now = new Date().toISOString();
     const newProduct: Product = {
       ...product,
       id: `p-${Date.now()}`,
+      createdAt: now,
+      updatedAt: now,
     };
     setProducts((prev) => {
-      const updated = [newProduct, ...prev.filter((p) => p.id !== newProduct.id)];
+      const updated = sortProductsNewestFirst([newProduct, ...prev.filter((p) => p.id !== newProduct.id)]);
       try { localStorage.setItem('bakery_products', JSON.stringify(updated)); } catch (e) {}
       return updated;
     });
@@ -1138,8 +1142,12 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   };
 
   const updateProduct = (product: Product) => {
+    const updatedProd: Product = {
+      ...product,
+      updatedAt: new Date().toISOString(),
+    };
     setProducts((prev) => {
-      const updated = prev.map((p) => (p.id === product.id ? product : p));
+      const updated = prev.map((p) => (p.id === updatedProd.id ? updatedProd : p));
       try { localStorage.setItem('bakery_products', JSON.stringify(updated)); } catch (e) {}
       return updated;
     });
@@ -1147,10 +1155,10 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     fetch('/api/save-product', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ product }),
+      body: JSON.stringify({ product: updatedProd }),
     }).catch((err) => console.error('Error saving product to LAN:', err));
 
-    saveFirestoreDoc('products', product.id, product);
+    saveFirestoreDoc('products', updatedProd.id, updatedProd);
   };
 
   const deleteProduct = (productId: string) => {
@@ -1972,8 +1980,9 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         localStorage.setItem('bakery_exchange_rate', String(rate));
       }
       if (Array.isArray(data.products)) {
-        setProducts(data.products);
-        localStorage.setItem('bakery_products', JSON.stringify(data.products));
+        const sorted = sortProductsNewestFirst(data.products);
+        setProducts(sorted);
+        localStorage.setItem('bakery_products', JSON.stringify(sorted));
       }
       if (Array.isArray(data.flavors)) {
         setFlavors(data.flavors);

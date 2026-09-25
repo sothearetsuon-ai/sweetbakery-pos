@@ -155,11 +155,30 @@ function lanSyncPlugin(): Plugin {
                 (a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
               );
 
-              // 4. Merge products
+              // 4. Merge products (newest first)
+              const getProdTimestamp = (p: any) => {
+                if (!p) return 0;
+                if (p.updatedAt) {
+                  const t = new Date(p.updatedAt).getTime();
+                  if (!isNaN(t) && t > 0) return t;
+                }
+                if (p.createdAt) {
+                  const t = new Date(p.createdAt).getTime();
+                  if (!isNaN(t) && t > 0) return t;
+                }
+                if (typeof p.id === 'string' && p.id.startsWith('p-')) {
+                  const num = parseInt(p.id.replace('p-', ''), 10);
+                  if (!isNaN(num) && num > 1000000) return num;
+                }
+                return 0;
+              };
+
               const productsMap = new Map();
               (currentDb.products || []).forEach((p: any) => { if (p && p.id) productsMap.set(p.id, p); });
               (incoming.products || []).forEach((p: any) => { if (p && p.id) productsMap.set(p.id, p); });
-              const mergedProducts = Array.from(productsMap.values());
+              const mergedProducts = Array.from(productsMap.values()).sort(
+                (a: any, b: any) => getProdTimestamp(b) - getProdTimestamp(a)
+              );
 
               const mergedDb = {
                 ...currentDb,
