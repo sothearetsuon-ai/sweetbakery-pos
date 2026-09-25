@@ -48,7 +48,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart }
   return (
     <div
       onClick={handleAdd}
-      className="group bg-white rounded-3xl border border-slate-200/90 overflow-hidden shadow-xs hover:shadow-xl hover:shadow-pink-500/15 hover:border-pink-400 hover:-translate-y-1.5 transition-all duration-300 cursor-pointer flex flex-col justify-between select-none relative"
+      style={{ contentVisibility: 'auto', containIntrinsicSize: '240px' }}
+      className="group bg-white rounded-3xl border border-slate-200/90 overflow-hidden shadow-xs hover:shadow-xl hover:shadow-pink-500/15 hover:border-pink-400 hover:-translate-y-1.5 transition-all duration-300 cursor-pointer flex flex-col justify-between select-none relative transform-gpu"
     >
       <div>
         {/* Image Frame */}
@@ -56,7 +57,9 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart }
           <img
             src={displayImage}
             alt={name}
-            className="w-full h-full object-cover group-hover:scale-108 transition-transform duration-500 ease-out"
+            loading="lazy"
+            decoding="async"
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 ease-out transform-gpu"
             onError={() => {
               if (!imgError) setImgError(true);
             }}

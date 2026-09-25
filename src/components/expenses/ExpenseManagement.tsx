@@ -9,6 +9,7 @@ import {
   TrendingUp,
   Wallet,
   Calendar,
+  CalendarDays,
   Trash2,
   Download,
   Eye,
@@ -16,11 +17,15 @@ import {
   FileText,
   Edit2,
   AlertTriangle,
+  RotateCcw,
+  Filter,
 } from 'lucide-react';
 import { useBakery } from '../../context/BakeryContext';
 import { Expense, ExpenseCategory } from '../../types';
 import { NewExpenseModal } from './NewExpenseModal';
 import { soundFx } from '../../utils/audio';
+
+type DateFilterPreset = 'ALL' | 'TODAY' | 'YESTERDAY' | 'THIS_MONTH' | 'CUSTOM';
 
 export const ExpenseManagement: React.FC = () => {
   const { lang, expenses, deleteExpense, clearAllExpenses, sales, exchangeRate } = useBakery();
@@ -34,7 +39,35 @@ export const ExpenseManagement: React.FC = () => {
   const [expenseToDelete, setExpenseToDelete] = useState<Expense | null>(null);
   const [isConfirmClearAll, setIsConfirmClearAll] = useState(false);
 
-  // Financial sums
+  // Date filtering state
+  const [datePreset, setDatePreset] = useState<DateFilterPreset>('ALL');
+  const [customDate, setCustomDate] = useState<string>(() => new Date().toISOString().slice(0, 10));
+
+  // Date helpers
+  const todayStr = useMemo(() => new Date().toISOString().slice(0, 10), []);
+  const yesterdayStr = useMemo(() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 1);
+    return d.toISOString().slice(0, 10);
+  }, []);
+  const thisMonthStr = useMemo(() => new Date().toISOString().slice(0, 7), []);
+
+  const formatKhmerDate = (dateStr: string) => {
+    try {
+      const [y, m, d] = dateStr.split('-');
+      if (!y || !m || !d) return dateStr;
+      const monthNamesKh = [
+        'មករា', 'កុម្ភៈ', 'មីនា', 'មេសា', 'ឧសភា', 'មិថុនា',
+        'កក្កដា', 'សីហា', 'កញ្ញា', 'តុលា', 'វិច្ឆិកា', 'ធ្នូ'
+      ];
+      const mIdx = parseInt(m, 10) - 1;
+      return `${parseInt(d, 10)} ${monthNamesKh[mIdx] || m} ${y}`;
+    } catch {
+      return dateStr;
+    }
+  };
+
+  // Financial sums (All-time)
   const totalSalesUsd = sales.reduce((sum, s) => sum + s.totalUsd, 0);
   const totalSalesKhr = sales.reduce((sum, s) => sum + (s.totalKhr || Math.round(s.totalUsd * exchangeRate)), 0);
   const totalExpensesUsd = expenses.reduce((sum, e) => sum + e.amountUsd, 0);
@@ -61,6 +94,19 @@ export const ExpenseManagement: React.FC = () => {
         receiptFilter === 'ALL' ||
         (receiptFilter === 'WITH_RECEIPT' && !!e.receiptImage) ||
         (receiptFilter === 'WITHOUT_RECEIPT' && !e.receiptImage);
+
+      // Date matching
+      let matchDate = true;
+      if (datePreset === 'TODAY') {
+        matchDate = e.date === todayStr;
+      } else if (datePreset === 'YESTERDAY') {
+        matchDate = e.date === yesterdayStr;
+      } else if (datePreset === 'THIS_MONTH') {
+        matchDate = !!e.date && e.date.startsWith(thisMonthStr);
+      } else if (datePreset === 'CUSTOM') {
+        matchDate = e.date === customDate;
+      }
+
       const q = searchQuery.toLowerCase().trim();
       const matchSearch =
         !q ||
@@ -68,15 +114,33 @@ export const ExpenseManagement: React.FC = () => {
         e.paidBy.toLowerCase().includes(q) ||
         (e.notes && e.notes.toLowerCase().includes(q));
 
-      return matchCat && matchReceipt && matchSearch;
+      return matchCat && matchReceipt && matchDate && matchSearch;
     });
-  }, [expenses, selectedCategory, receiptFilter, searchQuery]);
+  }, [expenses, selectedCategory, receiptFilter, datePreset, customDate, todayStr, yesterdayStr, thisMonthStr, searchQuery]);
+
+  // Filtered sums
+  const filteredExpensesKhr = useMemo(() => {
+    return filteredExpenses.reduce((sum, e) => sum + (e.amountKhr || Math.round(e.amountUsd * exchangeRate)), 0);
+  }, [filteredExpenses, exchangeRate]);
+
+  const filteredExpensesUsd = useMemo(() => {
+    return filteredExpenses.reduce((sum, e) => sum + e.amountUsd, 0);
+  }, [filteredExpenses]);
+
+  const activeDateLabel = useMemo(() => {
+    if (datePreset === 'ALL') return null;
+    if (datePreset === 'TODAY') return `ថ្ងៃនេះ (${formatKhmerDate(todayStr)})`;
+    if (datePreset === 'YESTERDAY') return `ម្សិលមិញ (${formatKhmerDate(yesterdayStr)})`;
+    if (datePreset === 'THIS_MONTH') return `ខែនេះ (${thisMonthStr})`;
+    return `ថ្ងៃទី ${formatKhmerDate(customDate)}`;
+  }, [datePreset, todayStr, yesterdayStr, thisMonthStr, customDate]);
 
   // Export CSV
   const handleExportCsv = () => {
+    const listToExport = filteredExpenses.length > 0 ? filteredExpenses : expenses;
     const csvRows = [
       ['Title', 'Category', 'Quantity', 'Unit', 'UnitPriceKHR', 'TotalKHR', 'TotalUSD', 'PaidBy', 'PaymentMethod', 'Date', 'Notes'].join(','),
-      ...expenses.map((e) =>
+      ...listToExport.map((e) =>
         [
           `"${e.title}"`,
           e.category,
@@ -96,7 +160,8 @@ export const ExpenseManagement: React.FC = () => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `bakery-expenses-${new Date().toISOString().slice(0, 10)}.csv`;
+    const dateLabel = datePreset !== 'ALL' ? (datePreset === 'CUSTOM' ? customDate : datePreset.toLowerCase()) : 'all';
+    a.download = `bakery-expenses-${dateLabel}-${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
   };
 
@@ -154,22 +219,34 @@ export const ExpenseManagement: React.FC = () => {
 
       {/* Financial Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        {/* Total Expenses */}
-        <div className="bg-white p-5 rounded-3xl border border-rose-100 shadow-sm space-y-2">
+        {/* Total Expenses (Adapts when date filter is active) */}
+        <div className="bg-white p-5 rounded-3xl border border-rose-100 shadow-sm space-y-2 relative overflow-hidden">
+          {datePreset !== 'ALL' && (
+            <div className="absolute top-0 right-0 bg-rose-600 text-white text-[9px] font-black px-2.5 py-0.5 rounded-bl-xl shadow-xs">
+              តម្រងថ្ងៃសកម្ម
+            </div>
+          )}
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
-              ការចំណាយសរុប (Expenses)
+              {datePreset !== 'ALL' ? `ចំណាយ (${activeDateLabel})` : 'ការចំណាយសរុប (Expenses)'}
             </span>
             <div className="p-2 bg-rose-50 text-rose-600 rounded-2xl">
               <TrendingDown className="w-4 h-4" />
             </div>
           </div>
           <div className="text-2xl font-black text-rose-600 tracking-tight">
-            {totalExpensesKhr.toLocaleString()} ៛
+            {(datePreset !== 'ALL' ? filteredExpensesKhr : totalExpensesKhr).toLocaleString()} ៛
           </div>
           <div className="text-xs text-slate-500 font-semibold">
-            ~ ${totalExpensesUsd.toFixed(2)} USD ({expenses.length} ប្រតិបត្តិការ)
+            ~ ${(datePreset !== 'ALL' ? filteredExpensesUsd : totalExpensesUsd).toFixed(2)} USD (
+            {datePreset !== 'ALL' ? filteredExpenses.length : expenses.length} ប្រតិបត្តិការ)
           </div>
+          {datePreset !== 'ALL' && (
+            <div className="text-[10px] text-slate-400 pt-1 border-t border-rose-50 flex items-center justify-between">
+              <span>សរុបគ្រប់ពេល៖</span>
+              <span className="font-bold text-slate-600">{totalExpensesKhr.toLocaleString()} ៛</span>
+            </div>
+          )}
         </div>
 
         {/* Total Revenue */}
@@ -231,120 +308,405 @@ export const ExpenseManagement: React.FC = () => {
         </div>
       </div>
 
-      {/* Filter Tabs & Search */}
-      <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
-        {/* Category & Receipt Pills */}
-        <div className="flex flex-wrap items-center gap-2">
-          {/* Receipt Filter Bar */}
-          <div className="flex items-center bg-slate-100/80 p-1 rounded-2xl border border-slate-200/80 text-xs shadow-2xs">
-            <button
-              onClick={() => {
-                soundFx.playPop();
-                setReceiptFilter('ALL');
-              }}
-              className={`px-3 py-1.5 rounded-xl font-bold transition-all ${
-                receiptFilter === 'ALL'
-                  ? 'bg-white text-slate-800 shadow-xs'
-                  : 'text-slate-500 hover:text-slate-800'
-              }`}
-            >
-              ទាំងអស់ ({expenses.length})
-            </button>
-            <button
-              onClick={() => {
-                soundFx.playPop();
-                setReceiptFilter('WITH_RECEIPT');
-              }}
-              className={`px-3 py-1.5 rounded-xl font-bold transition-all flex items-center gap-1.5 ${
-                receiptFilter === 'WITH_RECEIPT'
-                  ? 'bg-white text-rose-600 shadow-xs'
-                  : 'text-slate-500 hover:text-rose-600'
-              }`}
-            >
-              <span>📷 មានវិក្កយបត្រ</span>
-              <span className="text-[10px] bg-rose-50 text-rose-600 px-1.5 py-0.2 rounded-full font-black">
-                {expenses.filter((e) => !!e.receiptImage).length}
-              </span>
-            </button>
-            <button
-              onClick={() => {
-                soundFx.playPop();
-                setReceiptFilter('WITHOUT_RECEIPT');
-              }}
-              className={`px-3 py-1.5 rounded-xl font-bold transition-all flex items-center gap-1.5 ${
-                receiptFilter === 'WITHOUT_RECEIPT'
-                  ? 'bg-white text-amber-600 shadow-xs'
-                  : 'text-slate-500 hover:text-amber-600'
-              }`}
-            >
-              <span>📄 គ្មានវិក្កយបត្រ</span>
-              <span className="text-[10px] bg-amber-50 text-amber-600 px-1.5 py-0.2 rounded-full font-black">
-                {expenses.filter((e) => !e.receiptImage).length}
-              </span>
-            </button>
+      {/* Date Filter & Search Section */}
+      <div className="bg-white p-4 rounded-3xl border border-rose-100/90 shadow-2xs space-y-3">
+        {/* Date Filter Bar */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+          <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex items-center gap-1.5 text-xs font-black text-slate-700 bg-rose-50 text-rose-700 px-3 py-1.5 rounded-2xl border border-rose-100 shrink-0">
+              <CalendarDays className="w-3.5 h-3.5 text-rose-500" />
+              <span>មើលតាមថ្ងៃខែ៖</span>
+            </div>
+
+            {/* Quick Date Presets */}
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <button
+                type="button"
+                onClick={() => {
+                  soundFx.playPop();
+                  setDatePreset('ALL');
+                }}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  datePreset === 'ALL'
+                    ? 'bg-slate-900 text-white shadow-xs'
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                }`}
+              >
+                ទាំងអស់
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  soundFx.playPop();
+                  setDatePreset('TODAY');
+                }}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                  datePreset === 'TODAY'
+                    ? 'bg-rose-600 text-white shadow-xs'
+                    : 'bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200/60'
+                }`}
+              >
+                <span>⚡ ថ្ងៃនេះ</span>
+                <span className="text-[10px] opacity-80">({expenses.filter((e) => e.date === todayStr).length})</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  soundFx.playPop();
+                  setDatePreset('YESTERDAY');
+                }}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                  datePreset === 'YESTERDAY'
+                    ? 'bg-rose-600 text-white shadow-xs'
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                }`}
+              >
+                <span>⏳ ម្សិលមិញ</span>
+                <span className="text-[10px] opacity-80">({expenses.filter((e) => e.date === yesterdayStr).length})</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  soundFx.playPop();
+                  setDatePreset('THIS_MONTH');
+                }}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                  datePreset === 'THIS_MONTH'
+                    ? 'bg-rose-600 text-white shadow-xs'
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                }`}
+              >
+                <span>📅 ខែនេះ</span>
+                <span className="text-[10px] opacity-80">({expenses.filter((e) => !!e.date && e.date.startsWith(thisMonthStr)).length})</span>
+              </button>
+            </div>
           </div>
 
-          {/* Category Pills */}
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
-            <button
-              onClick={() => {
-                soundFx.playPop();
-                setSelectedCategory('ALL');
-              }}
-              className={`px-3 py-1.5 rounded-2xl text-xs font-bold whitespace-nowrap transition-all shadow-2xs ${
-                selectedCategory === 'ALL'
-                  ? 'bg-slate-900 text-white shadow-xs'
-                  : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
-              }`}
-            >
-              គ្រប់ប្រភេទ
-            </button>
-            {Object.entries(categoryLabels).map(([catKey, catVal]) => {
-              const isActive = selectedCategory === catKey;
-              const count = expenses.filter((e) => {
-                const matchCat = e.category === catKey;
-                const matchReceipt =
-                  receiptFilter === 'ALL' ||
-                  (receiptFilter === 'WITH_RECEIPT' && !!e.receiptImage) ||
-                  (receiptFilter === 'WITHOUT_RECEIPT' && !e.receiptImage);
-                return matchCat && matchReceipt;
-              }).length;
-              const totalCatCount = expenses.filter((e) => e.category === catKey).length;
-              return (
+          {/* Custom Date Picker */}
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 bg-slate-50 hover:bg-rose-50/50 border border-slate-200 hover:border-rose-300 px-3 py-1.5 rounded-2xl transition-all shadow-2xs">
+              <Calendar className="w-3.5 h-3.5 text-rose-500 shrink-0" />
+              <span className="text-[11px] font-bold text-slate-600 hidden sm:inline">រើសថ្ងៃជាក់លាក់៖</span>
+              <input
+                type="date"
+                value={customDate}
+                onChange={(e) => {
+                  if (e.target.value) {
+                    soundFx.playPop();
+                    setCustomDate(e.target.value);
+                    setDatePreset('CUSTOM');
+                  }
+                }}
+                className="text-xs font-black text-slate-800 bg-transparent focus:outline-none cursor-pointer"
+              />
+              {datePreset === 'CUSTOM' && (
                 <button
-                  key={catKey}
+                  type="button"
                   onClick={() => {
                     soundFx.playPop();
-                    setSelectedCategory(catKey);
+                    setDatePreset('ALL');
                   }}
-                  className={`px-3 py-1.5 rounded-2xl text-xs font-bold whitespace-nowrap transition-all shadow-2xs ${
-                    isActive
-                      ? 'bg-rose-600 text-white shadow-xs'
-                      : 'bg-white text-slate-600 hover:bg-rose-50 border border-slate-200'
-                  }`}
+                  className="p-0.5 hover:bg-rose-100 text-rose-500 rounded-md transition-colors cursor-pointer"
+                  title="បង្ហាញទាំងអស់"
                 >
-                  {catVal.labelKh} {totalCatCount > 0 ? `(${receiptFilter === 'ALL' ? totalCatCount : count})` : ''}
+                  <X className="w-3.5 h-3.5" />
                 </button>
-              );
-            })}
+              )}
+            </div>
           </div>
         </div>
 
-        {/* Search Input */}
-        <div className="relative w-full lg:w-64">
-          <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-          <input
-            type="text"
-            placeholder="ស្វែងរកការចំណាយ..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-3 py-2 bg-white border border-slate-200 rounded-2xl text-xs focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 font-semibold"
-          />
+        {/* Category & Receipt Pills & Search Bar */}
+        <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 pt-2 border-t border-slate-100">
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Receipt Filter Bar */}
+            <div className="flex items-center bg-slate-100/80 p-1 rounded-2xl border border-slate-200/80 text-xs shadow-2xs">
+              <button
+                onClick={() => {
+                  soundFx.playPop();
+                  setReceiptFilter('ALL');
+                }}
+                className={`px-3 py-1.5 rounded-xl font-bold transition-all cursor-pointer ${
+                  receiptFilter === 'ALL'
+                    ? 'bg-white text-slate-800 shadow-xs'
+                    : 'text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                ទាំងអស់ ({expenses.length})
+              </button>
+              <button
+                onClick={() => {
+                  soundFx.playPop();
+                  setReceiptFilter('WITH_RECEIPT');
+                }}
+                className={`px-3 py-1.5 rounded-xl font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                  receiptFilter === 'WITH_RECEIPT'
+                    ? 'bg-white text-rose-600 shadow-xs'
+                    : 'text-slate-500 hover:text-rose-600'
+                }`}
+              >
+                <span>📷 មានវិក្កយបត្រ</span>
+                <span className="text-[10px] bg-rose-50 text-rose-600 px-1.5 py-0.2 rounded-full font-black">
+                  {expenses.filter((e) => !!e.receiptImage).length}
+                </span>
+              </button>
+              <button
+                onClick={() => {
+                  soundFx.playPop();
+                  setReceiptFilter('WITHOUT_RECEIPT');
+                }}
+                className={`px-3 py-1.5 rounded-xl font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                  receiptFilter === 'WITHOUT_RECEIPT'
+                    ? 'bg-white text-amber-600 shadow-xs'
+                    : 'text-slate-500 hover:text-amber-600'
+                }`}
+              >
+                <span>📄 គ្មានវិក្កយបត្រ</span>
+                <span className="text-[10px] bg-amber-50 text-amber-600 px-1.5 py-0.2 rounded-full font-black">
+                  {expenses.filter((e) => !e.receiptImage).length}
+                </span>
+              </button>
+            </div>
+
+            {/* Category Pills */}
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+              <button
+                onClick={() => {
+                  soundFx.playPop();
+                  setSelectedCategory('ALL');
+                }}
+                className={`px-3 py-1.5 rounded-2xl text-xs font-bold whitespace-nowrap transition-all shadow-2xs cursor-pointer ${
+                  selectedCategory === 'ALL'
+                    ? 'bg-slate-900 text-white shadow-xs'
+                    : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+                }`}
+              >
+                គ្រប់ប្រភេទ
+              </button>
+              {Object.entries(categoryLabels).map(([catKey, catVal]) => {
+                const isActive = selectedCategory === catKey;
+                const totalCatCount = expenses.filter((e) => e.category === catKey).length;
+                return (
+                  <button
+                    key={catKey}
+                    onClick={() => {
+                      soundFx.playPop();
+                      setSelectedCategory(catKey);
+                    }}
+                    className={`px-3 py-1.5 rounded-2xl text-xs font-bold whitespace-nowrap transition-all shadow-2xs cursor-pointer ${
+                      isActive
+                        ? 'bg-rose-600 text-white shadow-xs'
+                        : 'bg-white text-slate-600 hover:bg-rose-50 border border-slate-200'
+                    }`}
+                  >
+                    {catVal.labelKh} {totalCatCount > 0 ? `(${totalCatCount})` : ''}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Search Input */}
+          <div className="relative w-full lg:w-64">
+            <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input
+              type="text"
+              placeholder="ស្វែងរកការចំណាយ..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-9 pr-3 py-2 bg-white border border-slate-200 rounded-2xl text-xs focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 font-semibold"
+            />
+          </div>
         </div>
+
+        {/* Active Filter Feedback Banner */}
+        {datePreset !== 'ALL' && (
+          <div className="bg-gradient-to-r from-rose-500/10 via-pink-500/10 to-amber-500/10 border border-rose-200/80 rounded-2xl p-3 flex flex-wrap items-center justify-between gap-2 text-xs animate-in fade-in duration-200">
+            <div className="flex items-center gap-2 flex-wrap">
+              <div className="p-1.5 bg-rose-500 text-white rounded-xl shadow-xs">
+                <CalendarDays className="w-4 h-4" />
+              </div>
+              <div className="font-bold text-slate-700">
+                កំពុងបង្ហាញចំណាយសម្រាប់៖{' '}
+                <span className="font-black text-rose-700 bg-white px-2 py-0.5 rounded-lg border border-rose-200 shadow-2xs">
+                  {activeDateLabel}
+                </span>
+              </div>
+              <span className="hidden sm:inline text-slate-300">|</span>
+              <div className="font-bold text-slate-700">
+                សរុបចំណាយ៖ <strong className="font-black text-rose-600">{filteredExpensesKhr.toLocaleString()} ៛</strong>
+                <span className="text-slate-500 ml-1">(~ ${filteredExpensesUsd.toFixed(2)} USD)</span>
+              </div>
+              <span className="text-[11px] font-bold bg-white text-slate-600 px-2 py-0.5 rounded-full border border-slate-200">
+                {filteredExpenses.length} ប្រតិបត្តិការ
+              </span>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                soundFx.playPop();
+                setDatePreset('ALL');
+              }}
+              className="px-2.5 py-1 bg-white hover:bg-rose-50 text-rose-600 border border-rose-200 rounded-xl font-bold text-xs transition-all shadow-2xs flex items-center gap-1 cursor-pointer ml-auto"
+            >
+              <RotateCcw className="w-3 h-3" />
+              <span>បង្ហាញទាំងអស់ (Reset)</span>
+            </button>
+          </div>
+        )}
       </div>
 
-      {/* Expenses Table */}
-      <div className="bg-white rounded-3xl border border-rose-100/90 shadow-sm overflow-hidden flex flex-col">
+      {/* Mobile Expenses Cards View (Visible on Small Screens) */}
+      <div className="md:hidden space-y-3">
+        {filteredExpenses.length === 0 ? (
+          <div className="bg-white rounded-3xl border border-rose-100 p-8 text-center text-slate-400 space-y-3">
+            <Receipt className="w-8 h-8 text-rose-300 mx-auto" />
+            <p className="font-bold text-slate-700 text-sm">
+              គ្មានទិន្នន័យការចំណាយក្នុងលក្ខខណ្ឌនេះទេ
+            </p>
+            {datePreset !== 'ALL' && (
+              <button
+                type="button"
+                onClick={() => setDatePreset('ALL')}
+                className="px-4 py-2 bg-rose-600 text-white rounded-xl text-xs font-bold shadow-xs cursor-pointer inline-flex items-center gap-1.5"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                <span>បង្ហាញចំណាយទាំងអស់</span>
+              </button>
+            )}
+          </div>
+        ) : (
+          filteredExpenses.map((expense) => {
+            const catInfo = categoryLabels[expense.category] || {
+              labelKh: expense.category,
+              color: 'bg-slate-100 text-slate-700 border-slate-200',
+            };
+            const displayQty = expense.quantity ?? 1;
+            const displayUnitPriceKhr =
+              expense.unitPriceKhr ?? Math.round(expense.amountKhr / displayQty);
+
+            return (
+              <div
+                key={expense.id}
+                className="bg-white rounded-2xl border border-rose-100/90 p-3.5 shadow-2xs space-y-2.5"
+              >
+                {/* Header: Title & Total */}
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <h4 className="font-black text-slate-900 text-sm">{expense.title}</h4>
+                    <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-lg text-[10px] font-bold border ${catInfo.color}`}>
+                        {catInfo.labelKh}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          soundFx.playPop();
+                          setCustomDate(expense.date);
+                          setDatePreset('CUSTOM');
+                        }}
+                        className="inline-flex items-center gap-1 text-[11px] font-bold text-slate-600 bg-slate-50 hover:bg-rose-50 px-2 py-0.5 rounded-lg border border-slate-200 cursor-pointer"
+                        title="ចុចដើម្បីមើលចំណាយក្នុងថ្ងៃនេះ"
+                      >
+                        <Calendar className="w-3 h-3 text-rose-500" />
+                        <span>{expense.date}</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="text-right shrink-0">
+                    <div className="font-black text-rose-600 text-base">
+                      {expense.amountKhr.toLocaleString()} ៛
+                    </div>
+                    <div className="text-[10px] text-slate-400 font-bold">
+                      ~ ${expense.amountUsd.toFixed(2)} USD
+                    </div>
+                  </div>
+                </div>
+
+                {/* Details: Qty, Unit price, Paid by */}
+                <div className="flex items-center justify-between text-xs bg-slate-50 p-2.5 rounded-xl border border-slate-100">
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-slate-800">
+                      {displayQty} {expense.unit || 'ដុំ'}
+                    </span>
+                    <span className="text-slate-300">@</span>
+                    <span className="text-slate-600 font-medium">
+                      {displayUnitPriceKhr.toLocaleString()} ៛
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-bold text-slate-700 text-[11px]">{expense.paidBy}</span>
+                    <span className="text-[9px] bg-white text-slate-600 px-1.5 py-0.5 rounded border border-slate-200 font-mono">
+                      {expense.paymentMethod === 'CASH_KHR'
+                        ? 'សាច់ប្រាក់ ៛'
+                        : expense.paymentMethod === 'BANK_TRANSFER'
+                        ? 'ABA'
+                        : 'សាច់ប្រាក់ $'}
+                    </span>
+                  </div>
+                </div>
+
+                {expense.notes && (
+                  <p className="text-xs text-slate-500 bg-amber-50/50 p-2 rounded-xl border border-amber-100/50">
+                    📝 {expense.notes}
+                  </p>
+                )}
+
+                {/* Footer: Receipt & Actions */}
+                <div className="flex items-center justify-between pt-1 border-t border-slate-100">
+                  {expense.receiptImage ? (
+                    <button
+                      type="button"
+                      onClick={() => setPreviewReceiptImage(expense.receiptImage || null)}
+                      className="px-2.5 py-1 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-xl transition-all inline-flex items-center gap-1 text-[11px] font-bold cursor-pointer"
+                    >
+                      <Eye className="w-3.5 h-3.5" />
+                      <span>មើលរូបវិក្កយបត្រ</span>
+                    </button>
+                  ) : (
+                    <span className="text-[11px] text-slate-400">គ្មានរូបវិក្កយបត្រ</span>
+                  )}
+
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        soundFx.playPop();
+                        setEditingExpense(expense);
+                        setIsAddExpenseOpen(true);
+                      }}
+                      className="p-1.5 bg-slate-100 hover:bg-pink-50 text-slate-600 hover:text-pink-600 rounded-xl transition-colors cursor-pointer"
+                      title="កែប្រែ"
+                    >
+                      <Edit2 className="w-4 h-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        soundFx.playPop();
+                        setExpenseToDelete(expense);
+                      }}
+                      className="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-xl transition-colors cursor-pointer"
+                      title="លុប"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            );
+          })
+        )}
+      </div>
+
+      {/* Desktop Expenses Table (Hidden on Mobile) */}
+      <div className="hidden md:flex bg-white rounded-3xl border border-rose-100/90 shadow-sm overflow-hidden flex-col">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs text-slate-600">
             <thead className="bg-slate-50 text-slate-700 font-black border-b border-slate-200">
@@ -369,11 +731,24 @@ export const ExpenseManagement: React.FC = () => {
                         : 'គ្មានទិន្នន័យការចំណាយក្នុងលក្ខខណ្ឌនេះទេ'}
                     </p>
                     <p className="text-xs text-slate-400 mt-1 max-w-md mx-auto">
-                      {receiptFilter === 'WITHOUT_RECEIPT' && selectedCategory !== 'ALL'
-                        ? 'មុខទំនិញដែលគ្មានវិក្កយបត្រអាចស្ថិតនៅក្នុងប្រភេទផ្សេង (សូមចុចប៊ូតុង «បង្ហាញគ្រប់ប្រភេទ» ខាងក្រោម)'
+                      {datePreset !== 'ALL'
+                        ? 'មិនមានប្រតិបត្តិការចំណាយក្នុងកាលបរិច្ឆេទនេះទេ សូមសាកល្បងជ្រើសរើសថ្ងៃផ្សេង ឬចុចបង្ហាញទាំងអស់'
                         : 'លោកអ្នកអាចចុចប៊ូតុងខាងក្រោមដើម្បីមើលទិន្នន័យទាំងអស់'}
                     </p>
                     <div className="flex items-center justify-center gap-2 mt-4 flex-wrap">
+                      {datePreset !== 'ALL' && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            soundFx.playPop();
+                            setDatePreset('ALL');
+                          }}
+                          className="px-3.5 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer flex items-center gap-1"
+                        >
+                          <RotateCcw className="w-3.5 h-3.5" />
+                          <span>បង្ហាញចំណាយទាំងអស់ (All Dates)</span>
+                        </button>
+                      )}
                       {selectedCategory !== 'ALL' && (
                         <button
                           type="button"
@@ -381,22 +756,10 @@ export const ExpenseManagement: React.FC = () => {
                             soundFx.playPop();
                             setSelectedCategory('ALL');
                           }}
-                          className="px-3.5 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer flex items-center gap-1"
+                          className="px-3.5 py-1.5 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer flex items-center gap-1"
                         >
                           <Eye className="w-3.5 h-3.5" />
                           <span>បង្ហាញគ្រប់ប្រភេទ (Show All Categories)</span>
-                        </button>
-                      )}
-                      {receiptFilter !== 'ALL' && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            soundFx.playPop();
-                            setReceiptFilter('ALL');
-                          }}
-                          className="px-3.5 py-1.5 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer flex items-center gap-1"
-                        >
-                          <span>🔄 បង្ហាញទាំងអស់ (All Receipts)</span>
                         </button>
                       )}
                     </div>
@@ -464,10 +827,19 @@ export const ExpenseManagement: React.FC = () => {
                       </td>
 
                       <td className="py-2.5 px-4">
-                        <div className="flex items-center gap-1.5 text-slate-700 font-semibold text-xs">
-                          <Calendar className="w-3.5 h-3.5 text-slate-400" />
-                          <span>{expense.date}</span>
-                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            soundFx.playPop();
+                            setCustomDate(expense.date);
+                            setDatePreset('CUSTOM');
+                          }}
+                          className="flex items-center gap-1.5 text-slate-700 hover:text-rose-600 font-semibold text-xs cursor-pointer transition-colors group/date"
+                          title="ចុចដើម្បីមើលចំណាយក្នុងថ្ងៃនេះ (Filter by this date)"
+                        >
+                          <Calendar className="w-3.5 h-3.5 text-slate-400 group-hover/date:text-rose-500" />
+                          <span className="group-hover/date:underline font-bold">{expense.date}</span>
+                        </button>
                         <div className="flex items-center gap-1.5 mt-0.5">
                           <span className="font-bold text-slate-800 text-[11px]">{expense.paidBy}</span>
                           <span className="text-[9px] bg-slate-100 text-slate-600 px-1.5 py-0.2 rounded font-mono">
@@ -537,10 +909,11 @@ export const ExpenseManagement: React.FC = () => {
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
               <span>
                 កំពុងបង្ហាញ <strong>{filteredExpenses.length}</strong> នៃ <strong>{expenses.length}</strong> ប្រតិបត្តិការចំណាយ
+                {datePreset !== 'ALL' && <span className="text-rose-600 ml-1">({activeDateLabel})</span>}
               </span>
             </div>
             <span className="text-slate-400 text-[11px]">
-              💡 (លោកអ្នកអាច Scroll / ទាញចុះក្រោមដើម្បីមើលប្រតិបត្តិការទាំងអស់)
+              💡 (លោកអ្នកអាចចុចលើកាលបរិច្ឆេទក្នុងតារាង ដើម្បីមើលការចំណាយក្នុងថ្ងៃនោះបានភ្លាមៗ)
             </span>
           </div>
         )}

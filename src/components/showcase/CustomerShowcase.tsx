@@ -53,15 +53,30 @@ const ShowcaseCard: React.FC<ShowcaseCardProps> = ({
       : [product.imageUrl].filter(Boolean);
   const images = rawImages.length > 0 ? rawImages : [fallbackCake];
   const [currentIdx, setCurrentIdx] = useState(0);
+  const [isInView, setIsInView] = useState(false);
+  const cardRef = React.useRef<HTMLDivElement>(null);
 
-  // Auto-transition between cake photos
+  // IntersectionObserver to only animate / interval when card is visible in viewport
   useEffect(() => {
-    if (images.length <= 1) return;
+    if (!cardRef.current) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setIsInView(entry.isIntersecting);
+      },
+      { rootMargin: '120px 0px', threshold: 0.05 }
+    );
+    observer.observe(cardRef.current);
+    return () => observer.disconnect();
+  }, []);
+
+  // Auto-transition between cake photos ONLY when visible in viewport
+  useEffect(() => {
+    if (!isInView || images.length <= 1) return;
     const interval = setInterval(() => {
       setCurrentIdx((prev) => (prev + 1) % images.length);
-    }, 3200);
+    }, 4500);
     return () => clearInterval(interval);
-  }, [images.length]);
+  }, [isInView, images.length]);
 
   const name = lang === 'km' ? product.nameKh : product.nameEn;
   const priceKhr = product.priceKhr ?? Math.round(product.priceUsd * exchangeRate);
@@ -69,33 +84,40 @@ const ShowcaseCard: React.FC<ShowcaseCardProps> = ({
 
   return (
     <div
+      ref={cardRef}
       onClick={onClick}
-      className="group bg-white rounded-3xl border border-rose-100/90 overflow-hidden shadow-xs hover:shadow-2xl hover:shadow-pink-500/15 hover:-translate-y-2 transition-all duration-300 cursor-pointer flex flex-col justify-between"
+      style={{ contentVisibility: 'auto', containIntrinsicSize: '360px' }}
+      className="group bg-white rounded-3xl border border-rose-100/90 overflow-hidden shadow-xs hover:shadow-2xl hover:shadow-pink-500/15 hover:-translate-y-2 transition-all duration-300 cursor-pointer flex flex-col justify-between transform-gpu"
     >
       {/* Photo with smooth transition */}
       <div className="relative w-full h-56 bg-rose-50 overflow-hidden">
-        {images.map((img, idx) => (
-          <img
-            key={idx}
-            src={img}
-            alt={`${name} ${idx + 1}`}
-            onError={(e) => {
-              (e.target as HTMLImageElement).src = fallbackCake;
-            }}
-            className={`w-full h-full object-cover absolute inset-0 transition-all duration-700 ease-in-out group-hover:scale-105 ${
-              idx === currentIdx
-                ? 'opacity-100 scale-100 z-10'
-                : 'opacity-0 scale-95 z-0 pointer-events-none'
-            }`}
-          />
-        ))}
+        {images.map((img, idx) => {
+          const isActive = idx === currentIdx;
+          return (
+            <img
+              key={idx}
+              src={img}
+              alt={`${name} ${idx + 1}`}
+              loading="lazy"
+              decoding="async"
+              onError={(e) => {
+                (e.target as HTMLImageElement).src = fallbackCake;
+              }}
+              className={`w-full h-full object-cover absolute inset-0 transition-opacity duration-500 ease-out transform-gpu group-hover:scale-105 ${
+                isActive
+                  ? 'opacity-100 z-10'
+                  : 'opacity-0 z-0 pointer-events-none'
+              }`}
+            />
+          );
+        })}
 
         {/* Multi-image badge */}
         {images.length > 1 && (
           <div className="absolute top-3 left-3 z-20 bg-black/60 backdrop-blur-md text-white text-[10px] font-black px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow-xs border border-white/10">
-            <Sparkles className="w-2.5 h-2.5 text-yellow-300 animate-spin-slow" />
+            <Sparkles className="w-2.5 h-2.5 text-yellow-300" />
             <span>
-              {currentIdx + 1}/{images.length} • ស្លាយស្វ័យប្រវត្តិ
+              {currentIdx + 1}/{images.length} • ស្លាយ
             </span>
           </div>
         )}

@@ -181,6 +181,8 @@ export const SelectDesignPriceModal: React.FC<SelectDesignPriceModalProps> = ({
               <img
                 src={images[selectedImgIdx] || images[0]}
                 alt={product.nameKh}
+                loading="lazy"
+                decoding="async"
                 className="w-full h-full object-cover"
               />
               {images.length > 1 && (
@@ -220,7 +222,7 @@ export const SelectDesignPriceModal: React.FC<SelectDesignPriceModalProps> = ({
                           : 'border-slate-200 opacity-60 hover:opacity-100'
                       }`}
                     >
-                      <img src={img} alt="thumb" className="w-full h-full object-cover" />
+                      <img src={img} alt="thumb" loading="lazy" decoding="async" className="w-full h-full object-cover" />
                     </button>
                   ))}
                 </div>
