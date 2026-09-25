@@ -15,6 +15,8 @@ import { StaffManagement } from './components/staff/StaffManagement';
 import { MusicPlayerModal } from './components/music/MusicPlayerModal';
 import { MiniMusicPlayer } from './components/music/MiniMusicPlayer';
 import { NotificationReminderScheduler } from './components/layout/NotificationReminderScheduler';
+import { getSavedTheme, saveTheme, AppTheme } from './utils/themeManager';
+import { ThemePickerModal } from './components/common/ThemePickerModal';
 
 export const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabType>('pos');
@@ -22,6 +24,13 @@ export const App: React.FC = () => {
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [settingsTab, setSettingsTab] = useState<SettingsTab>('store');
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
+  const [currentTheme, setCurrentTheme] = useState<AppTheme>(() => getSavedTheme());
+  const [isThemePickerOpen, setIsThemePickerOpen] = useState(false);
+
+  const handleSelectTheme = (theme: AppTheme) => {
+    setCurrentTheme(theme);
+    saveTheme(theme.id);
+  };
 
   const handleOpenSettings = (tab: SettingsTab = 'store') => {
     setSettingsTab(tab);
@@ -39,7 +48,10 @@ export const App: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#FAF8F5] flex flex-col font-sans selection:bg-pink-100 selection:text-pink-700 overflow-x-hidden">
+    <div
+      className={`min-h-screen ${currentTheme.bgClass} flex flex-col font-sans selection:bg-pink-100 selection:text-pink-700 overflow-x-hidden transition-colors duration-300`}
+      style={currentTheme.bgStyle}
+    >
       {/* Background Notification Scheduler & Polite Banner */}
       <NotificationReminderScheduler />
 
@@ -49,6 +61,7 @@ export const App: React.FC = () => {
         onOpenSettingsModal={handleOpenSettings}
         onOpenStaffTab={() => handleOpenSettings('staff')}
         onToggleMobileDrawer={() => setIsMobileDrawerOpen((prev) => !prev)}
+        onOpenThemePicker={() => setIsThemePickerOpen(true)}
       />
 
       {/* Main Workspace with Sidebar & Content */}
@@ -57,6 +70,7 @@ export const App: React.FC = () => {
           activeTab={activeTab}
           setActiveTab={handleSelectTab}
           onOpenSettings={handleOpenSettings}
+          onOpenThemePicker={() => setIsThemePickerOpen(true)}
           isMobileOpen={isMobileDrawerOpen}
           onCloseMobile={() => setIsMobileDrawerOpen(false)}
         />
@@ -96,6 +110,14 @@ export const App: React.FC = () => {
       {/* Bakery Music Player Modal & Floating Mini Player */}
       <MusicPlayerModal />
       <MiniMusicPlayer />
+
+      {/* Background Theme Customizer Modal */}
+      <ThemePickerModal
+        isOpen={isThemePickerOpen}
+        onClose={() => setIsThemePickerOpen(false)}
+        currentTheme={currentTheme}
+        onSelectTheme={handleSelectTheme}
+      />
     </div>
   );
 };

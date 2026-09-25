@@ -251,6 +251,7 @@ export const AddEditIngredientModal: React.FC<AddEditIngredientModalProps> = ({
                 required
                 min="0"
                 value={currentStock}
+                onFocus={(e) => e.target.select()}
                 onChange={(e) => setCurrentStock(e.target.value)}
                 className="w-full px-2.5 py-1.5 text-sm font-black bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500 text-slate-800"
               />
@@ -266,6 +267,7 @@ export const AddEditIngredientModal: React.FC<AddEditIngredientModalProps> = ({
                 step="0.01"
                 min="0"
                 value={totalUsed}
+                onFocus={(e) => e.target.select()}
                 onChange={(e) => setTotalUsed(e.target.value)}
                 className="w-full px-2.5 py-1.5 text-sm font-black bg-white border border-purple-200 rounded-xl text-purple-900 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500"
               />
@@ -283,6 +285,7 @@ export const AddEditIngredientModal: React.FC<AddEditIngredientModalProps> = ({
                 required
                 min="0"
                 value={minAlertStock}
+                onFocus={(e) => e.target.select()}
                 onChange={(e) => setMinAlertStock(e.target.value)}
                 className="w-full px-2.5 py-1.5 text-sm font-black bg-white border border-rose-200 rounded-xl text-rose-700 focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500"
               />
@@ -307,6 +310,7 @@ export const AddEditIngredientModal: React.FC<AddEditIngredientModalProps> = ({
               required
               min="0"
               value={costPerUnitUsd}
+              onFocus={(e) => e.target.select()}
               onChange={(e) => setCostPerUnitUsd(e.target.value)}
               className="w-full px-3.5 py-2 text-base font-black bg-white border border-emerald-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
             />

@@ -15,6 +15,7 @@ import {
   Lock,
   X,
   Music,
+  Palette,
 } from 'lucide-react';
 import { useBakery } from '../../context/BakeryContext';
 import { useMusic } from '../../context/MusicContext';
@@ -37,6 +38,7 @@ interface SidebarProps {
   activeTab: TabType;
   setActiveTab: (tab: TabType) => void;
   onOpenSettings: (tab?: 'store' | 'khqr' | 'staff' | 'currency') => void;
+  onOpenThemePicker?: () => void;
   isMobileOpen?: boolean;
   onCloseMobile?: () => void;
 }
@@ -45,6 +47,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   activeTab,
   setActiveTab,
   onOpenSettings,
+  onOpenThemePicker,
   isMobileOpen = false,
   onCloseMobile,
 }) => {
@@ -269,6 +272,26 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </span>
           )}
         </button>
+
+        {/* Background Theme Switcher button */}
+        {onOpenThemePicker && (
+          <button
+            onClick={() => {
+              soundFx.playPop();
+              onOpenThemePicker();
+              onCloseMobile?.();
+            }}
+            className="w-full flex items-center justify-between px-3.5 py-2 rounded-2xl font-bold text-xs text-slate-600 hover:bg-white hover:text-pink-600 transition-all border border-transparent hover:border-pink-200/60 shadow-2xs cursor-pointer group"
+          >
+            <div className="flex items-center gap-3">
+              <Palette className="w-4 h-4 text-pink-500 transition-transform group-hover:rotate-45" />
+              <span>ប្តូរពណ៌ផ្ទៃ 🎨</span>
+            </div>
+            <span className="text-[10px] text-pink-600 font-bold bg-pink-50 px-2 py-0.5 rounded-full border border-pink-100">
+              Themes
+            </span>
+          </button>
+        )}
 
         {/* Settings button */}
         <button

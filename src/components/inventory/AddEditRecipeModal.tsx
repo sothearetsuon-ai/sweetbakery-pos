@@ -465,8 +465,13 @@ export const AddEditRecipeModal: React.FC<AddEditRecipeModalProps> = ({
                     min="1"
                     step="1"
                     required
-                    value={yieldQty}
-                    onChange={(e) => setYieldQty(parseInt(e.target.value, 10) || 1)}
+                    value={yieldQty === 0 ? '' : yieldQty}
+                    placeholder="1"
+                    onFocus={(e) => e.target.select()}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      setYieldQty(v === '' ? 0 : parseInt(v, 10) || 0);
+                    }}
                     className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-black text-slate-800 focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500 text-center"
                   />
                 </div>
@@ -572,8 +577,13 @@ export const AddEditRecipeModal: React.FC<AddEditRecipeModalProps> = ({
                           type="number"
                           step="any"
                           min="0"
-                          value={item.quantity}
-                          onChange={(e) => handleUpdateItemQty(idx, parseFloat(e.target.value) || 0)}
+                          value={item.quantity === 0 ? '' : item.quantity}
+                          placeholder="0"
+                          onFocus={(e) => e.target.select()}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            handleUpdateItemQty(idx, val === '' ? 0 : parseFloat(val) || 0);
+                          }}
                           className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-black text-slate-800 text-center focus:outline-none focus:ring-1 focus:ring-pink-500"
                         />
                       </td>
@@ -648,6 +658,7 @@ export const AddEditRecipeModal: React.FC<AddEditRecipeModalProps> = ({
                     step="500"
                     min="0"
                     value={packagingCostKhr}
+                    onFocus={(e) => e.target.select()}
                     onChange={(e) => setPackagingCostKhr(e.target.value)}
                     className="w-full px-3 py-2 pr-8 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-pink-500/20"
                   />
@@ -668,6 +679,7 @@ export const AddEditRecipeModal: React.FC<AddEditRecipeModalProps> = ({
                     step="500"
                     min="0"
                     value={laborCostKhr}
+                    onFocus={(e) => e.target.select()}
                     onChange={(e) => setLaborCostKhr(e.target.value)}
                     className="w-full px-3 py-2 pr-8 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-pink-500/20"
                   />
@@ -688,6 +700,7 @@ export const AddEditRecipeModal: React.FC<AddEditRecipeModalProps> = ({
                     step="500"
                     min="0"
                     value={overheadCostKhr}
+                    onFocus={(e) => e.target.select()}
                     onChange={(e) => setOverheadCostKhr(e.target.value)}
                     className="w-full px-3 py-2 pr-8 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-pink-500/20"
                   />
@@ -718,6 +731,7 @@ export const AddEditRecipeModal: React.FC<AddEditRecipeModalProps> = ({
                     step="1000"
                     min="0"
                     value={sellingPriceKhr}
+                    onFocus={(e) => e.target.select()}
                     onChange={(e) => setSellingPriceKhr(e.target.value)}
                     className="w-32 px-2.5 py-1 pr-6 bg-slate-700/90 border border-slate-600 rounded-xl text-xs font-black text-amber-300 focus:outline-none focus:ring-1 focus:ring-amber-400 text-right"
                   />

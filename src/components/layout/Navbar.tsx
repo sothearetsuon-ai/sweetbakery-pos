@@ -18,6 +18,7 @@ import {
   Bell,
   Wifi,
   WifiOff,
+  Palette,
 } from 'lucide-react';
 import { useBakery } from '../../context/BakeryContext';
 import { useMusic } from '../../context/MusicContext';
@@ -34,6 +35,7 @@ interface NavbarProps {
   onOpenSettingsModal: (tab?: SettingsTab) => void;
   onOpenStaffTab?: () => void;
   onToggleMobileDrawer?: () => void;
+  onOpenThemePicker?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -41,6 +43,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenSettingsModal,
   onOpenStaffTab,
   onToggleMobileDrawer,
+  onOpenThemePicker,
 }) => {
   const {
     lang,
@@ -263,6 +266,22 @@ export const Navbar: React.FC<NavbarProps> = ({
               </span>
             )}
           </button>
+
+          {/* Background Theme Switcher Button */}
+          {onOpenThemePicker && (
+            <button
+              type="button"
+              onClick={() => {
+                soundFx.playPop();
+                onOpenThemePicker();
+              }}
+              title="ផ្លាស់ប្តូរពណ៌ផ្ទៃខាងក្រោយ (Background Theme Color)"
+              className="flex items-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-2xl text-xs font-bold transition-all shadow-2xs border bg-white border-slate-200/80 hover:bg-pink-50 hover:border-pink-300 text-slate-700 hover:text-pink-600 cursor-pointer active:scale-95"
+            >
+              <Palette className="w-3.5 h-3.5 text-pink-500" />
+              <span className="hidden md:inline">ពណ៌ផ្ទៃ 🎨</span>
+            </button>
+          )}
 
           {/* Cloud Sync Status Indicator */}
           <button
