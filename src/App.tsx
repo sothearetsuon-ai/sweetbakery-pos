@@ -17,10 +17,12 @@ import { MiniMusicPlayer } from './components/music/MiniMusicPlayer';
 import { NotificationReminderScheduler } from './components/layout/NotificationReminderScheduler';
 import { getSavedTheme, saveTheme, AppTheme } from './utils/themeManager';
 import { ThemePickerModal } from './components/common/ThemePickerModal';
-import { getLicenseInfo, syncLicenseFromStorage, LicenseInfo } from './utils/licenseManager';
+import { getLicenseInfo, syncLicenseFromStorage, syncRemoteLicense, LicenseInfo } from './utils/licenseManager';
 import { LicenseExpiredModal } from './components/license/LicenseExpiredModal';
 import { LicenseWarningBanner } from './components/license/LicenseWarningBanner';
 import { LicenseRenewalModal } from './components/license/LicenseRenewalModal';
+import { soundFx } from './utils/audio';
+import confetti from 'canvas-confetti';
 
 export const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabType>('pos');
@@ -43,6 +45,23 @@ export const App: React.FC = () => {
     syncLicenseFromStorage().then(() => {
       refreshLicense();
     });
+
+    // Real-time remote cloud auto-unlock subscription
+    const unsubscribe = syncRemoteLicense(() => {
+      refreshLicense();
+      try {
+        soundFx.playSuccess();
+        confetti({
+          particleCount: 90,
+          spread: 70,
+          origin: { y: 0.6 },
+        });
+      } catch (e) {}
+    });
+
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
   }, []);
 
   const handleSelectTheme = (theme: AppTheme) => {

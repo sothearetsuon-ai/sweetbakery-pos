@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
-import { Lock, Key, ShieldAlert, Phone, Send, CheckCircle2, Sparkles } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Lock, Key, ShieldAlert, Phone, Send, CheckCircle2, Sparkles, Copy, Check, Radio, Wifi } from 'lucide-react';
 import confetti from 'canvas-confetti';
-import { applyLicenseKey } from '../../utils/licenseManager';
+import { applyLicenseKey, getDeviceId } from '../../utils/licenseManager';
 import { soundFx } from '../../utils/audio';
 
 interface LicenseExpiredModalProps {
@@ -19,8 +19,31 @@ export const LicenseExpiredModal: React.FC<LicenseExpiredModalProps> = ({
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
   const [isActivating, setIsActivating] = useState(false);
+  const [copiedId, setCopiedId] = useState(false);
+  const [deviceId, setDeviceId] = useState('');
+
+  useEffect(() => {
+    if (isOpen) {
+      setDeviceId(getDeviceId());
+    }
+  }, [isOpen]);
 
   if (!isOpen) return null;
+
+  const handleCopyDeviceId = () => {
+    soundFx.playPop();
+    navigator.clipboard.writeText(deviceId);
+    setCopiedId(true);
+    setTimeout(() => setCopiedId(false), 2000);
+  };
+
+  const handleTelegramShare = () => {
+    soundFx.playPop();
+    const text = encodeURIComponent(
+      `ជំរាបសួរ Admin! ខ្ញុំសូមស្នើសុំបន្តសុពលភាពកម្មវិធី SweetBakery POS:\n- លេខសម្គាល់ម៉ាស៊ីន (Machine ID): ${deviceId}\nសូមមេត្តាជួយដោះសោពីចម្ងាយ ឬផ្តល់កូដបន្តសុពលភាព។ សូមអរគុណ!`
+    );
+    window.open(`https://t.me/share/url?url=&text=${text}`, '_blank');
+  };
 
   const handleActivate = (e: React.FormEvent) => {
     e.preventDefault();
@@ -61,7 +84,7 @@ export const LicenseExpiredModal: React.FC<LicenseExpiredModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-[9999] bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4 select-none animate-in fade-in duration-300">
+    <div className="fixed inset-0 z-[9999] bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 select-none animate-in fade-in duration-300">
       <div className="bg-white rounded-3xl max-w-md w-full shadow-2xl border border-rose-200 overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
         {/* Header Alert */}
         <div className="p-6 bg-gradient-to-br from-rose-600 via-pink-600 to-amber-600 text-white text-center relative overflow-hidden">
@@ -75,12 +98,71 @@ export const LicenseExpiredModal: React.FC<LicenseExpiredModalProps> = ({
           <p className="text-xs text-rose-100 font-medium max-w-xs mx-auto">
             {isTamper
               ? 'ម៉ោង ឬកាលបរិច្ឆេទនៅលើឧបករណ៍ត្រូវបានកែសម្រួលថយក្រោយ។ សូមកែម៉ោងឱ្យត្រូវ ឬបញ្ចូលកូដដោះសោ។'
-              : 'រយៈពេលសាកល្បង ៣៥ ថ្ងៃនៃប្រព័ន្ធ SweetBakery POS ត្រូវបានបញ្ចប់។ សូមទាក់ទងមកកាន់អ្នកគ្រប់គ្រងដើម្បីបន្តសុពលភាពថ្មី។'}
+              : 'រយៈពេលកំណត់នៃប្រព័ន្ធ SweetBakery POS ត្រូវបានបញ្ចប់។ សូមទាក់ទងមកកាន់អ្នកគ្រប់គ្រងដើម្បីដោះសោ។'}
           </p>
         </div>
 
         {/* Form Body */}
-        <div className="p-6 space-y-5">
+        <div className="p-5 sm:p-6 space-y-4">
+          {/* Unique Machine ID Box */}
+          <div className="p-3.5 bg-gradient-to-r from-slate-50 to-pink-50/40 border border-slate-200 rounded-2xl space-y-2">
+            <div className="flex items-center justify-between text-xs">
+              <span className="font-bold text-slate-600 flex items-center gap-1.5">
+                <Radio className="w-3.5 h-3.5 text-pink-600 animate-pulse" />
+                <span>លេខសម្គាល់ម៉ាស៊ីន (Machine ID)</span>
+              </span>
+              <span className="text-[10px] font-bold text-pink-700 bg-pink-100 px-2 py-0.5 rounded-full">
+                ឧបករណ៍ជាក់លាក់
+              </span>
+            </div>
+
+            <div className="flex items-center justify-between gap-2 bg-white px-3 py-2 rounded-xl border border-slate-200/90 shadow-2xs">
+              <code className="font-mono font-black text-sm text-slate-800 tracking-wider">
+                {deviceId || 'DEV-....'}
+              </code>
+              <button
+                type="button"
+                onClick={handleCopyDeviceId}
+                className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 rounded-lg text-xs font-bold transition-all flex items-center gap-1 cursor-pointer"
+              >
+                {copiedId ? (
+                  <>
+                    <Check className="w-3.5 h-3.5 text-emerald-600" />
+                    <span className="text-emerald-600 font-bold">បានចម្លង</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-3.5 h-3.5 text-slate-500" />
+                    <span>ចម្លង</span>
+                  </>
+                )}
+              </button>
+            </div>
+
+            <div className="text-[11px] text-slate-500 font-medium flex items-center justify-between pt-1">
+              <span>ផ្ញើលេខ ID នេះទៅកាន់ម្ចាស់ប្រព័ន្ធដើម្បីដោះសោ</span>
+              <button
+                type="button"
+                onClick={handleTelegramShare}
+                className="text-pink-600 hover:text-pink-700 font-bold flex items-center gap-1 hover:underline cursor-pointer"
+              >
+                <Send className="w-3 h-3" />
+                <span>ផ្ញើតាម Telegram</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Cloud Auto-Unlock Status Pulse */}
+          <div className="p-2.5 bg-emerald-50/70 border border-emerald-200/80 rounded-xl flex items-center gap-2.5 text-emerald-800">
+            <span className="relative flex h-2.5 w-2.5">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+            </span>
+            <div className="text-[11px] font-bold leading-tight">
+              📡 ប្រព័ន្ធ Cloud កំពុងភ្ជាប់៖ ម្ចាស់ប្រព័ន្ធអាចដោះសោពីចម្ងាយដោយស្វ័យប្រវត្តិ (មិនបាច់វាយកូដ)
+            </div>
+          </div>
+
           {successMsg ? (
             <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl text-emerald-800 text-center space-y-1 animate-in zoom-in-95 duration-150">
               <CheckCircle2 className="w-8 h-8 text-emerald-600 mx-auto" />
@@ -88,28 +170,28 @@ export const LicenseExpiredModal: React.FC<LicenseExpiredModalProps> = ({
               <div className="text-xs text-emerald-600">កំពុងបើកដំណើរការប្រព័ន្ធឡើងវិញ...</div>
             </div>
           ) : (
-            <form onSubmit={handleActivate} className="space-y-4">
+            <form onSubmit={handleActivate} className="space-y-3 pt-1">
               <div>
                 <label className="block text-xs font-black text-slate-700 mb-1.5 flex items-center gap-1.5">
                   <Key className="w-3.5 h-3.5 text-pink-600" />
-                  <span>វាយបញ្ចូលកូដបន្តសុពលភាព (License Key / PIN)</span>
+                  <span>ឬបញ្ចូលកូដដោះសោដែលម្ចាស់ផ្ញើមក (Locked Key / PIN)</span>
                 </label>
                 <div className="relative">
                   <input
                     type="text"
                     required
-                    placeholder="ឧ. BAKERY-35D-EXTEND ឬ PIN"
+                    placeholder="ឧ. ACT-....-35D-.... ឬ PIN"
                     value={keyCode}
                     onChange={(e) => {
                       setKeyCode(e.target.value.toUpperCase());
                       setErrorMsg('');
                     }}
-                    className="w-full px-4 py-3 text-sm font-mono font-black text-center tracking-wider bg-slate-50 border-2 border-slate-200 rounded-2xl focus:bg-white focus:outline-none focus:border-pink-500 focus:ring-4 focus:ring-pink-500/10 uppercase transition-all"
+                    className="w-full px-4 py-2.5 text-sm font-mono font-black text-center tracking-wider bg-slate-50 border-2 border-slate-200 rounded-2xl focus:bg-white focus:outline-none focus:border-pink-500 focus:ring-4 focus:ring-pink-500/10 uppercase transition-all"
                   />
                 </div>
 
                 {errorMsg && (
-                  <div className="flex items-center gap-1.5 mt-2 text-xs font-bold text-rose-600 bg-rose-50 border border-rose-200 p-2 rounded-xl">
+                  <div className="flex items-center gap-1.5 mt-2 text-xs font-bold text-rose-600 bg-rose-50 border border-rose-200 p-2.5 rounded-xl animate-in shake">
                     <ShieldAlert className="w-4 h-4 shrink-0 text-rose-500" />
                     <span>{errorMsg}</span>
                   </div>
@@ -119,14 +201,14 @@ export const LicenseExpiredModal: React.FC<LicenseExpiredModalProps> = ({
               <button
                 type="submit"
                 disabled={isActivating}
-                className="w-full py-3 bg-gradient-to-r from-pink-600 via-rose-600 to-amber-600 hover:from-pink-700 hover:to-rose-700 text-white font-black text-sm rounded-2xl shadow-lg shadow-pink-500/25 transition-all active:scale-95 disabled:opacity-50 cursor-pointer flex items-center justify-center gap-2"
+                className="w-full py-2.5 bg-gradient-to-r from-pink-600 via-rose-600 to-amber-600 hover:from-pink-700 hover:to-rose-700 text-white font-black text-xs rounded-xl shadow-md shadow-pink-500/25 transition-all active:scale-95 disabled:opacity-50 cursor-pointer flex items-center justify-center gap-2"
               >
                 {isActivating ? (
                   <span>កំពុងត្រួតពិនិត្យ...</span>
                 ) : (
                   <>
                     <Sparkles className="w-4 h-4" />
-                    <span>ដោះសោ / បន្តសុពលភាព</span>
+                    <span>បញ្ជាក់កូដដោះសោ</span>
                   </>
                 )}
               </button>
@@ -134,33 +216,27 @@ export const LicenseExpiredModal: React.FC<LicenseExpiredModalProps> = ({
           )}
 
           {/* Contact Admin Quick Links */}
-          <div className="pt-4 border-t border-slate-100 space-y-2">
-            <div className="text-[11px] font-bold text-slate-400 text-center">
-              ទាក់ទងអ្នកគ្រប់គ្រងដើម្បីទិញ ឬទទួលកូដបន្តសុពលភាព៖
-            </div>
-
-            <div className="grid grid-cols-2 gap-2">
-              <a
-                href="https://t.me/"
-                target="_blank"
-                rel="noreferrer"
-                className="flex items-center justify-center gap-2 py-2 px-3 bg-sky-50 hover:bg-sky-100 text-sky-700 border border-sky-200 rounded-xl text-xs font-bold transition-all"
-              >
-                <Send className="w-3.5 h-3.5" />
-                <span>Telegram Support</span>
-              </a>
-
-              <a
-                href="tel:012345678"
-                className="flex items-center justify-center gap-2 py-2 px-3 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-xl text-xs font-bold transition-all"
-              >
-                <Phone className="w-3.5 h-3.5" />
-                <span>Call Admin</span>
-              </a>
-            </div>
+          <div className="pt-2 border-t border-slate-100 flex items-center justify-center gap-4 text-xs font-bold text-slate-500">
+            <button
+              type="button"
+              onClick={handleTelegramShare}
+              className="flex items-center gap-1 text-sky-600 hover:text-sky-700 transition-colors"
+            >
+              <Send className="w-3.5 h-3.5" />
+              <span>Telegram</span>
+            </button>
+            <span>•</span>
+            <a
+              href="tel:012345678"
+              className="flex items-center gap-1 text-emerald-600 hover:text-emerald-700 transition-colors"
+            >
+              <Phone className="w-3.5 h-3.5" />
+              <span>ទូរស័ព្ទ Admin</span>
+            </a>
           </div>
         </div>
       </div>
     </div>
   );
 };
+
