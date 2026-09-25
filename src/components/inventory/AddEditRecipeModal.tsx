@@ -135,27 +135,35 @@ export const AddEditRecipeModal: React.FC<AddEditRecipeModalProps> = ({
     if (!ing || !ing.costPerUnitUsd || qty <= 0) return 0;
 
     const baseCost = ing.costPerUnitUsd;
-    const stockUnit = (ing.unit || '').toLowerCase();
-    const recipeUnit = (unit || '').toLowerCase();
+    const stockUnit = (ing.unit || '').toLowerCase().trim();
+    const recipeUnit = (unit || '').toLowerCase().trim();
 
-    // If matching units
+    // If matching units exactly
     if (stockUnit === recipeUnit) {
       return baseCost * qty;
     }
 
-    // Weight conversions (kg <-> g)
-    if (stockUnit === 'kg' && recipeUnit === 'g') {
+    // Weight conversions: Stock is kg and Recipe is g (e.g. $1.50/kg -> ($1.50 / 1000) * 250g)
+    const isStockKg = stockUnit === 'kg' || stockUnit.startsWith('kg') || stockUnit.includes('គីឡូ');
+    const isRecipeG = recipeUnit === 'g' || recipeUnit.startsWith('g') || recipeUnit.includes('ក្រាម');
+    if (isStockKg && isRecipeG) {
       return (baseCost / 1000) * qty;
     }
-    if (stockUnit === 'g' && recipeUnit === 'kg') {
+
+    // Weight conversions: Stock is g and Recipe is kg
+    const isStockG = stockUnit === 'g' || stockUnit.startsWith('g') || stockUnit.includes('ក្រាម');
+    const isRecipeKg = recipeUnit === 'kg' || recipeUnit.startsWith('kg') || recipeUnit.includes('គីឡូ');
+    if (isStockG && isRecipeKg) {
       return baseCost * 1000 * qty;
     }
 
-    // Volume conversions (l <-> ml)
-    if ((stockUnit === 'l' || stockUnit === 'liter') && recipeUnit === 'ml') {
+    // Volume conversions: Stock is L/liter and Recipe is ml or g (for liquids like milk/water: 1L = 1000ml ≈ 1000g)
+    const isStockLiter = stockUnit === 'l' || stockUnit === 'liter' || stockUnit.includes('លីត្រ');
+    const isRecipeMlOrG = recipeUnit === 'ml' || recipeUnit === 'g';
+    if (isStockLiter && isRecipeMlOrG) {
       return (baseCost / 1000) * qty;
     }
-    if (stockUnit === 'ml' && (recipeUnit === 'l' || recipeUnit === 'liter')) {
+    if ((stockUnit === 'ml' || stockUnit === 'g') && isRecipeKg) {
       return baseCost * 1000 * qty;
     }
 
@@ -499,6 +507,34 @@ export const AddEditRecipeModal: React.FC<AddEditRecipeModalProps> = ({
                 <Plus className="w-3.5 h-3.5 stroke-[3]" />
                 <span>+ ថែមគ្រឿងផ្សំ</span>
               </button>
+            </div>
+
+            {/* Gram (g) Weighing Guidance Banner */}
+            <div className="bg-gradient-to-r from-amber-50 to-pink-50/70 border border-amber-200/90 rounded-2xl p-3 text-xs space-y-1.5 shadow-2xs">
+              <div className="flex items-center gap-1.5 font-black text-amber-900">
+                <span className="text-base">⚖️</span>
+                <span>របៀបបញ្ចូលគ្រឿងផ្សំថ្លឹងជាក្រាម (g) អោយបានត្រឹមត្រូវ៖</span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1 text-[11px] text-slate-700">
+                <div className="bg-white/80 p-2 rounded-xl border border-amber-200/60">
+                  <div className="font-bold text-amber-950 mb-0.5">១. ក្នុងស្តុក (Inventory)</div>
+                  <p className="text-slate-600">
+                    ដាក់ខ្នាតជា <strong className="text-rose-600">kg</strong> (ឧ. ម្សៅមី $1.20/kg, ស្ករស $1.00/kg, ប៊័រ $6.00/kg)
+                  </p>
+                </div>
+                <div className="bg-white/80 p-2 rounded-xl border border-amber-200/60">
+                  <div className="font-bold text-amber-950 mb-0.5">២. ក្នុងរូបមន្ត (Recipe)</div>
+                  <p className="text-slate-600">
+                    ជ្រើសខ្នាត <strong className="text-rose-600">g</strong> រួចវាយលេខតាមជញ្ជីង (ឧ. 350, 150, 20...)
+                  </p>
+                </div>
+                <div className="bg-white/80 p-2 rounded-xl border border-amber-200/60">
+                  <div className="font-bold text-amber-950 mb-0.5">៣. ប្រព័ន្ធគណនាអូតូ</div>
+                  <p className="text-slate-600">
+                    ប្រព័ន្ធនឹងយក <strong className="text-rose-600">តម្លៃ/kg ÷ 1000 × ចំនួនក្រាម</strong> ដោយស្វ័យប្រវត្តិ!
+                  </p>
+                </div>
+              </div>
             </div>
 
             {/* Table */}
