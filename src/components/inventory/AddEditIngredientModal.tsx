@@ -37,6 +37,8 @@ export const AddEditIngredientModal: React.FC<AddEditIngredientModalProps> = ({
   const [unit, setUnit] = useState('kg');
   const [customUnit, setCustomUnit] = useState('');
   const [minAlertStock, setMinAlertStock] = useState('5');
+  const [costCurrency, setCostCurrency] = useState<'khr' | 'usd'>('khr');
+  const [costPerUnitKhr, setCostPerUnitKhr] = useState('6000');
   const [costPerUnitUsd, setCostPerUnitUsd] = useState('1.5');
   const [supplier, setSupplier] = useState('');
 
@@ -55,7 +57,11 @@ export const AddEditIngredientModal: React.FC<AddEditIngredientModalProps> = ({
         setCustomUnit(ingredientToEdit.unit || '');
       }
       setMinAlertStock(String(ingredientToEdit.minAlertStock ?? 5));
-      setCostPerUnitUsd(String(ingredientToEdit.costPerUnitUsd ?? 0));
+      const khr = ingredientToEdit.costPerUnitKhr ?? Math.round((ingredientToEdit.costPerUnitUsd || 0) * exchangeRate);
+      const usd = ingredientToEdit.costPerUnitUsd ?? Number((khr / exchangeRate).toFixed(3));
+      setCostPerUnitKhr(String(khr));
+      setCostPerUnitUsd(String(usd));
+      setCostCurrency('khr');
       setSupplier(ingredientToEdit.supplier || '');
     } else {
       setNameKh('');
@@ -65,12 +71,26 @@ export const AddEditIngredientModal: React.FC<AddEditIngredientModalProps> = ({
       setUnit('kg');
       setCustomUnit('');
       setMinAlertStock('5');
-      setCostPerUnitUsd('1.5');
+      setCostPerUnitKhr('6000');
+      setCostPerUnitUsd(String(Number((6000 / exchangeRate).toFixed(2))));
+      setCostCurrency('khr');
       setSupplier('');
     }
-  }, [ingredientToEdit, isOpen]);
+  }, [ingredientToEdit, isOpen, exchangeRate]);
 
   if (!isOpen) return null;
+
+  const handleKhrChange = (val: string) => {
+    setCostPerUnitKhr(val);
+    const num = parseFloat(val) || 0;
+    setCostPerUnitUsd((num / exchangeRate).toFixed(2));
+  };
+
+  const handleUsdChange = (val: string) => {
+    setCostPerUnitUsd(val);
+    const num = parseFloat(val) || 0;
+    setCostPerUnitKhr(String(Math.round(num * exchangeRate)));
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -81,7 +101,10 @@ export const AddEditIngredientModal: React.FC<AddEditIngredientModalProps> = ({
     const parsedStock = parseFloat(currentStock) || 0;
     const parsedUsed = parseFloat(totalUsed) || 0;
     const parsedMinAlert = parseFloat(minAlertStock) || 0;
-    const parsedCostUsd = parseFloat(costPerUnitUsd) || 0;
+    const parsedCostKhr = parseFloat(costPerUnitKhr) || 0;
+    const parsedCostUsd = costCurrency === 'khr'
+      ? Number((parsedCostKhr / exchangeRate).toFixed(4))
+      : (parseFloat(costPerUnitUsd) || 0);
 
     if (ingredientToEdit) {
       updateIngredient({
@@ -93,6 +116,7 @@ export const AddEditIngredientModal: React.FC<AddEditIngredientModalProps> = ({
         unit: finalUnit,
         minAlertStock: parsedMinAlert,
         costPerUnitUsd: parsedCostUsd,
+        costPerUnitKhr: parsedCostKhr,
         supplier: supplier.trim() || undefined,
       });
       soundFx.playSuccess();
@@ -105,6 +129,7 @@ export const AddEditIngredientModal: React.FC<AddEditIngredientModalProps> = ({
         unit: finalUnit,
         minAlertStock: parsedMinAlert,
         costPerUnitUsd: parsedCostUsd,
+        costPerUnitKhr: parsedCostKhr,
         supplier: supplier.trim() || undefined,
       });
       soundFx.playSuccess();
@@ -119,8 +144,6 @@ export const AddEditIngredientModal: React.FC<AddEditIngredientModalProps> = ({
 
     onClose();
   };
-
-  const costKhrEstimated = Math.round((parseFloat(costPerUnitUsd) || 0) * exchangeRate);
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-900/65 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-150">
@@ -294,28 +317,97 @@ export const AddEditIngredientModal: React.FC<AddEditIngredientModalProps> = ({
           </div>
 
           {/* Cost Price per Unit */}
-          <div className="p-3.5 bg-gradient-to-r from-emerald-50/50 to-teal-50/30 border border-emerald-100 rounded-2xl space-y-2">
-            <div className="flex items-center justify-between">
-              <label className="font-black text-emerald-900 flex items-center gap-1">
-                <DollarSign className="w-3.5 h-3.5 text-emerald-600" />
-                <span>ថ្លៃដើមទិញចូលក្នុង ១ {unit === 'custom' ? customUnit || 'ឯកតា' : unit} ($ USD)</span>
+          <div className="p-3.5 bg-gradient-to-r from-emerald-50/60 to-teal-50/40 border border-emerald-200/80 rounded-2xl space-y-2.5">
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <label className="font-black text-emerald-950 flex items-center gap-1.5 text-xs sm:text-sm">
+                <span className="w-5 h-5 rounded-md bg-emerald-600 text-white flex items-center justify-center text-xs font-black">
+                  {costCurrency === 'khr' ? '៛' : '$'}
+                </span>
+                <span>ថ្លៃដើមទិញចូលក្នុង ១ {unit === 'custom' ? customUnit || 'ឯកតា' : unit}</span>
               </label>
-              <span className="text-xs font-black text-emerald-700">
-                ~ {costKhrEstimated.toLocaleString()} ៛
-              </span>
+
+              {/* Currency Selector (KHR ៛ vs USD $) */}
+              <div className="flex items-center bg-white border border-emerald-200 rounded-xl p-0.5 shadow-2xs">
+                <button
+                  type="button"
+                  onClick={() => setCostCurrency('khr')}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-black transition-all cursor-pointer flex items-center gap-1 ${
+                    costCurrency === 'khr'
+                      ? 'bg-emerald-600 text-white shadow-xs'
+                      : 'text-slate-600 hover:text-emerald-700'
+                  }`}
+                >
+                  <span>៛ រៀល (KHR)</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCostCurrency('usd')}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-black transition-all cursor-pointer flex items-center gap-1 ${
+                    costCurrency === 'usd'
+                      ? 'bg-emerald-600 text-white shadow-xs'
+                      : 'text-slate-600 hover:text-emerald-700'
+                  }`}
+                >
+                  <span>$ USD</span>
+                </button>
+              </div>
             </div>
-            <input
-              type="number"
-              step="0.01"
-              required
-              min="0"
-              value={costPerUnitUsd}
-              onFocus={(e) => e.target.select()}
-              onChange={(e) => setCostPerUnitUsd(e.target.value)}
-              className="w-full px-3.5 py-2 text-base font-black bg-white border border-emerald-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
-            />
-            <p className="text-[10px] text-emerald-700/80">
-              ថ្លៃដើមនេះនឹងត្រូវយកទៅគណនាស្វ័យប្រវត្តិក្នុងរូបមន្តនំ (Recipe Costing / BOM)
+
+            {/* Input field based on selected currency */}
+            {costCurrency === 'khr' ? (
+              <div className="space-y-1.5">
+                <div className="relative">
+                  <input
+                    type="number"
+                    step="any"
+                    required
+                    min="0"
+                    placeholder="ឧ. 6000 ឬ 20000"
+                    value={costPerUnitKhr}
+                    onFocus={(e) => e.target.select()}
+                    onChange={(e) => handleKhrChange(e.target.value)}
+                    className="w-full pl-3.5 pr-14 py-2.5 text-base sm:text-lg font-black bg-white border border-emerald-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 text-slate-800"
+                  />
+                  <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-sm font-black text-emerald-700">
+                    ៛ KHR
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-xs px-1 text-emerald-800 font-semibold">
+                  <span>ស្មើនឹងប្រាក់ដុល្លារ ($):</span>
+                  <span className="font-mono font-black text-emerald-900 bg-emerald-100/60 px-2 py-0.5 rounded-md">
+                    ~ ${(parseFloat(costPerUnitUsd) || 0).toFixed(2)} USD
+                  </span>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-1.5">
+                <div className="relative">
+                  <input
+                    type="number"
+                    step="0.01"
+                    required
+                    min="0"
+                    placeholder="ឧ. 1.50"
+                    value={costPerUnitUsd}
+                    onFocus={(e) => e.target.select()}
+                    onChange={(e) => handleUsdChange(e.target.value)}
+                    className="w-full pl-3.5 pr-14 py-2.5 text-base sm:text-lg font-black bg-white border border-emerald-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 text-slate-800"
+                  />
+                  <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-sm font-black text-emerald-700 font-mono">
+                    $ USD
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-xs px-1 text-emerald-800 font-semibold">
+                  <span>ស្មើនឹងប្រាក់រៀល (៛):</span>
+                  <span className="font-black text-emerald-900 bg-emerald-100/60 px-2 py-0.5 rounded-md">
+                    ~ {(parseFloat(costPerUnitKhr) || 0).toLocaleString()} ៛ KHR
+                  </span>
+                </div>
+              </div>
+            )}
+
+            <p className="text-[10px] text-emerald-700/80 font-medium">
+              💡 បញ្ចូលជាប្រាក់រៀល (៛) ដោយផ្ទាល់ ហើយប្រព័ន្ធនឹងគណនាថ្លៃដើមស្វ័យប្រវត្តិក្នុ​ងរូបមន្តនំ (Recipe Costing / BOM)
             </p>
           </div>
 

@@ -105,6 +105,7 @@ export interface Ingredient {
   unit: string; // 'kg', 'g', 'ml', 'pcs', 'box'
   minAlertStock: number;
   costPerUnitUsd: number;
+  costPerUnitKhr?: number;
   supplier?: string;
 }
 
