@@ -29,6 +29,7 @@ import {
   Loader2,
   Bell,
   Camera,
+  Key,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { useBakery } from '../../context/BakeryContext';
@@ -41,6 +42,7 @@ import { FirebaseSettingsTab } from './FirebaseSettingsTab';
 import { TelegramSettingsTab } from './TelegramSettingsTab';
 import { NotificationSettingsTab } from './NotificationSettingsTab';
 import { CameraCaptureModal } from '../common/CameraCaptureModal';
+import { isSuperAdminAuthenticated } from '../../utils/superAdminAuth';
 
 export type SettingsTab = 'store' | 'khqr' | 'staff' | 'backup' | 'firebase' | 'currency' | 'telegram' | 'notifications';
 
@@ -49,6 +51,7 @@ interface SettingsModalProps {
   onClose: () => void;
   initialTab?: SettingsTab;
   onOpenLicenseModal?: () => void;
+  onOpenSuperAdminPortal?: () => void;
 }
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({
@@ -56,6 +59,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   onClose,
   initialTab = 'store',
   onOpenLicenseModal,
+  onOpenSuperAdminPortal,
 }) => {
   const {
     lang,
@@ -384,7 +388,24 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               <p className="text-xs text-slate-500">កំណត់ឈ្មោះហាង, Logo, ប្រព័ន្ធ KHQR, សិទ្ធិបុគ្គលិក និងអត្រាប្តូរប្រាក់</p>
             </div>
           </div>
+
           <div className="flex items-center gap-2">
+            {isSuperAdminAuthenticated() && onOpenSuperAdminPortal && (
+              <button
+                type="button"
+                onClick={() => {
+                  soundFx.playPop();
+                  onOpenSuperAdminPortal();
+                }}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-amber-500 to-yellow-400 text-slate-950 rounded-xl text-xs font-black transition-all cursor-pointer shadow-md shadow-amber-500/20 hover:scale-105 active:scale-95"
+                title="បើកផ្ទាំងគ្រប់គ្រង App Super Admin & License Master"
+              >
+                <Key className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Super Admin Hub 👑</span>
+                <span className="sm:hidden">Admin 👑</span>
+              </button>
+            )}
+
             {onOpenLicenseModal && (
               <button
                 type="button"

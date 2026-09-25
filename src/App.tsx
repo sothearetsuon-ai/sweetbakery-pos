@@ -21,6 +21,8 @@ import { getLicenseInfo, syncLicenseFromStorage, syncRemoteLicense, LicenseInfo 
 import { LicenseExpiredModal } from './components/license/LicenseExpiredModal';
 import { LicenseWarningBanner } from './components/license/LicenseWarningBanner';
 import { LicenseRenewalModal } from './components/license/LicenseRenewalModal';
+import { SuperAdminPortalModal } from './components/license/SuperAdminPortalModal';
+import { isSuperAdminAuthenticated, onSuperAdminAuthChange } from './utils/superAdminAuth';
 import { soundFx } from './utils/audio';
 import confetti from 'canvas-confetti';
 
@@ -33,6 +35,10 @@ export const App: React.FC = () => {
   const [currentTheme, setCurrentTheme] = useState<AppTheme>(() => getSavedTheme());
   const [isThemePickerOpen, setIsThemePickerOpen] = useState(false);
 
+  // App Super Admin Portal State
+  const [isSuperAdmin, setIsSuperAdmin] = useState(() => isSuperAdminAuthenticated());
+  const [isSuperAdminModalOpen, setIsSuperAdminModalOpen] = useState(false);
+
   // 35-Day Trial License State
   const [licenseInfo, setLicenseInfo] = useState<LicenseInfo>(() => getLicenseInfo());
   const [isRenewModalOpen, setIsRenewModalOpen] = useState(false);
@@ -40,6 +46,13 @@ export const App: React.FC = () => {
   const refreshLicense = () => {
     setLicenseInfo(getLicenseInfo());
   };
+
+  React.useEffect(() => {
+    const unsubAuth = onSuperAdminAuthChange((auth) => {
+      setIsSuperAdmin(auth);
+    });
+    return unsubAuth;
+  }, []);
 
   React.useEffect(() => {
     syncLicenseFromStorage().then(() => {
@@ -107,6 +120,8 @@ export const App: React.FC = () => {
         onOpenStaffTab={() => handleOpenSettings('staff')}
         onToggleMobileDrawer={() => setIsMobileDrawerOpen((prev) => !prev)}
         onOpenThemePicker={() => setIsThemePickerOpen(true)}
+        isSuperAdmin={isSuperAdmin}
+        onOpenSuperAdminPortal={() => setIsSuperAdminModalOpen(true)}
       />
 
       {/* Main Workspace with Sidebar & Content */}
@@ -151,6 +166,7 @@ export const App: React.FC = () => {
         onClose={() => setIsSettingsModalOpen(false)}
         initialTab={settingsTab}
         onOpenLicenseModal={() => setIsRenewModalOpen(true)}
+        onOpenSuperAdminPortal={() => setIsSuperAdminModalOpen(true)}
       />
 
       {/* Bakery Music Player Modal & Floating Mini Player */}
@@ -172,12 +188,24 @@ export const App: React.FC = () => {
         isTamper={licenseInfo.tamperDetected}
       />
 
-      {/* Manual License Renewal Modal */}
+      {/* Manual License Renewal Modal (Client Facing Only) */}
       <LicenseRenewalModal
         isOpen={isRenewModalOpen}
         onClose={() => setIsRenewModalOpen(false)}
         onRenewSuccess={refreshLicense}
         licenseInfo={licenseInfo}
+        onOpenSuperAdminPortal={() => setIsSuperAdminModalOpen(true)}
+      />
+
+      {/* App Super Admin Master License Portal */}
+      <SuperAdminPortalModal
+        isOpen={isSuperAdminModalOpen}
+        onClose={() => setIsSuperAdminModalOpen(false)}
+        onLogout={() => {
+          setIsSuperAdmin(false);
+          setIsSuperAdminModalOpen(false);
+          refreshLicense();
+        }}
       />
     </div>
   );

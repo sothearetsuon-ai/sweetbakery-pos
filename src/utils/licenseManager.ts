@@ -8,7 +8,7 @@
  */
 
 import { idbGet, idbSet } from './idbStorage';
-import { saveFirestoreDoc, subscribeToFirestoreDoc } from '../services/firebase';
+import { saveFirestoreDoc, subscribeToFirestoreDoc, subscribeToFirestoreCollection } from '../services/firebase';
 
 export interface LicenseInfo {
   deviceId: string;
@@ -19,6 +19,19 @@ export interface LicenseInfo {
   activatedAt: number; // timestamp in ms
   isPermanent: boolean;
   tamperDetected: boolean;
+}
+
+export interface ClientLicenseRecord {
+  id?: string;
+  deviceId: string;
+  storeName?: string;
+  expiresAt: number | string;
+  isExpired?: boolean;
+  isPermanent?: boolean;
+  daysRemaining?: number;
+  lastSeen?: string;
+  active?: boolean;
+  updatedAt?: string;
 }
 
 const STORAGE_DEVICE_ID = 'bakery_license_device_id';
@@ -36,7 +49,7 @@ const TRIAL_DURATION_MS = DEFAULT_TRIAL_DAYS * MS_PER_DAY;
 const SECRET_SALT = 'SWB_BAKERY_KEY_SALT_2026';
 
 // Global Master Activation Keys
-const GLOBAL_KEYS: Record<string, { days?: number; permanent?: boolean; label: string }> = {
+export const GLOBAL_KEYS: Record<string, { days?: number; permanent?: boolean; label: string }> = {
   // Lifetime Unlimited Access
   'BAKERY-VIP-LIFETIME': { permanent: true, label: 'សិទ្ធិប្រើប្រាស់ពេញមួយជីវិត (Lifetime Access)' },
   'SWEET-BAKERY-PRO-2026': { permanent: true, label: 'សិទ្ធិប្រើប្រាស់ពេញមួយជីវិត (Lifetime Pro)' },
@@ -397,4 +410,13 @@ export const applyLicenseKey = (rawCode: string): { success: boolean; message: s
   }
 
   return { success: false, message: 'កូដបន្តសុពលភាពមិនត្រឹមត្រូវឡើយ (Invalid License Key)' };
+};
+
+/**
+ * Subscribe to real-time client licenses list for Super Admin monitor
+ */
+export const subscribeToClientLicenses = (
+  onUpdate: (clients: ClientLicenseRecord[]) => void
+): (() => void) => {
+  return subscribeToFirestoreCollection<ClientLicenseRecord>('system_licenses', onUpdate);
 };

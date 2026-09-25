@@ -19,6 +19,7 @@ import {
   Wifi,
   WifiOff,
   Palette,
+  Key,
 } from 'lucide-react';
 import { useBakery } from '../../context/BakeryContext';
 import { useMusic } from '../../context/MusicContext';
@@ -36,6 +37,8 @@ interface NavbarProps {
   onOpenStaffTab?: () => void;
   onToggleMobileDrawer?: () => void;
   onOpenThemePicker?: () => void;
+  isSuperAdmin?: boolean;
+  onOpenSuperAdminPortal?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -44,6 +47,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenStaffTab,
   onToggleMobileDrawer,
   onOpenThemePicker,
+  isSuperAdmin = false,
+  onOpenSuperAdminPortal,
 }) => {
   const {
     lang,
@@ -329,6 +334,22 @@ export const Navbar: React.FC<NavbarProps> = ({
             <Bell className="w-4 h-4 text-pink-500" />
             <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-pink-500 animate-pulse" />
           </button>
+
+          {/* App Super Admin Badge & Portal Button */}
+          {isSuperAdmin && onOpenSuperAdminPortal && (
+            <button
+              type="button"
+              onClick={() => {
+                soundFx.playPop();
+                onOpenSuperAdminPortal();
+              }}
+              title="ផ្ទាំងគ្រប់គ្រង App Super Admin (Master License Manager)"
+              className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-2xl bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-500 text-slate-950 font-black text-xs shadow-md shadow-amber-500/25 ring-2 ring-amber-300 animate-pulse hover:scale-105 active:scale-95 transition-all cursor-pointer"
+            >
+              <Key className="w-3.5 h-3.5 text-slate-950" />
+              <span className="hidden sm:inline">Super Admin 👑</span>
+            </button>
+          )}
 
           {/* Settings Button */}
           <button
