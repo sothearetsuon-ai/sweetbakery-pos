@@ -7,6 +7,7 @@ export interface StoreInfo {
   phone: string;
   address: string;
   tagline?: string;
+  storeId?: string;
   khqrQrImage?: string;
   khqrMerchantName?: string;
   khqrBakongId?: string;

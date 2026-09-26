@@ -212,7 +212,8 @@ Super Admin Master Vault • Confidential
     const q = searchTerm.toLowerCase();
     return (
       c.deviceId.toLowerCase().includes(q) ||
-      (c.storeName && c.storeName.toLowerCase().includes(q))
+      (c.storeName && c.storeName.toLowerCase().includes(q)) ||
+      (c.storeId && c.storeId.toLowerCase().includes(q))
     );
   });
 
@@ -554,10 +555,15 @@ Super Admin Master Vault • Confidential
                         className="p-3 bg-white border border-slate-200 hover:border-pink-300 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs transition-all"
                       >
                         <div className="space-y-1 min-w-0">
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 flex-wrap">
                             <span className="font-mono font-black text-xs text-slate-900 bg-slate-100 px-2 py-0.5 rounded">
                               {client.deviceId}
                             </span>
+                            {client.storeId && (
+                              <span className="text-[10px] font-mono font-bold bg-purple-50 text-purple-700 border border-purple-200 px-1.5 py-0.5 rounded">
+                                🏬 {client.storeId}
+                              </span>
+                            )}
                             <span
                               className={`text-[10px] font-black px-2 py-0.5 rounded-full ${
                                 isPerm

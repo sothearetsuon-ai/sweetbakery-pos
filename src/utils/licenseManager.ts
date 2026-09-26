@@ -8,7 +8,7 @@
  */
 
 import { idbGet, idbSet } from './idbStorage';
-import { saveFirestoreDoc, subscribeToFirestoreDoc, subscribeToFirestoreCollection } from '../services/firebase';
+import { saveFirestoreDoc, subscribeToFirestoreDoc, subscribeToFirestoreCollection, getStoreId } from '../services/firebase';
 
 export interface LicenseInfo {
   deviceId: string;
@@ -24,6 +24,7 @@ export interface LicenseInfo {
 export interface ClientLicenseRecord {
   id?: string;
   deviceId: string;
+  storeId?: string;
   storeName?: string;
   expiresAt: number | string;
   isExpired?: boolean;
@@ -255,8 +256,10 @@ export const syncRemoteLicense = (
       }
     })();
 
+    const storeId = getStoreId();
     saveFirestoreDoc('system_licenses', deviceId, {
       deviceId,
+      storeId,
       storeName,
       expiresAt: localInfo.expiresAt,
       isExpired: localInfo.isExpired,

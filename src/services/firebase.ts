@@ -19,6 +19,7 @@ import {
   FirebaseStorage,
 } from 'firebase/storage';
 import { BakeryBackupData, CompletedSale, CustomCakeOrder, Expense, Ingredient, Product, StaffMember, StoreInfo } from '../types';
+import { idbGet, idbSet } from '../utils/idbStorage';
 
 export interface FirebaseConfig {
   apiKey: string;
@@ -31,6 +32,58 @@ export interface FirebaseConfig {
 
 const STORAGE_KEY = 'bakery_firebase_config';
 const DISABLED_KEY = 'bakery_firebase_disabled';
+const STORAGE_STORE_ID = 'bakery_store_tenant_id';
+const STORE_ID_EVENT = 'bakery_store_id_changed';
+
+/**
+ * Get or initialize persistent Store Tenant ID
+ * Isolates each bakery's data completely on Cloud Firestore!
+ */
+export const getStoreId = (): string => {
+  let id = localStorage.getItem(STORAGE_STORE_ID);
+  if (!id) {
+    try {
+      const savedStoreInfo = localStorage.getItem('bakery_store_info');
+      if (savedStoreInfo) {
+        const info = JSON.parse(savedStoreInfo);
+        if (info.storeId) {
+          id = info.storeId;
+        }
+      }
+    } catch (e) {}
+
+    if (!id) {
+      const randHex = () => Math.floor((1 + Math.random()) * 0x10000).toString(16).substring(1).toUpperCase();
+      id = `STORE-${randHex()}-${randHex()}`;
+    }
+
+    localStorage.setItem(STORAGE_STORE_ID, id);
+    idbSet(STORAGE_STORE_ID, id).catch(() => {});
+  }
+  return id;
+};
+
+/**
+ * Set custom Store Tenant ID (e.g. to connect multiple devices in the same bakery)
+ */
+export const setStoreId = (newStoreId: string): void => {
+  const cleanId = newStoreId.trim().toUpperCase().replace(/[^A-Z0-9_-]/g, '');
+  if (!cleanId) return;
+  localStorage.setItem(STORAGE_STORE_ID, cleanId);
+  idbSet(STORAGE_STORE_ID, cleanId).catch(() => {});
+  window.dispatchEvent(new CustomEvent(STORE_ID_EVENT, { detail: { storeId: cleanId } }));
+};
+
+/**
+ * Subscribe to Store Tenant ID changes
+ */
+export const subscribeToStoreIdChange = (callback: (storeId: string) => void): (() => void) => {
+  const handler = (e: any) => {
+    callback(e.detail?.storeId || getStoreId());
+  };
+  window.addEventListener(STORE_ID_EVENT, handler);
+  return () => window.removeEventListener(STORE_ID_EVENT, handler);
+};
 
 export const DEFAULT_FIREBASE_CONFIG: FirebaseConfig = {
   apiKey: 'AIzaSyAUcTJMNMOAjT_FrtmJsaM68otwUnujrXg',
@@ -247,6 +300,28 @@ export const sanitizeForFirestore = (obj: any): any => {
 };
 
 /**
+ * Resolves Firestore Collection Reference:
+ * - 'system_licenses' stays at root collection level for Super Admin centralization.
+ * - All store business collections ('products', 'sales', 'expenses', etc.) are partitioned under:
+ *   tenants/{storeId}/{collectionName}
+ */
+export const getScopedCollectionRef = (db: Firestore, collectionName: string) => {
+  if (collectionName === 'system_licenses') {
+    return collection(db, 'system_licenses');
+  }
+  const storeId = getStoreId();
+  return collection(db, 'tenants', storeId, collectionName);
+};
+
+export const getScopedDocRef = (db: Firestore, collectionName: string, docId: string) => {
+  if (collectionName === 'system_licenses') {
+    return doc(db, 'system_licenses', docId);
+  }
+  const storeId = getStoreId();
+  return doc(db, 'tenants', storeId, collectionName, docId);
+};
+
+/**
  * Save single document to a collection
  */
 export const saveFirestoreDoc = async (
@@ -258,7 +333,7 @@ export const saveFirestoreDoc = async (
   if (!db) return;
   try {
     const cleanData = sanitizeForFirestore(data);
-    const docRef = doc(db, collectionName, docId);
+    const docRef = getScopedDocRef(db, collectionName, docId);
     await setDoc(docRef, cleanData, { merge: true });
   } catch (e) {
     console.error(`Error saving document to ${collectionName}/${docId}:`, e);
@@ -275,7 +350,7 @@ export const deleteFirestoreDoc = async (
   const db = getFirestoreDb();
   if (!db) return;
   try {
-    const docRef = doc(db, collectionName, docId);
+    const docRef = getScopedDocRef(db, collectionName, docId);
     await deleteDoc(docRef);
   } catch (e) {
     console.error(`Error deleting document from ${collectionName}/${docId}:`, e);
@@ -295,7 +370,7 @@ export const subscribeToFirestoreCollection = <T>(
     return () => {};
   }
 
-  const colRef = collection(db, collectionName);
+  const colRef = getScopedCollectionRef(db, collectionName);
   const unsubscribe = onSnapshot(
     colRef,
     (snapshot) => {
@@ -328,7 +403,7 @@ export const subscribeToFirestoreDoc = <T>(
     return () => {};
   }
 
-  const docRef = doc(db, collectionName, docId);
+  const docRef = getScopedDocRef(db, collectionName, docId);
   const unsubscribe = onSnapshot(
     docRef,
     (snapshot) => {
@@ -366,48 +441,48 @@ export const bulkUploadLocalToFirebase = async (
 
     // Save Settings
     if (data.storeInfo) {
-      await setDoc(doc(db, 'settings', 'storeInfo'), data.storeInfo);
+      await setDoc(getScopedDocRef(db, 'settings', 'storeInfo'), data.storeInfo);
     }
     if (data.exchangeRate) {
-      await setDoc(doc(db, 'settings', 'currency'), { exchangeRate: data.exchangeRate });
+      await setDoc(getScopedDocRef(db, 'settings', 'currency'), { exchangeRate: data.exchangeRate });
     }
     if (data.flavors && data.flavors.length) {
-      await setDoc(doc(db, 'settings', 'flavors'), { list: data.flavors });
+      await setDoc(getScopedDocRef(db, 'settings', 'flavors'), { list: data.flavors });
     }
 
     // Upload Products
     for (const p of data.products || []) {
-      await setDoc(doc(db, 'products', p.id), p);
+      await setDoc(getScopedDocRef(db, 'products', p.id), p);
       uploadedProducts++;
     }
 
     // Upload Sales
     for (const s of data.sales || []) {
-      await setDoc(doc(db, 'sales', s.id), s);
+      await setDoc(getScopedDocRef(db, 'sales', s.id), s);
       uploadedSales++;
     }
 
     // Upload Custom Orders
     for (const o of data.customOrders || []) {
-      await setDoc(doc(db, 'customOrders', o.id), o);
+      await setDoc(getScopedDocRef(db, 'customOrders', o.id), o);
       uploadedOrders++;
     }
 
     // Upload Expenses
     for (const e of data.expenses || []) {
-      await setDoc(doc(db, 'expenses', e.id), e);
+      await setDoc(getScopedDocRef(db, 'expenses', e.id), e);
       uploadedExpenses++;
     }
 
     // Upload Staff
     for (const st of data.staffMembers || []) {
-      await setDoc(doc(db, 'staffMembers', st.id), st);
+      await setDoc(getScopedDocRef(db, 'staffMembers', st.id), st);
       uploadedStaff++;
     }
 
     // Upload Ingredients
     for (const ing of data.ingredients || []) {
-      await setDoc(doc(db, 'ingredients', ing.id), ing);
+      await setDoc(getScopedDocRef(db, 'ingredients', ing.id), ing);
       uploadedIngredients++;
     }
 
@@ -450,13 +525,13 @@ export const fetchEntireFirestoreData = async (): Promise<Partial<BakeryBackupDa
       ingredientsSnap,
       settingsSnap,
     ] = await Promise.all([
-      getDocs(collection(db, 'products')),
-      getDocs(collection(db, 'sales')),
-      getDocs(collection(db, 'customOrders')),
-      getDocs(collection(db, 'expenses')),
-      getDocs(collection(db, 'staffMembers')),
-      getDocs(collection(db, 'ingredients')),
-      getDocs(collection(db, 'settings')),
+      getDocs(getScopedCollectionRef(db, 'products')),
+      getDocs(getScopedCollectionRef(db, 'sales')),
+      getDocs(getScopedCollectionRef(db, 'customOrders')),
+      getDocs(getScopedCollectionRef(db, 'expenses')),
+      getDocs(getScopedCollectionRef(db, 'staffMembers')),
+      getDocs(getScopedCollectionRef(db, 'ingredients')),
+      getDocs(getScopedCollectionRef(db, 'settings')),
     ]);
 
     const products: Product[] = [];

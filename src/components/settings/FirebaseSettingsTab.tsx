@@ -28,6 +28,7 @@ import {
   bulkUploadLocalToFirebase,
   fetchEntireFirestoreData,
   getFirestoreDb,
+  getStoreId,
 } from '../../services/firebase';
 import { useBakery } from '../../context/BakeryContext';
 import { soundFx } from '../../utils/audio';
@@ -285,11 +286,16 @@ export const FirebaseSettingsTab: React.FC = () => {
               <h5 className="text-sm font-black text-slate-800">
                 {currentConfig ? '🟢 បានតភ្ជាប់ជាមួយ Google Firebase Cloud' : '⚪ មិនទាន់បានកំណត់ការតភ្ជាប់ (Local Mode)'}
               </h5>
-              <p className="text-xs text-slate-500">
-                {currentConfig
-                  ? `Project ID: ${currentConfig.projectId}`
-                  : 'ប្រព័ន្ធកំពុងដំណើរការរក្សាទុកទិន្នន័យក្នុង Browser LocalStorage នៃឧបករណ៍នេះ'}
-              </p>
+              <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                <p className="text-xs text-slate-500">
+                  {currentConfig
+                    ? `Project ID: ${currentConfig.projectId}`
+                    : 'ប្រព័ន្ធកំពុងដំណើរការរក្សាទុកទិន្នន័យក្នុង Browser LocalStorage នៃឧបករណ៍នេះ'}
+                </p>
+                <span className="text-[10px] font-mono font-bold bg-purple-50 text-purple-700 border border-purple-200 px-1.5 py-0.2 rounded">
+                  Store ID: {getStoreId()} (Isolated)
+                </span>
+              </div>
             </div>
           </div>
 

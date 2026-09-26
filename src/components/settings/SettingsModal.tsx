@@ -30,6 +30,8 @@ import {
   Bell,
   Camera,
   Key,
+  Building2,
+  Copy,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { useBakery } from '../../context/BakeryContext';
@@ -43,6 +45,7 @@ import { TelegramSettingsTab } from './TelegramSettingsTab';
 import { NotificationSettingsTab } from './NotificationSettingsTab';
 import { CameraCaptureModal } from '../common/CameraCaptureModal';
 import { isSuperAdminAuthenticated } from '../../utils/superAdminAuth';
+import { getStoreId, setStoreId } from '../../services/firebase';
 
 export type SettingsTab = 'store' | 'khqr' | 'staff' | 'backup' | 'firebase' | 'currency' | 'telegram' | 'notifications';
 
@@ -89,6 +92,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   }, [isOpen, initialTab]);
 
   const [rateInput, setRateInput] = useState(exchangeRate.toString());
+  const [storeIdInput, setStoreIdInput] = useState(() => getStoreId());
+  const [copiedStoreId, setCopiedStoreId] = useState(false);
   const [nameKh, setNameKh] = useState(storeInfo?.nameKh || '');
   const [nameEn, setNameEn] = useState(storeInfo?.nameEn || '');
   const [logoUrl, setLogoUrl] = useState(storeInfo?.logoUrl || '');
@@ -123,6 +128,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       setAddress(storeInfo.address || (storeInfo as any)?.addressKh || '');
       setTagline(storeInfo.tagline || '');
       setRateInput(exchangeRate.toString());
+      setStoreIdInput(storeInfo.storeId || getStoreId());
       setKhqrQrImage(storeInfo.khqrQrImage || '');
       setKhqrMerchantName(storeInfo.khqrMerchantName || 'SWEET BAKERY & CAFE');
       setKhqrBakongId(storeInfo.khqrBakongId || 'sweet_bakery@aba');
@@ -305,6 +311,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       setExchangeRate(rate);
     }
 
+    const finalStoreId = storeIdInput.trim().toUpperCase() || getStoreId();
+    setStoreId(finalStoreId);
+
     const updatedStoreData = {
       nameKh: nameKh.trim() || 'ហាងនំខេក ស្វីតបេកខឺរី',
       nameEn: nameEn.trim() || 'SweetBakery & Cafe',
@@ -313,6 +322,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       address: address.trim(),
       addressKh: address.trim(),
       tagline: tagline.trim(),
+      storeId: finalStoreId,
       khqrQrImage: finalKhqr.trim(),
       khqrMerchantName: khqrMerchantName.trim() || 'SWEET BAKERY & CAFE',
       khqrBakongId: khqrBakongId.trim(),
@@ -752,6 +762,46 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       onChange={handleLogoUpload}
                       className="hidden"
                     />
+                  </div>
+
+                  {/* Store Tenant ID (Multi-Tenant Isolation) */}
+                  <div className="p-3.5 bg-gradient-to-r from-purple-50 via-pink-50/50 to-amber-50/40 border border-purple-200/90 rounded-2xl space-y-2">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-bold text-slate-700 flex items-center gap-1.5">
+                        <Building2 className="w-4 h-4 text-purple-600" />
+                        <span>លេខសម្គាល់ហាង (Store Tenant ID - ការពារទិន្នន័យដាច់ដោយឡែក)</span>
+                      </span>
+                      <span className="text-[10px] font-black bg-purple-100 text-purple-800 px-2 py-0.5 rounded-full border border-purple-200">
+                        Multi-Tenant Cloud
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        value={storeIdInput}
+                        onChange={(e) => setStoreIdInput(e.target.value.toUpperCase())}
+                        placeholder="ឧ. STORE-SENSOK-01"
+                        className="flex-1 px-3 py-2 text-xs font-mono font-black uppercase bg-white border border-slate-300 rounded-xl focus:outline-none focus:border-purple-500 shadow-2xs text-purple-900"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          soundFx.playPop();
+                          navigator.clipboard.writeText(storeIdInput);
+                          setCopiedStoreId(true);
+                          setTimeout(() => setCopiedStoreId(false), 2000);
+                        }}
+                        className="px-3 py-2 bg-white hover:bg-slate-100 border border-slate-300 text-slate-700 rounded-xl text-xs font-bold transition-all flex items-center gap-1 cursor-pointer shrink-0 shadow-2xs"
+                      >
+                        {copiedStoreId ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5 text-slate-500" />}
+                        <span>{copiedStoreId ? 'បានចម្លង' : 'ចម្លង ID'}</span>
+                      </button>
+                    </div>
+
+                    <p className="text-[11px] text-slate-500 font-medium leading-relaxed">
+                      💡 លេខសម្គាល់នេះធានាថាទិន្នន័យរបស់ហាងលោកអ្នក (មុខទំនិញ, ការលក់, ចំណាយ) រក្សាទុកដាច់ដោយឡែក ១០០% ពីហាងដទៃ។ ប្រសិនបើហាងលោកអ្នកមានឧបករណ៍ច្រើន (POS, Tablet, Phone) សូមប្រើ Store ID ដូចគ្នានេះដើម្បី Sync ទិន្នន័យរួមគ្នា។
+                    </p>
                   </div>
 
                   {/* Store Names */}
