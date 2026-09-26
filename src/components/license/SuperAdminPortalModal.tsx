@@ -209,11 +209,13 @@ Super Admin Master Vault • Confidential
   };
 
   const filteredClients = clientRecords.filter((c) => {
-    const q = searchTerm.toLowerCase();
+    const devId = (c.deviceId || (c as any).id || '');
+    if (!devId && !c.storeName && !c.storeId) return false;
+    const q = (searchTerm || '').toLowerCase();
     return (
-      c.deviceId.toLowerCase().includes(q) ||
-      (c.storeName && c.storeName.toLowerCase().includes(q)) ||
-      (c.storeId && c.storeId.toLowerCase().includes(q))
+      devId.toLowerCase().includes(q) ||
+      ((c.storeName || '').toLowerCase().includes(q)) ||
+      ((c.storeId || '').toLowerCase().includes(q))
     );
   });
 
@@ -551,13 +553,13 @@ Super Admin Master Vault • Confidential
 
                     return (
                       <div
-                        key={client.deviceId}
+                        key={client.deviceId || (client as any).id || Math.random()}
                         className="p-3 bg-white border border-slate-200 hover:border-pink-300 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs transition-all"
                       >
                         <div className="space-y-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
                             <span className="font-mono font-black text-xs text-slate-900 bg-slate-100 px-2 py-0.5 rounded">
-                              {client.deviceId}
+                              {client.deviceId || (client as any).id || 'DEV-UNKNOWN'}
                             </span>
                             {client.storeId && (
                               <span className="text-[10px] font-mono font-bold bg-purple-50 text-purple-700 border border-purple-200 px-1.5 py-0.5 rounded">
@@ -603,7 +605,7 @@ Super Admin Master Vault • Confidential
 
                           <button
                             type="button"
-                            onClick={() => handleQuickUnlockRow(client.deviceId, 35)}
+                            onClick={() => handleQuickUnlockRow(client.deviceId || (client as any).id, 35)}
                             className="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-lg text-xs font-bold transition-all border border-emerald-200 cursor-pointer"
                           >
                             +35 ថ្ងៃ
@@ -611,7 +613,7 @@ Super Admin Master Vault • Confidential
 
                           <button
                             type="button"
-                            onClick={() => handleQuickUnlockRow(client.deviceId, 365)}
+                            onClick={() => handleQuickUnlockRow(client.deviceId || (client as any).id, 365)}
                             className="px-2.5 py-1 bg-teal-50 hover:bg-teal-100 text-teal-700 rounded-lg text-xs font-bold transition-all border border-teal-200 cursor-pointer"
                           >
                             +1 ឆ្នាំ
@@ -619,7 +621,7 @@ Super Admin Master Vault • Confidential
 
                           <button
                             type="button"
-                            onClick={() => handleQuickUnlockRow(client.deviceId, 'permanent')}
+                            onClick={() => handleQuickUnlockRow(client.deviceId || (client as any).id, 'permanent')}
                             className="px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-amber-800 rounded-lg text-xs font-bold transition-all border border-amber-300 cursor-pointer"
                           >
                             VIP

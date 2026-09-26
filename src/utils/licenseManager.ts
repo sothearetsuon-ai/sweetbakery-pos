@@ -421,5 +421,17 @@ export const applyLicenseKey = (rawCode: string): { success: boolean; message: s
 export const subscribeToClientLicenses = (
   onUpdate: (clients: ClientLicenseRecord[]) => void
 ): (() => void) => {
-  return subscribeToFirestoreCollection<ClientLicenseRecord>('system_licenses', onUpdate);
+  return subscribeToFirestoreCollection<ClientLicenseRecord>('system_licenses', (rawClients) => {
+    if (!Array.isArray(rawClients)) {
+      onUpdate([]);
+      return;
+    }
+    const sanitized = rawClients.map((c: any) => ({
+      ...c,
+      deviceId: c.deviceId || c.id || 'DEV-UNKNOWN',
+      storeName: c.storeName || 'ហាងមិនទាន់កំណត់ឈ្មោះ',
+      storeId: c.storeId || '',
+    }));
+    onUpdate(sanitized);
+  });
 };
