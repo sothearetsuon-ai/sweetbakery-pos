@@ -277,24 +277,30 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [storeInfo, setStoreInfo] = useState<StoreInfo>(() => {
     const saved = localStorage.getItem('bakery_store_info');
     const defaultInfo: StoreInfo = {
-      nameKh: 'មិត្តភាព & ខេក',
-      nameEn: 'Friends Cake & Bakery',
+      nameKh: 'ហាងនំខកនិងនំបុ័ងវិជ្ជតា',
+      nameEn: 'SweetBakery & Cafe',
       logoUrl: '/uploads/products/prod_1789651345094_x6k2.jpg',
-      phone: '081 55 66 99',
-      address: 'ផ្ទះលេខ #123, ផ្លូវ 2004, សង្កាត់កាកាប, ខណ្ឌពោធិ៍សែនជ័យ, ភ្នំពេញ',
+      phone: '0978707000',
+      address: 'រតនៈគីរី អូរយ៉ាដាវ',
       tagline: 'នំខេកឆ្ងាញ់ប្រណិត ស្រស់ៗរាល់ថ្ងៃ • មានទទួលកុម្ម៉ង់គ្រប់ម៉ូដ',
       khqrQrImage: '/uploads/products/prod_1789651425146_asp0.jpg',
-      khqrMerchantName: 'SUON SOTHEARET',
+      khqrMerchantName: 'Suon Sothearet',
       khqrBakongId: 'sweet_bakery@aba',
-      khqrAccountNumber: '001 234 567',
-      khqrBankName: 'ACLEDA Bank',
+      khqrAccountNumber: '012629160',
+      khqrBankName: 'ACLEDA Bank / Bakong',
     };
 
     if (saved) {
       try {
+        const parsed = JSON.parse(saved);
+        if (parsed.nameKh === 'មិត្តភាព & ខេក' || !parsed.nameKh) {
+          parsed.nameKh = 'ហាងនំខកនិងនំបុ័ងវិជ្ជតា';
+          parsed.phone = parsed.phone || '0978707000';
+          parsed.address = parsed.address || 'រតនៈគីរី អូរយ៉ាដាវ';
+        }
         return {
           ...defaultInfo,
-          ...JSON.parse(saved),
+          ...parsed,
         };
       } catch (e) {
         // fallback
@@ -937,44 +943,73 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
     // Subscribe to products
     const unsubProducts = subscribeToFirestoreCollection<Product>('products', (cloudProducts) => {
-      if (Array.isArray(cloudProducts)) {
+      if (Array.isArray(cloudProducts) && cloudProducts.length > 0) {
         const filtered = sortProductsNewestFirst(cloudProducts.filter((p) => p && p.id && !deletedProductIds.current.has(p.id)));
-        setProducts(filtered);
-        safeSetStorage('bakery_products', JSON.stringify(filtered));
+        setProducts((prev) => {
+          const map = new Map<string, Product>();
+          prev.forEach((p) => { if (p && p.id && !deletedProductIds.current.has(p.id)) map.set(p.id, p); });
+          filtered.forEach((p) => { if (p && p.id && !deletedProductIds.current.has(p.id)) map.set(p.id, p); });
+          const merged = sortProductsNewestFirst(Array.from(map.values()));
+          safeSetStorage('bakery_products', JSON.stringify(merged));
+          return merged;
+        });
       }
     });
 
     // Subscribe to sales
     const unsubSales = subscribeToFirestoreCollection<CompletedSale>('sales', (cloudSales) => {
-      if (Array.isArray(cloudSales)) {
+      if (Array.isArray(cloudSales) && cloudSales.length > 0) {
         const filtered = cloudSales
           .filter((s) => s && s.id && !deletedSaleIds.current.has(s.id))
           .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-        setSales(filtered);
-        try { localStorage.setItem('bakery_sales', JSON.stringify(filtered)); } catch (e) {}
+        setSales((prev) => {
+          const map = new Map<string, CompletedSale>();
+          prev.forEach((s) => { if (s && s.id && !deletedSaleIds.current.has(s.id)) map.set(s.id, s); });
+          filtered.forEach((s) => { if (s && s.id && !deletedSaleIds.current.has(s.id)) map.set(s.id, s); });
+          const merged = Array.from(map.values()).sort(
+            (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+          );
+          try { localStorage.setItem('bakery_sales', JSON.stringify(merged)); } catch (e) {}
+          return merged;
+        });
       }
     });
 
     // Subscribe to custom orders
     const unsubOrders = subscribeToFirestoreCollection<CustomCakeOrder>('customOrders', (cloudOrders) => {
-      if (Array.isArray(cloudOrders)) {
-        const sorted = [...cloudOrders].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-        setCustomOrders(sorted);
-        try { localStorage.setItem('bakery_custom_orders', JSON.stringify(sorted)); } catch (e) {}
+      if (Array.isArray(cloudOrders) && cloudOrders.length > 0) {
+        setCustomOrders((prev) => {
+          const map = new Map<string, CustomCakeOrder>();
+          prev.forEach((o) => { if (o && o.id) map.set(o.id, o); });
+          cloudOrders.forEach((o) => { if (o && o.id) map.set(o.id, o); });
+          const merged = Array.from(map.values()).sort(
+            (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+          );
+          try { localStorage.setItem('bakery_custom_orders', JSON.stringify(merged)); } catch (e) {}
+          return merged;
+        });
       }
     });
 
     // Subscribe to expenses
     const unsubExpenses = subscribeToFirestoreCollection<Expense>('expenses', (cloudExpenses) => {
-      if (Array.isArray(cloudExpenses)) {
+      if (Array.isArray(cloudExpenses) && cloudExpenses.length > 0) {
         const sorted = cloudExpenses
           .filter((e) => e && e.id && !deletedExpenseIds.current.has(e.id))
           .sort(
             (a, b) =>
               new Date(b.createdAt || b.date).getTime() - new Date(a.createdAt || a.date).getTime()
           );
-        setExpenses(sorted);
-        safeSetStorage('bakery_expenses', JSON.stringify(sorted));
+        setExpenses((prev) => {
+          const map = new Map<string, Expense>();
+          prev.forEach((e) => { if (e && e.id && !deletedExpenseIds.current.has(e.id)) map.set(e.id, e); });
+          sorted.forEach((e) => { if (e && e.id && !deletedExpenseIds.current.has(e.id)) map.set(e.id, e); });
+          const merged = Array.from(map.values()).sort(
+            (a, b) => new Date(b.createdAt || b.date).getTime() - new Date(a.createdAt || a.date).getTime()
+          );
+          safeSetStorage('bakery_expenses', JSON.stringify(merged));
+          return merged;
+        });
       }
     });
 
