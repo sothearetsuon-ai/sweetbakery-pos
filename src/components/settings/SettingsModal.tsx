@@ -801,7 +801,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     </div>
 
                     <p className="text-[11px] text-slate-500 font-medium leading-relaxed">
-                      💡 លេខសម្គាល់នេះធានាថាទិន្នន័យរបស់ហាងលោកអ្នក (មុខទំនិញ, ការលក់, ចំណាយ) រក្សាទុកដាច់ដោយឡែក ១០០% ពីហាងដទៃ។ ប្រសិនបើហាងលោកអ្នកមានឧបករណ៍ច្រើន (POS, Tablet, Phone) សូមប្រើ Store ID ដូចគ្នានេះដើម្បី Sync ទិន្នន័យរួមគ្នា។
+                      💡 លេខសម្គាល់នេះធានាថាទិន្នន័យរបស់ហាងលោកអ្នក (មុខទំនិញ, ការលក់, ចំណាយ) រក្សាទុកដាច់ដោយឡែក ១០០% ពីហាងដទៃ (សម្រាប់ហាងវិជ្ជតាដើម សូមទុក <span className="font-bold text-purple-700 font-mono">DEFAULT</span> ដដែល)។ <br />
+                      ⚠️ <strong>ចំណាំ៖</strong> «លេខសម្គាល់ហាង» នេះមិនមែនជា License Key ទេ។ បើចង់បន្តសុពលភាព សូមប្រើកូដបន្តសុពលភាព (License Key) ឬផ្ញើ Device ID ទៅកាន់ Admin។
                     </p>
                   </div>
 

@@ -337,27 +337,53 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   const [categories] = useState<Category[]>(initialCategories);
 
-  // Products with seamless merge for party supplies (newest images/products first)
+  // Helper to repair missing images or convert base64/broken images to official upload paths
+  const healProductItem = (p: Product): { product: Product; changed: boolean } => {
+    const match = initialProducts.find((ip) => ip.id === p.id);
+    if (!match) return { product: p, changed: false };
+
+    const currentImg = (p.imageUrl || '').trim();
+    const needsImageFix =
+      !currentImg ||
+      currentImg.startsWith('data:') ||
+      currentImg.length < 5 ||
+      (match.imageUrl && match.imageUrl.startsWith('/uploads/products/') && currentImg !== match.imageUrl);
+
+    if (needsImageFix && match.imageUrl) {
+      return {
+        product: {
+          ...p,
+          imageUrl: match.imageUrl,
+          images: match.images && match.images.length > 0 ? match.images : [match.imageUrl],
+        },
+        changed: true,
+      };
+    }
+
+    if ((!p.images || p.images.length === 0) && currentImg) {
+      return {
+        product: {
+          ...p,
+          images: [currentImg],
+        },
+        changed: true,
+      };
+    }
+
+    return { product: p, changed: false };
+  };
+
+  // Products with seamless merge for party supplies & cake items (newest images/products first)
   const [products, setProducts] = useState<Product[]>(() => {
     const saved = localStorage.getItem('bakery_products');
     if (saved) {
       try {
         const parsed: Product[] = JSON.parse(saved);
-        // Auto-heal any product with missing imageUrl from initialProducts
-        const healed = parsed.map((p) => {
-          if (!p.imageUrl) {
-            const match = initialProducts.find((ip) => ip.id === p.id);
-            if (match && match.imageUrl) {
-              return { ...p, imageUrl: match.imageUrl, images: match.images || [match.imageUrl] };
-            }
-          }
-          return p;
-        });
-        const partyItems = initialProducts.filter((p) => p.categoryId === 'party');
-        const missingPartyItems = partyItems.filter(
-          (pi) => !healed.some((existing) => existing.id === pi.id)
+        const healed = parsed.map((p) => healProductItem(p).product);
+        const missingItems = initialProducts.filter(
+          (ip) => !healed.some((existing) => existing.id === ip.id)
         );
-        return sortProductsNewestFirst([...healed, ...missingPartyItems]);
+        return sortProductsNewestFirst([...healed, ...missingItems]);
       } catch (e) {
         return sortProductsNewestFirst(initialProducts);
       }
@@ -373,17 +399,17 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         const parsed: Product[] = JSON.parse(saved);
         let changed = false;
         const healed = parsed.map((p) => {
-          if (!p.imageUrl) {
-            const match = initialProducts.find((ip) => ip.id === p.id);
-            if (match && match.imageUrl) {
-              changed = true;
-              return { ...p, imageUrl: match.imageUrl, images: match.images || [match.imageUrl] };
-            }
-          }
-          return p;
+          const res = healProductItem(p);
+          if (res.changed) changed = true;
+          return res.product;
         });
+        const missingItems = initialProducts.filter(
+          (ip) => !healed.some((existing) => existing.id === ip.id)
+        );
+        if (missingItems.length > 0) changed = true;
+
         if (changed) {
-          const sorted = sortProductsNewestFirst(healed);
+          const sorted = sortProductsNewestFirst([...healed, ...missingItems]);
           setProducts(sorted);
           localStorage.setItem('bakery_products', JSON.stringify(sorted));
         }

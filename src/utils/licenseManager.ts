@@ -8,7 +8,7 @@
  */
 
 import { idbGet, idbSet } from './idbStorage';
-import { saveFirestoreDoc, subscribeToFirestoreDoc, subscribeToFirestoreCollection, getStoreId } from '../services/firebase';
+import { saveFirestoreDoc, subscribeToFirestoreDoc, subscribeToFirestoreCollection, getStoreId, isDefaultStore } from '../services/firebase';
 
 export interface LicenseInfo {
   deviceId: string;
@@ -58,6 +58,8 @@ export const GLOBAL_KEYS: Record<string, { days?: number; permanent?: boolean; l
   // 1 Year License (+365 Days)
   'BAKERY-365D-PRO': { days: 365, label: 'បន្តសុពលភាព ១ ឆ្នាំ (365 ថ្ងៃ)' },
   'SWB-YEAR-ACCESS': { days: 365, label: 'បន្តសុពលភាព ១ ឆ្នាំ (365 ថ្ងៃ)' },
+  'DEFAULT': { days: 365, label: 'បន្តសុពលភាព ១ ឆ្នាំ (Store Default Key)' },
+  'STORE-DEFAULT': { days: 365, label: 'បន្តសុពលភាព ១ ឆ្នាំ (Store Default Key)' },
 
   // 6 Months License (+180 Days)
   'BAKERY-180D-PASS': { days: 180, label: 'បន្តសុពលភាព ៦ ខែ (180 ថ្ងៃ)' },
@@ -244,6 +246,7 @@ export const syncRemoteLicense = (
 ): (() => void) => {
   const deviceId = getDeviceId();
   const localInfo = getLicenseInfo();
+  const storeId = getStoreId();
 
   // 1. Report heartbeat to Firebase so owner sees this client device
   try {
@@ -256,7 +259,6 @@ export const syncRemoteLicense = (
       }
     })();
 
-    const storeId = getStoreId();
     saveFirestoreDoc('system_licenses', deviceId, {
       deviceId,
       storeId,
@@ -270,11 +272,7 @@ export const syncRemoteLicense = (
   } catch (e) {}
 
   // 2. Real-time subscription to cloud changes made by owner
-  const unsubscribe = subscribeToFirestoreDoc<{
-    active?: boolean;
-    expiresAt?: number | string;
-    permanent?: boolean;
-  }>('system_licenses', deviceId, (remoteData) => {
+  const handleRemoteUpdate = (remoteData: any) => {
     if (!remoteData) return;
 
     const now = Date.now();
@@ -293,7 +291,8 @@ export const syncRemoteLicense = (
         ? remoteData.expiresAt
         : new Date(remoteData.expiresAt).getTime();
 
-      if (remoteExp > localInfo.expiresAt && remoteExp > now) {
+      const currentStored = parseInt(localStorage.getItem(STORAGE_EXPIRES_AT) || '0', 10);
+      if (remoteExp > currentStored && remoteExp > now) {
         localStorage.setItem(STORAGE_EXPIRES_AT, remoteExp.toString());
         idbSet(STORAGE_EXPIRES_AT, remoteExp.toString()).catch(() => {});
         localStorage.setItem(STORAGE_LAST_TIMESTAMP, now.toString());
@@ -302,9 +301,18 @@ export const syncRemoteLicense = (
         });
       }
     }
-  });
+  };
 
-  return unsubscribe;
+  const unsubDevice = subscribeToFirestoreDoc('system_licenses', deviceId, handleRemoteUpdate);
+  let unsubDefault: (() => void) | undefined;
+  if (isDefaultStore(storeId)) {
+    unsubDefault = subscribeToFirestoreDoc('system_licenses', 'DEFAULT', handleRemoteUpdate);
+  }
+
+  return () => {
+    if (unsubDevice) unsubDevice();
+    if (unsubDefault) unsubDefault();
+  };
 };
 
 /**

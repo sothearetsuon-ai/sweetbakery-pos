@@ -23,8 +23,11 @@ export function getProductImageUrl(url?: string | null): string {
     return trimmed;
   }
 
-  // Handle local upload paths like /uploads/products/xxx.jpg or uploads/products/xxx.jpg
-  const cleanPath = trimmed.startsWith('/') ? trimmed.slice(1) : trimmed;
+  // Handle local upload paths like /uploads/products/xxx.jpg or public/uploads/...
+  let cleanPath = trimmed.startsWith('/') ? trimmed.slice(1) : trimmed;
+  if (cleanPath.startsWith('public/')) {
+    cleanPath = cleanPath.slice(7);
+  }
 
   // In the browser, resolve dynamically with origin and subpath for 100% guarantee
   if (typeof window !== 'undefined' && window.location) {
