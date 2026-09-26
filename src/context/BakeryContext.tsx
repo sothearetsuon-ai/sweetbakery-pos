@@ -343,17 +343,53 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     if (saved) {
       try {
         const parsed: Product[] = JSON.parse(saved);
+        // Auto-heal any product with missing imageUrl from initialProducts
+        const healed = parsed.map((p) => {
+          if (!p.imageUrl) {
+            const match = initialProducts.find((ip) => ip.id === p.id);
+            if (match && match.imageUrl) {
+              return { ...p, imageUrl: match.imageUrl, images: match.images || [match.imageUrl] };
+            }
+          }
+          return p;
+        });
         const partyItems = initialProducts.filter((p) => p.categoryId === 'party');
         const missingPartyItems = partyItems.filter(
-          (pi) => !parsed.some((existing) => existing.id === pi.id)
+          (pi) => !healed.some((existing) => existing.id === pi.id)
         );
-        return sortProductsNewestFirst([...parsed, ...missingPartyItems]);
+        return sortProductsNewestFirst([...healed, ...missingPartyItems]);
       } catch (e) {
         return sortProductsNewestFirst(initialProducts);
       }
     }
     return sortProductsNewestFirst(initialProducts);
   });
+
+  // Auto-heal products in localStorage on mount
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('bakery_products');
+      if (saved) {
+        const parsed: Product[] = JSON.parse(saved);
+        let changed = false;
+        const healed = parsed.map((p) => {
+          if (!p.imageUrl) {
+            const match = initialProducts.find((ip) => ip.id === p.id);
+            if (match && match.imageUrl) {
+              changed = true;
+              return { ...p, imageUrl: match.imageUrl, images: match.images || [match.imageUrl] };
+            }
+          }
+          return p;
+        });
+        if (changed) {
+          const sorted = sortProductsNewestFirst(healed);
+          setProducts(sorted);
+          localStorage.setItem('bakery_products', JSON.stringify(sorted));
+        }
+      }
+    } catch (e) {}
+  }, []);
 
   // Dynamic Flavors list
   const [flavors, setFlavors] = useState<string[]>(() => {
@@ -394,7 +430,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         } catch (e) {}
       }
 
-      // 2. Strip heavy base64 images from bakery_products in localStorage cache
+      // 2. Safely trim bakery_products in localStorage cache (preserve imageUrl!)
       const prodRaw = localStorage.getItem('bakery_products');
       if (prodRaw && prodRaw.length > 600000) {
         try {
@@ -402,8 +438,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           if (Array.isArray(prods)) {
             const slim = prods.map((p: any) => ({
               ...p,
-              images: undefined,
-              imageUrl: (p.imageUrl && p.imageUrl.startsWith('data:') && p.imageUrl.length > 30000) ? undefined : p.imageUrl,
+              images: p.images && p.images.length > 1 ? [p.imageUrl || p.images[0]] : p.images,
             }));
             localStorage.setItem('bakery_products', JSON.stringify(slim));
           }
@@ -441,8 +476,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           const parsed = JSON.parse(value);
           const slim = parsed.map((p: any) => ({
             ...p,
-            images: undefined,
-            imageUrl: (p.imageUrl && p.imageUrl.startsWith('data:') && p.imageUrl.length > 30000) ? undefined : p.imageUrl,
+            images: p.images && p.images.length > 1 ? [p.imageUrl || p.images[0]] : p.images,
           }));
           localStorage.setItem(key, JSON.stringify(slim));
         } else if (key === 'bakery_expenses') {
