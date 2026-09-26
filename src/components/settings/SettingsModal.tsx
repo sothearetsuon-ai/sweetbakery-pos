@@ -38,6 +38,7 @@ import { useBakery } from '../../context/BakeryContext';
 import { t } from '../../utils/translations';
 import { soundFx } from '../../utils/audio';
 import { compressImageFile } from '../../utils/imageCompressor';
+import { getProductImageUrl } from '../../utils/imagePath';
 import { KhqrStandeeModal } from '../pos/KhqrStandeeModal';
 import { StaffManagement } from '../staff/StaffManagement';
 import { FirebaseSettingsTab } from './FirebaseSettingsTab';
@@ -697,7 +698,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                             <span className="text-[9px] font-bold mt-1">កំពុងផ្ទុក...</span>
                           </div>
                         ) : logoUrl ? (
-                          <img src={logoUrl} alt="Store Logo Preview" className="w-full h-full object-cover" />
+                          <img src={getProductImageUrl(logoUrl)} alt="Store Logo Preview" className="w-full h-full object-cover" />
                         ) : (
                           <div className="text-center p-2 text-slate-400">
                             <ImageIcon className="w-7 h-7 mx-auto mb-1 text-pink-400" />
@@ -917,7 +918,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                           <span className="text-[9px] font-bold mt-1">កំពុងផ្ទុក...</span>
                         </div>
                       ) : khqrQrImage ? (
-                        <img src={khqrQrImage} alt="KHQR Preview" className="w-full h-full object-contain p-1" />
+                        <img src={getProductImageUrl(khqrQrImage)} alt="KHQR Preview" className="w-full h-full object-contain p-1" />
                       ) : (
                         <div className="text-center p-2 text-slate-400">
                           <QrCode className="w-7 h-7 mx-auto mb-1 text-red-500" />

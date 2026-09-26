@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { X, Printer, QrCode, Sparkles, Download, CheckCircle2 } from 'lucide-react';
 import { useBakery } from '../../context/BakeryContext';
 import { soundFx } from '../../utils/audio';
+import { getProductImageUrl } from '../../utils/imagePath';
 
 interface KhqrStandeeModalProps {
   isOpen: boolean;
@@ -36,7 +37,7 @@ export const KhqrStandeeModal: React.FC<KhqrStandeeModalProps> = ({
     : `bakong://pay?merchant=${encodeURIComponent(merchantName)}&account=${encodeURIComponent(bakongId)}`;
 
   const fallbackQrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=280x280&data=${encodeURIComponent(qrData)}`;
-  const displayQrSrc = storeInfo.khqrQrImage || fallbackQrUrl;
+  const displayQrSrc = storeInfo.khqrQrImage ? getProductImageUrl(storeInfo.khqrQrImage) : fallbackQrUrl;
   const isUploadedFullPoster = !!storeInfo.khqrQrImage;
 
   const modalContent = (
@@ -125,7 +126,7 @@ export const KhqrStandeeModal: React.FC<KhqrStandeeModalProps> = ({
                   <div className="flex items-center justify-center gap-2 pb-2 border-b border-dashed border-slate-200">
                     {storeInfo.logoUrl ? (
                       <img
-                        src={storeInfo.logoUrl}
+                        src={getProductImageUrl(storeInfo.logoUrl)}
                         alt={storeInfo.nameKh}
                         className="w-9 h-9 object-cover rounded-xl border border-rose-100 shrink-0"
                       />

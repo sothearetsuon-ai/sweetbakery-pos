@@ -24,6 +24,57 @@ export const initialFlavors: string[] = [
 
 export const initialProducts: Product[] = [
   {
+    "id": "p-1789806994353",
+    "nameKh": "សូកូឡា",
+    "nameEn": "Chocolate",
+    "categoryId": "birthday",
+    "priceUsd": 5,
+    "priceKhr": 20000,
+    "costPriceUsd": 0,
+    "costPriceKhr": 0,
+    "stockQty": 1,
+    "unit": "នំ",
+    "description": "",
+    "imageUrl": "/uploads/products/p-1789806994353.jpg",
+    "images": [
+      "/uploads/products/p-1789806994353.jpg"
+    ]
+  },
+  {
+    "id": "p-1789790979158",
+    "nameKh": "សូកូឡា",
+    "nameEn": "Chocolate",
+    "categoryId": "birthday",
+    "priceUsd": 5,
+    "priceKhr": 20000,
+    "costPriceUsd": 10,
+    "costPriceKhr": 40000,
+    "stockQty": 10,
+    "unit": "នំ",
+    "description": "",
+    "imageUrl": "/uploads/products/p-1789790979158.jpg",
+    "images": [
+      "/uploads/products/p-1789790979158.jpg"
+    ]
+  },
+  {
+    "id": "p-1789798204081",
+    "nameKh": "ស្រ្តប៊ែរី",
+    "nameEn": "Strawberry Cake",
+    "categoryId": "birthday",
+    "priceUsd": 5,
+    "priceKhr": 20000,
+    "costPriceUsd": 0,
+    "costPriceKhr": 0,
+    "stockQty": 5,
+    "unit": "នំ",
+    "description": "",
+    "imageUrl": "/uploads/products/p-1789798204081.jpg",
+    "images": [
+      "/uploads/products/p-1789798204081.jpg"
+    ]
+  },
+  {
     "id": "p9",
     "nameKh": "កាហ្វេ ឡាតេ ក្តៅ/ត្រជាក់",
     "nameEn": "Artisan Cafe Latte (Hot/Iced)",

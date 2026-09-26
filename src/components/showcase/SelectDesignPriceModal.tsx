@@ -16,6 +16,7 @@ import confetti from 'canvas-confetti';
 import { Product } from '../../types';
 import { useBakery } from '../../context/BakeryContext';
 import { soundFx } from '../../utils/audio';
+import { getProductImageUrl } from '../../utils/imagePath';
 
 interface SelectDesignPriceModalProps {
   isOpen: boolean;
@@ -179,7 +180,7 @@ export const SelectDesignPriceModal: React.FC<SelectDesignPriceModalProps> = ({
           <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 p-3.5 bg-rose-50/60 border border-rose-100 rounded-3xl">
             <div className="relative w-28 h-28 sm:w-32 sm:h-32 rounded-2xl overflow-hidden shrink-0 border-2 border-pink-200 shadow-sm bg-white">
               <img
-                src={images[selectedImgIdx] || images[0]}
+                src={getProductImageUrl(images[selectedImgIdx] || images[0])}
                 alt={product.nameKh}
                 loading="lazy"
                 decoding="async"
@@ -222,7 +223,7 @@ export const SelectDesignPriceModal: React.FC<SelectDesignPriceModalProps> = ({
                           : 'border-slate-200 opacity-60 hover:opacity-100'
                       }`}
                     >
-                      <img src={img} alt="thumb" loading="lazy" decoding="async" className="w-full h-full object-cover" />
+                      <img src={getProductImageUrl(img)} alt="thumb" loading="lazy" decoding="async" className="w-full h-full object-cover" />
                     </button>
                   ))}
                 </div>

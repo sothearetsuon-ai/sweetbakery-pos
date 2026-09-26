@@ -27,6 +27,7 @@ import { useBakery } from '../../context/BakeryContext';
 import { t } from '../../utils/translations';
 import { soundFx } from '../../utils/audio';
 import { Product, PartyAddon } from '../../types';
+import { getProductImageUrl } from '../../utils/imagePath';
 
 interface CartPanelProps {
   onCheckout: (options?: {
@@ -380,7 +381,7 @@ export const CartPanel: React.FC<CartPanelProps> = ({ onCheckout, onClose, isMob
                   className="bg-white/90 rounded-2xl p-3 border border-rose-100/70 shadow-2xs hover:shadow-xs transition-all flex items-center gap-3 group"
                 >
                   <img
-                    src={item.product.imageUrl || (item.product.images && item.product.images[0]) || 'https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=400'}
+                    src={getProductImageUrl(item.product.imageUrl || (item.product.images && item.product.images[0])) || 'https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=400'}
                     alt={name}
                     className="w-14 h-14 rounded-xl object-cover shrink-0 border border-rose-100"
                   />

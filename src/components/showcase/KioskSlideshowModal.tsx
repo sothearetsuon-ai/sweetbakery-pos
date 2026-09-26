@@ -3,6 +3,7 @@ import { X, Play, Pause, ChevronLeft, ChevronRight, ShoppingBag, Sparkles, Cake,
 import { Product } from '../../types';
 import { useBakery } from '../../context/BakeryContext';
 import { soundFx } from '../../utils/audio';
+import { getProductImageUrl } from '../../utils/imagePath';
 
 interface KioskSlideshowModalProps {
   isOpen: boolean;
@@ -85,7 +86,7 @@ export const KioskSlideshowModal: React.FC<KioskSlideshowModalProps> = ({
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-pink-600 to-rose-500 p-0.5 shadow-lg shadow-pink-500/30 overflow-hidden">
             {storeInfo.logoUrl ? (
-              <img src={storeInfo.logoUrl} alt="Logo" className="w-full h-full object-cover rounded-[14px]" />
+              <img src={getProductImageUrl(storeInfo.logoUrl)} alt="Logo" className="w-full h-full object-cover rounded-[14px]" />
             ) : (
               <div className="w-full h-full bg-white/10 flex items-center justify-center">
                 <Cake className="w-5 h-5 text-white animate-float" />
@@ -162,7 +163,7 @@ export const KioskSlideshowModal: React.FC<KioskSlideshowModalProps> = ({
         {/* Background Blurred Glow */}
         <div
           className="absolute inset-0 bg-cover bg-center blur-3xl opacity-25 scale-110 transition-all duration-1000"
-          style={{ backgroundImage: `url(${activeImages[currentImageIdx]})` }}
+          style={{ backgroundImage: `url(${getProductImageUrl(activeImages[currentImageIdx])})` }}
         />
 
         {/* Big Cake Image Container */}
@@ -172,7 +173,7 @@ export const KioskSlideshowModal: React.FC<KioskSlideshowModalProps> = ({
             {activeImages.map((img, idx) => (
               <img
                 key={idx}
-                src={img}
+                src={getProductImageUrl(img)}
                 alt={`${name} ${idx + 1}`}
                 className={`w-full h-full object-cover absolute inset-0 transition-all duration-1000 ease-in-out ${
                   idx === currentImageIdx
@@ -299,7 +300,7 @@ export const KioskSlideshowModal: React.FC<KioskSlideshowModalProps> = ({
                   : 'border-white/20 opacity-60 hover:opacity-100 hover:border-pink-300'
               }`}
             >
-              <img src={cover} alt={p.nameKh} className="w-full h-full object-cover" />
+              <img src={getProductImageUrl(cover)} alt={p.nameKh} className="w-full h-full object-cover" />
             </button>
           );
         })}

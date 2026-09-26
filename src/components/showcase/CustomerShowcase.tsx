@@ -28,6 +28,7 @@ import { KioskSlideshowModal } from './KioskSlideshowModal';
 import { SelectDesignPriceModal } from './SelectDesignPriceModal';
 import { NewCustomOrderModal } from '../custom-orders/NewCustomOrderModal';
 import { sortProductsNewestFirst } from '../../utils/productUtils';
+import { getProductImageUrl } from '../../utils/imagePath';
 
 // Animated Individual Cake Card with Auto-Transitions
 interface ShowcaseCardProps {
@@ -96,7 +97,7 @@ const ShowcaseCard: React.FC<ShowcaseCardProps> = ({
           return (
             <img
               key={idx}
-              src={img}
+              src={getProductImageUrl(img)}
               alt={`${name} ${idx + 1}`}
               loading="lazy"
               decoding="async"
@@ -432,7 +433,7 @@ export const CustomerShowcase: React.FC = () => {
                 {previewImages.map((img, idx) => (
                   <img
                     key={idx}
-                    src={img}
+                    src={getProductImageUrl(img)}
                     alt={`${previewProduct.nameKh} ${idx + 1}`}
                     className={`w-full h-full object-cover absolute inset-0 transition-all duration-700 ease-in-out ${
                       idx === lightboxImgIdx
@@ -531,7 +532,7 @@ export const CustomerShowcase: React.FC = () => {
                             : 'border-white/20 opacity-60 hover:opacity-100 hover:border-pink-300'
                         }`}
                       >
-                        <img src={img} alt={`Thumb ${idx + 1}`} className="w-full h-full object-cover" />
+                        <img src={getProductImageUrl(img)} alt={`Thumb ${idx + 1}`} className="w-full h-full object-cover" />
                       </button>
                     );
                   })}

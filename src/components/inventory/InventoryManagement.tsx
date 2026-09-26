@@ -28,6 +28,7 @@ import { useBakery } from '../../context/BakeryContext';
 import { t } from '../../utils/translations';
 import { Ingredient, Product, Recipe } from '../../types';
 import { soundFx } from '../../utils/audio';
+import { getProductImageUrl } from '../../utils/imagePath';
 import { AddProductModal } from '../pos/AddProductModal';
 import { AddEditIngredientModal } from './AddEditIngredientModal';
 import { AddEditRecipeModal } from './AddEditRecipeModal';
@@ -341,7 +342,7 @@ export const InventoryManagement: React.FC = () => {
                       <div className="w-12 h-12 rounded-xl bg-pink-50 border border-pink-100 overflow-hidden shrink-0 flex items-center justify-center">
                         {prod.imageUrl ? (
                           <img
-                            src={prod.imageUrl}
+                            src={getProductImageUrl(prod.imageUrl)}
                             alt={prod.nameKh}
                             className="w-full h-full object-cover"
                           />
@@ -462,7 +463,7 @@ export const InventoryManagement: React.FC = () => {
                               <div className="w-10 h-10 rounded-xl bg-pink-50 border border-pink-100 overflow-hidden shrink-0 flex items-center justify-center">
                                 {prod.imageUrl ? (
                                   <img
-                                    src={prod.imageUrl}
+                                    src={getProductImageUrl(prod.imageUrl)}
                                     alt={prod.nameKh}
                                     className="w-full h-full object-cover"
                                   />

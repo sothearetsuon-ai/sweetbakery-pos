@@ -25,6 +25,7 @@ import { useBakery } from '../../context/BakeryContext';
 import { useMusic } from '../../context/MusicContext';
 import { t } from '../../utils/translations';
 import { soundFx } from '../../utils/audio';
+import { getProductImageUrl } from '../../utils/imagePath';
 import { KhqrStandeeModal } from '../pos/KhqrStandeeModal';
 import { SwitchStaffModal } from '../staff/SwitchStaffModal';
 import { StaffDropdown } from '../staff/StaffDropdown';
@@ -148,7 +149,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-2xl bg-gradient-to-tr from-pink-600 via-rose-500 to-amber-400 p-0.5 shadow-lg shadow-pink-500/25 transition-transform duration-300 group-hover:scale-105 overflow-hidden">
                 {storeInfo.logoUrl ? (
                   <img
-                    src={storeInfo.logoUrl}
+                    src={getProductImageUrl(storeInfo.logoUrl)}
                     alt={storeInfo.nameKh}
                     className="w-full h-full object-cover rounded-[14px] bg-white"
                   />

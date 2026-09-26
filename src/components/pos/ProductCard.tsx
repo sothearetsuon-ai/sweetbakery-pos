@@ -4,6 +4,7 @@ import { Product } from '../../types';
 import { useBakery } from '../../context/BakeryContext';
 import { t } from '../../utils/translations';
 import { soundFx } from '../../utils/audio';
+import { getProductImageUrl } from '../../utils/imagePath';
 
 interface ProductCardProps {
   product: Product;
@@ -41,9 +42,10 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart }
   const defaultCakeFallback =
     'https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=500&q=80';
 
-  const displayImage =
+  const rawImage =
     (!imgError && (product.imageUrl || (product.images && product.images.length > 0 ? product.images[0] : ''))) ||
-    defaultCakeFallback;
+    '';
+  const displayImage = rawImage ? getProductImageUrl(rawImage) : defaultCakeFallback;
 
   return (
     <div

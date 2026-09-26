@@ -6,6 +6,7 @@ import { t } from '../../utils/translations';
 import { soundFx } from '../../utils/audio';
 import { compressImageFile } from '../../utils/imageCompressor';
 import { CameraCaptureModal } from '../common/CameraCaptureModal';
+import { getProductImageUrl } from '../../utils/imagePath';
 import { Product } from '../../types';
 
 interface AddProductModalProps {
@@ -337,7 +338,7 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, onClos
                         }`}
                       >
                         <img
-                          src={img}
+                          src={getProductImageUrl(img)}
                           alt={`Uploaded ${idx + 1}`}
                           className="w-full h-full object-cover"
                         />

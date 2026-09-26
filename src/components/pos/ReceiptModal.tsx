@@ -3,6 +3,7 @@ import { X, Printer, CheckCircle2 } from 'lucide-react';
 import { CompletedSale } from '../../types';
 import { useBakery } from '../../context/BakeryContext';
 import { t } from '../../utils/translations';
+import { getProductImageUrl } from '../../utils/imagePath';
 
 interface ReceiptModalProps {
   sale: CompletedSale | null;
@@ -48,7 +49,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({ sale, isOpen, onClos
               {storeInfo.logoUrl && (
                 <div className="w-14 h-14 mx-auto mb-1.5 rounded-xl overflow-hidden border border-slate-200 p-0.5">
                   <img
-                    src={storeInfo.logoUrl}
+                    src={getProductImageUrl(storeInfo.logoUrl)}
                     alt="Store Logo"
                     className="w-full h-full object-contain"
                   />
@@ -197,7 +198,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({ sale, isOpen, onClos
               <div className="w-20 h-20 mx-auto bg-slate-100 p-1 rounded-lg border border-slate-200 overflow-hidden">
                 <img
                   src={
-                    storeInfo.khqrQrImage ||
+                    (storeInfo.khqrQrImage ? getProductImageUrl(storeInfo.khqrQrImage) : undefined) ||
                     `https://api.qrserver.com/v1/create-qr-code/?size=80x80&data=bakong://pay?merchant=${encodeURIComponent(
                       storeInfo.khqrMerchantName || 'SWEET_BAKERY'
                     )}&account=${encodeURIComponent(
