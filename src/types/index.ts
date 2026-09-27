@@ -86,6 +86,8 @@ export interface CustomCakeOrder {
   depositUsd: number;
   depositKhr?: number;
   paymentMethod: 'CASH_USD' | 'CASH_KHR' | 'KHQR_BAKONG';
+  bankSlipImage?: string;
+  orderSource?: 'CUSTOMER_ONLINE' | 'POS_STAFF';
   createdAt: string;
 }
 

@@ -48,6 +48,18 @@ import {
   getStoredTelegramConfig,
   saveStoredTelegramConfig,
 } from '../services/telegram';
+import { offlineSyncService, SyncState } from '../services/offlineSyncService';
+
+// Unified wrapper to guarantee every write & delete is queued for offline-to-cloud automatic sync
+const syncSaveDoc = (collectionName: string, docId: string, data: any) => {
+  saveFirestoreDoc(collectionName, docId, data);
+  offlineSyncService.queueMutation(collectionName, docId, 'set', data);
+};
+
+const syncDeleteDoc = (collectionName: string, docId: string) => {
+  deleteFirestoreDoc(collectionName, docId);
+  offlineSyncService.queueMutation(collectionName, docId, 'delete');
+};
 
 interface BakeryContextType {
   lang: Language;
@@ -57,6 +69,9 @@ interface BakeryContextType {
 
   isFirebaseConnected: boolean;
   firebaseSyncStatus: 'connected' | 'disconnected' | 'syncing';
+  offlineSyncStatus: SyncState;
+  pendingSyncCount: number;
+  triggerAutoCloudSync: () => Promise<void>;
 
   staffMembers: StaffMember[];
   currentStaff: StaffMember;
@@ -98,7 +113,7 @@ interface BakeryContextType {
   cartTotalKhr: number;
 
   customOrders: CustomCakeOrder[];
-  addCustomOrder: (order: Omit<CustomCakeOrder, 'id' | 'orderNumber' | 'createdAt'>) => void;
+  addCustomOrder: (order: Omit<CustomCakeOrder, 'id' | 'orderNumber' | 'createdAt'>) => CustomCakeOrder;
   updateOrderStatus: (orderId: string, newStatus: OrderStatus) => void;
   addCustomOrderDeposit: (
     orderId: string,
@@ -322,7 +337,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       };
       updatedTarget = updated;
       try { localStorage.setItem('bakery_store_info', JSON.stringify(updated)); } catch (e) {}
-      saveFirestoreDoc('settings', 'storeInfo', updated);
+      syncSaveDoc('settings', 'storeInfo', updated);
       return updated;
     });
 
@@ -982,6 +997,16 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     return !!getStoredFirebaseConfig();
   });
   const [firebaseSyncStatus, setFirebaseSyncStatus] = useState<'connected' | 'disconnected' | 'syncing'>('disconnected');
+  const [offlineSyncStatus, setOfflineSyncStatus] = useState<SyncState>(() => offlineSyncService.getStatus());
+  const [pendingSyncCount, setPendingSyncCount] = useState<number>(() => offlineSyncService.getPendingCount());
+
+  useEffect(() => {
+    const unsub = offlineSyncService.subscribe((state) => {
+      setOfflineSyncStatus(state.status);
+      setPendingSyncCount(state.pendingCount);
+    });
+    return unsub;
+  }, []);
 
   useEffect(() => {
     const config = getStoredFirebaseConfig();
@@ -1000,6 +1025,9 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
     setIsFirebaseConnected(true);
     setFirebaseSyncStatus('connected');
+
+    // Automatically trigger queue processing when Firebase initializes & connects
+    offlineSyncService.processQueue().catch(() => {});
 
     // Subscribe to products
     const unsubProducts = subscribeToFirestoreCollection<Product>('products', (cloudProducts) => {
@@ -1165,7 +1193,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       }, true);
       return updated;
     });
-    saveFirestoreDoc('expenses', newExpense.id, newExpense);
+    syncSaveDoc('expenses', newExpense.id, newExpense);
     notifyTelegramExpense(newExpense, storeInfo, exchangeRate);
   };
 
@@ -1195,7 +1223,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       }, true);
       return updated;
     });
-    saveFirestoreDoc('expenses', id, updatedData);
+    syncSaveDoc('expenses', id, updatedData);
   };
 
   const deleteExpense = (id: string) => {
@@ -1227,7 +1255,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     });
 
     // 3. Delete from Firebase if configured
-    deleteFirestoreDoc('expenses', id);
+    syncDeleteDoc('expenses', id);
   };
 
   const clearAllExpenses = () => {
@@ -1235,7 +1263,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     if (lanSyncTimer.current) clearTimeout(lanSyncTimer.current);
     expenses.forEach((e) => {
       deletedExpenseIds.current.add(e.id);
-      deleteFirestoreDoc('expenses', e.id);
+      syncDeleteDoc('expenses', e.id);
     });
 
     // 1. Call atomic server clear endpoint
@@ -1366,7 +1394,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       body: JSON.stringify({ product: newProduct }),
     }).catch((err) => console.error('Error saving product to LAN:', err));
 
-    saveFirestoreDoc('products', newProduct.id, newProduct);
+    syncSaveDoc('products', newProduct.id, newProduct);
   };
 
   const updateProduct = (product: Product) => {
@@ -1386,7 +1414,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       body: JSON.stringify({ product: updatedProd }),
     }).catch((err) => console.error('Error saving product to LAN:', err));
 
-    saveFirestoreDoc('products', updatedProd.id, updatedProd);
+    syncSaveDoc('products', updatedProd.id, updatedProd);
   };
 
   const deleteProduct = (productId: string) => {
@@ -1406,7 +1434,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       body: JSON.stringify({ id: productId }),
     }).catch((err) => console.error('Error deleting product from LAN:', err));
 
-    deleteFirestoreDoc('products', productId);
+    syncDeleteDoc('products', productId);
   };
 
   const restockProduct = (productId: string, additionalStock: number) => {
@@ -1434,7 +1462,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ product: updatedTarget }),
       }).catch(() => {});
-      saveFirestoreDoc('products', productId, updatedTarget);
+      syncSaveDoc('products', productId, updatedTarget);
     }
   };
 
@@ -1667,7 +1695,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       const soldItem = saleData.items.find((item) => item.productId === p.id);
       if (soldItem) {
         const updated = { ...p, stockQty: Math.max(0, p.stockQty - soldItem.quantity) };
-        saveFirestoreDoc('products', p.id, updated);
+        syncSaveDoc('products', p.id, updated);
         return updated;
       }
       return p;
@@ -1699,7 +1727,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setProducts(updatedProducts);
     try { localStorage.setItem('bakery_products', JSON.stringify(updatedProducts)); } catch (e) {}
 
-    saveFirestoreDoc('sales', newSale.id, newSale);
+    syncSaveDoc('sales', newSale.id, newSale);
     clearCart();
     notifyTelegramSale(newSale, storeInfo, exchangeRate);
 
@@ -1745,7 +1773,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       }, true);
       return updated;
     });
-    saveFirestoreDoc('sales', newSale.id, newSale);
+    syncSaveDoc('sales', newSale.id, newSale);
   };
 
   // Update Existing Sale
@@ -1773,7 +1801,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       }, true);
       return updated;
     });
-    saveFirestoreDoc('sales', updatedSale.id, updatedSale);
+    syncSaveDoc('sales', updatedSale.id, updatedSale);
   };
 
   // Delete Sale
@@ -1806,7 +1834,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       }, true);
       return updated;
     });
-    deleteFirestoreDoc('sales', id);
+    syncDeleteDoc('sales', id);
   };
 
   const clearAllSales = () => {
@@ -1821,7 +1849,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }).catch(() => {});
 
     sales.forEach((s) => {
-      deleteFirestoreDoc('sales', s.id);
+      syncDeleteDoc('sales', s.id);
     });
     setSales([]);
     try {
@@ -1839,7 +1867,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   };
 
   // Custom cake orders actions
-  const addCustomOrder = (orderData: Omit<CustomCakeOrder, 'id' | 'orderNumber' | 'createdAt'>) => {
+  const addCustomOrder = (orderData: Omit<CustomCakeOrder, 'id' | 'orderNumber' | 'createdAt'>): CustomCakeOrder => {
     const randomSuffix = Math.floor(1000 + Math.random() * 9000);
     const orderNumber = `CK-${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, '0')}-${randomSuffix}`;
     const newOrder: CustomCakeOrder = {
@@ -1848,9 +1876,31 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       orderNumber,
       createdAt: new Date().toISOString(),
     };
-    setCustomOrders((prev) => [newOrder, ...prev]);
-    saveFirestoreDoc('customOrders', newOrder.id, newOrder);
+    setCustomOrders((prev) => {
+      const updated = [newOrder, ...prev];
+      try { localStorage.setItem('bakery_custom_orders', JSON.stringify(updated)); } catch (e) {}
+      saveToLanSync({
+        products,
+        sales,
+        customOrders: updated,
+        expenses,
+        storeInfo,
+        flavors,
+        telegramConfig: getStoredTelegramConfig(),
+      }, true);
+      return updated;
+    });
+
+    // Save to LAN server atomically
+    fetch('/api/save-custom-order', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ order: newOrder }),
+    }).catch(() => {});
+
+    syncSaveDoc('customOrders', newOrder.id, newOrder);
     notifyTelegramCustomOrder(newOrder, storeInfo, exchangeRate);
+    return newOrder;
   };
 
   const updateOrderStatus = (orderId: string, newStatus: OrderStatus) => {
@@ -1869,7 +1919,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
     if (!targetOrder) return;
 
-    saveFirestoreDoc('customOrders', orderId, { status: newStatus });
+    syncSaveDoc('customOrders', orderId, { status: newStatus });
 
     // Transition TO 'DELIVERED': Record sale & revenue
     if (newStatus === 'DELIVERED' && oldStatus !== 'DELIVERED') {
@@ -1961,7 +2011,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           body: JSON.stringify({ sale: newSale }),
         }).catch(() => {});
 
-        saveFirestoreDoc('sales', newSale.id, newSale);
+        syncSaveDoc('sales', newSale.id, newSale);
         notifyTelegramSale(newSale, storeInfo, exchangeRate);
 
         if (currentShift && currentShift.status === 'OPEN') {
@@ -1998,7 +2048,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         return updatedSales;
       });
 
-      deleteFirestoreDoc('sales', autoSaleId);
+      syncDeleteDoc('sales', autoSaleId);
       fetch('/api/delete-sale', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -2023,7 +2073,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setCustomOrders((prev) =>
       prev.map((o) => (o.id === orderId ? { ...o, ...updates } : o))
     );
-    saveFirestoreDoc('customOrders', orderId, updates);
+    syncSaveDoc('customOrders', orderId, updates);
   };
 
   const addCustomOrderDeposit = (
@@ -2044,7 +2094,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           depositUsd: newDepUsd,
           paymentMethod: paymentMethod || o.paymentMethod,
         };
-        saveFirestoreDoc('customOrders', orderId, updated);
+        syncSaveDoc('customOrders', orderId, updated);
         return updated;
       })
     );
@@ -2062,7 +2112,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       } catch (e) {}
       return updatedSales;
     });
-    deleteFirestoreDoc('sales', autoSaleId);
+    syncDeleteDoc('sales', autoSaleId);
     fetch('/api/delete-sale', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -2085,7 +2135,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       });
       return updated;
     });
-    deleteFirestoreDoc('customOrders', orderId);
+    syncDeleteDoc('customOrders', orderId);
   };
 
   const clearAllCustomOrders = () => {
@@ -2102,8 +2152,8 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     });
 
     customOrders.forEach((o) => {
-      deleteFirestoreDoc('customOrders', o.id);
-      deleteFirestoreDoc('sales', `sale-custom-${o.id}`);
+      syncDeleteDoc('customOrders', o.id);
+      syncDeleteDoc('sales', `sale-custom-${o.id}`);
     });
     setCustomOrders([]);
     try {
@@ -2425,6 +2475,20 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         exportExpensesCsv,
         isFirebaseConnected,
         firebaseSyncStatus,
+        offlineSyncStatus,
+        pendingSyncCount,
+        triggerAutoCloudSync: async () => {
+          setFirebaseSyncStatus('syncing');
+          await offlineSyncService.processQueue();
+          await offlineSyncService.reconcileLocalDataToCloud({
+            sales,
+            customOrders,
+            expenses,
+            products,
+            storeInfo,
+          });
+          setFirebaseSyncStatus('connected');
+        },
       }}
     >
       {children}

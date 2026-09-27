@@ -354,6 +354,33 @@ function lanSyncPlugin(): Plugin {
           return;
         }
 
+        // POST Save Single Custom Order (Atomic & Instant for Customer Portal & Staff)
+        if (req.url === '/api/save-custom-order' && req.method === 'POST') {
+          let body = '';
+          req.on('data', (chunk) => { body += chunk; });
+          req.on('end', () => {
+            try {
+              const { order } = JSON.parse(body);
+              if (!order || !order.id) {
+                res.writeHead(400, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ error: 'Missing custom order object or id' }));
+                return;
+              }
+              const dbData = getDbData() || {};
+              if (!Array.isArray(dbData.customOrders)) dbData.customOrders = [];
+              dbData.customOrders = [order, ...dbData.customOrders.filter((o: any) => o.id !== order.id)];
+              safeWrite(dbPath, JSON.stringify(dbData, null, 2));
+              res.writeHead(200, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({ success: true, orderId: order.id }));
+              broadcastEvent('SYNC_UPDATE');
+            } catch (err: any) {
+              res.writeHead(500, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({ error: err.message }));
+            }
+          });
+          return;
+        }
+
         // POST Save Single Product (Atomic & Instant)
         if (req.url === '/api/save-product' && req.method === 'POST') {
           let body = '';

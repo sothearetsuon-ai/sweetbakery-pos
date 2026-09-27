@@ -1,9 +1,10 @@
-import React from 'react';
-import { Clock, Phone, ChevronRight, CheckCircle2, Flame, Palette, Sparkles, CheckSquare, Wallet, Trash2, Printer } from 'lucide-react';
+import React, { useState } from 'react';
+import { Clock, Phone, ChevronRight, CheckCircle2, Flame, Palette, Sparkles, CheckSquare, Wallet, Trash2, Printer, X, Globe, Eye } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { CustomCakeOrder, OrderStatus } from '../../types';
 import { useBakery } from '../../context/BakeryContext';
 import { soundFx } from '../../utils/audio';
+import { getProductImageUrl } from '../../utils/imagePath';
 
 interface OrderCardProps {
   order: CustomCakeOrder;
@@ -15,6 +16,7 @@ interface OrderCardProps {
 
 export const OrderCard: React.FC<OrderCardProps> = ({ order, onAdvanceStatus, onAddDeposit, onDelete, onViewReceipt }) => {
   const { exchangeRate } = useBakery();
+  const [previewImage, setPreviewImage] = useState<{ url: string; title: string } | null>(null);
 
   const getNextStatus = (current: OrderStatus): OrderStatus | null => {
     switch (current) {
@@ -99,6 +101,12 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, onAdvanceStatus, on
             <span className={`text-[10px] font-black px-2 py-0.5 rounded-md ${isBreadOrder ? 'bg-amber-500 text-white' : 'bg-pink-100 text-pink-700'}`}>
               {isBreadOrder ? '🥖 នំបុ័ង & នំដុត' : '🎂 នំខួបកំណើត'}
             </span>
+            {order.orderSource === 'CUSTOMER_ONLINE' && (
+              <span className="text-[10px] font-black px-2 py-0.5 rounded-md bg-gradient-to-r from-blue-600 to-indigo-600 text-white flex items-center gap-1 shadow-2xs">
+                <Globe className="w-2.5 h-2.5" />
+                <span>កុម្ម៉ង់តាម Link</span>
+              </span>
+            )}
           </div>
           <h4 className="font-bold text-slate-800 text-sm mt-1">{order.customerName}</h4>
         </div>
@@ -210,6 +218,39 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, onAdvanceStatus, on
         </div>
       )}
 
+      {/* Attached Images: Reference Cake & Bank Slip */}
+      {(order.referenceImage || order.bankSlipImage) && (
+        <div className="flex flex-wrap items-center gap-2 pt-1">
+          {order.referenceImage && (
+            <button
+              type="button"
+              onClick={() => {
+                soundFx.playPop();
+                setPreviewImage({ url: order.referenceImage!, title: 'រូបភាពគំរូនំដែលភ្ញៀវចង់បាន (Cake Reference)' });
+              }}
+              className="flex items-center gap-1.5 px-2.5 py-1 bg-pink-50 hover:bg-pink-100 text-pink-700 rounded-xl text-[11px] font-bold border border-pink-200 transition-all cursor-pointer shadow-2xs active:scale-95"
+            >
+              <Eye className="w-3 h-3 text-pink-500" />
+              <span>រូបគំរូនំ</span>
+            </button>
+          )}
+
+          {order.bankSlipImage && (
+            <button
+              type="button"
+              onClick={() => {
+                soundFx.playPop();
+                setPreviewImage({ url: order.bankSlipImage!, title: 'វិក្កយបត្រ / បង្កាន់ដៃបង់ប្រាក់កក់ KHQR (Bank Transfer Slip)' });
+              }}
+              className="flex items-center gap-1.5 px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-xl text-[11px] font-bold border border-emerald-200 transition-all cursor-pointer shadow-2xs active:scale-95"
+            >
+              <Eye className="w-3 h-3 text-emerald-500" />
+              <span>បង្កាន់ដៃបង់កក់ ✓</span>
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Pickup Timing */}
       <div className="flex items-center gap-1.5 text-xs text-amber-800 bg-amber-50/90 px-3 py-1.5 rounded-2xl border border-amber-200/80">
         <Clock className="w-3.5 h-3.5 text-amber-600 shrink-0" />
@@ -316,6 +357,31 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, onAdvanceStatus, on
               <span>មើលវិក្កយបត្រ / បោះពុម្ព (Receipt)</span>
             </button>
           )}
+        </div>
+      )}
+
+      {/* Image Preview Modal */}
+      {previewImage && (
+        <div className="fixed inset-0 z-[150] bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl max-w-lg w-full overflow-hidden shadow-2xl border border-rose-100 flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200">
+            <div className="px-5 py-3 border-b border-slate-100 flex items-center justify-between bg-slate-50 shrink-0">
+              <span className="font-black text-xs text-slate-800">{previewImage.title}</span>
+              <button
+                type="button"
+                onClick={() => setPreviewImage(null)}
+                className="w-7 h-7 rounded-full hover:bg-slate-200 text-slate-400 hover:text-slate-700 flex items-center justify-center transition-colors cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="p-4 flex-1 overflow-auto flex items-center justify-center bg-slate-100">
+              <img
+                src={getProductImageUrl(previewImage.url)}
+                alt={previewImage.title}
+                className="max-w-full max-h-[72vh] object-contain rounded-2xl shadow-md"
+              />
+            </div>
+          </div>
         </div>
       )}
     </div>

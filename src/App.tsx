@@ -23,6 +23,9 @@ import { LicenseWarningBanner } from './components/license/LicenseWarningBanner'
 import { LicenseRenewalModal } from './components/license/LicenseRenewalModal';
 import { SuperAdminPortalModal } from './components/license/SuperAdminPortalModal';
 import { isSuperAdminAuthenticated, onSuperAdminAuthChange } from './utils/superAdminAuth';
+import { CustomerOrderPortal } from './components/customer-order/CustomerOrderPortal';
+import { CustomerOrderLinkModal } from './components/customer-order/CustomerOrderLinkModal';
+import { OfflineAutoSyncToast } from './components/common/OfflineAutoSyncToast';
 import { soundFx } from './utils/audio';
 import confetti from 'canvas-confetti';
 
@@ -42,6 +45,31 @@ export const App: React.FC = () => {
   // 35-Day Trial License State
   const [licenseInfo, setLicenseInfo] = useState<LicenseInfo>(() => getLicenseInfo());
   const [isRenewModalOpen, setIsRenewModalOpen] = useState(false);
+
+  // Customer Self-Order Link & Portal Mode
+  const [isCustomerPortalOpen, setIsCustomerPortalOpen] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return (
+      new URLSearchParams(window.location.search).get('order') === 'true' ||
+      window.location.hash === '#order'
+    );
+  });
+  const [isCustomerOrderLinkModalOpen, setIsCustomerOrderLinkModalOpen] = useState(false);
+
+  React.useEffect(() => {
+    const handleUrlChange = () => {
+      const isOrder =
+        new URLSearchParams(window.location.search).get('order') === 'true' ||
+        window.location.hash === '#order';
+      setIsCustomerPortalOpen(isOrder);
+    };
+    window.addEventListener('popstate', handleUrlChange);
+    window.addEventListener('hashchange', handleUrlChange);
+    return () => {
+      window.removeEventListener('popstate', handleUrlChange);
+      window.removeEventListener('hashchange', handleUrlChange);
+    };
+  }, []);
 
   const refreshLicense = () => {
     setLicenseInfo(getLicenseInfo());
@@ -97,6 +125,16 @@ export const App: React.FC = () => {
     }
   };
 
+  // Render dedicated Customer Self-Order & Deposit Booking Portal if in customer mode (?order=true)
+  if (isCustomerPortalOpen) {
+    return (
+      <>
+        <CustomerOrderPortal />
+        <OfflineAutoSyncToast />
+      </>
+    );
+  }
+
   return (
     <div
       className={`min-h-screen ${currentTheme.bgClass} flex flex-col font-sans selection:bg-pink-100 selection:text-pink-700 overflow-x-hidden transition-colors duration-300`}
@@ -122,6 +160,7 @@ export const App: React.FC = () => {
         onOpenThemePicker={() => setIsThemePickerOpen(true)}
         isSuperAdmin={isSuperAdmin}
         onOpenSuperAdminPortal={() => setIsSuperAdminModalOpen(true)}
+        onOpenCustomerOrderLinkModal={() => setIsCustomerOrderLinkModalOpen(true)}
       />
 
       {/* Main Workspace with Sidebar & Content */}
@@ -197,16 +236,18 @@ export const App: React.FC = () => {
         onOpenSuperAdminPortal={() => setIsSuperAdminModalOpen(true)}
       />
 
-      {/* App Super Admin Master License Portal */}
-      <SuperAdminPortalModal
-        isOpen={isSuperAdminModalOpen}
-        onClose={() => setIsSuperAdminModalOpen(false)}
-        onLogout={() => {
-          setIsSuperAdmin(false);
-          setIsSuperAdminModalOpen(false);
-          refreshLicense();
+      {/* Customer Order Link & QR Sharing Modal */}
+      <CustomerOrderLinkModal
+        isOpen={isCustomerOrderLinkModalOpen}
+        onClose={() => setIsCustomerOrderLinkModalOpen(false)}
+        onOpenCustomerView={() => {
+          setIsCustomerPortalOpen(true);
+          window.history.pushState({}, '', '?order=true');
         }}
       />
+
+      {/* Floating Offline-to-Cloud Auto-Sync Toast */}
+      <OfflineAutoSyncToast />
     </div>
   );
 };

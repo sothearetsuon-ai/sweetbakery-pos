@@ -20,6 +20,8 @@ import {
   WifiOff,
   Palette,
   Key,
+  Link as LinkIcon,
+  RefreshCw,
 } from 'lucide-react';
 import { useBakery } from '../../context/BakeryContext';
 import { useMusic } from '../../context/MusicContext';
@@ -40,6 +42,7 @@ interface NavbarProps {
   onOpenThemePicker?: () => void;
   isSuperAdmin?: boolean;
   onOpenSuperAdminPortal?: () => void;
+  onOpenCustomerOrderLinkModal?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -50,6 +53,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenThemePicker,
   isSuperAdmin = false,
   onOpenSuperAdminPortal,
+  onOpenCustomerOrderLinkModal,
 }) => {
   const {
     lang,
@@ -60,6 +64,9 @@ export const Navbar: React.FC<NavbarProps> = ({
     storeInfo,
     currentStaff,
     isFirebaseConnected,
+    offlineSyncStatus,
+    pendingSyncCount,
+    triggerAutoCloudSync,
   } = useBakery();
   const { isPlaying: isMusicPlaying, setIsPlayerOpen: setIsMusicPlayerOpen } = useMusic();
   const text = t[lang];
@@ -227,17 +234,49 @@ export const Navbar: React.FC<NavbarProps> = ({
             <strong className="text-amber-950 font-black">$1 = {exchangeRate.toLocaleString()} ៛</strong>
           </div>
 
-          <div
-            className={`hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-2xl border text-xs font-bold ${
-              isOnline
-                ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
-                : 'bg-amber-50 border-amber-200 text-amber-700'
+          {/* Cloud Auto-Sync & Online/Offline Status Indicator */}
+          <button
+            type="button"
+            onClick={() => {
+              soundFx.playPop();
+              triggerAutoCloudSync();
+            }}
+            className={`hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-2xl border text-xs font-bold cursor-pointer transition-all active:scale-95 shadow-2xs ${
+              !isOnline || offlineSyncStatus === 'offline'
+                ? 'bg-amber-50 border-amber-200 text-amber-800 hover:bg-amber-100'
+                : offlineSyncStatus === 'syncing'
+                ? 'bg-blue-50 border-blue-200 text-blue-700'
+                : pendingSyncCount > 0
+                ? 'bg-orange-50 border-orange-200 text-orange-700 hover:bg-orange-100'
+                : 'bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100'
             }`}
-            title={isOnline ? 'កំពុងភ្ជាប់អ៊ីនធឺណិត' : 'កំពុងប្រើទម្រង់ Offline'}
+            title={
+              !isOnline
+                ? `កំពុង Offline (${pendingSyncCount} ទិន្នន័យរង់ចាំ Auto Sync ទៅ Cloud ពេល Online វិញ)`
+                : offlineSyncStatus === 'syncing'
+                ? 'កំពុងធ្វើសមកាលកម្មទិន្នន័យទៅ Google Cloud...'
+                : pendingSyncCount > 0
+                ? `${pendingSyncCount} ទិន្នន័យរង់ចាំ Sync (ចុចដើម្បី Sync ឥឡូវនេះ)`
+                : 'Cloud Synced រួចរាល់ (ចុចដើម្បី Re-Sync)'
+            }
           >
-            {isOnline ? <Wifi className="w-3.5 h-3.5" /> : <WifiOff className="w-3.5 h-3.5" />}
-            <span>{isOnline ? 'Online' : 'Offline'}</span>
-          </div>
+            {!isOnline ? (
+              <>
+                <WifiOff className="w-3.5 h-3.5 text-amber-600" />
+                <span>Offline {pendingSyncCount > 0 ? `(${pendingSyncCount})` : ''}</span>
+              </>
+            ) : offlineSyncStatus === 'syncing' ? (
+              <>
+                <RefreshCw className="w-3.5 h-3.5 text-blue-600 animate-spin" />
+                <span>Syncing...</span>
+              </>
+            ) : (
+              <>
+                <Cloud className="w-3.5 h-3.5 text-emerald-600" />
+                <span>Online (Cloud)</span>
+              </>
+            )}
+          </button>
 
           {/* Low Stock Badge */}
           {lowStockCount > 0 && (
@@ -272,6 +311,22 @@ export const Navbar: React.FC<NavbarProps> = ({
             <QrCode className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
             <span className="hidden sm:inline">KHQR លើតុ</span>
           </button>
+
+          {/* Customer Order Link & QR Button */}
+          {onOpenCustomerOrderLinkModal && (
+            <button
+              type="button"
+              onClick={() => {
+                soundFx.playPop();
+                onOpenCustomerOrderLinkModal();
+              }}
+              title="លីងកុម្ម៉ង់សម្រាប់ភ្ញៀវ (Customer Self-Ordering Link & QR)"
+              className="flex items-center gap-1.5 px-2.5 py-1.5 sm:px-3 sm:py-1.5 rounded-2xl bg-gradient-to-r from-pink-600 to-rose-500 hover:from-pink-700 hover:to-rose-600 text-white text-xs font-black shadow-md shadow-pink-500/20 transition-all active:scale-95 cursor-pointer"
+            >
+              <LinkIcon className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
+              <span className="hidden sm:inline">លីងភ្ញៀវ</span>
+            </button>
+          )}
 
           {/* Background Theme Switcher Button */}
           {onOpenThemePicker && (

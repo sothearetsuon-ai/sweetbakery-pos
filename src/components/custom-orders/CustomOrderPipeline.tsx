@@ -1,11 +1,12 @@
 import React, { useState, useMemo } from 'react';
-import { Cake, Plus, Search, Clock, Flame, Palette, CheckCircle2, CheckSquare, Sparkles, Trash2 } from 'lucide-react';
+import { Cake, Plus, Search, Clock, Flame, Palette, CheckCircle2, CheckSquare, Sparkles, Trash2, Link as LinkIcon } from 'lucide-react';
 import { useBakery } from '../../context/BakeryContext';
 import { t } from '../../utils/translations';
 import { OrderCard } from './OrderCard';
 import { NewCustomOrderModal } from './NewCustomOrderModal';
 import { AddDepositModal } from './AddDepositModal';
 import { ReceiptModal } from '../pos/ReceiptModal';
+import { CustomerOrderLinkModal } from '../customer-order/CustomerOrderLinkModal';
 import { OrderStatus, CustomCakeOrder, CompletedSale } from '../../types';
 import { soundFx } from '../../utils/audio';
 
@@ -14,6 +15,7 @@ export const CustomOrderPipeline: React.FC = () => {
   const text = t[lang];
 
   const [isNewOrderModalOpen, setIsNewOrderModalOpen] = useState(false);
+  const [isCustomerLinkModalOpen, setIsCustomerLinkModalOpen] = useState(false);
   const [selectedOrderForDeposit, setSelectedOrderForDeposit] = useState<CustomCakeOrder | null>(null);
   const [receiptSale, setReceiptSale] = useState<CompletedSale | null>(null);
   const [orderToDelete, setOrderToDelete] = useState<CustomCakeOrder | null>(null);
@@ -328,6 +330,20 @@ export const CustomOrderPipeline: React.FC = () => {
             </button>
           )}
 
+          {/* Customer Order Link Button */}
+          <button
+            onClick={() => {
+              soundFx.playPop();
+              setIsCustomerLinkModalOpen(true);
+            }}
+            className="px-3.5 py-2 bg-gradient-to-r from-pink-500/10 to-rose-500/10 hover:bg-pink-500/20 text-pink-700 border border-pink-300 text-xs font-black rounded-2xl flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer shadow-2xs"
+            title="ចម្លង ឬចែករំលែកលីងកុម្ម៉ង់សម្រាប់ភ្ញៀវ"
+          >
+            <LinkIcon className="w-3.5 h-3.5 text-pink-600" />
+            <span className="hidden sm:inline">លីងកុម្ម៉ង់ភ្ញៀវ & QR</span>
+            <span className="sm:hidden">លីងភ្ញៀវ</span>
+          </button>
+
           {/* New Order Button */}
           <button
             onClick={() => {
@@ -556,6 +572,11 @@ export const CustomOrderPipeline: React.FC = () => {
           </div>
         </div>
       )}
+      {/* Customer Self-Order Link & QR Modal */}
+      <CustomerOrderLinkModal
+        isOpen={isCustomerLinkModalOpen}
+        onClose={() => setIsCustomerLinkModalOpen(false)}
+      />
     </div>
   );
 };
