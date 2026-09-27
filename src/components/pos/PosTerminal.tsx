@@ -18,17 +18,19 @@ import { CartPanel } from './CartPanel';
 import { CheckoutModal } from './CheckoutModal';
 import { ReceiptModal } from './ReceiptModal';
 import { AddProductModal } from './AddProductModal';
+import { PartyAccessoriesModal } from './PartyAccessoriesModal';
 import { Product, CompletedSale } from '../../types';
 import { soundFx } from '../../utils/audio';
 import { sortProductsNewestFirst } from '../../utils/productUtils';
 
 export const PosTerminal: React.FC = () => {
-  const { lang, categories, products, addToCart, cart, cartTotalKhr, cartTotalUsd } = useBakery();
+  const { lang, categories, products, addToCart, cart, cartTotalKhr, cartTotalUsd, partyAddons } = useBakery();
   const text = t[lang];
 
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
+  const [isPartyAccessoriesOpen, setIsPartyAccessoriesOpen] = useState(false);
   const [checkoutOptions, setCheckoutOptions] = useState<{
     isDeposit?: boolean;
     depositKhr?: number;
@@ -142,6 +144,20 @@ export const PosTerminal: React.FC = () => {
               </div>
 
               <button
+                type="button"
+                onClick={() => {
+                  soundFx.playPop();
+                  setIsPartyAccessoriesOpen(true);
+                }}
+                className="px-3 sm:px-3.5 py-2 sm:py-2.5 bg-gradient-to-r from-amber-500 via-rose-500 to-pink-600 hover:from-amber-600 hover:to-pink-700 text-white font-black rounded-2xl text-xs transition-all shadow-md shadow-amber-500/20 flex items-center gap-1.5 active:scale-95 cursor-pointer"
+                title="គ្រប់គ្រងគ្រឿងបន្ថែមសម្រាប់កម្មវិធី និងកែប្រែតម្លៃ"
+              >
+                <Sparkles className="w-4 h-4 text-amber-200" />
+                <span className="hidden sm:inline">🎉 គ្រឿងបន្ថែម ({partyAddons.length})</span>
+                <span className="sm:hidden">🎉 គ្រឿងពិធី</span>
+              </button>
+
+              <button
                 onClick={() => {
                   soundFx.playPop();
                   setIsAddProductOpen(true);
@@ -180,6 +196,36 @@ export const PosTerminal: React.FC = () => {
             })}
           </div>
         </div>
+
+        {/* Dedicated Party Accessories Banner when Category is selected */}
+        {selectedCategory === 'party' && (
+          <div className="mb-4 p-3.5 sm:p-4 bg-gradient-to-r from-amber-500/10 via-rose-500/10 to-pink-500/10 border-2 border-pink-300 rounded-3xl flex flex-wrap items-center justify-between gap-3 shadow-xs animate-in fade-in duration-200">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-amber-500 to-pink-600 text-white flex items-center justify-center shadow-md shrink-0">
+                <Sparkles className="w-5 h-5 text-amber-100" />
+              </div>
+              <div>
+                <h3 className="text-xs sm:text-sm font-black text-slate-800">
+                  🎉 គ្រឿងបន្ថែមសម្រាប់កម្មវិធី (Party Accessories)
+                </h3>
+                <p className="text-[11px] sm:text-xs text-slate-500">
+                  មាន {partyAddons.length} មុខទំនិញ — លោកអ្នកអាចថែមថ្មី កែប្រែតម្លៃលក់ ($/៛) ឬចុចដាក់កន្ត្រកភ្លាមៗ
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                soundFx.playPop();
+                setIsPartyAccessoriesOpen(true);
+              }}
+              className="px-4 py-2 bg-gradient-to-r from-pink-600 via-rose-600 to-amber-500 text-white rounded-2xl text-xs font-black flex items-center gap-2 shadow-md shadow-pink-500/25 active:scale-95 cursor-pointer transition-all"
+            >
+              <Plus className="w-4 h-4 stroke-[3]" />
+              <span>+ ថែម និងកែតម្លៃគ្រឿងបន្ថែម</span>
+            </button>
+          </div>
+        )}
 
         {/* Product Grid */}
         {filteredProducts.length === 0 ? (
@@ -294,6 +340,12 @@ export const PosTerminal: React.FC = () => {
         isOpen={!!activeReceiptSale}
         sale={activeReceiptSale}
         onClose={() => setActiveReceiptSale(null)}
+      />
+
+      {/* Party Accessories Management Modal */}
+      <PartyAccessoriesModal
+        isOpen={isPartyAccessoriesOpen}
+        onClose={() => setIsPartyAccessoriesOpen(false)}
       />
     </div>
   );

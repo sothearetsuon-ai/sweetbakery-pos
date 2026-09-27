@@ -713,6 +713,9 @@ self.addEventListener('fetch', (event) => {
 });
 `;
       fs.writeFileSync(path.join(distDir, 'sw.js'), swContent, 'utf-8');
+      if (fs.existsSync(path.join(distDir, 'index.html'))) {
+        fs.copyFileSync(path.join(distDir, 'index.html'), path.join(distDir, '404.html'));
+      }
       console.log('✅ Generated robust offline PWA Service Worker in dist/sw.js with assets:', precacheList);
     },
   };

@@ -47,6 +47,7 @@ export const CustomerOrderPortal: React.FC = () => {
     products,
     categories,
     flavors,
+    partyAddons,
     storeInfo,
     exchangeRate,
     addCustomOrder,
@@ -99,13 +100,23 @@ export const CustomerOrderPortal: React.FC = () => {
   const [copiedAccount, setCopiedAccount] = useState(false);
   const [copiedOrderNumber, setCopiedOrderNumber] = useState(false);
 
-  // Available party addons
-  const availableAddons = useMemo(() => [
-    { id: 'sparkler', nameKh: 'ទៀនភ្លើងពណ៌ (Sparkler Candle)', priceUsd: 1, priceKhr: 4100 },
-    { id: 'number_candle', nameKh: 'ទៀនលេខអាយុ (Number Candles)', priceUsd: 1, priceKhr: 4100 },
-    { id: 'party_hats', nameKh: 'មួកខួបកំណើត (Party Hats)', priceUsd: 1.5, priceKhr: 6000 },
-    { id: 'plates_forks', nameKh: 'ចាន & ស្លាបព្រាបន្ថែម (Extra Plates & Forks)', priceUsd: 1, priceKhr: 4100 },
-  ], []);
+  // Available party addons - connected dynamically to POS partyAddons
+  const availableAddons = useMemo(() => {
+    if (partyAddons && partyAddons.length > 0) {
+      return partyAddons.map((addon) => ({
+        id: addon.id,
+        nameKh: addon.nameKh,
+        priceUsd: addon.priceUsd,
+        priceKhr: addon.priceKhr ?? Math.round(addon.priceUsd * exchangeRate),
+      }));
+    }
+    return [
+      { id: 'sparkler', nameKh: 'ទៀនភ្លើងពណ៌ (Sparkler Candle)', priceUsd: 1, priceKhr: 4100 },
+      { id: 'number_candle', nameKh: 'ទៀនលេខអាយុ (Number Candles)', priceUsd: 1, priceKhr: 4100 },
+      { id: 'party_hats', nameKh: 'មួកខួបកំណើត (Party Hats)', priceUsd: 1.5, priceKhr: 6000 },
+      { id: 'plates_forks', nameKh: 'ចាន & ស្លាបព្រាបន្ថែម (Extra Plates & Forks)', priceUsd: 1, priceKhr: 4100 },
+    ];
+  }, [partyAddons, exchangeRate]);
 
   // Filtered Products for Catalog
   const filteredProducts = useMemo(() => {

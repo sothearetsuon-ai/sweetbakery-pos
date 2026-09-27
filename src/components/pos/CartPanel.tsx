@@ -28,6 +28,7 @@ import { t } from '../../utils/translations';
 import { soundFx } from '../../utils/audio';
 import { Product, PartyAddon } from '../../types';
 import { getProductImageUrl } from '../../utils/imagePath';
+import { PartyAccessoriesModal } from './PartyAccessoriesModal';
 
 interface CartPanelProps {
   onCheckout: (options?: {
@@ -82,6 +83,7 @@ export const CartPanel: React.FC<CartPanelProps> = ({ onCheckout, onClose, isMob
   const [orderNotes, setOrderNotes] = useState('');
 
   // Party Add-on Add / Edit state
+  const [isPartyModalOpen, setIsPartyModalOpen] = useState(false);
   const [isAddingNewAddon, setIsAddingNewAddon] = useState(false);
   const [newAddonName, setNewAddonName] = useState('');
   const [newAddonPriceKhr, setNewAddonPriceKhr] = useState('4000');
@@ -520,7 +522,7 @@ export const CartPanel: React.FC<CartPanelProps> = ({ onCheckout, onClose, isMob
             <div className="flex items-center justify-between text-[11px] font-bold text-amber-950">
               <span className="flex items-center gap-1.5">
                 <Sparkles className="w-3.5 h-3.5 text-amber-600" />
-                <span>ឥវ៉ាន់ទិញបន្ថែមសម្រាប់ពិធី (Party Add-ons)</span>
+                <span className="font-black text-rose-950">🎉 គ្រឿងបន្ថែមសម្រាប់កម្មវិធី (Party Accessories)</span>
               </span>
               <div className="flex items-center gap-1.5">
                 {cart.filter((item) => item.product.id.startsWith('addon-') || item.product.categoryId === 'party').length > 0 && (
@@ -532,14 +534,13 @@ export const CartPanel: React.FC<CartPanelProps> = ({ onCheckout, onClose, isMob
                   type="button"
                   onClick={() => {
                     soundFx.playPop();
-                    setIsAddingNewAddon((prev) => !prev);
-                    setEditingAddon(null);
+                    setIsPartyModalOpen(true);
                   }}
-                  className="px-2 py-0.5 bg-white hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-lg text-[10px] font-bold transition-all flex items-center gap-1 shadow-2xs active:scale-95 cursor-pointer"
-                  title="បន្ថែមមុខទំនិញពិធីថ្មី"
+                  className="px-2 py-0.5 bg-white hover:bg-pink-50 text-pink-700 border border-pink-300 rounded-lg text-[10px] font-black transition-all flex items-center gap-1 shadow-2xs active:scale-95 cursor-pointer"
+                  title="កែប្រែតម្លៃ ឬបន្ថែមមុខទំនិញថ្មី"
                 >
-                  <Plus className="w-3 h-3 text-amber-600" />
-                  <span>+ ថែម</span>
+                  <Pencil className="w-2.5 h-2.5 text-pink-600" />
+                  <span>កែតម្លៃ/ថែម</span>
                 </button>
               </div>
             </div>
@@ -1125,6 +1126,12 @@ export const CartPanel: React.FC<CartPanelProps> = ({ onCheckout, onClose, isMob
           )}
         </div>
       )}
+
+      {/* Party Accessories Management Modal */}
+      <PartyAccessoriesModal
+        isOpen={isPartyModalOpen}
+        onClose={() => setIsPartyModalOpen(false)}
+      />
     </div>
   );
 };

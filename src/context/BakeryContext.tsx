@@ -1324,7 +1324,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   // Party Addon actions
   const addPartyAddon = (nameKh: string, priceKhr: number, priceUsd?: number) => {
     const validKhr = Math.max(0, Number(priceKhr) || 0);
-    const validUsd = priceUsd ?? Number((validKhr / exchangeRate).toFixed(2));
+    const validUsd = priceUsd !== undefined ? Number(priceUsd) : Number((validKhr / exchangeRate).toFixed(2));
     const newAddon: PartyAddon = {
       id: `addon-${Date.now()}`,
       nameKh: nameKh.trim(),
@@ -1335,14 +1335,14 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       const updated = [...prev, newAddon];
       try { localStorage.setItem('bakery_party_addons', JSON.stringify(updated)); } catch (e) {}
       saveToLanSync({ partyAddons: updated });
+      syncSaveDoc('settings', 'partyAddons', { items: updated });
       return updated;
     });
-    saveFirestoreDoc('settings', 'partyAddons', { items: [...partyAddons, newAddon] });
   };
 
   const updatePartyAddon = (id: string, nameKh: string, priceKhr: number, priceUsd?: number) => {
     const validKhr = Math.max(0, Number(priceKhr) || 0);
-    const validUsd = priceUsd ?? Number((validKhr / exchangeRate).toFixed(2));
+    const validUsd = priceUsd !== undefined ? Number(priceUsd) : Number((validKhr / exchangeRate).toFixed(2));
     setPartyAddons((prev) => {
       const updated = prev.map((a) =>
         a.id === id
@@ -1356,6 +1356,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       );
       try { localStorage.setItem('bakery_party_addons', JSON.stringify(updated)); } catch (e) {}
       saveToLanSync({ partyAddons: updated });
+      syncSaveDoc('settings', 'partyAddons', { items: updated });
       return updated;
     });
   };
@@ -1365,6 +1366,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       const updated = prev.filter((a) => a.id !== id);
       try { localStorage.setItem('bakery_party_addons', JSON.stringify(updated)); } catch (e) {}
       saveToLanSync({ partyAddons: updated });
+      syncSaveDoc('settings', 'partyAddons', { items: updated });
       return updated;
     });
   };
