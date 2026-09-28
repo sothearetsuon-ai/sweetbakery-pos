@@ -626,9 +626,6 @@ export const CustomerOrderPortal: React.FC = () => {
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                         loading="lazy"
                       />
-                      <span className="absolute top-2 right-2 px-2 py-0.5 bg-black/60 backdrop-blur-md text-white rounded-lg text-[10px] font-black">
-                        ${p.priceUsd > 0 ? p.priceUsd.toFixed(2) : '16.00'}
-                      </span>
                     </div>
 
                     <div className="p-3 space-y-1.5 flex-1 flex flex-col justify-between">
@@ -642,11 +639,12 @@ export const CustomerOrderPortal: React.FC = () => {
                       </div>
 
                       <div className="pt-2 border-t border-rose-50 flex items-center justify-between">
-                        <div className="text-pink-600 font-black text-xs sm:text-sm">
-                          {priceKhr.toLocaleString()} ៛
+                        <div className="text-pink-600 font-bold text-[11px] flex items-center gap-1">
+                          <Sparkles className="w-3 h-3 text-pink-500" />
+                          <span>តម្លៃតាមទំហំ & ម៉ូដ</span>
                         </div>
-                        <button className="px-2.5 py-1 bg-pink-50 group-hover:bg-pink-600 text-pink-700 group-hover:text-white rounded-xl text-[10px] font-black transition-all">
-                          កុម្ម៉ង់
+                        <button className="px-3 py-1.5 bg-gradient-to-r from-pink-600 to-rose-500 text-white rounded-xl text-[10px] font-black transition-all shadow-2xs group-hover:scale-105 cursor-pointer">
+                          រើសម៉ូដនេះ ✨
                         </button>
                       </div>
                     </div>
@@ -704,8 +702,9 @@ export const CustomerOrderPortal: React.FC = () => {
                   className="font-black text-slate-800 text-sm sm:text-base border-b border-transparent hover:border-pink-300 focus:border-pink-500 focus:outline-none w-full"
                   placeholder="ឈ្មោះនំ (Cake Name)..."
                 />
-                <p className="text-xs text-pink-600 font-bold mt-0.5">
-                  តម្លៃប៉ាន់ស្មាន៖ ${totalUsd.toFixed(2)} ({totalKhr.toLocaleString()} ៛)
+                <p className="text-xs text-pink-600 font-bold mt-0.5 flex items-center gap-1">
+                  <Sparkles className="w-3.5 h-3.5 text-pink-500" />
+                  <span>តម្លៃគិតតាមទំហំ & ការរចនាជាក់ស្តែង</span>
                 </p>
               </div>
             </div>
