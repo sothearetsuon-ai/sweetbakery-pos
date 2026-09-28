@@ -33,7 +33,10 @@ export default {
         }
       },
       fontFamily: {
-        sans: ['Kantumruy Pro', 'Inter', 'system-ui', 'sans-serif'],
+        sans: ['"Khmer OS Battambang"', 'Battambang', 'system-ui', 'sans-serif'],
+        battambang: ['"Khmer OS Battambang"', 'Battambang', 'system-ui', 'sans-serif'],
+        muol: ['"Khmer OS Muol Light"', '"Khmer OS Muol"', 'Moul', 'cursive', 'serif'],
+        heading: ['"Khmer OS Muol Light"', '"Khmer OS Muol"', 'Moul', 'cursive', 'serif'],
       }
     },
   },

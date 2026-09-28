@@ -51,7 +51,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   isMobileOpen = false,
   onCloseMobile,
 }) => {
-  const { lang, customOrders, lowStockCount, expenses, sales, currentStaff, hasPermission, staffMembers } = useBakery();
+  const { lang, customOrders, lowStockCount, expenses, sales, currentStaff, hasPermission, staffMembers, storeInfo } = useBakery();
   const { isPlaying: isMusicPlaying, setIsPlayerOpen: setIsMusicPlayerOpen } = useMusic();
   const text = t[lang];
 
@@ -59,85 +59,141 @@ export const Sidebar: React.FC<SidebarProps> = ({
     (o) => o.status === 'PENDING' || o.status === 'BAKING' || o.status === 'DECORATING'
   ).length;
 
-  const navItems: {
+  interface NavItem {
     id: TabType;
     label: string;
+    subLabel: string;
     icon: any;
+    iconBg: string;
+    iconColor: string;
     badge: any;
     badgeColor: string;
     permission?: keyof StaffPermissions;
-  }[] = [
+  }
+
+  interface NavSection {
+    sectionTitle: string;
+    sectionIcon: string;
+    items: NavItem[];
+  }
+
+  const navSections: NavSection[] = [
     {
-      id: 'pos',
-      label: text.pos,
-      icon: ShoppingBag,
-      badge: null,
-      badgeColor: '',
-      permission: 'canAccessPos',
+      sectionTitle: 'ការលក់ & សេវាកម្ម',
+      sectionIcon: '🛒',
+      items: [
+        {
+          id: 'pos',
+          label: text.pos || 'ផ្ទាំងលក់ទំនិញ (POS)',
+          subLabel: 'Quick Cashier & Cart',
+          icon: ShoppingBag,
+          iconBg: 'bg-pink-100 text-pink-600',
+          iconColor: 'text-pink-600',
+          badge: null,
+          badgeColor: '',
+          permission: 'canAccessPos',
+        },
+        {
+          id: 'showcase',
+          label: 'កាតាឡុកបង្ហាញភ្ញៀវ 🎨',
+          subLabel: 'Customer Showcase',
+          icon: Images,
+          iconBg: 'bg-emerald-100 text-emerald-600',
+          iconColor: 'text-emerald-600',
+          badge: 'Showcase',
+          badgeColor: 'bg-emerald-500 text-white font-bold',
+          permission: 'canAccessShowcase',
+        },
+        {
+          id: 'custom-orders',
+          label: text.customOrders || 'កុម្ម៉ង់នំខួបកំណើត 🎂',
+          subLabel: 'Custom Cake Orders',
+          icon: Cake,
+          iconBg: 'bg-purple-100 text-purple-600',
+          iconColor: 'text-purple-600',
+          badge: pendingCakeOrdersCount > 0 ? pendingCakeOrdersCount : null,
+          badgeColor: 'bg-gradient-to-r from-pink-500 to-rose-500 text-white animate-pulse',
+          permission: 'canAccessCustomOrders',
+        },
+      ],
     },
     {
-      id: 'showcase',
-      label: 'កាតាឡុកបង្ហាញភ្ញៀវ 🎨',
-      icon: Images,
-      badge: 'Showcase',
-      badgeColor: 'bg-emerald-500 text-white font-bold',
-      permission: 'canAccessShowcase',
+      sectionTitle: 'គ្រប់គ្រង & ហិរញ្ញវត្ថុ',
+      sectionIcon: '📊',
+      items: [
+        {
+          id: 'sales',
+          label: 'ប្រវត្តិលក់ & វិក្កយបត្រ 🧾',
+          subLabel: 'Sales & Receipts',
+          icon: FileText,
+          iconBg: 'bg-blue-100 text-blue-600',
+          iconColor: 'text-blue-600',
+          badge: sales.length > 0 ? `${sales.length}` : null,
+          badgeColor: 'bg-blue-600 text-white font-bold',
+          permission: 'canAccessSalesHistory',
+        },
+        {
+          id: 'expenses',
+          label: 'គ្រប់គ្រងការចំណាយ 💸',
+          subLabel: 'Store Expenses',
+          icon: Wallet,
+          iconBg: 'bg-rose-100 text-rose-600',
+          iconColor: 'text-rose-600',
+          badge: expenses.length > 0 ? `${expenses.length}` : null,
+          badgeColor: 'bg-rose-500 text-white font-bold',
+          permission: 'canAccessExpenses',
+        },
+        {
+          id: 'inventory',
+          label: text.inventory || 'ស្តុកទំនិញ & វត្ថុធាតុដើម 📦',
+          subLabel: 'Stock & Raw Materials',
+          icon: Package,
+          iconBg: 'bg-amber-100 text-amber-600',
+          iconColor: 'text-amber-600',
+          badge: lowStockCount > 0 ? lowStockCount : null,
+          badgeColor: 'bg-amber-500 text-white animate-bounce',
+          permission: 'canAccessInventory',
+        },
+        {
+          id: 'reports',
+          label: text.reports || 'របាយការណ៍សង្ខេប 📊',
+          subLabel: 'Analytics & Revenue',
+          icon: BarChart3,
+          iconBg: 'bg-indigo-100 text-indigo-600',
+          iconColor: 'text-indigo-600',
+          badge: null,
+          badgeColor: '',
+          permission: 'canAccessReports',
+        },
+      ],
     },
     {
-      id: 'custom-orders',
-      label: text.customOrders,
-      icon: Cake,
-      badge: pendingCakeOrdersCount > 0 ? pendingCakeOrdersCount : null,
-      badgeColor: 'bg-gradient-to-r from-pink-500 to-rose-500 text-white animate-pulse',
-      permission: 'canAccessCustomOrders',
-    },
-    {
-      id: 'sales',
-      label: 'ប្រវត្តិលក់ & វិក្កយបត្រ 🧾',
-      icon: FileText,
-      badge: sales.length > 0 ? `${sales.length}` : null,
-      badgeColor: 'bg-blue-600 text-white font-bold',
-      permission: 'canAccessSalesHistory',
-    },
-    {
-      id: 'expenses',
-      label: 'គ្រប់គ្រងការចំណាយ 💸',
-      icon: Wallet,
-      badge: expenses.length > 0 ? `${expenses.length}` : null,
-      badgeColor: 'bg-rose-500 text-white font-bold',
-      permission: 'canAccessExpenses',
-    },
-    {
-      id: 'inventory',
-      label: text.inventory,
-      icon: Package,
-      badge: lowStockCount > 0 ? lowStockCount : null,
-      badgeColor: 'bg-amber-500 text-white',
-      permission: 'canAccessInventory',
-    },
-    {
-      id: 'reports',
-      label: text.reports,
-      icon: BarChart3,
-      badge: null,
-      badgeColor: '',
-      permission: 'canAccessReports',
-    },
-    {
-      id: 'staff',
-      label: 'បុគ្គលិក & សិទ្ធិ 👥',
-      icon: Users,
-      badge: `${staffMembers.length}`,
-      badgeColor: 'bg-purple-600 text-white font-bold',
-      permission: 'canAccessSettings',
-    },
-    {
-      id: 'shifts',
-      label: text.shifts,
-      icon: Clock3,
-      badge: null,
-      badgeColor: '',
-      permission: 'canAccessPos',
+      sectionTitle: 'រដ្ឋបាល & បុគ្គលិក',
+      sectionIcon: '👥',
+      items: [
+        {
+          id: 'staff',
+          label: 'បុគ្គលិក & សិទ្ធិ 👥',
+          subLabel: 'Staff Management',
+          icon: Users,
+          iconBg: 'bg-violet-100 text-violet-600',
+          iconColor: 'text-violet-600',
+          badge: `${staffMembers.length}`,
+          badgeColor: 'bg-purple-600 text-white font-bold',
+          permission: 'canAccessSettings',
+        },
+        {
+          id: 'shifts',
+          label: text.shifts || 'វេនលក់បុគ្គលិក ⏰',
+          subLabel: 'Shift Cash Control',
+          icon: Clock3,
+          iconBg: 'bg-cyan-100 text-cyan-600',
+          iconColor: 'text-cyan-600',
+          badge: null,
+          badgeColor: '',
+          permission: 'canAccessPos',
+        },
+      ],
     },
   ];
 
@@ -162,53 +218,100 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   const renderNavList = () => (
     <>
-      <div className="p-4 space-y-1.5 flex-1 overflow-y-auto">
-        <div className="px-3 py-1.5 flex items-center justify-between text-[11px] font-black uppercase tracking-wider text-slate-400">
-          <span>មឺនុយចម្បង</span>
-          <Sparkles className="w-3.5 h-3.5 text-pink-400" />
+      <div className="p-3.5 space-y-3.5 flex-1 overflow-y-auto">
+        {/* Main Menu Hero Banner */}
+        <div className="p-3 rounded-2xl bg-gradient-to-r from-pink-500/10 via-rose-500/10 to-amber-500/10 border border-pink-200/80 shadow-2xs flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <span className="w-8 h-8 rounded-xl bg-gradient-to-tr from-pink-600 via-rose-500 to-amber-500 text-white flex items-center justify-center text-sm shadow-md shadow-pink-500/20 animate-pulse">
+              ✨
+            </span>
+            <div>
+              <div className="font-muol text-xs text-slate-900 tracking-wide flex items-center gap-1.5">
+                <span>មឺនុយចម្បង</span>
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" />
+              </div>
+              <div className="text-[9px] font-bold text-pink-600 uppercase tracking-widest font-sans">
+                Main Menu • Navigation
+              </div>
+            </div>
+          </div>
+          <span className="px-2 py-0.5 rounded-full bg-white text-pink-700 text-[10px] font-black border border-pink-200/80 shadow-2xs">
+            POS Pro
+          </span>
         </div>
 
-        {navItems.map((item) => {
-          const Icon = item.icon;
-          const isActive = activeTab === item.id;
-          const isAllowed = !item.permission || hasPermission(item.permission);
-          return (
-            <button
-              key={item.id}
-              onClick={() => handleTabClick(item.id, item.permission)}
-              className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-2xl font-black text-xs tracking-wide transition-all duration-200 relative group cursor-pointer ${
-                isActive
-                  ? 'bg-gradient-to-r from-rose-600 via-pink-600 to-rose-500 text-white shadow-md shadow-rose-500/30 scale-[1.02] ring-2 ring-rose-400/25'
-                  : isAllowed
-                  ? 'text-slate-700 hover:bg-white hover:text-rose-600 hover:shadow-xs hover:border hover:border-slate-200/90'
-                  : 'text-slate-400 opacity-60 hover:opacity-80'
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                <Icon
-                  className={`w-4 h-4 transition-transform duration-300 group-hover:scale-110 ${
-                    isActive ? 'text-white' : isAllowed ? 'text-slate-400 group-hover:text-pink-500' : 'text-slate-300'
-                  }`}
-                />
-                <span className="truncate">{item.label}</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                {!isAllowed && (
-                  <span title="ជាប់សោរ (គ្មានសិទ្ធិ)">
-                    <Lock className="w-3.5 h-3.5 text-slate-400" />
-                  </span>
-                )}
-                {item.badge !== null && (
-                  <span
-                    className={`px-2 py-0.5 text-[10px] font-black rounded-full shadow-2xs ${item.badgeColor}`}
+        {/* Categorized Menu Groups */}
+        {navSections.map((section, sIdx) => (
+          <div key={sIdx} className="space-y-1">
+            <div className="px-2.5 py-1 flex items-center justify-between text-[10px] font-black uppercase tracking-wider text-slate-400">
+              <span className="flex items-center gap-1.5">
+                <span>{section.sectionIcon}</span>
+                <span>{section.sectionTitle}</span>
+              </span>
+            </div>
+
+            <div className="space-y-1">
+              {section.items.map((item) => {
+                const Icon = item.icon;
+                const isActive = activeTab === item.id;
+                const isAllowed = !item.permission || hasPermission(item.permission);
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => handleTabClick(item.id, item.permission)}
+                    className={`w-full flex items-center justify-between px-3 py-2 rounded-2xl font-bold text-xs tracking-normal transition-all duration-200 relative group cursor-pointer ${
+                      isActive
+                        ? 'bg-gradient-to-r from-pink-600 via-rose-600 to-amber-500 text-white shadow-md shadow-pink-500/30 scale-[1.02] ring-2 ring-pink-300'
+                        : isAllowed
+                        ? 'text-slate-700 hover:bg-white hover:text-pink-600 hover:shadow-xs hover:border hover:border-pink-100/80'
+                        : 'text-slate-400 opacity-60 hover:opacity-80'
+                    }`}
                   >
-                    {item.badge}
-                  </span>
-                )}
-              </div>
-            </button>
-          );
-        })}
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div
+                        className={`w-7 h-7 rounded-xl flex items-center justify-center shrink-0 transition-transform duration-300 group-hover:scale-110 ${
+                          isActive
+                            ? 'bg-white/25 text-white shadow-xs'
+                            : isAllowed
+                            ? `${item.iconBg} shadow-2xs`
+                            : 'bg-slate-100 text-slate-400'
+                        }`}
+                      >
+                        <Icon className="w-3.5 h-3.5" />
+                      </div>
+                      <div className="text-left truncate">
+                        <div className={`truncate leading-tight font-battambang ${isActive ? 'font-black text-white' : 'font-bold'}`}>
+                          {item.label}
+                        </div>
+                        <div className={`text-[9px] truncate ${isActive ? 'text-pink-100' : 'text-slate-400'}`}>
+                          {item.subLabel}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-1.5 shrink-0 ml-1">
+                      {!isAllowed && (
+                        <span title="ជាប់សោរ (គ្មានសិទ្ធិ)">
+                          <Lock className="w-3.5 h-3.5 text-slate-400" />
+                        </span>
+                      )}
+                      {item.badge !== null && (
+                        <span
+                          className={`px-2 py-0.5 text-[10px] font-black rounded-full shadow-2xs ${item.badgeColor}`}
+                        >
+                          {item.badge}
+                        </span>
+                      )}
+                      {isActive && (
+                        <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+                      )}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ))}
       </div>
 
       {/* Active Staff Card & Kitchen Status Widget & Settings */}
@@ -338,7 +441,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   🎂
                 </div>
                 <div>
-                  <div className="text-xs font-black text-slate-800">ម៉ឺនុយហាងនំ</div>
+                  <div className="font-muol text-xs text-slate-800 tracking-wide">{storeInfo.nameKh || 'ម៉ឺនុយហាងនំ'}</div>
                   <div className="text-[10px] text-pink-600 font-bold">SweetBakery POS</div>
                 </div>
               </div>
