@@ -23,7 +23,7 @@ import {
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { useBakery } from '../../context/BakeryContext';
-import { Expense, ExpenseCategory } from '../../types';
+import { Expense, ExpenseCategory, ExpenseType } from '../../types';
 import { soundFx } from '../../utils/audio';
 import { compressImageFile } from '../../utils/imageCompressor';
 import { CameraCaptureModal } from '../common/CameraCaptureModal';
@@ -37,6 +37,7 @@ interface NewExpenseModalProps {
 const COMMON_UNITS = [
   'គីឡូ (kg)',
   'ក្រាម (g)',
+  'គ្រាប់ (eggs)',
   'ប្រអប់ (box)',
   'កញ្ចប់ (pack)',
   'បាវ (sack)',
@@ -44,22 +45,34 @@ const COMMON_UNITS = [
   'លីត្រ (L)',
   'ដុំ (pcs)',
   'ឡូ (dozen)',
-  'ដើម (unit)',
   'ធុង (can/tub)',
+  'ខែ (month)',
+  'ដង (times)',
 ];
 
-const QUICK_TITLES = [
-  { label: '🥚 ស៊ុតមាន់', cat: 'INGREDIENTS' as ExpenseCategory },
-  { label: '🌾 ម្សៅមីពិសេស', cat: 'INGREDIENTS' as ExpenseCategory },
-  { label: '🧈 ប៊័រ Anchor', cat: 'INGREDIENTS' as ExpenseCategory },
-  { label: '🥛 ទឹកដោះគោស្រស់', cat: 'INGREDIENTS' as ExpenseCategory },
-  { label: '🍫 សូកូឡាដុំ', cat: 'INGREDIENTS' as ExpenseCategory },
-  { label: '🍓 ផ្លែស្ត្រប៊ឺរី', cat: 'INGREDIENTS' as ExpenseCategory },
-  { label: '📦 ប្រអប់នំខេក', cat: 'PACKAGING' as ExpenseCategory },
-  { label: '🎉 សម្ភារៈពិធី (Party Supplies)', cat: 'PACKAGING' as ExpenseCategory },
-  { label: '⚡ អគ្គិសនី EDC', cat: 'UTILITIES' as ExpenseCategory },
-  { label: '💧 ទឹកស្អាតរដ្ឋ', cat: 'UTILITIES' as ExpenseCategory },
-  { label: '🔥 ហ្គាសឡដុតនំ', cat: 'UTILITIES' as ExpenseCategory },
+const QUICK_INGREDIENTS = [
+  { label: '🥚 ស៊ុតមាន់ស្រស់កសិដ្ឋាន CP', unit: 'គ្រាប់ (eggs)', unitPriceKhr: 500, supplier: 'CP Cambodia' },
+  { label: '🌾 ម្សៅខេកជប៉ុនពិសេស', unit: 'kg', unitPriceKhr: 5800, supplier: 'Khmer Food Supply Co.' },
+  { label: '🧈 ប៊័រស្រស់បារាំង Elle & Vire', unit: 'kg', unitPriceKhr: 39000, supplier: 'Euro Gourmet' },
+  { label: '🥛 ក្រែមស្រស់ Anchor Whipping Cream', unit: 'liter', unitPriceKhr: 19500, supplier: 'Fonterra Dairy' },
+  { label: '🍫 សូកូឡាកាកាវ Callebaut 54.5%', unit: 'kg', unitPriceKhr: 58000, supplier: 'Euro Gourmet' },
+  { label: '🍓 ផ្លែស្ត្រប៊ែរីស្រស់នាំចូល', unit: 'kg', unitPriceKhr: 49000, supplier: 'Royal Fresh Fruits' },
+  { label: '🧀 ឈីស Philadelphia Cream Cheese', unit: 'kg', unitPriceKhr: 45000, supplier: 'Euro Gourmet' },
+  { label: '🍯 ស្ករសម៉ត់ Caster Sugar', unit: 'kg', unitPriceKhr: 3800, supplier: 'Local Market' },
+  { label: '🍵 ម្សៅតែបៃតង Uji Matcha', unit: 'kg', unitPriceKhr: 130000, supplier: 'Japan Direct' },
+  { label: '🥥 ខ្ទិះដូងស្រស់', unit: 'kg', unitPriceKhr: 8000, supplier: 'ផ្សារដើមគ' },
+];
+
+const QUICK_GENERAL_EXPENSES = [
+  { label: '⚡ អគ្គិសនី EDC (ភ្លើងឡ & ទូក្លាសេ)', cat: 'UTILITIES' as ExpenseCategory, unit: 'ខែ (month)', supplier: 'អគ្គិសនីកម្ពុជា EDC' },
+  { label: '💧 ទឹកស្អាតរដ្ឋ (Water Bill)', cat: 'UTILITIES' as ExpenseCategory, unit: 'ខែ (month)', supplier: 'រដ្ឋាករទឹកស្វយ័ត' },
+  { label: '🔥 ហ្គាសឡដុតនំ (Gas Refill 48kg)', cat: 'UTILITIES' as ExpenseCategory, unit: 'ធុង (48kg)', supplier: 'ហាងហ្គាស' },
+  { label: '📦 ប្រអប់នំខេកកញ្ចក់ថ្លា & ខ្សែបូ', cat: 'PACKAGING' as ExpenseCategory, unit: 'ប្រអប់ (box)', supplier: 'Cambodia Packaging' },
+  { label: '👤 ប្រាក់ខែបុគ្គលិក / ថ្លៃឈ្នួល', cat: 'SALARY' as ExpenseCategory, unit: 'ខែ (month)', supplier: 'បុគ្គលិកហាង' },
+  { label: '🏠 ថ្លៃជួលទីតាំងហាងប្រចាំខែ', cat: 'RENT' as ExpenseCategory, unit: 'ខែ (month)', supplier: 'ម្ចាស់ផ្ទះ' },
+  { label: '📢 ប៊ូសផេក Facebook / TikTok Ads', cat: 'MARKETING' as ExpenseCategory, unit: 'ដង', supplier: 'Meta / TikTok' },
+  { label: '🔧 ជួសជុលឧបករណ៍ / ឡដុតនំ', cat: 'MAINTENANCE' as ExpenseCategory, unit: 'ដង', supplier: 'ជាងជួសជុល' },
+  { label: '🧹 សម្ភារៈសម្អាត & អនាម័យហាង', cat: 'OTHER' as ExpenseCategory, unit: 'ឈុត', supplier: 'ផ្សារ' },
 ];
 
 export const NewExpenseModal: React.FC<NewExpenseModalProps> = ({
@@ -67,12 +80,27 @@ export const NewExpenseModal: React.FC<NewExpenseModalProps> = ({
   onClose,
   expenseToEdit,
 }) => {
-  const { lang, addExpense, updateExpense, deleteExpense, exchangeRate, currentStaff, staffMembers } = useBakery();
+  const {
+    lang,
+    addExpense,
+    updateExpense,
+    deleteExpense,
+    exchangeRate,
+    currentStaff,
+    staffMembers,
+    ingredients,
+    restockIngredient,
+  } = useBakery();
+
+  const [expenseType, setExpenseType] = useState<ExpenseType>('INGREDIENT');
+  const [selectedIngredientId, setSelectedIngredientId] = useState<string>('');
+  const [autoRestock, setAutoRestock] = useState<boolean>(true);
+  const [supplier, setSupplier] = useState<string>('');
 
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState<ExpenseCategory>('INGREDIENTS');
   
-  // New detailed expense fields: ចំនួន ខ្នាត តម្លៃរាយ សរុប
+  // Detailed fields: ចំនួន ខ្នាត តម្លៃរាយ សរុប
   const [quantity, setQuantity] = useState('1');
   const [unit, setUnit] = useState('គីឡូ (kg)');
   const [unitPriceKhr, setUnitPriceKhr] = useState('');
@@ -90,6 +118,13 @@ export const NewExpenseModal: React.FC<NewExpenseModalProps> = ({
   // Pre-fill fields when editing an existing expense
   useEffect(() => {
     if (expenseToEdit) {
+      const type: ExpenseType =
+        expenseToEdit.expenseType ||
+        (expenseToEdit.category === 'INGREDIENTS' ? 'INGREDIENT' : 'GENERAL');
+      setExpenseType(type);
+      setSelectedIngredientId(expenseToEdit.ingredientId || '');
+      setSupplier(expenseToEdit.supplier || '');
+      setAutoRestock(false);
       setTitle(expenseToEdit.title);
       setCategory(expenseToEdit.category);
       const q = expenseToEdit.quantity ?? 1;
@@ -104,6 +139,10 @@ export const NewExpenseModal: React.FC<NewExpenseModalProps> = ({
       setReceiptImage(expenseToEdit.receiptImage || '');
       setNotes(expenseToEdit.notes || '');
     } else {
+      setExpenseType('INGREDIENT');
+      setSelectedIngredientId('');
+      setSupplier('');
+      setAutoRestock(true);
       setTitle('');
       setCategory('INGREDIENTS');
       setQuantity('1');
@@ -145,6 +184,24 @@ export const NewExpenseModal: React.FC<NewExpenseModalProps> = ({
     const q = parseFloat(quantity) || 1;
     if (q > 0) {
       setUnitPriceKhr(Math.round(t / q).toString());
+    }
+  };
+
+  const handleSelectInventoryIngredient = (ingId: string) => {
+    setSelectedIngredientId(ingId);
+    if (!ingId) return;
+    const found = ingredients.find((i) => i.id === ingId);
+    if (found) {
+      soundFx.playPop();
+      setTitle(found.nameKh);
+      setUnit(found.unit);
+      if (found.supplier) setSupplier(found.supplier);
+      const estPriceKhr = found.costPerUnitKhr || Math.round(found.costPerUnitUsd * exchangeRate);
+      if (estPriceKhr > 0) {
+        setUnitPriceKhr(estPriceKhr.toString());
+        const q = parseFloat(quantity) || 1;
+        setAmountKhr(Math.round(q * estPriceKhr).toString());
+      }
     }
   };
 
@@ -199,7 +256,10 @@ export const NewExpenseModal: React.FC<NewExpenseModalProps> = ({
 
     const expensePayload: Omit<Expense, 'id' | 'createdAt'> = {
       title: title.trim(),
-      category,
+      expenseType,
+      category: expenseType === 'INGREDIENT' ? 'INGREDIENTS' : category,
+      ingredientId: expenseType === 'INGREDIENT' && selectedIngredientId ? selectedIngredientId : undefined,
+      supplier: supplier.trim() || undefined,
       quantity: numQuantity,
       unit: unit.trim() || 'ដុំ',
       unitPriceKhr: numUnitPriceKhr > 0 ? numUnitPriceKhr : Math.round(numAmountKhr / numQuantity),
@@ -217,10 +277,16 @@ export const NewExpenseModal: React.FC<NewExpenseModalProps> = ({
       updateExpense(expenseToEdit.id, expensePayload);
     } else {
       addExpense(expensePayload);
+      // Auto-restock ingredient in inventory if enabled
+      if (expenseType === 'INGREDIENT' && selectedIngredientId && autoRestock && numQuantity > 0) {
+        restockIngredient(selectedIngredientId, numQuantity);
+      }
     }
 
     // Reset Form
     setTitle('');
+    setSelectedIngredientId('');
+    setSupplier('');
     setQuantity('1');
     setUnitPriceKhr('');
     setAmountKhr('');
@@ -262,67 +328,203 @@ export const NewExpenseModal: React.FC<NewExpenseModalProps> = ({
 
         {/* Form Content */}
         <form onSubmit={handleSubmit} className="p-6 overflow-y-auto space-y-4 flex-1">
-          {/* Quick Shortcuts (only for new expense) */}
+          {/* Main Segmented Toggle: 🥚 ចំណាយគ្រឿងផ្សំ vs 🏢 ចំណាយទូទៅ */}
+          <div className="space-y-1.5">
+            <label className="block text-xs font-black text-slate-700 uppercase tracking-wider">
+              បែងចែកប្រភេទចំណាយ (Expense Category Type) *
+            </label>
+            <div className="grid grid-cols-2 p-1.5 bg-slate-100/90 rounded-2xl border border-slate-200 gap-1.5 shadow-2xs">
+              <button
+                type="button"
+                onClick={() => {
+                  soundFx.playPop();
+                  setExpenseType('INGREDIENT');
+                  setCategory('INGREDIENTS');
+                }}
+                className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl font-black text-xs transition-all cursor-pointer ${
+                  expenseType === 'INGREDIENT'
+                    ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-md shadow-orange-500/25 scale-[1.01]'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+                }`}
+              >
+                <span className="text-base">🥚</span>
+                <span>ចំណាយគ្រឿងផ្សំ (Ingredients)</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  soundFx.playPop();
+                  setExpenseType('GENERAL');
+                  if (category === 'INGREDIENTS') {
+                    setCategory('UTILITIES');
+                  }
+                }}
+                className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl font-black text-xs transition-all cursor-pointer ${
+                  expenseType === 'GENERAL'
+                    ? 'bg-gradient-to-r from-sky-600 to-indigo-600 text-white shadow-md shadow-sky-600/25 scale-[1.01]'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+                }`}
+              >
+                <span className="text-base">🏢</span>
+                <span>ចំណាយទូទៅ (General / OPEX)</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Quick Shortcuts */}
           {!expenseToEdit && (
             <div>
               <span className="text-[11px] font-bold text-slate-500 block mb-1.5 flex items-center gap-1">
                 <Sparkles className="w-3.5 h-3.5 text-pink-500" />
-                <span>មុខទំនិញចំណាយញឹកញាប់ (ចុចជ្រើសរើសរហ័ស)៖</span>
+                <span>
+                  {expenseType === 'INGREDIENT'
+                    ? 'គ្រឿងផ្សំញឹកញាប់ (ចុចបំពេញរហ័ស)៖'
+                    : 'ចំណាយទូទៅញឹកញាប់ (ចុចបំពេញរហ័ស)៖'}
+                </span>
               </span>
               <div className="flex flex-wrap gap-1.5">
-                {QUICK_TITLES.map((qt, idx) => (
-                  <button
-                    key={idx}
-                    type="button"
-                    onClick={() => {
-                      soundFx.playPop();
-                      setTitle(qt.label);
-                      setCategory(qt.cat);
-                    }}
-                    className="px-2.5 py-1 rounded-xl text-xs font-semibold bg-rose-50/80 hover:bg-pink-100 text-slate-700 hover:text-pink-700 border border-rose-100 transition-colors cursor-pointer"
-                  >
-                    {qt.label}
-                  </button>
-                ))}
+                {expenseType === 'INGREDIENT'
+                  ? QUICK_INGREDIENTS.map((qi, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => {
+                          soundFx.playPop();
+                          setTitle(qi.label);
+                          setUnit(qi.unit);
+                          setUnitPriceKhr(qi.unitPriceKhr.toString());
+                          if (qi.supplier) setSupplier(qi.supplier);
+                          const q = parseFloat(quantity) || 1;
+                          setAmountKhr(Math.round(q * qi.unitPriceKhr).toString());
+                        }}
+                        className="px-2.5 py-1 rounded-xl text-xs font-semibold bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200/80 transition-colors cursor-pointer"
+                      >
+                        {qi.label}
+                      </button>
+                    ))
+                  : QUICK_GENERAL_EXPENSES.map((qg, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => {
+                          soundFx.playPop();
+                          setTitle(qg.label);
+                          setCategory(qg.cat);
+                          setUnit(qg.unit);
+                          if (qg.supplier) setSupplier(qg.supplier);
+                        }}
+                        className="px-2.5 py-1 rounded-xl text-xs font-semibold bg-sky-50 hover:bg-sky-100 text-sky-900 border border-sky-200/80 transition-colors cursor-pointer"
+                      >
+                        {qg.label}
+                      </button>
+                    ))}
               </div>
             </div>
           )}
 
-          {/* Title & Category */}
+          {/* INGREDIENT MODE: Link with Inventory Stock */}
+          {expenseType === 'INGREDIENT' && ingredients.length > 0 && !expenseToEdit && (
+            <div className="p-3 bg-amber-50/70 border border-amber-200/90 rounded-2xl space-y-2">
+              <div className="flex items-center justify-between text-xs">
+                <span className="font-bold text-amber-950 flex items-center gap-1.5">
+                  <span>📦</span>
+                  <span>ភ្ជាប់ជាមួយគ្រឿងផ្សំក្នុងស្តុក Inventory (ជម្រើសងាយស្រួល)៖</span>
+                </span>
+                {selectedIngredientId && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedIngredientId('');
+                    }}
+                    className="text-[10px] text-amber-700 hover:underline font-bold"
+                  >
+                    សម្អាតការភ្ជាប់
+                  </button>
+                )}
+              </div>
+              <select
+                value={selectedIngredientId}
+                onChange={(e) => handleSelectInventoryIngredient(e.target.value)}
+                className="w-full px-3 py-2 text-xs font-bold text-slate-800 bg-white border border-amber-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500/20"
+              >
+                <option value="">-- ជ្រើសរើសគ្រឿងផ្សំក្នុងស្តុក ឬវាយបញ្ចូលឈ្មោះខាងក្រោម --</option>
+                {ingredients.map((ing) => (
+                  <option key={ing.id} value={ing.id}>
+                    {ing.nameKh} (ស្តុកនៅសល់: {ing.currentStock} {ing.unit})
+                  </option>
+                ))}
+              </select>
+
+              {selectedIngredientId && (
+                <label className="flex items-center gap-2 pt-1 text-xs font-bold text-amber-900 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={autoRestock}
+                    onChange={(e) => setAutoRestock(e.target.checked)}
+                    className="w-4 h-4 rounded text-amber-600 focus:ring-amber-500 accent-amber-600"
+                  />
+                  <span>
+                    បញ្ចូលចំនួននេះបន្ថែមទៅក្នុងស្តុកគ្រឿងផ្សំ Inventory ដោយស្វ័យប្រវត្តិ (+{quantity} {unit})
+                  </span>
+                </label>
+              )}
+            </div>
+          )}
+
+          {/* Title, Category & Supplier */}
           <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
-            <div className="sm:col-span-7">
+            <div className={expenseType === 'INGREDIENT' ? 'sm:col-span-7' : 'sm:col-span-6'}>
               <label className="block text-xs font-black text-slate-700 mb-1 uppercase tracking-wider">
-                បរិយាយមុខទំនិញ / ការចំណាយ *
+                {expenseType === 'INGREDIENT' ? 'ឈ្មោះគ្រឿងផ្សំធ្វើនំ *' : 'បរិយាយមុខទំនិញ / ការចំណាយទូទៅ *'}
               </label>
               <input
                 type="text"
                 required
-                placeholder="ឧ. ស៊ុតមាន់ស្រស់ CP, ម្សៅមី Anchor, ប្រអប់នំ..."
+                placeholder={
+                  expenseType === 'INGREDIENT'
+                    ? 'ឧ. ស៊ុតមាន់ស្រស់ CP, ម្សៅខេកជប៉ុន, ប៊័របារាំង...'
+                    : 'ឧ. វិក្កយបត្រភ្លើង EDC, ទឹកស្អាត, ប្រអប់នំខេក...'
+                }
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 font-bold text-slate-800"
               />
             </div>
 
-            <div className="sm:col-span-5">
-              <label className="block text-xs font-black text-slate-700 mb-1 uppercase tracking-wider">
-                ប្រភេទចំណាយ
-              </label>
-              <select
-                value={category}
-                onChange={(e) => setCategory(e.target.value as ExpenseCategory)}
-                className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 font-semibold text-slate-800"
-              >
-                <option value="INGREDIENTS">🥚 គ្រឿងផ្សំធ្វើនំ (Ingredients)</option>
-                <option value="PACKAGING">📦 ប្រអប់ & វេចខ្ចប់ (Packaging)</option>
-                <option value="UTILITIES">⚡ ទឹក ភ្លើង ហ្គាស (Utilities)</option>
-                <option value="SALARY">👤 ប្រាក់ខែ & ថ្លៃឈ្នួល (Salary)</option>
-                <option value="RENT">🏠 ថ្លៃជួលទីតាំង (Rent)</option>
-                <option value="MAINTENANCE">🔧 ជួសជុលឧបករណ៍/ឡ</option>
-                <option value="MARKETING">📢 ផ្សព្វផ្សាយ / Boost Ads</option>
-                <option value="OTHER">📌 ផ្សេងៗ (Other)</option>
-              </select>
-            </div>
+            {expenseType === 'GENERAL' ? (
+              <div className="sm:col-span-6">
+                <label className="block text-xs font-black text-slate-700 mb-1 uppercase tracking-wider">
+                  ប្រភេទចំណាយទូទៅ *
+                </label>
+                <select
+                  value={category}
+                  onChange={(e) => setCategory(e.target.value as ExpenseCategory)}
+                  className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 font-semibold text-slate-800"
+                >
+                  <option value="UTILITIES">⚡ ទឹក ភ្លើង ហ្គាស (Utilities)</option>
+                  <option value="SALARY">👤 ប្រាក់ខែ & ថ្លៃឈ្នួល (Salary)</option>
+                  <option value="RENT">🏠 ថ្លៃជួលទីតាំង (Rent)</option>
+                  <option value="PACKAGING">📦 ប្រអប់ & វេចខ្ចប់ (Packaging)</option>
+                  <option value="MAINTENANCE">🔧 ជួសជុលឧបករណ៍ / ថែទាំ</option>
+                  <option value="MARKETING">📢 ផ្សព្វផ្សាយ / Boost Ads</option>
+                  <option value="OTHER">📌 ផ្សេងៗ (Other)</option>
+                </select>
+              </div>
+            ) : (
+              <div className="sm:col-span-5">
+                <label className="block text-xs font-black text-slate-700 mb-1 uppercase tracking-wider">
+                  ហាង / អ្នកផ្គត់ផ្គង់ (Supplier)
+                </label>
+                <input
+                  type="text"
+                  placeholder="ឧ. CP Cambodia, Euro Gourmet, ផ្សារ..."
+                  value={supplier}
+                  onChange={(e) => setSupplier(e.target.value)}
+                  className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 font-semibold text-slate-800"
+                />
+              </div>
+            )}
           </div>
 
           {/* Core Feature: ចំនួន, ខ្នាត, តម្លៃរាយ, សរុប */}

@@ -33,6 +33,7 @@ export const ExpenseManagement: React.FC = () => {
   const [isAddExpenseOpen, setIsAddExpenseOpen] = useState(false);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [mainTypeFilter, setMainTypeFilter] = useState<'ALL' | 'INGREDIENTS' | 'GENERAL'>('ALL');
   const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
   const [receiptFilter, setReceiptFilter] = useState<'ALL' | 'WITH_RECEIPT' | 'WITHOUT_RECEIPT'>('ALL');
   const [previewReceiptImage, setPreviewReceiptImage] = useState<string | null>(null);
@@ -67,6 +68,11 @@ export const ExpenseManagement: React.FC = () => {
     }
   };
 
+  // Helper to distinguish ingredient expense vs general expense
+  const isIngredientExpense = (e: Expense) => {
+    return e.expenseType === 'INGREDIENT' || e.category === 'INGREDIENTS';
+  };
+
   // Financial sums (All-time)
   const totalSalesUsd = sales.reduce((sum, s) => sum + s.totalUsd, 0);
   const totalSalesKhr = sales.reduce((sum, s) => sum + (s.totalKhr || Math.round(s.totalUsd * exchangeRate)), 0);
@@ -74,6 +80,25 @@ export const ExpenseManagement: React.FC = () => {
   const totalExpensesKhr = expenses.reduce((sum, e) => sum + (e.amountKhr || Math.round(e.amountUsd * exchangeRate)), 0);
   const netProfitUsd = totalSalesUsd - totalExpensesUsd;
   const netProfitKhr = totalSalesKhr - totalExpensesKhr;
+
+  // Breakdown: Ingredients vs General (All-time)
+  const ingredientExpenses = useMemo(() => expenses.filter(isIngredientExpense), [expenses]);
+  const generalExpenses = useMemo(() => expenses.filter((e) => !isIngredientExpense(e)), [expenses]);
+
+  const totalIngredientsUsd = useMemo(() => ingredientExpenses.reduce((sum, e) => sum + e.amountUsd, 0), [ingredientExpenses]);
+  const totalIngredientsKhr = useMemo(() => ingredientExpenses.reduce((sum, e) => sum + (e.amountKhr || Math.round(e.amountUsd * exchangeRate)), 0), [ingredientExpenses, exchangeRate]);
+
+  const totalGeneralUsd = useMemo(() => generalExpenses.reduce((sum, e) => sum + e.amountUsd, 0), [generalExpenses]);
+  const totalGeneralKhr = useMemo(() => generalExpenses.reduce((sum, e) => sum + (e.amountKhr || Math.round(e.amountUsd * exchangeRate)), 0), [generalExpenses, exchangeRate]);
+
+  // Gross profit = Sales - Ingredient Costs
+  const grossProfitUsd = totalSalesUsd - totalIngredientsUsd;
+  const grossProfitKhr = totalSalesKhr - totalIngredientsKhr;
+  const grossMarginPct = totalSalesUsd > 0 ? ((grossProfitUsd / totalSalesUsd) * 100).toFixed(0) : '0';
+  const netMarginPct = totalSalesUsd > 0 ? ((netProfitUsd / totalSalesUsd) * 100).toFixed(0) : '0';
+
+  const ingredientExpensePct = totalExpensesUsd > 0 ? ((totalIngredientsUsd / totalExpensesUsd) * 100).toFixed(0) : '0';
+  const generalExpensePct = totalExpensesUsd > 0 ? ((totalGeneralUsd / totalExpensesUsd) * 100).toFixed(0) : '0';
 
   // Category map
   const categoryLabels: Record<ExpenseCategory, { labelKh: string; color: string }> = {
@@ -89,6 +114,10 @@ export const ExpenseManagement: React.FC = () => {
 
   const filteredExpenses = useMemo(() => {
     return expenses.filter((e) => {
+      // Main Type filter
+      if (mainTypeFilter === 'INGREDIENTS' && !isIngredientExpense(e)) return false;
+      if (mainTypeFilter === 'GENERAL' && isIngredientExpense(e)) return false;
+
       const matchCat = selectedCategory === 'ALL' || e.category === selectedCategory;
       const matchReceipt =
         receiptFilter === 'ALL' ||
@@ -112,11 +141,12 @@ export const ExpenseManagement: React.FC = () => {
         !q ||
         e.title.toLowerCase().includes(q) ||
         e.paidBy.toLowerCase().includes(q) ||
+        (e.supplier && e.supplier.toLowerCase().includes(q)) ||
         (e.notes && e.notes.toLowerCase().includes(q));
 
       return matchCat && matchReceipt && matchDate && matchSearch;
     });
-  }, [expenses, selectedCategory, receiptFilter, datePreset, customDate, todayStr, yesterdayStr, thisMonthStr, searchQuery]);
+  }, [expenses, mainTypeFilter, selectedCategory, receiptFilter, datePreset, customDate, todayStr, yesterdayStr, thisMonthStr, searchQuery]);
 
   // Filtered sums
   const filteredExpensesKhr = useMemo(() => {
@@ -126,6 +156,26 @@ export const ExpenseManagement: React.FC = () => {
   const filteredExpensesUsd = useMemo(() => {
     return filteredExpenses.reduce((sum, e) => sum + e.amountUsd, 0);
   }, [filteredExpenses]);
+
+  // Filtered breakdown: Ingredients vs General
+  const filteredIngredients = useMemo(() => filteredExpenses.filter(isIngredientExpense), [filteredExpenses]);
+  const filteredGeneral = useMemo(() => filteredExpenses.filter((e) => !isIngredientExpense(e)), [filteredExpenses]);
+
+  const filteredIngredientsKhr = useMemo(() => {
+    return filteredIngredients.reduce((sum, e) => sum + (e.amountKhr || Math.round(e.amountUsd * exchangeRate)), 0);
+  }, [filteredIngredients, exchangeRate]);
+
+  const filteredIngredientsUsd = useMemo(() => {
+    return filteredIngredients.reduce((sum, e) => sum + e.amountUsd, 0);
+  }, [filteredIngredients]);
+
+  const filteredGeneralKhr = useMemo(() => {
+    return filteredGeneral.reduce((sum, e) => sum + (e.amountKhr || Math.round(e.amountUsd * exchangeRate)), 0);
+  }, [filteredGeneral, exchangeRate]);
+
+  const filteredGeneralUsd = useMemo(() => {
+    return filteredGeneral.reduce((sum, e) => sum + e.amountUsd, 0);
+  }, [filteredGeneral]);
 
   const activeDateLabel = useMemo(() => {
     if (datePreset === 'ALL') return null;
@@ -139,10 +189,11 @@ export const ExpenseManagement: React.FC = () => {
   const handleExportCsv = () => {
     const listToExport = filteredExpenses.length > 0 ? filteredExpenses : expenses;
     const csvRows = [
-      ['Title', 'Category', 'Quantity', 'Unit', 'UnitPriceKHR', 'TotalKHR', 'TotalUSD', 'PaidBy', 'PaymentMethod', 'Date', 'Notes'].join(','),
+      ['Title', 'ExpenseType', 'Category', 'Quantity', 'Unit', 'UnitPriceKHR', 'TotalKHR', 'TotalUSD', 'PaidBy', 'PaymentMethod', 'Supplier', 'Date', 'Notes'].join(','),
       ...listToExport.map((e) =>
         [
           `"${e.title}"`,
+          isIngredientExpense(e) ? 'INGREDIENTS' : 'GENERAL',
           e.category,
           e.quantity ?? 1,
           `"${e.unit || ''}"`,
@@ -151,6 +202,7 @@ export const ExpenseManagement: React.FC = () => {
           e.amountUsd.toFixed(2),
           `"${e.paidBy}"`,
           e.paymentMethod,
+          `"${e.supplier || ''}"`,
           e.date,
           `"${e.notes || ''}"`,
         ].join(',')
@@ -161,7 +213,7 @@ export const ExpenseManagement: React.FC = () => {
     const a = document.createElement('a');
     a.href = url;
     const dateLabel = datePreset !== 'ALL' ? (datePreset === 'CUSTOM' ? customDate : datePreset.toLowerCase()) : 'all';
-    a.download = `bakery-expenses-${dateLabel}-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.download = `bakery-expenses-${mainTypeFilter.toLowerCase()}-${dateLabel}-${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
   };
 
@@ -219,8 +271,90 @@ export const ExpenseManagement: React.FC = () => {
 
       {/* Financial Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        {/* Total Expenses (Adapts when date filter is active) */}
-        <div className="bg-white p-5 rounded-3xl border border-rose-100 shadow-sm space-y-2 relative overflow-hidden">
+        {/* Card 1: 🥚 ចំណាយគ្រឿងផ្សំ (Ingredient Costs / COGS) */}
+        <div
+          onClick={() => {
+            soundFx.playPop();
+            setMainTypeFilter(mainTypeFilter === 'INGREDIENTS' ? 'ALL' : 'INGREDIENTS');
+          }}
+          className={`bg-white p-5 rounded-3xl border transition-all cursor-pointer relative overflow-hidden shadow-sm space-y-2 hover:shadow-md ${
+            mainTypeFilter === 'INGREDIENTS'
+              ? 'border-amber-400 ring-2 ring-amber-300/60 bg-gradient-to-b from-amber-50/40 to-white'
+              : 'border-amber-200/70 hover:border-amber-300'
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-black uppercase tracking-wider text-amber-900 flex items-center gap-1.5">
+              <span>🥚</span>
+              <span>ចំណាយគ្រឿងផ្សំ (Ingredients)</span>
+            </span>
+            <div className="p-2 bg-amber-100 text-amber-700 rounded-2xl">
+              <span className="text-xs font-black">{ingredientExpensePct}%</span>
+            </div>
+          </div>
+          <div className="text-2xl font-black text-amber-600 tracking-tight">
+            {(datePreset !== 'ALL' ? filteredIngredientsKhr : totalIngredientsKhr).toLocaleString()} ៛
+          </div>
+          <div className="text-xs text-slate-500 font-semibold flex items-center justify-between">
+            <span>~ ${(datePreset !== 'ALL' ? filteredIngredientsUsd : totalIngredientsUsd).toFixed(2)} USD</span>
+            <span className="text-[10px] bg-amber-50 text-amber-800 font-bold px-2 py-0.5 rounded-full border border-amber-200">
+              {datePreset !== 'ALL' ? filteredIngredients.length : ingredientExpenses.length} ប្រតិបត្តិការ
+            </span>
+          </div>
+          <div className="text-[10px] text-amber-700/80 pt-1 border-t border-amber-100 flex items-center justify-between">
+            <span>ថ្លៃដើមផលិត (COGS)</span>
+            <span className="font-bold underline">
+              {mainTypeFilter === 'INGREDIENTS' ? '✓ កំពុងជ្រើស' : 'ចុចមើលតែគ្រឿងផ្សំ →'}
+            </span>
+          </div>
+        </div>
+
+        {/* Card 2: 🏢 ចំណាយទូទៅ (General Expenses / OPEX) */}
+        <div
+          onClick={() => {
+            soundFx.playPop();
+            setMainTypeFilter(mainTypeFilter === 'GENERAL' ? 'ALL' : 'GENERAL');
+          }}
+          className={`bg-white p-5 rounded-3xl border transition-all cursor-pointer relative overflow-hidden shadow-sm space-y-2 hover:shadow-md ${
+            mainTypeFilter === 'GENERAL'
+              ? 'border-sky-400 ring-2 ring-sky-300/60 bg-gradient-to-b from-sky-50/40 to-white'
+              : 'border-sky-200/70 hover:border-sky-300'
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-black uppercase tracking-wider text-sky-900 flex items-center gap-1.5">
+              <span>🏢</span>
+              <span>ចំណាយទូទៅ (General / OPEX)</span>
+            </span>
+            <div className="p-2 bg-sky-100 text-sky-700 rounded-2xl">
+              <span className="text-xs font-black">{generalExpensePct}%</span>
+            </div>
+          </div>
+          <div className="text-2xl font-black text-sky-600 tracking-tight">
+            {(datePreset !== 'ALL' ? filteredGeneralKhr : totalGeneralKhr).toLocaleString()} ៛
+          </div>
+          <div className="text-xs text-slate-500 font-semibold flex items-center justify-between">
+            <span>~ ${(datePreset !== 'ALL' ? filteredGeneralUsd : totalGeneralUsd).toFixed(2)} USD</span>
+            <span className="text-[10px] bg-sky-50 text-sky-800 font-bold px-2 py-0.5 rounded-full border border-sky-200">
+              {datePreset !== 'ALL' ? filteredGeneral.length : generalExpenses.length} ប្រតិបត្តិការ
+            </span>
+          </div>
+          <div className="text-[10px] text-sky-700/80 pt-1 border-t border-sky-100 flex items-center justify-between">
+            <span>ទឹកភ្លើង ប្រាក់ខែ ជួលតូប Ads</span>
+            <span className="font-bold underline">
+              {mainTypeFilter === 'GENERAL' ? '✓ កំពុងជ្រើស' : 'ចុចមើលតែទូទៅ →'}
+            </span>
+          </div>
+        </div>
+
+        {/* Card 3: 💸 ការចំណាយសរុប (Total Combined Expenses) */}
+        <div
+          onClick={() => {
+            soundFx.playPop();
+            setMainTypeFilter('ALL');
+          }}
+          className="bg-white p-5 rounded-3xl border border-rose-100 shadow-sm space-y-2 relative overflow-hidden cursor-pointer hover:border-rose-300 transition-all"
+        >
           {datePreset !== 'ALL' && (
             <div className="absolute top-0 right-0 bg-rose-600 text-white text-[9px] font-black px-2.5 py-0.5 rounded-bl-xl shadow-xs">
               តម្រងថ្ងៃសកម្ម
@@ -228,7 +362,7 @@ export const ExpenseManagement: React.FC = () => {
           )}
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
-              {datePreset !== 'ALL' ? `ចំណាយ (${activeDateLabel})` : 'ការចំណាយសរុប (Expenses)'}
+              {datePreset !== 'ALL' ? `ចំណាយសរុប (${activeDateLabel})` : 'ការចំណាយសរុបរួម (Total)'}
             </span>
             <div className="p-2 bg-rose-50 text-rose-600 rounded-2xl">
               <TrendingDown className="w-4 h-4" />
@@ -241,71 +375,133 @@ export const ExpenseManagement: React.FC = () => {
             ~ ${(datePreset !== 'ALL' ? filteredExpensesUsd : totalExpensesUsd).toFixed(2)} USD (
             {datePreset !== 'ALL' ? filteredExpenses.length : expenses.length} ប្រតិបត្តិការ)
           </div>
-          {datePreset !== 'ALL' && (
-            <div className="text-[10px] text-slate-400 pt-1 border-t border-rose-50 flex items-center justify-between">
-              <span>សរុបគ្រប់ពេល៖</span>
-              <span className="font-bold text-slate-600">{totalExpensesKhr.toLocaleString()} ៛</span>
-            </div>
-          )}
-        </div>
 
-        {/* Total Revenue */}
-        <div className="bg-white p-5 rounded-3xl border border-rose-100 shadow-sm space-y-2">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
-              ចំណូលលក់សរុប (Revenue)
-            </span>
-            <div className="p-2 bg-emerald-50 text-emerald-600 rounded-2xl">
-              <TrendingUp className="w-4 h-4" />
+          {/* Ratio bar */}
+          <div className="pt-1 border-t border-rose-50 space-y-1">
+            <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden flex">
+              <div
+                style={{ width: `${ingredientExpensePct}%` }}
+                className="bg-amber-500 h-full"
+                title={`គ្រឿងផ្សំ ${ingredientExpensePct}%`}
+              />
+              <div
+                style={{ width: `${generalExpensePct}%` }}
+                className="bg-sky-500 h-full"
+                title={`ចំណាយទូទៅ ${generalExpensePct}%`}
+              />
             </div>
-          </div>
-          <div className="text-2xl font-black text-emerald-600 tracking-tight">
-            {totalSalesKhr.toLocaleString()} ៛
-          </div>
-          <div className="text-xs text-slate-500 font-semibold">
-            ~ ${totalSalesUsd.toFixed(2)} USD (ពីការលក់នៅបញ្ជរ និងនំកុម្ម៉ង់)
+            <div className="flex justify-between text-[10px] text-slate-400 font-bold">
+              <span className="text-amber-700">🥚 គ្រឿងផ្សំ {ingredientExpensePct}%</span>
+              <span className="text-sky-700">🏢 ទូទៅ {generalExpensePct}%</span>
+            </div>
           </div>
         </div>
 
-        {/* Net Profit */}
-        <div className="bg-white p-5 rounded-3xl border border-rose-100 shadow-sm space-y-2">
+        {/* Card 4: 📈 ចំណេញដុល & ចំណេញសុទ្ធ (Profit Analysis) */}
+        <div className="bg-white p-5 rounded-3xl border border-emerald-100 shadow-sm space-y-2 relative overflow-hidden bg-gradient-to-br from-white to-emerald-50/20">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
-              ប្រាក់ចំណេញសុទ្ធពិតប្រាកដ (Net Profit)
+            <span className="text-xs font-black uppercase tracking-wider text-emerald-800 flex items-center gap-1.5">
+              <Wallet className="w-4 h-4 text-emerald-600" />
+              <span>ប្រាក់ចំណេញ (Profit Insights)</span>
             </span>
-            <div className="p-2 bg-blue-50 text-blue-600 rounded-2xl">
-              <Wallet className="w-4 h-4" />
-            </div>
+            <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
+              Net {netMarginPct}%
+            </span>
           </div>
-          <div
-            className={`text-2xl font-black tracking-tight ${
-              netProfitUsd >= 0 ? 'text-blue-600' : 'text-rose-600'
-            }`}
-          >
-            {netProfitKhr.toLocaleString()} ៛
-          </div>
-          <div className="text-xs text-slate-500 font-semibold">
-            {netProfitUsd >= 0 ? 'ចំណេញ៖' : 'ខាត៖'} ~ ${netProfitUsd.toFixed(2)} USD
-          </div>
-        </div>
 
-        {/* Top Expense Category */}
-        <div className="bg-white p-5 rounded-3xl border border-rose-100 shadow-sm space-y-2">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
-              ចំណាយច្រើនជាងគេ
-            </span>
-            <div className="p-2 bg-amber-50 text-amber-600 rounded-2xl">
-              <Receipt className="w-4 h-4" />
+          <div className="space-y-1">
+            <div className="flex items-baseline justify-between">
+              <span className="text-xs font-bold text-slate-500">ចំណេញដុល (Gross):</span>
+              <span className="text-sm font-black text-emerald-600">
+                +{grossProfitKhr.toLocaleString()} ៛
+              </span>
+            </div>
+            <div className="flex items-baseline justify-between border-t border-slate-100 pt-1">
+              <span className="text-xs font-black text-slate-800">ចំណេញសុទ្ធ (Net):</span>
+              <span
+                className={`text-lg font-black tracking-tight ${
+                  netProfitKhr >= 0 ? 'text-blue-600' : 'text-rose-600'
+                }`}
+              >
+                {netProfitKhr >= 0 ? '+' : ''}{netProfitKhr.toLocaleString()} ៛
+              </span>
             </div>
           </div>
-          <div className="text-lg font-black text-slate-800 tracking-tight">
-            ⚡ ទឹក ភ្លើង ហ្គាស
-          </div>
-          <div className="text-xs text-slate-500 font-semibold">
-            ប្រហែល 45% នៃការចំណាយសរុប
+
+          <div className="text-[10px] text-slate-400 font-semibold pt-1 border-t border-emerald-50 flex items-center justify-between">
+            <span>ចំណូលសរុប៖</span>
+            <span className="font-bold text-slate-700">{totalSalesKhr.toLocaleString()} ៛</span>
           </div>
         </div>
+      </div>
+
+      {/* Main Expense Type Tabs (បែងចែកដាច់ស្រឡះរវាង គ្រឿងផ្សំ និង ទូទៅ) */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 p-1.5 bg-white rounded-3xl border border-rose-100/90 shadow-2xs gap-1.5">
+        <button
+          type="button"
+          onClick={() => {
+            soundFx.playPop();
+            setMainTypeFilter('ALL');
+            setSelectedCategory('ALL');
+          }}
+          className={`flex items-center justify-center gap-2.5 py-3 px-4 rounded-2xl font-black text-xs transition-all cursor-pointer ${
+            mainTypeFilter === 'ALL'
+              ? 'bg-slate-900 text-white shadow-md'
+              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+          }`}
+        >
+          <span className="text-base">🌟</span>
+          <div className="text-left">
+            <div>ចំណាយទាំងអស់ (All Expenses)</div>
+            <div className="text-[10px] font-normal opacity-80">
+              {expenses.length} ប្រតិបត្តិការ • {totalExpensesKhr.toLocaleString()} ៛
+            </div>
+          </div>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => {
+            soundFx.playPop();
+            setMainTypeFilter('INGREDIENTS');
+            setSelectedCategory('ALL');
+          }}
+          className={`flex items-center justify-center gap-2.5 py-3 px-4 rounded-2xl font-black text-xs transition-all cursor-pointer ${
+            mainTypeFilter === 'INGREDIENTS'
+              ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-md shadow-orange-500/25 scale-[1.01]'
+              : 'text-amber-900 hover:bg-amber-50/70 border border-amber-200/60'
+          }`}
+        >
+          <span className="text-base">🥚</span>
+          <div className="text-left">
+            <div>ចំណាយគ្រឿងផ្សំ (Ingredient Expenses)</div>
+            <div className="text-[10px] font-normal opacity-90">
+              {ingredientExpenses.length} ប្រតិបត្តិការ • {totalIngredientsKhr.toLocaleString()} ៛
+            </div>
+          </div>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => {
+            soundFx.playPop();
+            setMainTypeFilter('GENERAL');
+            setSelectedCategory('ALL');
+          }}
+          className={`flex items-center justify-center gap-2.5 py-3 px-4 rounded-2xl font-black text-xs transition-all cursor-pointer ${
+            mainTypeFilter === 'GENERAL'
+              ? 'bg-gradient-to-r from-sky-600 to-indigo-600 text-white shadow-md shadow-sky-600/25 scale-[1.01]'
+              : 'text-sky-900 hover:bg-sky-50/70 border border-sky-200/60'
+          }`}
+        >
+          <span className="text-base">🏢</span>
+          <div className="text-left">
+            <div>ចំណាយទូទៅ (General Expenses)</div>
+            <div className="text-[10px] font-normal opacity-90">
+              {generalExpenses.length} ប្រតិបត្តិការ • {totalGeneralKhr.toLocaleString()} ៛
+            </div>
+          </div>
+        </button>
       </div>
 
       {/* Date Filter & Search Section */}
@@ -473,39 +669,50 @@ export const ExpenseManagement: React.FC = () => {
 
             {/* Category Pills */}
             <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
-              <button
-                onClick={() => {
-                  soundFx.playPop();
-                  setSelectedCategory('ALL');
-                }}
-                className={`px-3 py-1.5 rounded-2xl text-xs font-bold whitespace-nowrap transition-all shadow-2xs cursor-pointer ${
-                  selectedCategory === 'ALL'
-                    ? 'bg-slate-900 text-white shadow-xs'
-                    : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
-                }`}
-              >
-                គ្រប់ប្រភេទ
-              </button>
-              {Object.entries(categoryLabels).map(([catKey, catVal]) => {
-                const isActive = selectedCategory === catKey;
-                const totalCatCount = expenses.filter((e) => e.category === catKey).length;
-                return (
+              {mainTypeFilter === 'INGREDIENTS' ? (
+                <div className="flex items-center gap-2 text-xs font-bold text-amber-900 bg-amber-50 px-3 py-1.5 rounded-2xl border border-amber-200 shadow-2xs">
+                  <span>🥚</span>
+                  <span>គ្រឿងផ្សំធ្វើនំទាំងអស់ ({ingredientExpenses.length} ប្រតិបត្តិការ)</span>
+                </div>
+              ) : (
+                <>
                   <button
-                    key={catKey}
                     onClick={() => {
                       soundFx.playPop();
-                      setSelectedCategory(catKey);
+                      setSelectedCategory('ALL');
                     }}
                     className={`px-3 py-1.5 rounded-2xl text-xs font-bold whitespace-nowrap transition-all shadow-2xs cursor-pointer ${
-                      isActive
-                        ? 'bg-rose-600 text-white shadow-xs'
-                        : 'bg-white text-slate-600 hover:bg-rose-50 border border-slate-200'
+                      selectedCategory === 'ALL'
+                        ? 'bg-slate-900 text-white shadow-xs'
+                        : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
                     }`}
                   >
-                    {catVal.labelKh} {totalCatCount > 0 ? `(${totalCatCount})` : ''}
+                    គ្រប់ប្រភេទ {mainTypeFilter === 'GENERAL' ? `(${generalExpenses.length})` : `(${expenses.length})`}
                   </button>
-                );
-              })}
+                  {Object.entries(categoryLabels)
+                    .filter(([catKey]) => mainTypeFilter !== 'GENERAL' || catKey !== 'INGREDIENTS')
+                    .map(([catKey, catVal]) => {
+                      const isActive = selectedCategory === catKey;
+                      const totalCatCount = expenses.filter((e) => e.category === catKey).length;
+                      return (
+                        <button
+                          key={catKey}
+                          onClick={() => {
+                            soundFx.playPop();
+                            setSelectedCategory(catKey);
+                          }}
+                          className={`px-3 py-1.5 rounded-2xl text-xs font-bold whitespace-nowrap transition-all shadow-2xs cursor-pointer ${
+                            isActive
+                              ? 'bg-rose-600 text-white shadow-xs'
+                              : 'bg-white text-slate-600 hover:bg-rose-50 border border-slate-200'
+                          }`}
+                        >
+                          {catVal.labelKh} {totalCatCount > 0 ? `(${totalCatCount})` : ''}
+                        </button>
+                      );
+                    })}
+                </>
+              )}
             </div>
           </div>
 
@@ -599,9 +806,23 @@ export const ExpenseManagement: React.FC = () => {
                   <div>
                     <h4 className="font-black text-slate-900 text-sm">{expense.title}</h4>
                     <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                      <span
+                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-black border ${
+                          isIngredientExpense(expense)
+                            ? 'bg-amber-100 text-amber-900 border-amber-300'
+                            : 'bg-sky-100 text-sky-900 border-sky-300'
+                        }`}
+                      >
+                        <span>{isIngredientExpense(expense) ? '🥚 គ្រឿងផ្សំ' : '🏢 ទូទៅ'}</span>
+                      </span>
                       <span className={`inline-flex items-center px-2 py-0.5 rounded-lg text-[10px] font-bold border ${catInfo.color}`}>
                         {catInfo.labelKh}
                       </span>
+                      {expense.supplier && (
+                        <span className="text-[10px] text-slate-500 font-semibold bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">
+                          🏪 {expense.supplier}
+                        </span>
+                      )}
                       <button
                         type="button"
                         onClick={() => {
@@ -711,7 +932,7 @@ export const ExpenseManagement: React.FC = () => {
           <table className="w-full text-left text-xs text-slate-600">
             <thead className="bg-slate-50 text-slate-700 font-black border-b border-slate-200">
               <tr>
-                <th className="py-3 px-4">បរិយាយការចំណាយ</th>
+                <th className="py-3 px-4">ផ្នែក & បរិយាយការចំណាយ</th>
                 <th className="py-3 px-4">ចំនួន & ខ្នាត</th>
                 <th className="py-3 px-4">តម្លៃរាយ (Unit Price)</th>
                 <th className="py-3 px-4">សរុប (៛ KHR & $)</th>
@@ -782,12 +1003,26 @@ export const ExpenseManagement: React.FC = () => {
                     <tr key={expense.id} className="hover:bg-rose-50/40 transition-colors">
                       <td className="py-2.5 px-4">
                         <div className="font-black text-slate-900 text-sm">{expense.title}</div>
-                        <div className="flex items-center gap-2 mt-0.5">
+                        <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                          <span
+                            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-black border ${
+                              isIngredientExpense(expense)
+                                ? 'bg-amber-100 text-amber-900 border-amber-300'
+                                : 'bg-sky-100 text-sky-900 border-sky-300'
+                            }`}
+                          >
+                            <span>{isIngredientExpense(expense) ? '🥚 គ្រឿងផ្សំ' : '🏢 ទូទៅ'}</span>
+                          </span>
                           <span
                             className={`inline-flex items-center px-2 py-0.5 rounded-lg text-[10px] font-bold border ${catInfo.color}`}
                           >
                             {catInfo.labelKh}
                           </span>
+                          {expense.supplier && (
+                            <span className="text-[10px] text-slate-500 font-semibold bg-slate-50 px-1.5 py-0.5 rounded border border-slate-200">
+                              🏪 {expense.supplier}
+                            </span>
+                          )}
                           {expense.notes && (
                             <span
                               className="text-[11px] text-slate-400 truncate max-w-[200px]"

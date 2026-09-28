@@ -508,9 +508,13 @@ export const notifyTelegramExpense = async (
   const storeTitle = storeInfo?.nameKh || 'ហាងនំ SweetBakery';
   const amountKhr = expense.amountKhr ?? Math.round(expense.amountUsd * exchangeRate);
 
+  const isIng = expense.expenseType === 'INGREDIENT' || expense.category === 'INGREDIENTS';
+  const typeBadge = isIng ? '🥚 ចំណាយគ្រឿងផ្សំ (Ingredients)' : '🏢 ចំណាយទូទៅ (General Expense)';
+
   const text =
     `💸 <b>[${storeTitle}] — កត់ត្រាការចំណាយថ្មី</b>\n` +
     `━━━━━━━━━━━━━━━━━━\n` +
+    `🏷️ <b>ផ្នែកចំណាយ៖</b> <b>${typeBadge}</b>\n` +
     `📦 <b>មុខទំនិញ/ការចំណាយ៖</b> <b>${expense.title}</b>\n` +
     (expense.quantity ? `🔢 <b>ចំនួន៖</b> ${expense.quantity} ${expense.unit || ''}\n` : '') +
     `💰 <b>ទឹកប្រាក់ចំណាយ៖</b> <b>${amountKhr.toLocaleString()} ៛</b> <i>($${expense.amountUsd.toFixed(2)})</i>\n` +

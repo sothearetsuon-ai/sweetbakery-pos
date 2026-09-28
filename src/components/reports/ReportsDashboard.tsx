@@ -126,6 +126,21 @@ export const ReportsDashboard: React.FC = () => {
   const profitMarginPercent =
     totalSalesUsd > 0 ? ((netProfitUsd / totalSalesUsd) * 100).toFixed(1) : '0';
 
+  // Breakdown: Ingredient Cost (COGS) vs General Overhead (OPEX)
+  const isIngExpense = (e: any) => e.expenseType === 'INGREDIENT' || e.category === 'INGREDIENTS';
+  const filteredIngExpenses = filteredExpenses.filter(isIngExpense);
+  const filteredGenExpenses = filteredExpenses.filter((e) => !isIngExpense(e));
+
+  const totalIngCostUsd = filteredIngExpenses.reduce((s, e) => s + e.amountUsd, 0);
+  const totalIngCostKhr = filteredIngExpenses.reduce((s, e) => s + (e.amountKhr || Math.round(e.amountUsd * exchangeRate)), 0);
+
+  const totalGenCostUsd = filteredGenExpenses.reduce((s, e) => s + e.amountUsd, 0);
+  const totalGenCostKhr = filteredGenExpenses.reduce((s, e) => s + (e.amountKhr || Math.round(e.amountUsd * exchangeRate)), 0);
+
+  const grossProfitUsd = totalSalesUsd - totalIngCostUsd;
+  const grossProfitKhr = totalSalesKhr - totalIngCostKhr;
+  const grossMarginPercent = totalSalesUsd > 0 ? ((grossProfitUsd / totalSalesUsd) * 100).toFixed(1) : '0';
+
   const totalCustomOrdersValue = filteredCustomOrders.reduce((acc, o) => acc + o.totalUsd, 0);
   const totalDepositsCollected = filteredCustomOrders.reduce((acc, o) => acc + o.depositUsd, 0);
 
@@ -482,37 +497,99 @@ export const ReportsDashboard: React.FC = () => {
                 <td className="p-3 text-right font-bold text-emerald-800">100%</td>
               </tr>
 
-              {/* Operating Expenses Rows */}
-              {Object.keys(expenseCategoryNames).map((key) => {
-                const catData = expenseCategoryBreakdown[key] || { usd: 0, khr: 0, count: 0 };
-                if (catData.usd === 0 && filteredExpenses.length > 0) return null;
-                const percentOfRevenue =
-                  totalSalesUsd > 0 ? ((catData.usd / totalSalesUsd) * 100).toFixed(1) : '0';
-                return (
-                  <tr key={key} className="hover:bg-slate-50/80 transition-colors">
-                    <td className="p-3 pl-8 text-slate-600 flex items-center gap-2">
-                      <span className="w-1.5 h-1.5 rounded-full bg-rose-400"></span>
-                      <span>(-) {expenseCategoryNames[key as ExpenseCategory]}</span>
-                    </td>
-                    <td className="p-3 text-center text-slate-500">
-                      {catData.count > 0 ? `${catData.count} ដង` : '-'}
-                    </td>
-                    <td className="p-3 text-right font-bold text-rose-600">
-                      {catData.khr > 0 ? `-${catData.khr.toLocaleString()} ៛` : '0 ៛'}
-                    </td>
-                    <td className="p-3 text-right font-bold text-rose-600">
-                      {catData.usd > 0 ? `-$${catData.usd.toFixed(2)}` : '$0.00'}
-                    </td>
-                    <td className="p-3 text-right text-slate-500">{percentOfRevenue}%</td>
-                  </tr>
-                );
-              })}
+              {/* 1. Direct Cost of Goods Sold: Ingredients */}
+              <tr className="bg-amber-50/50 font-bold border-t border-amber-200/80">
+                <td className="p-3 flex items-center gap-2 text-amber-950 pl-4">
+                  <span className="text-base">🥚</span>
+                  <span>(-) ថ្លៃដើមទិញគ្រឿងផ្សំធ្វើនំ (Cost of Ingredients / COGS)</span>
+                </td>
+                <td className="p-3 text-center text-amber-900 font-bold">{filteredIngExpenses.length} ប្រតិបត្តិការ</td>
+                <td className="p-3 text-right font-black text-amber-700">
+                  {totalIngCostKhr > 0 ? `-${totalIngCostKhr.toLocaleString()} ៛` : '0 ៛'}
+                </td>
+                <td className="p-3 text-right font-black text-amber-700">
+                  {totalIngCostUsd > 0 ? `-$${totalIngCostUsd.toFixed(2)}` : '$0.00'}
+                </td>
+                <td className="p-3 text-right font-bold text-amber-800">
+                  {totalSalesUsd > 0 ? ((totalIngCostUsd / totalSalesUsd) * 100).toFixed(1) : '0'}%
+                </td>
+              </tr>
+
+              {/* 2. Gross Profit Row */}
+              <tr className="bg-emerald-100/60 font-black border-y-2 border-emerald-300 text-emerald-950 text-xs">
+                <td className="p-3 flex items-center gap-2">
+                  <TrendingUp className="w-4 h-4 text-emerald-700" />
+                  <span>(=) ប្រាក់ចំណេញដុល (GROSS PROFIT = ចំណូល - គ្រឿងផ្សំ)</span>
+                </td>
+                <td className="p-3 text-center text-emerald-800">Gross Margin</td>
+                <td className="p-3 text-right font-black text-emerald-700 text-sm">
+                  +{grossProfitKhr.toLocaleString()} ៛
+                </td>
+                <td className="p-3 text-right font-black text-emerald-700 text-sm">
+                  +${grossProfitUsd.toFixed(2)}
+                </td>
+                <td className="p-3 text-right font-black text-emerald-800">{grossMarginPercent}%</td>
+              </tr>
+
+              {/* 3. General Operating Expenses (OPEX) Section Header */}
+              <tr className="bg-slate-100/70 font-black text-slate-700 border-t border-slate-200">
+                <td colSpan={5} className="p-2.5 pl-4 uppercase tracking-wider text-[11px] flex items-center gap-2">
+                  <span>🏢</span>
+                  <span>ការចំណាយទូទៅ & ប្រតិបត្តិការហាង (General Operating Expenses / OPEX)</span>
+                </td>
+              </tr>
+
+              {/* Operating Expenses Breakdown Rows (non-ingredients) */}
+              {Object.keys(expenseCategoryNames)
+                .filter((key) => key !== 'INGREDIENTS')
+                .map((key) => {
+                  const catData = expenseCategoryBreakdown[key] || { usd: 0, khr: 0, count: 0 };
+                  if (catData.usd === 0 && filteredExpenses.length > 0) return null;
+                  const percentOfRevenue =
+                    totalSalesUsd > 0 ? ((catData.usd / totalSalesUsd) * 100).toFixed(1) : '0';
+                  return (
+                    <tr key={key} className="hover:bg-slate-50/80 transition-colors">
+                      <td className="p-2.5 pl-8 text-slate-600 flex items-center gap-2">
+                        <span className="w-1.5 h-1.5 rounded-full bg-sky-400"></span>
+                        <span>(-) {expenseCategoryNames[key as ExpenseCategory]}</span>
+                      </td>
+                      <td className="p-2.5 text-center text-slate-500">
+                        {catData.count > 0 ? `${catData.count} ដង` : '-'}
+                      </td>
+                      <td className="p-2.5 text-right font-bold text-slate-700">
+                        {catData.khr > 0 ? `-${catData.khr.toLocaleString()} ៛` : '0 ៛'}
+                      </td>
+                      <td className="p-2.5 text-right font-bold text-slate-700">
+                        {catData.usd > 0 ? `-$${catData.usd.toFixed(2)}` : '$0.00'}
+                      </td>
+                      <td className="p-2.5 text-right text-slate-500">{percentOfRevenue}%</td>
+                    </tr>
+                  );
+                })}
+
+              {/* General OPEX Subtotal Row */}
+              <tr className="bg-sky-50/50 font-bold border-t border-sky-100">
+                <td className="p-2.5 pl-6 text-sky-950 flex items-center gap-2">
+                  <span>🏢</span>
+                  <span>(-) ចំណាយទូទៅសរុប (Total General Overhead OPEX)</span>
+                </td>
+                <td className="p-2.5 text-center text-sky-800">{filteredGenExpenses.length} ប្រតិបត្តិការ</td>
+                <td className="p-2.5 text-right font-black text-sky-700">
+                  -{totalGenCostKhr.toLocaleString()} ៛
+                </td>
+                <td className="p-2.5 text-right font-black text-sky-700">
+                  -${totalGenCostUsd.toFixed(2)}
+                </td>
+                <td className="p-2.5 text-right font-bold text-sky-800">
+                  {totalSalesUsd > 0 ? ((totalGenCostUsd / totalSalesUsd) * 100).toFixed(1) : '0'}%
+                </td>
+              </tr>
 
               {/* Total Expenses Summary Row */}
-              <tr className="bg-rose-50/40 font-bold border-t border-rose-200">
+              <tr className="bg-rose-50/50 font-black border-t-2 border-rose-200">
                 <td className="p-3 flex items-center gap-2 text-rose-900">
                   <ArrowDownRight className="w-4 h-4 text-rose-600" />
-                  <span>(-) ការចំណាយប្រតិបត្តិការសរុប (Total Operating Expenses)</span>
+                  <span>(-) ការចំណាយរួមទាំងអស់ (Total Combined Expenses = គ្រឿងផ្សំ + ទូទៅ)</span>
                 </td>
                 <td className="p-3 text-center text-rose-800">{filteredExpenses.length} ប្រតិបត្តិការ</td>
                 <td className="p-3 text-right font-black text-rose-600">

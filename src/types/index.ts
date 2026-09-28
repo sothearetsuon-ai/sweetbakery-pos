@@ -197,6 +197,8 @@ export interface Shift {
   status: 'OPEN' | 'CLOSED';
 }
 
+export type ExpenseType = 'INGREDIENT' | 'GENERAL';
+
 export type ExpenseCategory =
   | 'INGREDIENTS'
   | 'PACKAGING'
@@ -210,7 +212,10 @@ export type ExpenseCategory =
 export interface Expense {
   id: string;
   title: string;
+  expenseType?: ExpenseType; // 'INGREDIENT' (ចំណាយគ្រឿងផ្សំ) ឬ 'GENERAL' (ចំណាយទូទៅ)
   category: ExpenseCategory;
+  ingredientId?: string;     // ភ្ជាប់ទៅគ្រឿងផ្សំក្នុងស្តុក inventory (បើមាន)
+  supplier?: string;         // ហាង ឬអ្នកផ្គត់ផ្គង់
   quantity?: number;       // ចំនួន (e.g. 5, 10, 2.5)
   unit?: string;           // ខ្នាត (e.g. គីឡូ, ប្រអប់, ដប, កញ្ចប់, បាវ, ដុំ)
   unitPriceKhr?: number;   // តម្លៃរាយ (៛ KHR)
