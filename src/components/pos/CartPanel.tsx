@@ -160,10 +160,11 @@ export const CartPanel: React.FC<CartPanelProps> = ({ onCheckout, onClose, isMob
     }
   };
 
-  const discountUsd = (cartTotalUsd * discountPercent) / 100;
-  const discountKhr = Math.round(discountUsd * exchangeRate);
-  const finalTotalUsd = Math.max(0, cartTotalUsd - discountUsd);
-  const finalTotalKhr = Math.round(finalTotalUsd * exchangeRate);
+  // KHR-First calculations to prevent rounding drift (e.g. 27,500 becoming 27,520)
+  const discountKhr = discountPercent > 0 ? Math.round((cartTotalKhr * discountPercent) / 100) : 0;
+  const finalTotalKhr = Math.max(0, cartTotalKhr - discountKhr);
+  const discountUsd = Number((discountKhr / exchangeRate).toFixed(2));
+  const finalTotalUsd = Number((finalTotalKhr / exchangeRate).toFixed(2));
 
   // Deposit calculations
   const defaultDeposit50Pct = Math.round((finalTotalKhr * 0.5) / 1000) * 1000;
