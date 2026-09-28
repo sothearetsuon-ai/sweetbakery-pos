@@ -42,6 +42,28 @@ const CAKE_SIZES = [
   { id: '2 ជាន់', label: '2 ជាន់ (2-Tier)', desc: 'សម្រាប់កម្មវិធីធំ / 20+ នាក់', priceUsd: 45 },
 ];
 
+export interface CakeFlavorItem {
+  id: string;
+  nameKh: string;
+  nameEn: string;
+  icon: string;
+  label: string;
+}
+
+export const PRESET_CAKE_FLAVORS: CakeFlavorItem[] = [
+  { id: 'chocolate', nameKh: 'សូកូឡា', nameEn: 'Chocolate Cake', icon: '🍫', label: 'សូកូឡា (Chocolate Cake)' },
+  { id: 'durian', nameKh: 'ទុរេន', nameEn: 'Durian Cake', icon: '🍈', label: 'ទុរេន (Durian Cake)' },
+  { id: 'pandan_coconut', nameKh: 'តយដូង', nameEn: 'Pandan Coconut', icon: '🥥', label: 'តយដូង (Pandan Coconut)' },
+  { id: 'strawberry', nameKh: 'ស្ត្រប៊ែរី', nameEn: 'Strawberry Cake', icon: '🍓', label: 'ស្ត្រប៊ែរី (Strawberry Cake)' },
+  { id: 'blueberry', nameKh: 'ប៊្លូប៊ែរី', nameEn: 'Blueberry Cake', icon: '🫐', label: 'ប៊្លូប៊ែរី (Blueberry Cake)' },
+  { id: 'vanilla', nameKh: 'វ៉ានីឡា', nameEn: 'Vanilla Cake', icon: '🍦', label: 'វ៉ានីឡា (Vanilla Cake)' },
+  { id: 'coffee_mocha', nameKh: 'កាហ្វេម៉ូកា', nameEn: 'Coffee Mocha', icon: '☕', label: 'កាហ្វេម៉ូកា (Coffee Mocha)' },
+  { id: 'taro_coconut', nameKh: 'ត្រាវដូង', nameEn: 'Taro Coconut', icon: '🍠', label: 'ត្រាវដូង (Taro Coconut)' },
+  { id: 'matcha', nameKh: 'តែបៃតង', nameEn: 'Matcha Green Tea', icon: '🍵', label: 'តែបៃតង (Matcha Green Tea)' },
+  { id: 'red_velvet', nameKh: 'រ៉េដវ៉េលវែត', nameEn: 'Red Velvet', icon: '❤️', label: 'រ៉េដវ៉េលវែត (Red Velvet)' },
+  { id: 'other', nameKh: 'ផ្សេងៗ', nameEn: 'Other...', icon: '✨', label: 'ផ្សេងៗ (Other)' },
+];
+
 export const CustomerOrderPortal: React.FC = () => {
   const {
     products,
@@ -67,11 +89,56 @@ export const CustomerOrderPortal: React.FC = () => {
   // Customization State
   const [selectedSize, setSelectedSize] = useState(CAKE_SIZES[1].id);
   const [selectedSizePrice, setSelectedSizePrice] = useState(CAKE_SIZES[1].priceUsd);
-  const [selectedFlavor, setSelectedFlavor] = useState(flavors[0] || 'វ៉ានីឡា (Vanilla)');
+  const [selectedFlavor, setSelectedFlavor] = useState<string>(PRESET_CAKE_FLAVORS[0].label);
+  const [isOtherFlavor, setIsOtherFlavor] = useState(false);
+  const [customFlavorText, setCustomFlavorText] = useState('');
   const [inscription, setInscription] = useState('');
   const [specialNotes, setSpecialNotes] = useState('');
   const [referenceImage, setReferenceImage] = useState<string>('');
   const [isUploadingRefImage, setIsUploadingRefImage] = useState(false);
+
+  // Computed list of cake flavors
+  const cakeFlavorList = useMemo(() => {
+    const list: CakeFlavorItem[] = PRESET_CAKE_FLAVORS.filter((f) => f.id !== 'other');
+
+    if (flavors && flavors.length > 0) {
+      flavors.forEach((fl, idx) => {
+        const clean = fl.trim();
+        if (!clean) return;
+        const exists = list.some(
+          (item) =>
+            item.label.toLowerCase() === clean.toLowerCase() ||
+            item.nameKh.toLowerCase() === clean.toLowerCase()
+        );
+        if (!exists) {
+          list.push({
+            id: `store-fl-${idx}`,
+            nameKh: clean,
+            nameEn: 'រសជាតិហាង',
+            icon: '🧁',
+            label: clean,
+          });
+        }
+      });
+    }
+
+    list.push({
+      id: 'other',
+      nameKh: 'ផ្សេងៗ',
+      nameEn: 'Other...',
+      icon: '✨',
+      label: 'ផ្សេងៗ (Other)',
+    });
+
+    return list;
+  }, [flavors]);
+
+  const finalFlavor = useMemo(() => {
+    if (isOtherFlavor) {
+      return customFlavorText.trim() ? `ផ្សេងៗ: ${customFlavorText.trim()}` : 'ផ្សេងៗ (Other)';
+    }
+    return selectedFlavor;
+  }, [isOtherFlavor, customFlavorText, selectedFlavor]);
 
   // Selected Addons
   const [selectedAddons, setSelectedAddons] = useState<string[]>([]);
@@ -268,7 +335,7 @@ export const CustomerOrderPortal: React.FC = () => {
         pickupTime,
         cakeName: customCakeName,
         size: selectedSize,
-        flavor: selectedFlavor,
+        flavor: finalFlavor,
         inscription: inscription.trim(),
         themeNotes: combinedNotes || undefined,
         referenceImage: referenceImage || undefined,
@@ -674,32 +741,76 @@ export const CustomerOrderPortal: React.FC = () => {
             </div>
 
             {/* Flavor Selector */}
-            <div className="space-y-2">
-              <label className="text-xs font-black text-slate-700 flex items-center gap-1.5">
-                <span>🍰 ជ្រើសរើសរសជាតិនំ (Cake Flavor)</span>
-              </label>
-              <div className="flex flex-wrap gap-2">
-                {flavors.map((fl) => {
-                  const isSel = selectedFlavor === fl;
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-black text-slate-800 flex items-center gap-1.5">
+                  <span className="text-base">🍰</span>
+                  <span>ជ្រើសរើសរសជាតិនំ (Cake Flavor) *</span>
+                </label>
+                <span className="text-[11px] font-bold text-pink-700 bg-pink-50 px-2.5 py-0.5 rounded-full border border-pink-100 max-w-[200px] truncate">
+                  {finalFlavor}
+                </span>
+              </div>
+
+              {/* Grid of flavors with emojis & clear labels */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                {cakeFlavorList.map((fl) => {
+                  const isSel = fl.id === 'other' ? isOtherFlavor : (!isOtherFlavor && selectedFlavor === fl.label);
                   return (
                     <button
-                      key={fl}
+                      key={fl.id}
                       type="button"
                       onClick={() => {
                         soundFx.playPop();
-                        setSelectedFlavor(fl);
+                        if (fl.id === 'other') {
+                          setIsOtherFlavor(true);
+                        } else {
+                          setIsOtherFlavor(false);
+                          setSelectedFlavor(fl.label);
+                        }
                       }}
-                      className={`px-3.5 py-2 rounded-2xl text-xs font-bold transition-all cursor-pointer ${
+                      className={`p-2.5 rounded-2xl border text-left transition-all active:scale-95 cursor-pointer flex items-center gap-2.5 ${
                         isSel
-                          ? 'bg-gradient-to-r from-pink-600 to-rose-500 text-white shadow-xs'
-                          : 'bg-white border border-rose-100 hover:bg-rose-50 text-slate-700'
+                          ? 'bg-gradient-to-r from-pink-500 to-rose-500 text-white border-pink-500 shadow-md shadow-pink-500/20 ring-2 ring-pink-300'
+                          : 'bg-white border-rose-100 hover:border-pink-300 hover:bg-pink-50/30 text-slate-700 shadow-2xs'
                       }`}
                     >
-                      {fl}
+                      <span className="text-xl shrink-0 p-1 bg-white/20 rounded-xl flex items-center justify-center">
+                        {fl.icon}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <div className="font-black text-xs truncate leading-tight">{fl.nameKh}</div>
+                        <div className={`text-[10px] truncate ${isSel ? 'text-pink-100 font-semibold' : 'text-slate-400'}`}>
+                          {fl.nameEn}
+                        </div>
+                      </div>
+                      {isSel && <CheckCircle2 className="w-4 h-4 shrink-0 text-white" />}
                     </button>
                   );
                 })}
               </div>
+
+              {/* Custom Flavor Text Input when "ផ្សេងៗ (Other)" is selected */}
+              {isOtherFlavor && (
+                <div className="p-3.5 bg-gradient-to-r from-pink-50/70 to-rose-50/70 border border-pink-200 rounded-2xl space-y-1.5 animate-in fade-in zoom-in-95 duration-150 shadow-2xs">
+                  <label className="block text-xs font-black text-pink-900 flex items-center gap-1.5">
+                    <span>✨</span>
+                    <span>សូមបញ្ជាក់រសជាតិនំដែលលោកអ្នកចង់បាន (Enter Your Desired Flavor)៖</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    autoFocus
+                    placeholder="ឧ. ឈីសខេក (Cheesecake), រសជាតិស្វាយ (Mango), ខារ៉ាមែល..."
+                    value={customFlavorText}
+                    onChange={(e) => setCustomFlavorText(e.target.value)}
+                    className="w-full px-3.5 py-2.5 bg-white border border-pink-300 rounded-xl text-xs font-bold text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-pink-500/30 focus:border-pink-500 shadow-2xs"
+                  />
+                  <p className="text-[10px] text-pink-700 font-medium">
+                    ជាងនំយើងខ្ញុំនឹងរៀបចំរសជាតិពិសេសនេះជូនលោកអ្នកទៅតាមការស្នើសុំ។
+                  </p>
+                </div>
+              )}
             </div>
 
             {/* Inscription on Cake */}
@@ -1040,6 +1151,11 @@ export const CustomerOrderPortal: React.FC = () => {
               <div className="flex items-center justify-between text-xs pb-2 border-b border-slate-100">
                 <span className="text-slate-500 font-bold">នំកុម្ម៉ង់៖</span>
                 <span className="font-black text-slate-800">{customCakeName} ({selectedSize})</span>
+              </div>
+
+              <div className="flex items-center justify-between text-xs pb-2 border-b border-slate-100">
+                <span className="text-slate-500 font-bold">រសជាតិនំ៖</span>
+                <span className="font-bold text-pink-600">{finalFlavor}</span>
               </div>
 
               <div className="flex items-center justify-between text-xs pb-2 border-b border-slate-100">
