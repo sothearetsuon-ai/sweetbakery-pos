@@ -354,31 +354,15 @@ export const CustomerOrderPortal: React.FC = () => {
             </div>
           </div>
 
-          {/* Quick Call or Return to POS button */}
+          {/* Customer Support Contact */}
           <div className="flex items-center gap-2">
             <a
               href={`tel:${storeInfo.phone || '012345678'}`}
-              className="flex items-center gap-1 px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-xl text-xs font-bold transition-all border border-rose-200/80 active:scale-95"
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-xl text-xs font-bold transition-all border border-rose-200/80 active:scale-95 shadow-2xs"
             >
               <Phone className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">ទំនាក់ទំនង</span>
+              <span>ទំនាក់ទំនង</span>
             </a>
-
-            {/* Back to POS Button (for staff) */}
-            <button
-              type="button"
-              onClick={() => {
-                soundFx.playPop();
-                const url = new URL(window.location.href);
-                url.searchParams.delete('order');
-                url.hash = '';
-                window.location.href = url.pathname;
-              }}
-              className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-all active:scale-95 cursor-pointer border border-slate-200"
-              title="ត្រឡប់ទៅផ្ទាំង POS ហាង"
-            >
-              POS ហាង
-            </button>
           </div>
         </div>
 

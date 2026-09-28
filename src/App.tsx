@@ -22,7 +22,7 @@ import { LicenseExpiredModal } from './components/license/LicenseExpiredModal';
 import { LicenseWarningBanner } from './components/license/LicenseWarningBanner';
 import { LicenseRenewalModal } from './components/license/LicenseRenewalModal';
 import { SuperAdminPortalModal } from './components/license/SuperAdminPortalModal';
-import { isSuperAdminAuthenticated, onSuperAdminAuthChange } from './utils/superAdminAuth';
+import { isSuperAdminAuthenticated, onSuperAdminAuthChange, deauthenticateSuperAdmin } from './utils/superAdminAuth';
 import { CustomerOrderPortal } from './components/customer-order/CustomerOrderPortal';
 import { CustomerOrderLinkModal } from './components/customer-order/CustomerOrderLinkModal';
 import { OfflineAutoSyncToast } from './components/common/OfflineAutoSyncToast';
@@ -234,6 +234,17 @@ export const App: React.FC = () => {
         onRenewSuccess={refreshLicense}
         licenseInfo={licenseInfo}
         onOpenSuperAdminPortal={() => setIsSuperAdminModalOpen(true)}
+      />
+
+      {/* App Super Admin Portal Modal (License Generator & Remote Unlock) */}
+      <SuperAdminPortalModal
+        isOpen={isSuperAdminModalOpen}
+        onClose={() => setIsSuperAdminModalOpen(false)}
+        onLogout={() => {
+          deauthenticateSuperAdmin();
+          setIsSuperAdmin(false);
+          setIsSuperAdminModalOpen(false);
+        }}
       />
 
       {/* Customer Order Link & QR Sharing Modal */}
