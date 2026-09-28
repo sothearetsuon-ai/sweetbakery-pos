@@ -34,20 +34,63 @@ interface NewExpenseModalProps {
   expenseToEdit?: Expense | null;
 }
 
-const COMMON_UNITS = [
+interface CommonUnitItem {
+  label: string;
+  value: string;
+  aliases?: string[];
+}
+
+const COMMON_UNITS: CommonUnitItem[] = [
+  { label: 'ដង', value: 'ដង', aliases: ['ដង', 'ដង (times)', 'times'] },
+  { label: 'ដប', value: 'ដប', aliases: ['ដប', 'ដប (bottle)', 'bottle'] },
+  { label: 'ដើម', value: 'ដើម', aliases: ['ដើម', 'ដើម (loaf)', 'loaf', 'ដើម (Loaf/Stick)'] },
+  { label: 'គ្រាប់ (គ្រាប)', value: 'គ្រាប់', aliases: ['គ្រាប់', 'គ្រាប', 'គ្រាប់ (eggs)', 'eggs', 'pcs'] },
+  { label: 'លីត្រ (លិត្រ)', value: 'លីត្រ', aliases: ['លីត្រ', 'លិត្រ', 'លីត្រ (L)', 'liter', 'L'] },
+  { label: 'គីឡូ (kg)', value: 'គីឡូ (kg)', aliases: ['គីឡូ', 'គីឡូ (kg)', 'kg'] },
+  { label: 'ក្រាម (g)', value: 'ក្រាម (g)', aliases: ['ក្រាម', 'ក្រាម (g)', 'g'] },
+  { label: 'កំប៉ុង (can)', value: 'កំប៉ុង', aliases: ['កំប៉ុង', 'កំប៉ុង (can)', 'can'] },
+  { label: 'ប្រអប់ (box)', value: 'ប្រអប់', aliases: ['ប្រអប់', 'ប្រអប់ (box)', 'box'] },
+  { label: 'កញ្ចប់ (pack)', value: 'កញ្ចប់', aliases: ['កញ្ចប់', 'កញ្ចប់ (pack)', 'pack'] },
+  { label: 'បាវ (sack)', value: 'បាវ', aliases: ['បាវ', 'បាវ (sack)', 'sack'] },
+  { label: 'ដុំ (pcs)', value: 'ដុំ', aliases: ['ដុំ', 'ដុំ (pcs)', 'pcs'] },
+  { label: 'ឡូ (dozen)', value: 'ឡូ', aliases: ['ឡូ', 'ឡូ (dozen)', 'dozen'] },
+  { label: 'ធុង (tub)', value: 'ធុង', aliases: ['ធុង', 'ធុង (can/tub)', 'tub'] },
+  { label: 'ខែ (month)', value: 'ខែ', aliases: ['ខែ', 'ខែ (month)', 'month'] },
+];
+
+const ALL_SUGGESTED_UNITS = [
+  'ដង',
+  'ដប',
+  'ដើម',
+  'គ្រាប់',
+  'គ្រាប',
+  'លីត្រ',
+  'លិត្រ',
+  'គីឡូ',
   'គីឡូ (kg)',
+  'ក្រាម',
   'ក្រាម (g)',
-  'គ្រាប់ (eggs)',
+  'កំប៉ុង',
+  'កំប៉ុង (can)',
+  'ប្រអប់',
   'ប្រអប់ (box)',
+  'កញ្ចប់',
   'កញ្ចប់ (pack)',
+  'បាវ',
   'បាវ (sack)',
   'ដប (bottle)',
   'លីត្រ (L)',
-  'ដុំ (pcs)',
-  'ឡូ (dozen)',
-  'ធុង (can/tub)',
-  'ខែ (month)',
+  'គ្រាប់ (eggs)',
   'ដង (times)',
+  'ដើម (loaf)',
+  'ដុំ',
+  'ដុំ (pcs)',
+  'ឡូ',
+  'ឡូ (dozen)',
+  'ធុង',
+  'ធុង (can/tub)',
+  'ខែ',
+  'ខែ (month)',
 ];
 
 const QUICK_INGREDIENTS = [
@@ -592,13 +635,13 @@ export const NewExpenseModal: React.FC<NewExpenseModalProps> = ({
                   type="text"
                   required
                   list="common-units-list"
-                  placeholder="គីឡូ, ប្រអប់..."
+                  placeholder="គីឡូ, ដប, ដើម, គ្រាប់, លីត្រ..."
                   value={unit}
                   onChange={(e) => setUnit(e.target.value)}
                   className="w-full px-3 py-2 text-sm font-bold text-slate-800 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500"
                 />
                 <datalist id="common-units-list">
-                  {COMMON_UNITS.map((u, i) => (
+                  {ALL_SUGGESTED_UNITS.map((u, i) => (
                     <option key={i} value={u} />
                   ))}
                 </datalist>
@@ -714,21 +757,27 @@ export const NewExpenseModal: React.FC<NewExpenseModalProps> = ({
 
             {/* Quick Unit Chips for 1-click selection */}
             <div className="pt-1 flex flex-wrap items-center gap-1.5 text-xs">
-              <span className="text-[10px] text-slate-400 font-bold">ខ្នាតទូទៅ៖</span>
-              {COMMON_UNITS.slice(0, 6).map((u, i) => (
-                <button
-                  key={i}
-                  type="button"
-                  onClick={() => setUnit(u)}
-                  className={`px-2 py-0.5 rounded-lg text-[10px] font-bold transition-all ${
-                    unit === u
-                      ? 'bg-rose-600 text-white shadow-2xs'
-                      : 'bg-white text-slate-600 border border-slate-200 hover:bg-rose-50'
-                  }`}
-                >
-                  {u}
-                </button>
-              ))}
+              <span className="text-[10px] text-slate-400 font-bold shrink-0">ខ្នាតទូទៅ៖</span>
+              {COMMON_UNITS.map((u, i) => {
+                const isSelected = unit === u.value || u.aliases?.includes(unit);
+                return (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => {
+                      soundFx.playPop();
+                      setUnit(u.value);
+                    }}
+                    className={`px-2 py-0.5 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${
+                      isSelected
+                        ? 'bg-rose-600 text-white shadow-2xs font-black ring-1 ring-rose-400'
+                        : 'bg-white text-slate-600 border border-slate-200 hover:bg-rose-50 hover:text-rose-700'
+                    }`}
+                  >
+                    {u.label}
+                  </button>
+                );
+              })}
             </div>
 
             {/* Summary Visual Box */}

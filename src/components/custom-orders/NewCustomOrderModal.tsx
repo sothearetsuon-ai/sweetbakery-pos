@@ -692,6 +692,10 @@ export const NewCustomOrderModal: React.FC<NewCustomOrderModalProps> = ({ isOpen
                             >
                               <option value="ដើម">ដើម (Loaf/Stick)</option>
                               <option value="ដុំ">ដុំ (Pieces)</option>
+                              <option value="ដប">ដប (Bottles)</option>
+                              <option value="គ្រាប់">គ្រាប់ / គ្រាប (Eggs/Pieces)</option>
+                              <option value="លីត្រ">លីត្រ / លិត្រ (Liters)</option>
+                              <option value="ដង">ដង (Times)</option>
                               <option value="ថង់">ថង់ (Bags)</option>
                               <option value="កញ្ចប់">កញ្ចប់ (Packs)</option>
                               <option value="ឡូ">ឡូ (Dozens / 12)</option>

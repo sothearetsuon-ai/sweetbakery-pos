@@ -14,12 +14,14 @@ interface AddEditIngredientModalProps {
 const COMMON_UNITS = [
   { label: 'kg (គីឡូក្រាម)', value: 'kg' },
   { label: 'g (ក្រាម)', value: 'g' },
-  { label: 'liter (លីត្រ)', value: 'liter' },
+  { label: 'liter (លីត្រ/លិត្រ)', value: 'liter' },
   { label: 'ml (មីលីលីត្រ)', value: 'ml' },
   { label: 'pcs (គ្រាប់/ដុំ)', value: 'pcs' },
+  { label: 'bottle (ដប)', value: 'bottle' },
+  { label: 'ដើម (loaf/stick)', value: 'ដើម' },
+  { label: 'ដង (times)', value: 'ដង' },
   { label: 'box (ប្រអប់)', value: 'box' },
   { label: 'can (កំប៉ុង)', value: 'can' },
-  { label: 'bottle (ដប)', value: 'bottle' },
   { label: 'pack (កញ្ចប់)', value: 'pack' },
 ];
 

@@ -87,8 +87,8 @@ export const CustomerOrderPortal: React.FC = () => {
   const [customCakeName, setCustomCakeName] = useState('នំខួបកំណើតម៉ូដពិសេស (Custom Cake)');
 
   // Customization State
-  const [selectedSize, setSelectedSize] = useState(CAKE_SIZES[1].id);
-  const [selectedSizePrice, setSelectedSizePrice] = useState(CAKE_SIZES[1].priceUsd);
+  const [selectedSize, setSelectedSize] = useState('ស្តង់ដារ');
+  const [selectedSizePrice, setSelectedSizePrice] = useState(16);
   const [selectedFlavor, setSelectedFlavor] = useState<string>(PRESET_CAKE_FLAVORS[0].label);
   const [isOtherFlavor, setIsOtherFlavor] = useState(false);
   const [customFlavorText, setCustomFlavorText] = useState('');
@@ -230,6 +230,12 @@ export const CustomerOrderPortal: React.FC = () => {
     soundFx.playPop();
     setSelectedProduct(product);
     setCustomCakeName(product.nameKh);
+    if (product.unit) {
+      setSelectedSize(product.unit);
+    }
+    if (product.priceUsd > 0) {
+      setSelectedSizePrice(product.priceUsd);
+    }
     if (product.imageUrl) {
       setReferenceImage(product.imageUrl);
     }
@@ -242,6 +248,8 @@ export const CustomerOrderPortal: React.FC = () => {
     soundFx.playPop();
     setSelectedProduct(null);
     setCustomCakeName('នំខួបកំណើតម៉ូដពិសេស (Custom Cake)');
+    setSelectedSize('ស្តង់ដារ');
+    setSelectedSizePrice(16);
     setStep(2);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -702,44 +710,6 @@ export const CustomerOrderPortal: React.FC = () => {
               </div>
             </div>
 
-            {/* Size Selector */}
-            <div className="space-y-2">
-              <label className="text-xs font-black text-slate-700 flex items-center gap-1.5">
-                <span>📏 ជ្រើសរើសទំហំនំ (Cake Size)</span>
-              </label>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-                {CAKE_SIZES.map((sz) => {
-                  const isSel = selectedSize === sz.id;
-                  const khr = Math.round(sz.priceUsd * exchangeRate);
-                  return (
-                    <button
-                      key={sz.id}
-                      type="button"
-                      onClick={() => {
-                        soundFx.playPop();
-                        setSelectedSize(sz.id);
-                        setSelectedSizePrice(sz.priceUsd);
-                      }}
-                      className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${
-                        isSel
-                          ? 'bg-pink-50/90 border-pink-500 text-pink-900 shadow-xs ring-2 ring-pink-500/20'
-                          : 'bg-white border-rose-100 hover:border-rose-200 text-slate-700'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="font-black text-xs">{sz.label}</span>
-                        {isSel && <CheckCircle2 className="w-4 h-4 text-pink-600" />}
-                      </div>
-                      <div className="text-[11px] text-slate-400 mt-0.5">{sz.desc}</div>
-                      <div className="text-xs font-black text-pink-600 mt-1.5">
-                        ${sz.priceUsd.toFixed(2)} ({khr.toLocaleString()} ៛)
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
             {/* Flavor Selector */}
             <div className="space-y-3">
               <div className="flex items-center justify-between">
@@ -1150,7 +1120,7 @@ export const CustomerOrderPortal: React.FC = () => {
             <div className="bg-white rounded-3xl p-5 border border-rose-100 shadow-sm space-y-3">
               <div className="flex items-center justify-between text-xs pb-2 border-b border-slate-100">
                 <span className="text-slate-500 font-bold">នំកុម្ម៉ង់៖</span>
-                <span className="font-black text-slate-800">{customCakeName} ({selectedSize})</span>
+                <span className="font-black text-slate-800">{customCakeName}{selectedSize && selectedSize !== 'ស្តង់ដារ' ? ` (${selectedSize})` : ''}</span>
               </div>
 
               <div className="flex items-center justify-between text-xs pb-2 border-b border-slate-100">
@@ -1440,7 +1410,7 @@ export const CustomerOrderPortal: React.FC = () => {
               <div className="text-left bg-rose-50/50 p-4 rounded-2xl border border-rose-100 space-y-2 text-xs">
                 <div className="flex justify-between">
                   <span className="text-slate-500">នំកុម្ម៉ង់៖</span>
-                  <span className="font-black text-slate-800">{confirmedOrder.cakeName} ({confirmedOrder.size})</span>
+                  <span className="font-black text-slate-800">{confirmedOrder.cakeName}{confirmedOrder.size && confirmedOrder.size !== 'ស្តង់ដារ' ? ` (${confirmedOrder.size})` : ''}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-500">រសជាតិ៖</span>
