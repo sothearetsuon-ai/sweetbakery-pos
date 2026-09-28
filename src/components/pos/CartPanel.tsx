@@ -21,6 +21,10 @@ import {
   Calendar,
   Clock,
   FileText,
+  ChevronDown,
+  ChevronUp,
+  Maximize2,
+  Minimize2,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { useBakery } from '../../context/BakeryContext';
@@ -72,6 +76,9 @@ export const CartPanel: React.FC<CartPanelProps> = ({ onCheckout, onClose, isMob
   const [depositAmountKhr, setDepositAmountKhr] = useState('');
 
   // Customer pre-order & schedule details
+  const [isCustomerInfoOpen, setIsCustomerInfoOpen] = useState(false);
+  const [isPartyCollapsed, setIsPartyCollapsed] = useState(false);
+  const [isWideView, setIsWideView] = useState(false);
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [pickupDate, setPickupDate] = useState(() => {
@@ -174,31 +181,50 @@ export const CartPanel: React.FC<CartPanelProps> = ({ onCheckout, onClose, isMob
       className={`${
         isMobileSheet
           ? 'w-full h-full max-h-[92vh] bg-white rounded-t-3xl flex flex-col justify-between overflow-hidden shadow-2xl'
-          : 'w-96 glass-panel border-l border-rose-100/80 flex flex-col justify-between shrink-0 h-[calc(100vh-65px)] sticky top-[65px] shadow-sm'
+          : `${isWideView ? 'w-[520px] xl:w-[600px] 2xl:w-[680px]' : 'w-[420px] xl:w-[460px] 2xl:w-[500px]'} glass-panel border-l border-rose-100/80 flex flex-col justify-between shrink-0 h-[calc(100vh-65px)] sticky top-[65px] shadow-sm transition-all duration-300`
       }`}
     >
       {/* Header */}
-      <div className="p-4 border-b border-rose-100/60 flex items-center justify-between bg-white/80">
-        <div className="flex items-center gap-2.5">
+      <div className="p-4 sm:p-4.5 border-b border-rose-100/70 flex items-center justify-between bg-white/90">
+        <div className="flex items-center gap-3">
           <div className="relative">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-pink-500 to-rose-500 text-white flex items-center justify-center shadow-md shadow-pink-500/20">
+            <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-pink-500 via-rose-500 to-amber-500 text-white flex items-center justify-center shadow-md shadow-pink-500/25">
               <ShoppingBag className="w-5 h-5" />
             </div>
             {totalItemCount > 0 && (
-              <span className="absolute -top-1.5 -right-1.5 bg-slate-900 text-white text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center border-2 border-white shadow-sm">
+              <span className="absolute -top-1.5 -right-1.5 bg-slate-900 text-white text-[11px] font-black w-5 h-5 rounded-full flex items-center justify-center border-2 border-white shadow-sm">
                 {totalItemCount}
               </span>
             )}
           </div>
           <div>
-            <h2 className="font-black text-slate-800 text-sm tracking-tight">{text.cart}</h2>
-            <p className="text-[11px] text-pink-600 font-bold">
+            <h2 className="font-black text-slate-900 text-sm sm:text-base tracking-tight">{text.cart}</h2>
+            <p className="text-xs text-pink-600 font-bold">
               {totalItemCount > 0 ? `${totalItemCount} មុខទំនិញត្រូវបានជ្រើសរើស` : 'កន្ត្រកទំនេរ'}
             </p>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
+          {!isMobileSheet && (
+            <button
+              type="button"
+              onClick={() => {
+                soundFx.playPop();
+                setIsWideView(!isWideView);
+              }}
+              className={`px-2.5 py-1.5 rounded-xl border transition-all cursor-pointer flex items-center gap-1.5 text-xs font-bold ${
+                isWideView
+                  ? 'bg-pink-50 border-pink-300 text-pink-700 shadow-2xs font-black'
+                  : 'bg-white border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+              }`}
+              title={isWideView ? 'បង្រួមកន្ត្រក (Normal)' : 'ពង្រីកកន្ត្រកឱ្យទូលាយ (Wide View)'}
+            >
+              {isWideView ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
+              <span className="text-[11px]">{isWideView ? 'បង្រួម' : 'ពង្រីក'}</span>
+            </button>
+          )}
+
           {cart.length > 0 && (
             <button
               onClick={() => {
@@ -206,16 +232,17 @@ export const CartPanel: React.FC<CartPanelProps> = ({ onCheckout, onClose, isMob
                 clearCart();
               }}
               className="text-xs text-rose-500 hover:text-rose-700 font-bold flex items-center gap-1 transition-colors px-2.5 py-1.5 hover:bg-rose-50 rounded-xl cursor-pointer"
+              title="លុបមុខទំនិញទាំងអស់"
             >
               <Trash2 className="w-3.5 h-3.5" />
-              <span>{text.clearCart}</span>
+              <span className="hidden sm:inline">{text.clearCart}</span>
             </button>
           )}
 
           {isMobileSheet && onClose && (
             <button
               onClick={onClose}
-              className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center cursor-pointer transition-colors"
+              className="w-9 h-9 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center cursor-pointer transition-colors"
               title="បិទកន្ត្រក"
             >
               <X className="w-4 h-4" />
@@ -358,14 +385,14 @@ export const CartPanel: React.FC<CartPanelProps> = ({ onCheckout, onClose, isMob
         </div>
 
         {/* Cart Items List */}
-        <div className="p-3 sm:p-4 space-y-2.5">
+        <div className="p-3 sm:p-4 space-y-3">
           {cart.length === 0 ? (
-            <div className="flex flex-col items-center justify-center text-slate-400 py-10 text-center select-none">
-              <div className="w-16 h-16 rounded-3xl bg-pink-50/70 border border-pink-100/80 flex items-center justify-center mb-3 text-pink-400">
-                <ShoppingBag className="w-8 h-8 animate-bounce" />
+            <div className="flex flex-col items-center justify-center text-slate-400 py-12 text-center select-none">
+              <div className="w-20 h-20 rounded-3xl bg-pink-50/80 border border-pink-100 flex items-center justify-center mb-3 text-pink-400 shadow-inner">
+                <ShoppingBag className="w-10 h-10 animate-bounce" />
               </div>
-              <p className="text-sm font-bold text-slate-700">{text.cartEmpty}</p>
-              <p className="text-xs text-slate-400 mt-1 max-w-[210px] leading-relaxed">
+              <p className="text-base font-black text-slate-700">{text.cartEmpty}</p>
+              <p className="text-xs text-slate-400 mt-1 max-w-[240px] leading-relaxed">
                 សូមចុចលើមុខនំ ឬភេសជ្ជៈ ដើម្បីបញ្ចូលទៅកាន់កន្ត្រក និងគិតលុយ
               </p>
             </div>
@@ -380,29 +407,43 @@ export const CartPanel: React.FC<CartPanelProps> = ({ onCheckout, onClose, isMob
               return (
                 <div
                   key={index}
-                  className="bg-white/90 rounded-2xl p-3 border border-rose-100/70 shadow-2xs hover:shadow-xs transition-all flex items-center gap-3 group"
+                  className="bg-white rounded-2xl p-3.5 border border-rose-100/90 shadow-2xs hover:shadow-xs hover:border-pink-200 transition-all flex items-center gap-3.5 group"
                 >
                   <img
                     src={getProductImageUrl(item.product.imageUrl || (item.product.images && item.product.images[0])) || 'https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=400'}
                     alt={name}
-                    className="w-14 h-14 rounded-xl object-cover shrink-0 border border-rose-100"
+                    className="w-16 h-16 sm:w-18 sm:h-18 rounded-2xl object-cover shrink-0 border border-rose-100 shadow-2xs"
                   />
 
                   <div className="flex-1 min-w-0">
-                    <h4 className="font-bold text-slate-800 text-xs leading-snug line-clamp-1 group-hover:text-pink-600 transition-colors">
-                      {name}
-                    </h4>
+                    <div className="flex items-start justify-between gap-1">
+                      <h4 className="font-bold text-slate-900 text-xs sm:text-sm leading-snug line-clamp-2 group-hover:text-pink-600 transition-colors">
+                        {name}
+                      </h4>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          soundFx.playChime();
+                          removeFromCart(index);
+                        }}
+                        className="text-slate-300 hover:text-rose-600 hover:bg-rose-50 p-1.5 rounded-xl transition-all cursor-pointer shrink-0 -mr-1"
+                        title="លុបចេញពីកន្ត្រក"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+
                     {/* Prioritize KHR ៛ first & Allow inline price editing */}
                     {editingPriceIndex === index ? (
-                      <div className="mt-1 p-1.5 bg-pink-50/90 border border-pink-200 rounded-xl space-y-1 animate-in fade-in">
-                        <div className="flex items-center gap-1">
+                      <div className="mt-1.5 p-2 bg-pink-50/90 border border-pink-200 rounded-xl space-y-1.5 animate-in fade-in">
+                        <div className="flex items-center gap-1.5">
                           <input
                             type="number"
                             step={editCurrency === 'KHR' ? '500' : '0.1'}
                             value={editPriceInput}
                             onChange={(e) => setEditPriceInput(e.target.value)}
                             autoFocus
-                            className="w-full px-2 py-0.5 text-xs font-bold text-slate-800 bg-white border border-pink-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-pink-500"
+                            className="w-full px-2.5 py-1 text-xs font-bold text-slate-800 bg-white border border-pink-300 rounded-xl focus:outline-none focus:ring-1 focus:ring-pink-500 shadow-2xs"
                             placeholder={editCurrency === 'KHR' ? 'តម្លៃជា ៛' : 'តម្លៃជា $'}
                           />
                           <button
@@ -419,97 +460,101 @@ export const CartPanel: React.FC<CartPanelProps> = ({ onCheckout, onClose, isMob
                                 setEditPriceInput(khrVal.toString());
                               }
                             }}
-                            className="px-1.5 py-0.5 bg-white border border-pink-200 text-pink-700 text-[10px] font-black rounded-lg hover:bg-pink-100 cursor-pointer shrink-0"
+                            className="px-2 py-1 bg-white border border-pink-200 text-pink-700 text-[10px] font-black rounded-xl hover:bg-pink-100 cursor-pointer shrink-0 shadow-2xs"
                             title="ប្ដូររូបិយប័ណ្ណ"
                           >
-                            {editCurrency === 'KHR' ? '៛' : '$'}
+                            {editCurrency === 'KHR' ? '៛ KHR' : '$ USD'}
                           </button>
                         </div>
-                        <div className="flex items-center justify-end gap-1">
+                        <div className="flex items-center justify-end gap-1.5">
                           <button
                             type="button"
                             onClick={() => setEditingPriceIndex(null)}
-                            className="p-1 text-slate-400 hover:text-slate-600 rounded-md hover:bg-white cursor-pointer"
-                            title="បោះបង់"
+                            className="px-2.5 py-1 text-slate-500 hover:text-slate-700 text-xs rounded-lg hover:bg-white cursor-pointer"
                           >
-                            <X className="w-3 h-3" />
+                            បោះបង់
                           </button>
                           <button
                             type="button"
                             onClick={() => handleSaveEditPrice(index)}
-                            className="px-2 py-0.5 bg-pink-600 hover:bg-pink-700 text-white rounded-md text-[10px] font-bold flex items-center gap-0.5 cursor-pointer shadow-2xs"
-                            title="រក្សាទុកតម្លៃថ្មី"
+                            className="px-3 py-1 bg-pink-600 hover:bg-pink-700 text-white rounded-lg text-xs font-bold flex items-center gap-1 cursor-pointer shadow-xs"
                           >
-                            <Check className="w-3 h-3" />
+                            <Check className="w-3.5 h-3.5" />
                             <span>រក្សាទុក</span>
                           </button>
                         </div>
                       </div>
                     ) : (
-                      <div className="flex items-center gap-1.5 mt-0.5 group/price">
-                        <div className="text-[11px] font-black text-pink-600">
+                      <div className="flex items-center gap-2 mt-1">
+                        <div className="text-xs font-black text-slate-700">
                           {itemPriceKhr.toLocaleString()} ៛
-                          <span className="text-[10px] text-slate-400 font-normal ml-1">
+                          <span className="text-[11px] text-slate-400 font-medium ml-1">
                             (${itemPriceUsd.toFixed(2)})
                           </span>
                         </div>
                         <button
                           type="button"
                           onClick={() => handleStartEditPrice(index, item.product.priceUsd)}
-                          className="text-slate-400 hover:text-pink-600 p-0.5 rounded hover:bg-pink-50 transition-colors cursor-pointer"
-                          title="កែសម្រួលតម្លៃនំនេះ (Edit Price)"
+                          className="text-slate-400 hover:text-pink-600 p-1 rounded-lg hover:bg-pink-50 transition-colors cursor-pointer"
+                          title="កែសម្រួលតម្លៃ (Edit Price)"
                         >
-                          <Edit3 className="w-3 h-3" />
+                          <Edit3 className="w-3.5 h-3.5" />
                         </button>
                       </div>
                     )}
 
-                    {/* Quantity Stepper */}
-                    <div className="flex items-center justify-between mt-2">
-                      <div className="flex items-center gap-1.5 bg-slate-100/80 p-0.5 rounded-xl border border-slate-200/80">
+                    {/* Quantity Stepper & Line Total */}
+                    <div className="flex items-center justify-between mt-2.5 pt-1.5 border-t border-slate-100">
+                      {/* Large, finger-friendly Stepper */}
+                      <div className="flex items-center gap-1 bg-slate-100 p-0.5 rounded-xl border border-slate-200/80 shadow-2xs">
                         <button
+                          type="button"
                           onClick={() => {
                             soundFx.playPop();
                             updateCartQuantity(index, item.quantity - 1);
                           }}
-                          className="w-6 h-6 rounded-lg bg-white text-slate-700 hover:bg-rose-50 hover:text-rose-600 flex items-center justify-center transition-colors shadow-2xs active:scale-90"
+                          className="w-8 h-8 rounded-lg bg-white text-slate-700 hover:bg-rose-50 hover:text-rose-600 flex items-center justify-center transition-all shadow-2xs active:scale-90 cursor-pointer font-black"
+                          title="បន្ថយចំនួន (-1)"
                         >
-                          <Minus className="w-3 h-3" />
+                          <Minus className="w-3.5 h-3.5 stroke-[2.5]" />
                         </button>
-                        <span className="w-6 text-center text-xs font-black text-slate-800">
-                          {item.quantity}
-                        </span>
+                        <input
+                          type="number"
+                          min={1}
+                          value={item.quantity}
+                          onChange={(e) => {
+                            const val = parseInt(e.target.value, 10);
+                            if (!isNaN(val) && val >= 1) {
+                              updateCartQuantity(index, val);
+                            }
+                          }}
+                          className="w-10 text-center text-xs sm:text-sm font-black text-slate-900 bg-white py-1 rounded-lg border border-slate-200/70 focus:outline-none focus:ring-1 focus:ring-pink-500 shadow-2xs"
+                          title="វាយចំនួនផ្ទាល់"
+                        />
                         <button
+                          type="button"
                           onClick={() => {
                             soundFx.playPop();
                             updateCartQuantity(index, item.quantity + 1);
                           }}
-                          className="w-6 h-6 rounded-lg bg-white text-slate-700 hover:bg-pink-50 hover:text-pink-600 flex items-center justify-center transition-colors shadow-2xs active:scale-90"
+                          className="w-8 h-8 rounded-lg bg-white text-slate-700 hover:bg-pink-50 hover:text-pink-600 flex items-center justify-center transition-all shadow-2xs active:scale-90 cursor-pointer font-black"
+                          title="បន្ថែមចំនួន (+1)"
                         >
-                          <Plus className="w-3 h-3" />
+                          <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
                         </button>
                       </div>
 
+                      {/* Line Item Total */}
                       <div className="text-right">
-                        <div className="font-black text-xs text-slate-900">
+                        <div className="font-black text-sm sm:text-base text-pink-600">
                           {itemTotalKhr.toLocaleString()} ៛
                         </div>
-                        <div className="text-[10px] text-slate-400">
+                        <div className="text-[11px] text-slate-400 font-bold">
                           ${itemTotalUsd.toFixed(2)}
                         </div>
                       </div>
                     </div>
                   </div>
-
-                  <button
-                    onClick={() => {
-                      soundFx.playChime();
-                      removeFromCart(index);
-                    }}
-                    className="text-slate-300 hover:text-rose-500 transition-colors p-1"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
                 </div>
               );
             })
@@ -520,10 +565,22 @@ export const CartPanel: React.FC<CartPanelProps> = ({ onCheckout, onClose, isMob
         {partyAddons && partyAddons.length > 0 && (
           <div className="px-3.5 py-2.5 bg-gradient-to-r from-amber-50/90 via-rose-50/60 to-pink-50/80 border-t border-amber-200/70 space-y-2">
             <div className="flex items-center justify-between text-[11px] font-bold text-amber-950">
-              <span className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => {
+                  soundFx.playPop();
+                  setIsPartyCollapsed(!isPartyCollapsed);
+                }}
+                className="flex items-center gap-1.5 cursor-pointer text-left group"
+              >
                 <Sparkles className="w-3.5 h-3.5 text-amber-600" />
-                <span className="font-black text-rose-950">🎉 គ្រឿងបន្ថែមសម្រាប់កម្មវិធី (Party Accessories)</span>
-              </span>
+                <span className="font-black text-rose-950">🎉 គ្រឿងបន្ថែមសម្រាប់កម្មវិធី ({partyAddons.length})</span>
+                {isPartyCollapsed ? (
+                  <ChevronDown className="w-3.5 h-3.5 text-slate-500" />
+                ) : (
+                  <ChevronUp className="w-3.5 h-3.5 text-slate-500" />
+                )}
+              </button>
               <div className="flex items-center gap-1.5">
                 {cart.filter((item) => item.product.id.startsWith('addon-') || item.product.categoryId === 'party').length > 0 && (
                   <span className="text-[10px] font-black bg-pink-600 text-white px-2 py-0.5 rounded-full shadow-2xs">
@@ -544,6 +601,9 @@ export const CartPanel: React.FC<CartPanelProps> = ({ onCheckout, onClose, isMob
                 </button>
               </div>
             </div>
+
+            {!isPartyCollapsed && (
+              <>
 
             {/* Inline Add New Party Add-on Form */}
             {isAddingNewAddon && (
@@ -839,84 +899,111 @@ export const CartPanel: React.FC<CartPanelProps> = ({ onCheckout, onClose, isMob
                 <span>ចុចលើកាតម្តងទៀត ឬចុច <strong>[+]</strong> ដើម្បីបូកបន្ថែមចំនួន (x2, x3...)</span>
               </span>
             </div>
+              </>
+            )}
           </div>
         )}
 
         {/* Customer Info & Pickup Schedule Section */}
         {cart.length > 0 && (
-          <div className="p-3 sm:p-3.5 bg-gradient-to-br from-rose-50/80 via-pink-50/50 to-amber-50/60 border-t border-rose-100/80 space-y-2.5">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-1.5 text-xs font-black text-slate-800">
-                <User className="w-3.5 h-3.5 text-pink-600" />
-                <span>ព័ត៌មានអ្នកទិញ & ថ្ងៃមកយក (Customer & Schedule)</span>
+          <div className="p-3.5 sm:p-4 bg-gradient-to-br from-rose-50/80 via-pink-50/50 to-amber-50/60 border-t border-rose-100/80 space-y-2.5">
+            <button
+              type="button"
+              onClick={() => {
+                soundFx.playPop();
+                setIsCustomerInfoOpen(!isCustomerInfoOpen);
+              }}
+              className="w-full flex items-center justify-between text-left cursor-pointer group"
+            >
+              <div className="flex items-center gap-2 text-xs font-black text-slate-800">
+                <div className="w-6 h-6 rounded-lg bg-pink-100 text-pink-600 flex items-center justify-center">
+                  <User className="w-3.5 h-3.5" />
+                </div>
+                <span>ព័ត៌មានអ្នកកក់ & ថ្ងៃមកយក (Customer & Schedule)</span>
+                {(customerName || isDepositMode) && (
+                  <span className="w-2 h-2 rounded-full bg-pink-500 animate-pulse" />
+                )}
               </div>
-              {isDepositMode && (
-                <span className="text-[10px] font-black bg-amber-500 text-white px-2 py-0.5 rounded-full shadow-2xs">
-                  កក់ប្រាក់
-                </span>
-              )}
-            </div>
+              <div className="flex items-center gap-1.5">
+                {isDepositMode && (
+                  <span className="text-[10px] font-black bg-amber-500 text-white px-2 py-0.5 rounded-full shadow-2xs">
+                    កក់ប្រាក់
+                  </span>
+                )}
+                <div className="w-6 h-6 rounded-lg bg-white/80 group-hover:bg-white text-slate-500 flex items-center justify-center shadow-2xs">
+                  {isCustomerInfoOpen || isDepositMode || customerName ? (
+                    <ChevronUp className="w-3.5 h-3.5" />
+                  ) : (
+                    <ChevronDown className="w-3.5 h-3.5" />
+                  )}
+                </div>
+              </div>
+            </button>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              <div className="relative">
-                <User className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
-                <input
-                  type="text"
-                  placeholder="ឈ្មោះអ្នកទិញ (Customer Name)"
-                  value={customerName}
-                  onChange={(e) => setCustomerName(e.target.value)}
-                  className="w-full pl-8 pr-2.5 py-1.5 bg-white border border-rose-200/80 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500"
-                />
-              </div>
-              <div className="relative">
-                <Phone className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
-                <input
-                  type="tel"
-                  placeholder="លេខទូរស័ព្ទ (Phone Number)"
-                  value={customerPhone}
-                  onChange={(e) => setCustomerPhone(e.target.value)}
-                  className="w-full pl-8 pr-2.5 py-1.5 bg-white border border-rose-200/80 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500"
-                />
-              </div>
-            </div>
+            {(isCustomerInfoOpen || isDepositMode || customerName) && (
+              <div className="space-y-2.5 pt-1.5 animate-in fade-in duration-200">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <div className="relative">
+                    <User className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                    <input
+                      type="text"
+                      placeholder="ឈ្មោះអ្នកទិញ (Customer Name)"
+                      value={customerName}
+                      onChange={(e) => setCustomerName(e.target.value)}
+                      className="w-full pl-8 pr-3 py-2 bg-white border border-rose-200/80 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500 shadow-2xs"
+                    />
+                  </div>
+                  <div className="relative">
+                    <Phone className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                    <input
+                      type="tel"
+                      placeholder="លេខទូរស័ព្ទ (Phone Number)"
+                      value={customerPhone}
+                      onChange={(e) => setCustomerPhone(e.target.value)}
+                      className="w-full pl-8 pr-3 py-2 bg-white border border-rose-200/80 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500 shadow-2xs"
+                    />
+                  </div>
+                </div>
 
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <label className="text-[10px] font-bold text-slate-600 flex items-center gap-1 mb-0.5">
-                  <Calendar className="w-3 h-3 text-pink-600" />
-                  <span>កាលបរិច្ឆេទមកយក (Date)</span>
-                </label>
-                <input
-                  type="date"
-                  value={pickupDate}
-                  onChange={(e) => setPickupDate(e.target.value)}
-                  className="w-full px-2.5 py-1.5 bg-white border border-rose-200/80 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500"
-                />
-              </div>
-              <div>
-                <label className="text-[10px] font-bold text-slate-600 flex items-center gap-1 mb-0.5">
-                  <Clock className="w-3 h-3 text-pink-600" />
-                  <span>ម៉ោងមកយក (Time)</span>
-                </label>
-                <input
-                  type="time"
-                  value={pickupTime}
-                  onChange={(e) => setPickupTime(e.target.value)}
-                  className="w-full px-2.5 py-1.5 bg-white border border-rose-200/80 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500"
-                />
-              </div>
-            </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="text-[10px] font-bold text-slate-600 flex items-center gap-1 mb-1">
+                      <Calendar className="w-3 h-3 text-pink-600" />
+                      <span>កាលបរិច្ឆេទមកយក (Date)</span>
+                    </label>
+                    <input
+                      type="date"
+                      value={pickupDate}
+                      onChange={(e) => setPickupDate(e.target.value)}
+                      className="w-full px-3 py-2 bg-white border border-rose-200/80 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500 shadow-2xs"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-bold text-slate-600 flex items-center gap-1 mb-1">
+                      <Clock className="w-3 h-3 text-pink-600" />
+                      <span>ម៉ោងមកយក (Time)</span>
+                    </label>
+                    <input
+                      type="time"
+                      value={pickupTime}
+                      onChange={(e) => setPickupTime(e.target.value)}
+                      className="w-full px-3 py-2 bg-white border border-rose-200/80 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500 shadow-2xs"
+                    />
+                  </div>
+                </div>
 
-            <div className="relative">
-              <FileText className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
-              <input
-                type="text"
-                placeholder="ចំណាំបន្ថែម / សរសេរលើនំ (ឧ. Happy Birthday, ទៀន ៥ដើម...)"
-                value={orderNotes}
-                onChange={(e) => setOrderNotes(e.target.value)}
-                className="w-full pl-8 pr-2.5 py-1.5 bg-white border border-rose-200/80 rounded-xl text-xs font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500"
-              />
-            </div>
+                <div className="relative">
+                  <FileText className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <input
+                    type="text"
+                    placeholder="ចំណាំបន្ថែម / សរសេរលើនំ (ឧ. Happy Birthday, ទៀន ៥ដើម...)"
+                    value={orderNotes}
+                    onChange={(e) => setOrderNotes(e.target.value)}
+                    className="w-full pl-8 pr-3 py-2 bg-white border border-rose-200/80 rounded-xl text-xs font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500 shadow-2xs"
+                  />
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -1092,13 +1179,13 @@ export const CartPanel: React.FC<CartPanelProps> = ({ onCheckout, onClose, isMob
                   notes: orderNotes.trim() || undefined,
                 });
               }}
-              className="w-full py-3.5 bg-pink-600 bg-gradient-to-r from-pink-600 via-rose-500 to-pink-600 hover:from-pink-700 hover:via-rose-600 hover:to-pink-700 shimmer-btn animate-pulse-glow text-white font-black rounded-2xl shadow-xl shadow-pink-500/30 flex items-center justify-center gap-2 text-sm transition-all duration-300 active:scale-[0.98] hover:scale-[1.01] cursor-pointer"
+              className="w-full py-4 bg-gradient-to-r from-pink-600 via-rose-500 to-pink-600 hover:from-pink-700 hover:via-rose-600 hover:to-pink-700 shimmer-btn animate-pulse-glow text-white font-black rounded-2xl shadow-xl shadow-pink-500/30 flex items-center justify-center gap-2.5 text-base transition-all duration-300 active:scale-[0.98] hover:scale-[1.01] cursor-pointer"
             >
-              <Sparkles className="w-4 h-4 text-pink-100 relative z-10 shrink-0" />
-              <span className="relative z-10 font-black text-white text-sm tracking-wide drop-shadow-xs">
-                {text.checkout} ({finalTotalKhr.toLocaleString()} ៛)
+              <Sparkles className="w-5 h-5 text-pink-100 relative z-10 shrink-0" />
+              <span className="relative z-10 font-black text-white text-base tracking-wide drop-shadow-xs">
+                {text.checkout} • {finalTotalKhr.toLocaleString()} ៛
               </span>
-              <ArrowRight className="w-4 h-4 ml-1 text-white relative z-10 shrink-0" />
+              <ArrowRight className="w-5 h-5 ml-1 text-white relative z-10 shrink-0" />
             </button>
           ) : (
             <button
@@ -1115,13 +1202,13 @@ export const CartPanel: React.FC<CartPanelProps> = ({ onCheckout, onClose, isMob
                   notes: orderNotes.trim() || undefined,
                 });
               }}
-              className="w-full py-3.5 bg-amber-500 bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 hover:from-amber-600 hover:via-orange-600 hover:to-amber-700 shimmer-btn text-white font-black rounded-2xl shadow-xl shadow-amber-500/30 flex items-center justify-center gap-2 text-sm transition-all duration-300 active:scale-[0.98] hover:scale-[1.01] cursor-pointer"
+              className="w-full py-4 bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 hover:from-amber-600 hover:via-orange-600 hover:to-amber-700 shimmer-btn text-white font-black rounded-2xl shadow-xl shadow-amber-500/30 flex items-center justify-center gap-2.5 text-base transition-all duration-300 active:scale-[0.98] hover:scale-[1.01] cursor-pointer"
             >
-              <Wallet className="w-4 h-4 text-amber-100 relative z-10 shrink-0" />
-              <span className="relative z-10 font-black text-white text-sm tracking-wide drop-shadow-xs">
-                កត់ត្រាកក់ប្រាក់ ({numDepositKhr.toLocaleString()} ៛)
+              <Wallet className="w-5 h-5 text-amber-100 relative z-10 shrink-0" />
+              <span className="relative z-10 font-black text-white text-base tracking-wide drop-shadow-xs">
+                កត់ត្រាកក់ប្រាក់ • {numDepositKhr.toLocaleString()} ៛
               </span>
-              <ArrowRight className="w-4 h-4 ml-1 text-white relative z-10 shrink-0" />
+              <ArrowRight className="w-5 h-5 ml-1 text-white relative z-10 shrink-0" />
             </button>
           )}
         </div>

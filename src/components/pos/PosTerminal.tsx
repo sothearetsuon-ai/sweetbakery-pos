@@ -250,7 +250,7 @@ export const PosTerminal: React.FC = () => {
       </div>
 
       {/* 1. Desktop Cart Side Panel (Hidden on Mobile) */}
-      <div className="hidden lg:flex">
+      <div className="hidden lg:flex shrink-0">
         <CartPanel
           onCheckout={(opts) => {
             setCheckoutOptions(opts || {});
@@ -301,7 +301,7 @@ export const PosTerminal: React.FC = () => {
             onClick={() => setIsMobileCartOpen(false)}
           />
           {/* Sheet Container */}
-          <div className="relative z-50 w-full max-h-[92vh] bg-white rounded-t-3xl shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-bottom duration-200">
+          <div className="relative z-50 w-full max-w-xl mx-auto max-h-[94vh] bg-white rounded-t-3xl shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-bottom duration-200">
             <CartPanel
               isMobileSheet={true}
               onClose={() => setIsMobileCartOpen(false)}
