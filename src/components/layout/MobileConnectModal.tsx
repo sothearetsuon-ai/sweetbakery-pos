@@ -37,8 +37,8 @@ export const MobileConnectModal: React.FC<MobileConnectModalProps> = ({ isOpen, 
   if (!isOpen) return null;
 
   const cloudUrl =
-    typeof window !== 'undefined' && window.location.origin.includes('surge.sh')
-      ? window.location.origin
+    typeof window !== 'undefined'
+      ? `${window.location.origin}${window.location.pathname}`
       : 'https://sweetbakery-pos.surge.sh';
 
   const demoUrl =

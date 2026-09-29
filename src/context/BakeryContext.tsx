@@ -1017,9 +1017,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
     setSales((prev) => {
       const updated = [...newSales, ...prev];
-      try {
-        localStorage.setItem('bakery_sales', JSON.stringify(updated));
-      } catch (e) {}
+      safeSetStorage('bakery_sales', JSON.stringify(updated));
       return updated;
     });
 
@@ -1331,7 +1329,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           const merged = Array.from(map.values()).sort(
             (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
           );
-          try { localStorage.setItem('bakery_sales', JSON.stringify(merged)); } catch (e) {}
+          safeSetStorage('bakery_sales', JSON.stringify(merged));
           return merged;
         });
       }
@@ -1348,7 +1346,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           const merged = Array.from(map.values()).sort(
             (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
           );
-          try { localStorage.setItem('bakery_custom_orders', JSON.stringify(merged)); } catch (e) {}
+          safeSetStorage('bakery_custom_orders', JSON.stringify(merged));
           return merged;
         });
       }
@@ -1993,7 +1991,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     // 2. Optimistic local state & LocalStorage update
     setSales((prev) => {
       const updated = [newSale, ...prev.filter((s) => s.id !== newSale.id)];
-      try { localStorage.setItem('bakery_sales', JSON.stringify(updated)); } catch (e) {}
+      safeSetStorage('bakery_sales', JSON.stringify(updated));
       saveToLanSync({
         products: updatedProducts,
         sales: updated,
@@ -2007,7 +2005,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     });
 
     setProducts(updatedProducts);
-    try { localStorage.setItem('bakery_products', JSON.stringify(updatedProducts)); } catch (e) {}
+    safeSetStorage('bakery_products', JSON.stringify(updatedProducts));
 
     syncSaveDoc('sales', newSale.id, newSale);
     clearCart();
@@ -2160,7 +2158,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     };
     setCustomOrders((prev) => {
       const updated = [newOrder, ...prev];
-      try { localStorage.setItem('bakery_custom_orders', JSON.stringify(updated)); } catch (e) {}
+      safeSetStorage('bakery_custom_orders', JSON.stringify(updated));
       saveToLanSync({
         products,
         sales,
