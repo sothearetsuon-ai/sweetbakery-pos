@@ -2191,6 +2191,13 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     if (lanSyncTimer.current) clearTimeout(lanSyncTimer.current);
     recordDeletedId('sales', id, deletedSaleIds);
 
+    // If this sale was generated from a custom order, also mark the corresponding order
+    // to prevent self-healing auto-regeneration
+    if (id.startsWith('sale-custom-')) {
+      const orderId = id.replace('sale-custom-', '');
+      recordDeletedId('orders', orderId, deletedOrderIds);
+    }
+
     // 1. Immediately call atomic server deletion endpoint
     fetch('/api/delete-sale', {
       method: 'POST',
@@ -2219,7 +2226,13 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const clearAllSales = () => {
     isUpdatingFromLan.current = false;
     if (lanSyncTimer.current) clearTimeout(lanSyncTimer.current);
-    sales.forEach((s) => recordDeletedId('sales', s.id, deletedSaleIds));
+    sales.forEach((s) => {
+      recordDeletedId('sales', s.id, deletedSaleIds);
+      if (s.id.startsWith('sale-custom-')) {
+        const orderId = s.id.replace('sale-custom-', '');
+        recordDeletedId('orders', orderId, deletedOrderIds);
+      }
+    });
 
     // 1. Immediately call atomic server clear endpoint
     fetch('/api/clear-all-sales', {
@@ -2550,9 +2563,17 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
     const deliveredWithoutSale = customOrders.filter((order) => {
       if (order.status !== 'DELIVERED') return false;
+      const expectedSaleId = `sale-custom-${order.id}`;
+      // CRITICAL GUARD: If this sale or order was explicitly deleted, NEVER resurrect it!
+      if (
+        deletedSaleIds.current.has(expectedSaleId) ||
+        deletedOrderIds.current.has(order.id)
+      ) {
+        return false;
+      }
       const hasSale = sales.some(
         (s) =>
-          s.id === `sale-custom-${order.id}` ||
+          s.id === expectedSaleId ||
           s.orderNumber === order.orderNumber ||
           (order.themeNotes && order.themeNotes.includes(s.orderNumber))
       );
@@ -2567,7 +2588,9 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
       setSales((prev) => {
         const existingIds = new Set(prev.map((s) => s.id));
-        const filteredNew = newSalesToInsert.filter((s) => !existingIds.has(s.id));
+        const filteredNew = newSalesToInsert.filter(
+          (s) => !existingIds.has(s.id) && !deletedSaleIds.current.has(s.id)
+        );
         if (filteredNew.length === 0) return prev;
         const combined = [...filteredNew, ...prev];
         safeSetStorage('bakery_sales', JSON.stringify(combined));
