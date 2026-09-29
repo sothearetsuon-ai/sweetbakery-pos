@@ -9,6 +9,65 @@ import { CameraCaptureModal } from '../common/CameraCaptureModal';
 import { getProductImageUrl } from '../../utils/imagePath';
 import { Product } from '../../types';
 
+interface DemoProductPreset {
+  nameKh: string;
+  nameEn: string;
+  categoryId: string;
+  unit: string;
+  priceKhr: string;
+  costPriceKhr: string;
+  stockQty: string;
+  description: string;
+  images: string[];
+}
+
+const DEMO_PRODUCTS: DemoProductPreset[] = [
+  {
+    nameKh: 'នំខេកសូកូឡាផ្លែស្ត្រប៊ែរី',
+    nameEn: 'Chocolate Strawberry Birthday Cake',
+    categoryId: 'birthday',
+    unit: 'នំ',
+    priceKhr: '80000',
+    costPriceKhr: '35000',
+    stockQty: '10',
+    description: 'នំខេកសូកូឡាស្រទាប់ទន់ល្មើយ តុបតែងផ្លែស្ត្រប៊ែរីស្រស់ និងគ្រីមវ៉ានីឡាឈ្ងុយឆ្ងាញ់',
+    images: ['https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=600&q=80'],
+  },
+  {
+    nameKh: 'នំបុ័ងក្រូសង់បឺរបារាំង',
+    nameEn: 'French Butter Croissant',
+    categoryId: 'pastries',
+    unit: 'ដុំ',
+    priceKhr: '10000',
+    costPriceKhr: '4000',
+    stockQty: '25',
+    description: 'នំបុ័ងបឺរបារាំងស្រួយស្រទាប់ខាងក្រៅ ទន់ស្បែកខាងក្នុង ផលិតពីបឺរសុទ្ធ ១០០%',
+    images: ['https://images.unsplash.com/photo-1555507036-ab1f4038808a?auto=format&fit=crop&w=600&q=80'],
+  },
+  {
+    nameKh: 'នំខេកឈីសប៊្លូប៊ែរី',
+    nameEn: 'Blueberry Basque Cheesecake',
+    categoryId: 'slices',
+    unit: 'ចំណិត',
+    priceKhr: '14000',
+    costPriceKhr: '6000',
+    stockQty: '15',
+    description: 'នំឈីសខេកដុតក្លិនឈ្ងុយ ជាមួយទឹកជ្រលក់ផ្លែប៊្លូប៊ែរីស្រស់ជូរអែម',
+    images: ['https://images.unsplash.com/photo-1533134242443-d4fd215305ad?auto=format&fit=crop&w=600&q=80'],
+  },
+  {
+    nameKh: 'កាហ្វេឡាតេទឹកដោះគោស្រស់',
+    nameEn: 'Iced Latte Fresh Milk',
+    categoryId: 'drinks',
+    unit: 'កែវ',
+    priceKhr: '8000',
+    costPriceKhr: '3000',
+    stockQty: '40',
+    description: 'កាហ្វេគ្រាប់អារ៉ាប៊ីកាឆុងស្រស់ ជាមួយទឹកដោះគោស្រស់កូរ៉េត្រជាក់ស្រស់ស្រាយ',
+    images: ['https://images.unsplash.com/photo-1517701604599-bb29b565090c?auto=format&fit=crop&w=600&q=80'],
+  },
+];
+
 interface AddProductModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -23,11 +82,12 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, onClos
   const [nameKh, setNameKh] = useState('');
   const [nameEn, setNameEn] = useState('');
   const [categoryId, setCategoryId] = useState('birthday');
-  const [priceKhr, setPriceKhr] = useState('90000');
-  const [costPriceKhr, setCostPriceKhr] = useState('40000');
-  const [stockQty, setStockQty] = useState('10');
+  const [priceKhr, setPriceKhr] = useState('');
+  const [costPriceKhr, setCostPriceKhr] = useState('');
+  const [stockQty, setStockQty] = useState('');
   const [unit, setUnit] = useState('នំ');
   const [description, setDescription] = useState('');
+  const [demoIndex, setDemoIndex] = useState(0);
   
   // Multi-image state
   const [images, setImages] = useState<string[]>([]);
@@ -43,10 +103,10 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, onClos
       setNameEn(productToEdit.nameEn || '');
       setCategoryId(productToEdit.categoryId || 'birthday');
       const khr = productToEdit.priceKhr ?? Math.round(productToEdit.priceUsd * exchangeRate);
-      setPriceKhr(String(khr));
+      setPriceKhr(khr > 0 ? String(khr) : '');
       const costKhr = productToEdit.costPriceKhr ?? Math.round((productToEdit.costPriceUsd || 0) * exchangeRate);
-      setCostPriceKhr(String(costKhr));
-      setStockQty(String(productToEdit.stockQty ?? 10));
+      setCostPriceKhr(costKhr > 0 ? String(costKhr) : '');
+      setStockQty(productToEdit.stockQty !== undefined && productToEdit.stockQty !== null ? String(productToEdit.stockQty) : '');
       setUnit(productToEdit.unit || 'នំ');
       setDescription(productToEdit.description || '');
       const prodImages = productToEdit.images && productToEdit.images.length > 0
@@ -60,15 +120,39 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, onClos
       setNameKh('');
       setNameEn('');
       setCategoryId('birthday');
-      setPriceKhr('90000');
-      setCostPriceKhr('40000');
-      setStockQty('10');
+      setPriceKhr('');
+      setCostPriceKhr('');
+      setStockQty('');
       setUnit('នំ');
       setDescription('');
       setImages([]);
       setPrimaryIndex(0);
     }
   }, [productToEdit, isOpen, exchangeRate]);
+
+  // Handle Fill Demo Data
+  const handleFillDemo = () => {
+    soundFx.playSuccess();
+    confetti({
+      particleCount: 50,
+      spread: 60,
+      origin: { y: 0.4 },
+    });
+
+    const demo = DEMO_PRODUCTS[demoIndex % DEMO_PRODUCTS.length];
+    setDemoIndex((prev) => prev + 1);
+
+    setNameKh(demo.nameKh);
+    setNameEn(demo.nameEn);
+    setCategoryId(demo.categoryId);
+    setUnit(demo.unit);
+    setPriceKhr(demo.priceKhr);
+    setCostPriceKhr(demo.costPriceKhr);
+    setStockQty(demo.stockQty);
+    setDescription(demo.description);
+    setImages(demo.images);
+    setPrimaryIndex(0);
+  };
 
   if (!isOpen) return null;
 
@@ -115,7 +199,7 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, onClos
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!nameKh.trim() || !priceKhr.trim() || isSubmitting) return;
+    if (!nameKh.trim() || isSubmitting) return;
 
     setIsSubmitting(true);
 
@@ -157,6 +241,7 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, onClos
       } catch (e) {}
 
       const finalPrimary = finalImages[0] || primaryImage;
+      const finalStock = stockQty.trim() !== '' ? parseInt(stockQty, 10) || 0 : 0;
 
       if (productToEdit) {
         await updateProduct({
@@ -168,7 +253,7 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, onClos
           priceKhr: numPriceKhr,
           costPriceUsd: numCostUsd,
           costPriceKhr: numCostKhr,
-          stockQty: parseInt(stockQty) || 0,
+          stockQty: finalStock,
           unit,
           description: description.trim(),
           imageUrl: finalPrimary,
@@ -183,7 +268,7 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, onClos
           priceKhr: numPriceKhr,
           costPriceUsd: numCostUsd,
           costPriceKhr: numCostKhr,
-          stockQty: parseInt(stockQty) || 0,
+          stockQty: finalStock,
           unit,
           description: description.trim(),
           imageUrl: finalPrimary,
@@ -232,15 +317,28 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, onClos
               </p>
             </div>
           </div>
-          <button
-            onClick={() => {
-              soundFx.playPop();
-              onClose();
-            }}
-            className="w-8 h-8 rounded-full hover:bg-slate-200 text-slate-400 hover:text-slate-600 flex items-center justify-center transition-colors cursor-pointer"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-2">
+            {!productToEdit && (
+              <button
+                type="button"
+                onClick={handleFillDemo}
+                className="px-3 py-1.5 bg-gradient-to-r from-amber-500 via-rose-500 to-pink-500 hover:from-amber-600 hover:to-pink-600 text-white rounded-xl text-xs font-black shadow-md shadow-pink-500/25 flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer"
+                title="ចុចដើម្បីបំពេញទិន្នន័យគំរូនំ (Demo) ដោយស្វ័យប្រវត្ត"
+              >
+                <Sparkles className="w-3.5 h-3.5 fill-amber-200" />
+                <span>✨ ដាក់ Demo</span>
+              </button>
+            )}
+            <button
+              onClick={() => {
+                soundFx.playPop();
+                onClose();
+              }}
+              className="w-8 h-8 rounded-full hover:bg-slate-200 text-slate-400 hover:text-slate-600 flex items-center justify-center transition-colors cursor-pointer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         {/* Form */}
@@ -445,17 +543,20 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, onClos
           {/* Prices & Stock (KHR ៛ FIRST) */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">
-                តម្លៃលក់ (៛ KHR) *
-              </label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-xs font-bold text-slate-700">
+                  តម្លៃលក់ (៛ KHR)
+                </label>
+                <span className="text-[10px] text-slate-400 font-medium">(ទទេរ = 0)</span>
+              </div>
               <div className="relative">
                 <input
                   type="number"
                   step="any"
-                  required
+                  placeholder="0"
                   value={priceKhr}
                   onChange={(e) => setPriceKhr(e.target.value)}
-                  className="w-full pl-3 pr-8 py-2 text-sm font-black text-pink-600 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500"
+                  className="w-full pl-3 pr-8 py-2 text-sm font-black text-pink-600 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500 placeholder:text-slate-300"
                 />
                 <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-xs">
                   ៛
@@ -467,16 +568,20 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, onClos
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">
-                ថ្លៃដើមផលិត (៛ KHR)
-              </label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-xs font-bold text-slate-700">
+                  ថ្លៃដើមផលិត (៛ KHR)
+                </label>
+                <span className="text-[10px] text-slate-400 font-medium">(មិនបង្ខំ)</span>
+              </div>
               <div className="relative">
                 <input
                   type="number"
                   step="any"
+                  placeholder="0"
                   value={costPriceKhr}
                   onChange={(e) => setCostPriceKhr(e.target.value)}
-                  className="w-full pl-3 pr-8 py-2 text-sm font-bold border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500"
+                  className="w-full pl-3 pr-8 py-2 text-sm font-bold border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500 placeholder:text-slate-300"
                 />
                 <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-xs">
                   ៛
@@ -488,18 +593,57 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, onClos
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">
-                ចំនួនក្នុងស្តុក
-              </label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-xs font-bold text-slate-700">
+                  ចំនួនក្នុងស្តុក
+                </label>
+                <span className="text-[10px] text-slate-400 font-medium">(ទទេរ = 0)</span>
+              </div>
               <input
                 type="number"
                 step="1"
+                placeholder="0"
                 value={stockQty}
                 onChange={(e) => setStockQty(e.target.value)}
-                className="w-full px-3 py-2 text-sm font-bold border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500"
+                className="w-full px-3 py-2 text-sm font-bold border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500 placeholder:text-slate-300"
               />
             </div>
           </div>
+
+          {/* Quick Demo Presets Bar */}
+          {!productToEdit && (
+            <div className="p-2.5 bg-gradient-to-r from-amber-50/70 via-rose-50/60 to-pink-50/70 rounded-2xl border border-rose-100 flex items-center justify-between flex-wrap gap-2 text-xs">
+              <span className="text-[11px] font-bold text-slate-600 flex items-center gap-1">
+                <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                <span>រើសគំរូនំ Demo៖</span>
+              </span>
+              <div className="flex items-center gap-1.5 flex-wrap">
+                {DEMO_PRODUCTS.map((d, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => {
+                      soundFx.playSuccess();
+                      confetti({ particleCount: 35, spread: 50, origin: { y: 0.5 } });
+                      setNameKh(d.nameKh);
+                      setNameEn(d.nameEn);
+                      setCategoryId(d.categoryId);
+                      setUnit(d.unit);
+                      setPriceKhr(d.priceKhr);
+                      setCostPriceKhr(d.costPriceKhr);
+                      setStockQty(d.stockQty);
+                      setDescription(d.description);
+                      setImages(d.images);
+                      setPrimaryIndex(0);
+                    }}
+                    className="px-2.5 py-1 bg-white hover:bg-rose-50 border border-rose-200/80 hover:border-pink-400 rounded-lg text-[11px] font-bold text-slate-700 hover:text-pink-600 transition-all shadow-2xs active:scale-95 cursor-pointer"
+                  >
+                    {d.nameKh}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Description */}
           <div>
