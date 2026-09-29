@@ -113,10 +113,21 @@ export const getStoredFirebaseConfig = (): FirebaseConfig => {
   return DEFAULT_FIREBASE_CONFIG;
 };
 
+export const isDemoModeActive = (): boolean => {
+  if (typeof window === 'undefined') return false;
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('demo') === 'true' || window.location.hash === '#demo') return true;
+  return localStorage.getItem('bakery_is_demo_mode') === 'true';
+};
+
 /**
  * Save Firebase config to localStorage
  */
 export const saveStoredFirebaseConfig = (config: FirebaseConfig): void => {
+  if (isDemoModeActive()) {
+    console.warn('[Firebase] Config saving blocked in Demo mode');
+    return;
+  }
   try {
     localStorage.removeItem(DISABLED_KEY);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
@@ -124,9 +135,13 @@ export const saveStoredFirebaseConfig = (config: FirebaseConfig): void => {
 };
 
 /**
- * Clear Firebase config from localStorage
+ * Clear Firebase config from localStorage (Disconnect)
  */
 export const clearStoredFirebaseConfig = (): void => {
+  if (isDemoModeActive()) {
+    console.warn('[Firebase] Disconnect blocked in Demo mode');
+    return;
+  }
   localStorage.removeItem(STORAGE_KEY);
   localStorage.setItem(DISABLED_KEY, 'true');
 };

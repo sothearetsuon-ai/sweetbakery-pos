@@ -137,7 +137,7 @@ export const App: React.FC = () => {
   };
 
   const handleOpenSettings = (tab: SettingsTab = 'store') => {
-    if (isDemoMode && (tab === 'staff' || tab === 'telegram')) {
+    if (isDemoMode && (tab === 'staff' || tab === 'telegram' || tab === 'firebase')) {
       setSettingsTab('store');
     } else {
       setSettingsTab(tab);

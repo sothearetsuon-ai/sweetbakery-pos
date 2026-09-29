@@ -87,7 +87,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const text = t[lang];
 
   const [activeTab, setActiveTab] = useState<SettingsTab>(() => {
-    if (isDemoMode && (initialTab === 'staff' || initialTab === 'telegram')) {
+    if (isDemoMode && (initialTab === 'staff' || initialTab === 'telegram' || initialTab === 'firebase')) {
       return 'store';
     }
     return initialTab;
@@ -95,7 +95,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
   useEffect(() => {
     if (isOpen && initialTab) {
-      if (isDemoMode && (initialTab === 'staff' || initialTab === 'telegram')) {
+      if (isDemoMode && (initialTab === 'staff' || initialTab === 'telegram' || initialTab === 'firebase')) {
         setActiveTab('store');
       } else {
         setActiveTab(initialTab);
@@ -404,7 +404,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   ];
 
   const tabs = allTabs.filter((tab) => {
-    if (isDemoMode && (tab.id === 'staff' || tab.id === 'telegram')) {
+    if (isDemoMode && (tab.id === 'staff' || tab.id === 'telegram' || tab.id === 'firebase')) {
       return false;
     }
     return true;
@@ -713,7 +713,21 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             </div>
           ) : activeTab === 'firebase' ? (
             /* Google Firebase Cloud Tab */
-            <FirebaseSettingsTab />
+            isDemoMode ? (
+              <div className="p-8 text-center bg-white rounded-3xl border border-amber-100 shadow-sm space-y-4 my-6">
+                <div className="w-16 h-16 bg-amber-50 text-amber-600 rounded-full flex items-center justify-center mx-auto shadow-inner">
+                  <ShieldCheck className="w-8 h-8" />
+                </div>
+                <h3 className="text-lg font-black text-slate-800">
+                  មុខងារ Google Firebase ត្រូវបានបិទក្នុង Demo Mode
+                </h3>
+                <p className="text-sm text-slate-500 max-w-md mx-auto">
+                  ដើម្បីការពារសុវត្ថិភាពការភ្ជាប់ Cloud Sync ផ្ទាំងកំណត់ប្រព័ន្ធ Firebase មិនត្រូវបានអនុញ្ញាតឱ្យចូលមើល ឬចុចផ្តាច់ក្នុងផ្ទាំង Demo ឡើយ។
+                </p>
+              </div>
+            ) : (
+              <FirebaseSettingsTab />
+            )
           ) : activeTab === 'telegram' ? (
             /* Telegram Bot Tab */
             isDemoMode ? (

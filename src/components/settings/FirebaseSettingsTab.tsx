@@ -45,7 +45,24 @@ export const FirebaseSettingsTab: React.FC = () => {
     exchangeRate,
     exportBackupData,
     importBackupData,
+    isDemoMode,
   } = useBakery();
+
+  if (isDemoMode) {
+    return (
+      <div className="p-8 text-center bg-white rounded-3xl border border-amber-100 shadow-sm space-y-4 my-6">
+        <div className="w-16 h-16 bg-amber-50 text-amber-600 rounded-full flex items-center justify-center mx-auto shadow-inner">
+          <Cloud className="w-8 h-8" />
+        </div>
+        <h3 className="text-lg font-black text-slate-800">
+          មុខងារ Google Firebase ត្រូវបានបិទក្នុង Demo Mode
+        </h3>
+        <p className="text-sm text-slate-500 max-w-md mx-auto">
+          ដើម្បីការពារសុវត្ថិភាពការភ្ជាប់ Cloud Sync ផ្ទាំងកំណត់ប្រព័ន្ធ Firebase មិនត្រូវបានអនុញ្ញាតឱ្យចូលមើល ឬចុចផ្តាច់ក្នុងផ្ទាំង Demo ឡើយ។
+        </p>
+      </div>
+    );
+  }
 
   const [currentConfig, setCurrentConfig] = useState<FirebaseConfig | null>(() =>
     getStoredFirebaseConfig()
@@ -82,6 +99,10 @@ export const FirebaseSettingsTab: React.FC = () => {
   // Handle Save & Connect from Raw Paste
   const handleConnectFromInput = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
+    if (isDemoMode) {
+      alert('មុខងារនេះត្រូវបានបិទក្នុង Demo Mode');
+      return;
+    }
 
     let configToTest: FirebaseConfig | null = null;
 
@@ -235,6 +256,10 @@ export const FirebaseSettingsTab: React.FC = () => {
 
   // Disconnect Firebase
   const handleDisconnect = () => {
+    if (isDemoMode) {
+      alert('មុខងារនេះត្រូវបានបិទក្នុង Demo Mode (មិនអនុញ្ញាតឱ្យផ្តាច់ឡើយ)');
+      return;
+    }
     if (
       window.confirm(
         'តើអ្នកពិតជាចង់ផ្តាច់ការតភ្ជាប់ពី Google Firebase មែនទេ? (ទិន្នន័យក្នុងឧបករណ៍នឹងនៅតែមានជាធម្មតា)'
