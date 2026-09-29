@@ -1036,6 +1036,10 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const deletedSaleIds = useRef<Set<string>>(new Set());
   const deletedExpenseIds = useRef<Set<string>>(new Set());
   const deletedProductIds = useRef<Set<string>>(new Set());
+  const customOrdersRef = useRef<CustomCakeOrder[]>(customOrders);
+  customOrdersRef.current = customOrders;
+  const salesRef = useRef<CompletedSale[]>(sales);
+  salesRef.current = sales;
 
   const saveToLanSync = (payload: any, force: boolean = false) => {
     if (globalIsDemoMode) return;
@@ -2178,30 +2182,95 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     return newOrder;
   };
 
+  // Helper to construct a completed sale record from a custom cake/bread order
+  const buildSaleFromCustomOrder = (order: CustomCakeOrder): CompletedSale => {
+    const orderTotalKhr = order.totalKhr ?? Math.round(order.totalUsd * exchangeRate);
+    const receiptItems =
+      order.orderType === 'BREAD' && order.breadItems && order.breadItems.length > 0
+        ? order.breadItems.map((it, idx) => ({
+            productId: `bread-${order.id}-${idx}`,
+            nameKh: `${it.nameKh} (${it.unit})`,
+            nameEn: `${it.nameEn || it.nameKh} (${it.unit})`,
+            quantity: it.quantity,
+            priceUsd: it.pricePerUnitUsd,
+            priceKhr: it.pricePerUnitKhr,
+          }))
+        : [
+            {
+              productId: `custom-${order.id}`,
+              nameKh:
+                order.orderType === 'BREAD'
+                  ? `កុម្ម៉ង់នំបុ័ង៖ ${order.cakeName || 'នំបុ័ងពិសេស'}`
+                  : `នំកុម្ម៉ង់៖ ${order.cakeName} (${order.size})`,
+              nameEn:
+                order.orderType === 'BREAD'
+                  ? `Bread Order: ${order.cakeName || 'Custom Bread'}`
+                  : `Custom Cake: ${order.cakeName} (${order.size})`,
+              quantity: 1,
+              priceUsd: order.totalUsd,
+              priceKhr: orderTotalKhr,
+              image: order.referenceImage || undefined,
+            },
+          ];
+
+    return {
+      id: `sale-custom-${order.id}`,
+      orderNumber: order.orderNumber,
+      items: receiptItems,
+      subtotalUsd: order.totalUsd,
+      discountUsd: 0,
+      totalUsd: order.totalUsd,
+      totalKhr: orderTotalKhr,
+      paymentMethod: order.paymentMethod || 'CASH_KHR',
+      paidUsd: order.totalUsd,
+      paidKhr: orderTotalKhr,
+      changeUsd: 0,
+      changeKhr: 0,
+      cashierName: currentStaff?.name || 'ម្ចាស់ហាង (Admin)',
+      customerName: order.customerName,
+      customerPhone: order.phone,
+      isDeposit: false,
+      depositKhr: order.depositKhr,
+      depositUsd: order.depositUsd,
+      remainingKhr: 0,
+      remainingUsd: 0,
+      pickupDate: order.pickupDate,
+      pickupTime: order.pickupTime,
+      notes:
+        order.orderType === 'BREAD'
+          ? `កុម្ម៉ង់នំបុ័ង & នំដុត (${order.packagingOption || 'ច្រកធម្មតា'}) • បានប្រគល់ជូនរួចរាល់`
+          : `នំកុម្ម៉ង់ពិសេស (រសជាតិ៖ ${order.flavor}${order.inscription ? ' • អក្សរលើនំ៖ ' + order.inscription : ''}) • បានប្រគល់ជូនភ្ញៀវរួចរាល់`,
+      createdAt: new Date().toISOString(),
+    };
+  };
+
   const updateOrderStatus = (orderId: string, newStatus: OrderStatus) => {
     isUpdatingFromLan.current = false;
     if (lanSyncTimer.current) clearTimeout(lanSyncTimer.current);
 
-    let targetOrder: CustomCakeOrder | undefined;
-    let oldStatus: OrderStatus | undefined;
-
-    setCustomOrders((prev) => {
-      targetOrder = prev.find((o) => o.id === orderId);
-      if (!targetOrder) return prev;
-      oldStatus = targetOrder.status;
-      return prev.map((o) => (o.id === orderId ? { ...o, status: newStatus } : o));
-    });
-
+    const currentOrders = customOrdersRef.current;
+    const targetOrder = currentOrders.find((o) => o.id === orderId);
     if (!targetOrder) return;
+    const oldStatus = targetOrder.status;
+
+    // Immediately update customOrders state and storage
+    const updatedOrders = currentOrders.map((o) => (o.id === orderId ? { ...o, status: newStatus } : o));
+    setCustomOrders(updatedOrders);
+    safeSetStorage('bakery_custom_orders', JSON.stringify(updatedOrders));
 
     syncSaveDoc('customOrders', orderId, { status: newStatus });
+    fetch('/api/save-custom-order', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ order: { ...targetOrder, status: newStatus } }),
+    }).catch(() => {});
 
     // Transition TO 'DELIVERED': Record sale & revenue
     if (newStatus === 'DELIVERED' && oldStatus !== 'DELIVERED') {
-      const order = targetOrder;
-      const orderTotalKhr = order.totalKhr ?? Math.round(order.totalUsd * exchangeRate);
+      const order = { ...targetOrder, status: newStatus };
+      const currentSales = salesRef.current;
 
-      const existingSaleIndex = sales.findIndex(
+      const existingSaleIndex = currentSales.findIndex(
         (s) =>
           s.id === `sale-custom-${order.id}` ||
           s.orderNumber === order.orderNumber ||
@@ -2209,7 +2278,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       );
 
       if (existingSaleIndex >= 0) {
-        const existingSale = sales[existingSaleIndex];
+        const existingSale = currentSales[existingSaleIndex];
         const updatedSale: CompletedSale = {
           ...existingSale,
           isDeposit: false,
@@ -2222,54 +2291,18 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             : 'បានប្រគល់ជូនភ្ញៀវ & បង់គ្រប់ចំនួន',
         };
         updateSale(updatedSale);
+        notifyTelegramSale(updatedSale, storeInfo, exchangeRate);
       } else {
-        const newSale: CompletedSale = {
-          id: `sale-custom-${order.id}`,
-          orderNumber: order.orderNumber,
-          items: [
-            {
-              productId: `custom-${order.id}`,
-              nameKh: `នំកុម្ម៉ង់៖ ${order.cakeName} (${order.size})`,
-              nameEn: `Custom Cake: ${order.cakeName} (${order.size})`,
-              quantity: 1,
-              priceUsd: order.totalUsd,
-              priceKhr: orderTotalKhr,
-              image: order.referenceImage || undefined,
-            },
-          ],
-          subtotalUsd: order.totalUsd,
-          discountUsd: 0,
-          totalUsd: order.totalUsd,
-          totalKhr: orderTotalKhr,
-          paymentMethod: order.paymentMethod || 'CASH_KHR',
-          paidUsd: order.totalUsd,
-          paidKhr: orderTotalKhr,
-          changeUsd: 0,
-          changeKhr: 0,
-          cashierName: currentStaff?.name || 'ម្ចាស់ហាង (Admin)',
-          customerName: order.customerName,
-          customerPhone: order.phone,
-          isDeposit: false,
-          depositKhr: order.depositKhr,
-          depositUsd: order.depositUsd,
-          remainingKhr: 0,
-          remainingUsd: 0,
-          pickupDate: order.pickupDate,
-          pickupTime: order.pickupTime,
-          notes: `នំកុម្ម៉ង់ពិសេស (រសជាតិ៖ ${order.flavor}${order.inscription ? ' • អក្សរលើនំ៖ ' + order.inscription : ''}) • បានប្រគល់ជូនភ្ញៀវរួចរាល់`,
-          createdAt: new Date().toISOString(),
-        };
+        const newSale = buildSaleFromCustomOrder(order);
 
         setSales((prevSales) => {
           const updatedSales = [newSale, ...prevSales.filter((s) => s.id !== newSale.id)];
-          try {
-            localStorage.setItem('bakery_sales', JSON.stringify(updatedSales));
-          } catch (e) {}
+          safeSetStorage('bakery_sales', JSON.stringify(updatedSales));
           saveToLanSync(
             {
               products,
               sales: updatedSales,
-              customOrders: customOrders.map((o) => (o.id === orderId ? { ...o, status: newStatus } : o)),
+              customOrders: updatedOrders,
               expenses,
               storeInfo,
               flavors,
@@ -2305,14 +2338,12 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       const autoSaleId = `sale-custom-${orderId}`;
       setSales((prevSales) => {
         const updatedSales = prevSales.filter((s) => s.id !== autoSaleId);
-        try {
-          localStorage.setItem('bakery_sales', JSON.stringify(updatedSales));
-        } catch (e) {}
+        safeSetStorage('bakery_sales', JSON.stringify(updatedSales));
         saveToLanSync(
           {
             products,
             sales: updatedSales,
-            customOrders: customOrders.map((o) => (o.id === orderId ? { ...o, status: newStatus } : o)),
+            customOrders: updatedOrders,
             expenses,
             storeInfo,
             flavors,
@@ -2335,7 +2366,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           prevShift
             ? {
                 ...prevShift,
-                totalSalesUsd: Math.max(0, prevShift.totalSalesUsd - targetOrder!.totalUsd),
+                totalSalesUsd: Math.max(0, prevShift.totalSalesUsd - targetOrder.totalUsd),
                 totalOrdersCount: Math.max(0, prevShift.totalOrdersCount - 1),
               }
             : prevShift
@@ -2345,9 +2376,14 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   };
 
   const updateCustomOrder = (orderId: string, updates: Partial<CustomCakeOrder>) => {
-    setCustomOrders((prev) =>
-      prev.map((o) => (o.id === orderId ? { ...o, ...updates } : o))
-    );
+    if (updates.status) {
+      updateOrderStatus(orderId, updates.status);
+    }
+    setCustomOrders((prev) => {
+      const updated = prev.map((o) => (o.id === orderId ? { ...o, ...updates } : o));
+      safeSetStorage('bakery_custom_orders', JSON.stringify(updated));
+      return updated;
+    });
     syncSaveDoc('customOrders', orderId, updates);
   };
 
@@ -2356,24 +2392,99 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     additionalDepositKhr: number,
     paymentMethod?: 'CASH_USD' | 'CASH_KHR' | 'KHQR_BAKONG'
   ) => {
-    setCustomOrders((prev) =>
-      prev.map((o) => {
+    let updatedOrder: CustomCakeOrder | undefined;
+    setCustomOrders((prev) => {
+      const updated = prev.map((o) => {
         if (o.id !== orderId) return o;
         const currentDepKhr = o.depositKhr ?? Math.round(o.depositUsd * exchangeRate);
         const orderTotalKhr = o.totalKhr ?? Math.round(o.totalUsd * exchangeRate);
         const newDepKhr = Math.min(orderTotalKhr, currentDepKhr + additionalDepositKhr);
         const newDepUsd = Number((newDepKhr / exchangeRate).toFixed(2));
-        const updated = {
+        const res: CustomCakeOrder = {
           ...o,
           depositKhr: newDepKhr,
           depositUsd: newDepUsd,
           paymentMethod: paymentMethod || o.paymentMethod,
         };
-        syncSaveDoc('customOrders', orderId, updated);
-        return updated;
-      })
-    );
+        updatedOrder = res;
+        return res;
+      });
+      safeSetStorage('bakery_custom_orders', JSON.stringify(updated));
+      return updated;
+    });
+
+    if (updatedOrder) {
+      syncSaveDoc('customOrders', orderId, updatedOrder);
+      // Also update sales record if it exists
+      const currentSales = salesRef.current;
+      const targetSale = currentSales.find(
+        (s) =>
+          s.id === `sale-custom-${orderId}` ||
+          s.orderNumber === (updatedOrder as CustomCakeOrder).orderNumber
+      );
+      if (targetSale) {
+        const orderTotalKhr = (updatedOrder as CustomCakeOrder).totalKhr ?? Math.round((updatedOrder as CustomCakeOrder).totalUsd * exchangeRate);
+        const isFullyPaid = ((updatedOrder as CustomCakeOrder).depositKhr ?? 0) >= orderTotalKhr;
+        const remainingKhr = Math.max(0, orderTotalKhr - ((updatedOrder as CustomCakeOrder).depositKhr ?? 0));
+        const remainingUsd = Number((remainingKhr / exchangeRate).toFixed(2));
+
+        const updatedSale: CompletedSale = {
+          ...targetSale,
+          paidUsd: (updatedOrder as CustomCakeOrder).depositUsd,
+          paidKhr: (updatedOrder as CustomCakeOrder).depositKhr ?? 0,
+          depositUsd: (updatedOrder as CustomCakeOrder).depositUsd,
+          depositKhr: (updatedOrder as CustomCakeOrder).depositKhr,
+          remainingUsd,
+          remainingKhr,
+          isDeposit: !isFullyPaid,
+          notes: isFullyPaid
+            ? `${targetSale.notes || ''} • បានបង់គ្រប់ចំនួន`.trim()
+            : targetSale.notes,
+        };
+        updateSale(updatedSale);
+      }
+    }
   };
+
+  // Self-Healing Hook: Automatically generate missing sales for custom orders that were marked DELIVERED
+  useEffect(() => {
+    if (customOrders.length === 0) return;
+
+    const deliveredWithoutSale = customOrders.filter((order) => {
+      if (order.status !== 'DELIVERED') return false;
+      const hasSale = sales.some(
+        (s) =>
+          s.id === `sale-custom-${order.id}` ||
+          s.orderNumber === order.orderNumber ||
+          (order.themeNotes && order.themeNotes.includes(s.orderNumber))
+      );
+      return !hasSale;
+    });
+
+    if (deliveredWithoutSale.length > 0) {
+      console.log(`[BakeryContext] Auto-syncing ${deliveredWithoutSale.length} delivered custom order(s) into sales history & revenue.`);
+      const newSalesToInsert: CompletedSale[] = deliveredWithoutSale.map((order) => {
+        return buildSaleFromCustomOrder(order);
+      });
+
+      setSales((prev) => {
+        const existingIds = new Set(prev.map((s) => s.id));
+        const filteredNew = newSalesToInsert.filter((s) => !existingIds.has(s.id));
+        if (filteredNew.length === 0) return prev;
+        const combined = [...filteredNew, ...prev];
+        safeSetStorage('bakery_sales', JSON.stringify(combined));
+        filteredNew.forEach((s) => {
+          syncSaveDoc('sales', s.id, s);
+          fetch('/api/save-sale', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ sale: s }),
+          }).catch(() => {});
+        });
+        return combined;
+      });
+    }
+  }, [customOrders, sales, exchangeRate]);
 
   const deleteCustomOrder = (orderId: string) => {
     isUpdatingFromLan.current = false;
