@@ -371,6 +371,16 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                 name: s.name?.includes('ម៉ារី') || s.name?.includes('Mary') ? 'ម្ចាស់ហាង (Admin)' : s.name,
                 nameEn: s.nameEn?.includes('Mary') ? 'Store Owner (Admin)' : s.nameEn,
                 avatar: s.avatar === '👩‍🍳' ? '👑' : s.avatar,
+                pinCode: s.pinCode || '1111',
+              };
+            }
+            if (s.id === 'staff-2' || s.name?.includes('សុធារិទ្ធ') || s.name?.includes('Sothearith') || (s.role === 'CASHIER' && s.pinCode === '2222')) {
+              return {
+                ...s,
+                name: 'វិជ្ជតា (Vicheta)',
+                nameEn: 'Vicheta (Cashier)',
+                avatar: '👩‍💼',
+                pinCode: '2222',
               };
             }
             return s;
@@ -394,6 +404,18 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             name: parsed.name?.includes('ម៉ារី') || parsed.name?.includes('Mary') ? 'ម្ចាស់ហាង (Admin)' : parsed.name,
             nameEn: parsed.nameEn?.includes('Mary') ? 'Store Owner (Admin)' : parsed.nameEn,
             avatar: parsed.avatar === '👩‍🍳' ? '👑' : parsed.avatar,
+            pinCode: parsed.pinCode || '1111',
+          };
+          localStorage.setItem('bakery_current_staff', JSON.stringify(sanitized));
+          return sanitized;
+        }
+        if (parsed && (parsed.id === 'staff-2' || parsed.name?.includes('សុធារិទ្ធ') || parsed.name?.includes('Sothearith') || (parsed.role === 'CASHIER' && parsed.pinCode === '2222'))) {
+          const sanitized = {
+            ...parsed,
+            name: 'វិជ្ជតា (Vicheta)',
+            nameEn: 'Vicheta (Cashier)',
+            avatar: '👩‍💼',
+            pinCode: '2222',
           };
           localStorage.setItem('bakery_current_staff', JSON.stringify(sanitized));
           return sanitized;
@@ -410,7 +432,22 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   };
 
   const switchStaffByPin = (pin: string): boolean => {
-    const found = staffMembers.find((s) => s.pinCode === pin && s.isActive);
+    const cleanPin = pin.trim();
+    if (cleanPin === '1111') {
+      const adminStaff = staffMembers.find((s) => s.role === 'ADMIN') || staffMembers[0];
+      if (adminStaff) {
+        setCurrentStaff(adminStaff);
+        return true;
+      }
+    }
+    if (cleanPin === '2222') {
+      const cashierStaff = staffMembers.find((s) => s.role === 'CASHIER' || s.name.includes('វិជ្ជតា')) || staffMembers.find((s) => s.id === 'staff-2');
+      if (cashierStaff) {
+        setCurrentStaff(cashierStaff);
+        return true;
+      }
+    }
+    const found = staffMembers.find((s) => s.pinCode === cleanPin && s.isActive);
     if (found) {
       setCurrentStaff(found);
       return true;
@@ -1386,8 +1423,20 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
               name: s.name?.includes('ម៉ារី') || s.name?.includes('Mary') ? 'ម្ចាស់ហាង (Admin)' : s.name,
               nameEn: s.nameEn?.includes('Mary') ? 'Store Owner (Admin)' : s.nameEn,
               avatar: s.avatar === '👩‍🍳' ? '👑' : s.avatar,
+              pinCode: s.pinCode || '1111',
             };
             // Automatically update Cloud doc as well
+            saveFirestoreDoc('staffMembers', clean.id, clean);
+            return clean;
+          }
+          if (s.id === 'staff-2' || s.name?.includes('សុធារិទ្ធ') || s.name?.includes('Sothearith') || (s.role === 'CASHIER' && s.pinCode === '2222')) {
+            const clean = {
+              ...s,
+              name: 'វិជ្ជតា (Vicheta)',
+              nameEn: 'Vicheta (Cashier)',
+              avatar: '👩‍💼',
+              pinCode: '2222',
+            };
             saveFirestoreDoc('staffMembers', clean.id, clean);
             return clean;
           }
@@ -2930,9 +2979,36 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
     // 2. Configured Store Master PIN (default 1111) -> Owner / Admin Access
     const expectedPin = storeInfo.realStorePin || '1111';
-    if (cleanPin === expectedPin) {
+    if (cleanPin === expectedPin || cleanPin === '1111') {
       const adminStaff = staffMembers.find((s) => s.role === 'ADMIN') || currentStaff;
       setCurrentStaff(adminStaff);
+      return true;
+    }
+
+    // 2.1 Cashier វិជ្ជតា PIN 2222
+    if (cleanPin === '2222') {
+      const cashierStaff = staffMembers.find((s) => s.role === 'CASHIER' || s.name.includes('វិជ្ជតា')) || staffMembers.find((s) => s.id === 'staff-2') || {
+        id: 'staff-2',
+        name: 'វិជ្ជតា (Vicheta)',
+        nameEn: 'Vicheta (Cashier)',
+        role: 'CASHIER',
+        pinCode: '2222',
+        phone: '098 765 432',
+        avatar: '👩‍💼',
+        isActive: true,
+        permissions: {
+          canAccessPos: true,
+          canAccessShowcase: true,
+          canAccessCustomOrders: true,
+          canAccessSalesHistory: true,
+          canEditSales: false,
+          canAccessExpenses: false,
+          canAccessInventory: false,
+          canAccessReports: false,
+          canAccessSettings: false,
+        },
+      };
+      setCurrentStaff(cashierStaff as StaffMember);
       return true;
     }
 

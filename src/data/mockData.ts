@@ -880,12 +880,12 @@ export const initialStaffMembers: StaffMember[] = [
   },
   {
     id: 'staff-2',
-    name: 'សុធារិទ្ធ (Sothearith)',
-    nameEn: 'Sothearith (Cashier)',
+    name: 'វិជ្ជតា (Vicheta)',
+    nameEn: 'Vicheta (Cashier)',
     role: 'CASHIER',
     pinCode: '2222',
     phone: '098 765 432',
-    avatar: '👨‍💼',
+    avatar: '👩‍💼',
     isActive: true,
     permissions: {
       canAccessPos: true,
