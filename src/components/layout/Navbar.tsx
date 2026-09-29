@@ -23,6 +23,7 @@ import {
   Link as LinkIcon,
   RefreshCw,
   FlaskConical,
+  LogOut,
 } from 'lucide-react';
 import { useBakery } from '../../context/BakeryContext';
 import { useMusic } from '../../context/MusicContext';
@@ -72,6 +73,7 @@ export const Navbar: React.FC<NavbarProps> = ({
     enterDemoMode,
     exitDemoMode,
     requestExitDemoMode,
+    logoutAndLock,
   } = useBakery();
   const { isPlaying: isMusicPlaying, setIsPlayerOpen: setIsMusicPlayerOpen } = useMusic();
   const text = t[lang];
@@ -440,6 +442,20 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <Key className="w-4 h-4" />
               </button>
             )}
+
+            {/* Quick Logout Button */}
+            <button
+              type="button"
+              onClick={() => {
+                if (window.confirm(`តើអ្នកពិតជាចង់ចាកចេញពីគណនី «${currentStaff.name}» និងចាក់សោប្រព័ន្ធមែនទេ?`)) {
+                  logoutAndLock();
+                }
+              }}
+              title={`ចាកចេញពីគណនី «${currentStaff.name}» (Logout) 🚪`}
+              className="w-8 h-8 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200/80 flex items-center justify-center shadow-xs cursor-pointer hover:scale-105 active:scale-95 transition-all"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
           </div>
 
           {/* Quick Tools Dropdown for Screens < xl (Tablet/Laptop) */}
@@ -562,6 +578,21 @@ export const Navbar: React.FC<NavbarProps> = ({
                     <span>Super Admin 👑</span>
                   </button>
                 )}
+
+                {/* Logout Button */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsQuickToolsOpen(false);
+                    if (window.confirm(`តើអ្នកពិតជាចង់ចាកចេញពីគណនី «${currentStaff.name}» និងចាក់សោប្រព័ន្ធមែនទេ?`)) {
+                      logoutAndLock();
+                    }
+                  }}
+                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-black text-rose-700 bg-rose-50 hover:bg-rose-100 transition-colors text-left cursor-pointer border-t border-rose-100 mt-1"
+                >
+                  <LogOut className="w-4 h-4 text-rose-600" />
+                  <span>ចាកចេញពីគណនី (Logout) 🚪</span>
+                </button>
               </div>
             )}
           </div>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ChevronDown, Users, Check, ShieldCheck, KeyRound, ArrowRight, X, Sparkles } from 'lucide-react';
+import { ChevronDown, Users, Check, ShieldCheck, KeyRound, ArrowRight, X, Sparkles, LogOut } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { useBakery } from '../../context/BakeryContext';
 import { StaffMember } from '../../types';
@@ -16,7 +16,7 @@ export const StaffDropdown: React.FC<StaffDropdownProps> = ({
   onClose,
   onOpenStaffManagement,
 }) => {
-  const { staffMembers, currentStaff, setCurrentStaff, switchStaffByPin } = useBakery();
+  const { staffMembers, currentStaff, setCurrentStaff, switchStaffByPin, logoutAndLock } = useBakery();
   const [isPinMode, setIsPinMode] = useState(false);
   const [selectedStaffForPin, setSelectedStaffForPin] = useState<StaffMember | null>(null);
   const [pinInput, setPinInput] = useState('');
@@ -363,10 +363,11 @@ export const StaffDropdown: React.FC<StaffDropdownProps> = ({
           )}
         </div>
 
-        {/* Footer: Link to Staff Management */}
-        <div className="p-3 bg-slate-50 border-t border-slate-100 flex items-center justify-between text-xs">
-          {onOpenStaffManagement ? (
+        {/* Footer: Staff Management & Logout */}
+        <div className="p-3 bg-slate-50 border-t border-slate-100 space-y-2 text-xs">
+          {onOpenStaffManagement && (
             <button
+              type="button"
               onClick={() => {
                 soundFx.playPop();
                 onClose();
@@ -377,9 +378,22 @@ export const StaffDropdown: React.FC<StaffDropdownProps> = ({
               <Users className="w-3.5 h-3.5 text-purple-600" />
               <span>គ្រប់គ្រងបុគ្គលិក & កំណត់សិទ្ធិ 👥</span>
             </button>
-          ) : (
-            <span className="text-[10px] text-slate-400 mx-auto">SweetBakery POS • Staff Auth</span>
           )}
+
+          {/* Logout / Lock Store Button */}
+          <button
+            type="button"
+            onClick={() => {
+              if (window.confirm(`តើអ្នកពិតជាចង់ចាកចេញពីគណនី «${currentStaff.name}» និងចាក់សោប្រព័ន្ធមែនទេ?`)) {
+                onClose();
+                logoutAndLock();
+              }
+            }}
+            className="w-full py-2 px-3 rounded-xl bg-gradient-to-r from-rose-50 to-pink-50 hover:from-rose-100 hover:to-pink-100 text-rose-700 border border-rose-200 font-black text-xs shadow-2xs transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-98"
+          >
+            <LogOut className="w-3.5 h-3.5 text-rose-600" />
+            <span>ចាកចេញពីគណនី (Logout) 🚪</span>
+          </button>
         </div>
       </div>
     </>

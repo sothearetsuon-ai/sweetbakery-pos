@@ -49,6 +49,7 @@ import {
   saveStoredTelegramConfig,
 } from '../services/telegram';
 import { offlineSyncService, SyncState } from '../services/offlineSyncService';
+import { soundFx } from '../utils/audio';
 
 // Global demo mode flag to safely block cloud sync, LAN disk writes, and Telegram alerts during Demo mode
 let globalIsDemoMode = false;
@@ -210,11 +211,12 @@ interface BakeryContextType {
   lockRealStoreToDemo: () => void;
   resetDemoData: () => void;
 
-  // Real Store Passcode Authentication
+  // Real Store Passcode Authentication & Logout
   isRealStoreAuthModalOpen: boolean;
   openRealStoreAuthModal: (onSuccessCallback?: () => void) => void;
   closeRealStoreAuthModal: () => void;
   verifyRealStorePin: (pin: string) => boolean;
+  logoutAndLock: () => void;
 
   isFirebaseConnected: boolean;
   firebaseSyncStatus: 'connected' | 'disconnected' | 'syncing';
@@ -2849,6 +2851,13 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     enterDemoMode();
   };
 
+  const logoutAndLock = () => {
+    sessionStorage.removeItem('bakery_real_store_unlocked');
+    localStorage.removeItem('bakery_real_store_authorized_device');
+    soundFx.playPop();
+    openRealStoreAuthModal();
+  };
+
   return (
     <BakeryContext.Provider
       value={{
@@ -2861,6 +2870,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         exitDemoMode,
         requestExitDemoMode,
         lockRealStoreToDemo,
+        logoutAndLock,
         resetDemoData,
         isRealStoreAuthModalOpen,
         openRealStoreAuthModal,

@@ -16,6 +16,7 @@ import {
   X,
   Music,
   Palette,
+  LogOut,
 } from 'lucide-react';
 import { useBakery } from '../../context/BakeryContext';
 import { useMusic } from '../../context/MusicContext';
@@ -51,7 +52,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   isMobileOpen = false,
   onCloseMobile,
 }) => {
-  const { lang, customOrders, lowStockCount, expenses, sales, currentStaff, hasPermission, staffMembers, storeInfo } = useBakery();
+  const { lang, customOrders, lowStockCount, expenses, sales, currentStaff, hasPermission, staffMembers, storeInfo, logoutAndLock } = useBakery();
   const { isPlaying: isMusicPlaying, setIsPlayerOpen: setIsMusicPlayerOpen } = useMusic();
   const text = t[lang];
 
@@ -407,6 +408,27 @@ export const Sidebar: React.FC<SidebarProps> = ({
         >
           <Settings className="w-4 h-4 text-slate-400" />
           <span>{text.settings}</span>
+        </button>
+
+        {/* Logout / Lock Store Button */}
+        <button
+          type="button"
+          onClick={() => {
+            if (window.confirm(`តើអ្នកពិតជាចង់ចាកចេញពីគណនី «${currentStaff.name}» និងចាក់សោប្រព័ន្ធមែនទេ?`)) {
+              onCloseMobile?.();
+              logoutAndLock();
+            }
+          }}
+          className="w-full flex items-center justify-between px-3.5 py-2 rounded-2xl font-bold text-xs text-rose-600 hover:bg-rose-50 hover:text-rose-700 transition-all border border-transparent hover:border-rose-200/80 shadow-2xs cursor-pointer group"
+          title="ចាកចេញពីគណនី និងចាក់សោហាង"
+        >
+          <div className="flex items-center gap-3">
+            <LogOut className="w-4 h-4 text-rose-500 transition-transform group-hover:scale-110" />
+            <span>ចាកចេញ (Logout) 🚪</span>
+          </div>
+          <span className="text-[10px] text-rose-600 font-bold bg-rose-100/70 px-2 py-0.5 rounded-full border border-rose-200">
+            Lock
+          </span>
         </button>
 
         <div className="text-center text-[10px] text-slate-400 font-medium">
