@@ -726,8 +726,8 @@ export const initialShift: Shift = {
   status: 'OPEN',
 };
 
-// Initial realistic bakery operating expenses
-export const initialExpenses: Expense[] = [
+// Realistic bakery operating expenses for Demo Sandbox only
+export const demoExpenses: Expense[] = [
   {
     id: 'exp-1',
     title: 'ទិញស៊ុតមាន់ស្រស់កសិដ្ឋាន CP',
@@ -855,6 +855,9 @@ export const initialExpenses: Expense[] = [
     createdAt: '2026-09-10T16:00:00Z',
   },
 ];
+
+// In real store mode, start with empty expenses - only load real recorded expenses
+export const initialExpenses: Expense[] = [];
 
 export const initialStaffMembers: StaffMember[] = [
   {

@@ -296,8 +296,15 @@ class OfflineSyncEngine {
 
       // 3. Expenses
       if (Array.isArray(localData.expenses)) {
+        let deletedExpenses = new Set<string>();
+        try {
+          const raw = localStorage.getItem('bakery_deleted_expenses_ids');
+          if (raw) deletedExpenses = new Set(JSON.parse(raw));
+        } catch (e) {}
+
+        const mockExpenseIds = new Set(['exp-1', 'exp-2', 'exp-3', 'exp-4', 'exp-5', 'exp-6', 'exp-7']);
         for (const e of localData.expenses) {
-          if (e && e.id) {
+          if (e && e.id && !deletedExpenses.has(e.id) && !mockExpenseIds.has(e.id)) {
             await saveFirestoreDoc('expenses', e.id, e);
             uploaded++;
           }
@@ -306,8 +313,14 @@ class OfflineSyncEngine {
 
       // 4. Products
       if (Array.isArray(localData.products)) {
+        let deletedProducts = new Set<string>();
+        try {
+          const raw = localStorage.getItem('bakery_deleted_products_ids');
+          if (raw) deletedProducts = new Set(JSON.parse(raw));
+        } catch (e) {}
+
         for (const p of localData.products) {
-          if (p && p.id) {
+          if (p && p.id && !deletedProducts.has(p.id)) {
             await saveFirestoreDoc('products', p.id, p);
             uploaded++;
           }

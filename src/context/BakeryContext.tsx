@@ -27,6 +27,7 @@ import {
   initialShift,
   initialFlavors,
   initialExpenses,
+  demoExpenses,
   initialStaffMembers,
   initialRecipes,
 } from '../data/mockData';
@@ -120,6 +121,15 @@ const recordDeletedId = (key: string, id: string, setRef?: React.MutableRefObjec
     }
     const trimmed = currentArr.slice(-500);
     localStorage.setItem(`bakery_deleted_${key}_ids`, JSON.stringify(trimmed));
+
+    // Propagate deletion to cloud so all devices (mobile phones & PC) purge the item immediately
+    if (!globalIsDemoMode) {
+      const propKey = `deleted${key.charAt(0).toUpperCase() + key.slice(1)}Ids`;
+      saveFirestoreDoc('settings', 'deletedRecords', {
+        [propKey]: trimmed,
+        updatedAt: new Date().toISOString(),
+      });
+    }
   } catch (e) {}
 };
 
@@ -195,7 +205,7 @@ export const seedDemoDataIfMissing = () => {
     localStorage.setItem('demo_bakery_custom_orders', JSON.stringify(initialOrders));
   }
   if (!localStorage.getItem('demo_bakery_expenses')) {
-    localStorage.setItem('demo_bakery_expenses', JSON.stringify(initialExpenses));
+    localStorage.setItem('demo_bakery_expenses', JSON.stringify(demoExpenses));
   }
   if (!localStorage.getItem('demo_bakery_ingredients')) {
     localStorage.setItem('demo_bakery_ingredients', JSON.stringify(initialIngredients));
@@ -901,10 +911,19 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     if (globalIsDemoMode) {
       seedDemoDataIfMissing();
       const saved = localStorage.getItem('demo_bakery_expenses');
-      return saved ? JSON.parse(saved) : initialExpenses;
+      return saved ? JSON.parse(saved) : demoExpenses;
     }
     const saved = localStorage.getItem('bakery_expenses');
-    return saved ? JSON.parse(saved) : initialExpenses;
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          const mockExpenseIds = new Set(['exp-1', 'exp-2', 'exp-3', 'exp-4', 'exp-5', 'exp-6', 'exp-7']);
+          return parsed.filter((e) => e && e.id && !mockExpenseIds.has(e.id));
+        }
+      } catch (e) {}
+    }
+    return [];
   });
 
   // Sales management (including past sales)
@@ -1018,7 +1037,8 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           try {
             const parsed = JSON.parse(idbExpensesStr);
             if (Array.isArray(parsed) && parsed.length > 0) {
-              const active = parsed.filter((e: any) => e && e.id && !deletedExpenseIds.current.has(e.id));
+              const mockExpenseIds = new Set(['exp-1', 'exp-2', 'exp-3', 'exp-4', 'exp-5', 'exp-6', 'exp-7']);
+              const active = parsed.filter((e: any) => e && e.id && !deletedExpenseIds.current.has(e.id) && !mockExpenseIds.has(e.id));
               setExpenses(active);
             }
           } catch (e) {}
@@ -1537,13 +1557,21 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     // Subscribe to products
     const unsubProducts = subscribeToFirestoreCollection<Product>('products', (cloudProducts) => {
       if (globalIsDemoMode) return;
-      if (Array.isArray(cloudProducts) && cloudProducts.length > 0) {
+      if (Array.isArray(cloudProducts)) {
         const filtered = sortProductsNewestFirst(cloudProducts.filter((p) => p && p.id && !deletedProductIds.current.has(p.id)));
         setProducts((prev) => {
           const map = new Map<string, Product>();
-          prev.forEach((p) => { if (p && p.id && !deletedProductIds.current.has(p.id)) map.set(p.id, p); });
-          filtered.forEach((p) => { if (p && p.id && !deletedProductIds.current.has(p.id)) map.set(p.id, p); });
-          const merged = sortProductsNewestFirst(Array.from(map.values()));
+          filtered.forEach((p) => map.set(p.id, p));
+          const recentCutoff = Date.now() - 20000;
+          prev.forEach((p) => {
+            if (p && p.id && !deletedProductIds.current.has(p.id) && !map.has(p.id)) {
+              const time = new Date(p.createdAt || p.updatedAt || 0).getTime();
+              if (time > recentCutoff) {
+                map.set(p.id, p);
+              }
+            }
+          });
+          const merged = sortProductsNewestFirst(Array.from(map.values()).filter((p) => !deletedProductIds.current.has(p.id)));
           safeSetStorage('bakery_products', JSON.stringify(merged));
           return merged;
         });
@@ -1553,14 +1581,22 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     // Subscribe to sales
     const unsubSales = subscribeToFirestoreCollection<CompletedSale>('sales', (cloudSales) => {
       if (globalIsDemoMode) return;
-      if (Array.isArray(cloudSales) && cloudSales.length > 0) {
+      if (Array.isArray(cloudSales)) {
         const filtered = cloudSales
           .filter((s) => s && s.id && !deletedSaleIds.current.has(s.id))
           .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
         setSales((prev) => {
           const map = new Map<string, CompletedSale>();
-          prev.forEach((s) => { if (s && s.id && !deletedSaleIds.current.has(s.id)) map.set(s.id, s); });
-          filtered.forEach((s) => { if (s && s.id && !deletedSaleIds.current.has(s.id)) map.set(s.id, s); });
+          filtered.forEach((s) => map.set(s.id, s));
+          const recentCutoff = Date.now() - 20000;
+          prev.forEach((s) => {
+            if (s && s.id && !deletedSaleIds.current.has(s.id) && !map.has(s.id)) {
+              const time = new Date(s.createdAt).getTime();
+              if (time > recentCutoff) {
+                map.set(s.id, s);
+              }
+            }
+          });
           const merged = Array.from(map.values())
             .filter((s) => !deletedSaleIds.current.has(s.id))
             .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
@@ -1573,11 +1609,20 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     // Subscribe to custom orders
     const unsubOrders = subscribeToFirestoreCollection<CustomCakeOrder>('customOrders', (cloudOrders) => {
       if (globalIsDemoMode) return;
-      if (Array.isArray(cloudOrders) && cloudOrders.length > 0) {
+      if (Array.isArray(cloudOrders)) {
+        const filtered = cloudOrders.filter((o) => o && o.id && !deletedOrderIds.current.has(o.id));
         setCustomOrders((prev) => {
           const map = new Map<string, CustomCakeOrder>();
-          prev.forEach((o) => { if (o && o.id && !deletedOrderIds.current.has(o.id)) map.set(o.id, o); });
-          cloudOrders.forEach((o) => { if (o && o.id && !deletedOrderIds.current.has(o.id)) map.set(o.id, o); });
+          filtered.forEach((o) => map.set(o.id, o));
+          const recentCutoff = Date.now() - 20000;
+          prev.forEach((o) => {
+            if (o && o.id && !deletedOrderIds.current.has(o.id) && !map.has(o.id)) {
+              const time = new Date(o.createdAt).getTime();
+              if (time > recentCutoff) {
+                map.set(o.id, o);
+              }
+            }
+          });
           const merged = Array.from(map.values())
             .filter((o) => !deletedOrderIds.current.has(o.id))
             .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
@@ -1590,19 +1635,28 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     // Subscribe to expenses
     const unsubExpenses = subscribeToFirestoreCollection<Expense>('expenses', (cloudExpenses) => {
       if (globalIsDemoMode) return;
-      if (Array.isArray(cloudExpenses) && cloudExpenses.length > 0) {
+      if (Array.isArray(cloudExpenses)) {
+        const mockExpenseIds = new Set(['exp-1', 'exp-2', 'exp-3', 'exp-4', 'exp-5', 'exp-6', 'exp-7']);
         const sorted = cloudExpenses
-          .filter((e) => e && e.id && !deletedExpenseIds.current.has(e.id))
+          .filter((e) => e && e.id && !deletedExpenseIds.current.has(e.id) && !mockExpenseIds.has(e.id))
           .sort(
             (a, b) =>
               new Date(b.createdAt || b.date).getTime() - new Date(a.createdAt || a.date).getTime()
           );
         setExpenses((prev) => {
           const map = new Map<string, Expense>();
-          prev.forEach((e) => { if (e && e.id && !deletedExpenseIds.current.has(e.id)) map.set(e.id, e); });
-          sorted.forEach((e) => { if (e && e.id && !deletedExpenseIds.current.has(e.id)) map.set(e.id, e); });
+          sorted.forEach((e) => map.set(e.id, e));
+          const recentCutoff = Date.now() - 20000;
+          prev.forEach((e) => {
+            if (e && e.id && !deletedExpenseIds.current.has(e.id) && !mockExpenseIds.has(e.id) && !map.has(e.id)) {
+              const time = new Date(e.createdAt || e.date).getTime();
+              if (time > recentCutoff) {
+                map.set(e.id, e);
+              }
+            }
+          });
           const merged = Array.from(map.values())
-            .filter((e) => !deletedExpenseIds.current.has(e.id))
+            .filter((e) => !deletedExpenseIds.current.has(e.id) && !mockExpenseIds.has(e.id))
             .sort((a, b) => new Date(b.createdAt || b.date).getTime() - new Date(a.createdAt || a.date).getTime());
           safeSetStorage('bakery_expenses', JSON.stringify(merged));
           return merged;
@@ -1677,6 +1731,91 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       }
     });
 
+    // Subscribe to shared deleted records across all devices (PC & Phone sync deletions instantly)
+    const unsubDeletedRecords = subscribeToFirestoreDoc<any>('settings', 'deletedRecords', (cloudDeleted) => {
+      if (globalIsDemoMode || !cloudDeleted) return;
+
+      if (Array.isArray(cloudDeleted.deletedExpensesIds)) {
+        let changed = false;
+        cloudDeleted.deletedExpensesIds.forEach((id: string) => {
+          if (!deletedExpenseIds.current.has(id)) {
+            deletedExpenseIds.current.add(id);
+            changed = true;
+          }
+        });
+        if (changed) {
+          try {
+            localStorage.setItem('bakery_deleted_expenses_ids', JSON.stringify(Array.from(deletedExpenseIds.current).slice(-500)));
+          } catch (e) {}
+          setExpenses((prev) => {
+            const updated = prev.filter((e) => !deletedExpenseIds.current.has(e.id));
+            safeSetStorage('bakery_expenses', JSON.stringify(updated));
+            return updated;
+          });
+        }
+      }
+
+      if (Array.isArray(cloudDeleted.deletedSalesIds)) {
+        let changed = false;
+        cloudDeleted.deletedSalesIds.forEach((id: string) => {
+          if (!deletedSaleIds.current.has(id)) {
+            deletedSaleIds.current.add(id);
+            changed = true;
+          }
+        });
+        if (changed) {
+          try {
+            localStorage.setItem('bakery_deleted_sales_ids', JSON.stringify(Array.from(deletedSaleIds.current).slice(-500)));
+          } catch (e) {}
+          setSales((prev) => {
+            const updated = prev.filter((s) => !deletedSaleIds.current.has(s.id));
+            safeSetStorage('bakery_sales', JSON.stringify(updated));
+            return updated;
+          });
+        }
+      }
+
+      if (Array.isArray(cloudDeleted.deletedOrdersIds)) {
+        let changed = false;
+        cloudDeleted.deletedOrdersIds.forEach((id: string) => {
+          if (!deletedOrderIds.current.has(id)) {
+            deletedOrderIds.current.add(id);
+            changed = true;
+          }
+        });
+        if (changed) {
+          try {
+            localStorage.setItem('bakery_deleted_orders_ids', JSON.stringify(Array.from(deletedOrderIds.current).slice(-500)));
+          } catch (e) {}
+          setCustomOrders((prev) => {
+            const updated = prev.filter((o) => !deletedOrderIds.current.has(o.id));
+            safeSetStorage('bakery_custom_orders', JSON.stringify(updated));
+            return updated;
+          });
+        }
+      }
+
+      if (Array.isArray(cloudDeleted.deletedProductsIds)) {
+        let changed = false;
+        cloudDeleted.deletedProductsIds.forEach((id: string) => {
+          if (!deletedProductIds.current.has(id)) {
+            deletedProductIds.current.add(id);
+            changed = true;
+          }
+        });
+        if (changed) {
+          try {
+            localStorage.setItem('bakery_deleted_products_ids', JSON.stringify(Array.from(deletedProductIds.current).slice(-500)));
+          } catch (e) {}
+          setProducts((prev) => {
+            const updated = prev.filter((p) => !deletedProductIds.current.has(p.id));
+            safeSetStorage('bakery_products', JSON.stringify(updated));
+            return updated;
+          });
+        }
+      }
+    });
+
     return () => {
       unsubProducts();
       unsubSales();
@@ -1686,6 +1825,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       unsubIngredients();
       unsubRecipes();
       unsubStoreInfo();
+      unsubDeletedRecords();
     };
   }, []);
 
@@ -3072,8 +3212,8 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       const demoOrders = localStorage.getItem('demo_bakery_custom_orders');
       setCustomOrders(demoOrders ? JSON.parse(demoOrders) : initialOrders);
 
-      const demoExpenses = localStorage.getItem('demo_bakery_expenses');
-      setExpenses(demoExpenses ? JSON.parse(demoExpenses) : initialExpenses);
+      const demoExpensesData = localStorage.getItem('demo_bakery_expenses');
+      setExpenses(demoExpensesData ? JSON.parse(demoExpensesData) : demoExpenses);
 
       const demoIngredients = localStorage.getItem('demo_bakery_ingredients');
       setIngredients(demoIngredients ? JSON.parse(demoIngredients) : initialIngredients);
@@ -3155,7 +3295,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     localStorage.setItem('demo_bakery_products', JSON.stringify(initialProducts));
     localStorage.setItem('demo_bakery_sales', JSON.stringify(initialSales));
     localStorage.setItem('demo_bakery_custom_orders', JSON.stringify(initialOrders));
-    localStorage.setItem('demo_bakery_expenses', JSON.stringify(initialExpenses));
+    localStorage.setItem('demo_bakery_expenses', JSON.stringify(demoExpenses));
     localStorage.setItem('demo_bakery_ingredients', JSON.stringify(initialIngredients));
     localStorage.setItem('demo_bakery_recipes', JSON.stringify(initialRecipes));
     localStorage.setItem('demo_bakery_party_addons', JSON.stringify(initialPartyAddons));
@@ -3166,7 +3306,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setProducts(sortProductsNewestFirst(initialProducts));
     setSales(initialSales);
     setCustomOrders(initialOrders);
-    setExpenses(initialExpenses);
+    setExpenses(demoExpenses);
     setIngredients(initialIngredients);
     setRecipes(initialRecipes);
     setPartyAddons(initialPartyAddons);
