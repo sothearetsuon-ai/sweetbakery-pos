@@ -174,41 +174,41 @@ export const Navbar: React.FC<NavbarProps> = ({
             title="ចុចដើម្បីកំណត់ឈ្មោះហាង & Logo (Settings)"
           >
             <div className="relative group shrink-0">
-              <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-2xl bg-gradient-to-tr from-pink-600 via-rose-500 to-amber-400 p-0.5 shadow-lg shadow-pink-500/25 transition-transform duration-300 group-hover:scale-105 overflow-hidden">
+              <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-tr from-pink-600 via-rose-500 to-amber-400 p-0.5 shadow-md shadow-pink-500/20 transition-transform duration-300 group-hover:scale-105 overflow-hidden">
                 {storeInfo.logoUrl ? (
                   <img
                     src={getProductImageUrl(storeInfo.logoUrl)}
                     alt={storeInfo.nameKh}
-                    className="w-full h-full object-cover rounded-[14px] bg-white"
+                    className="w-full h-full object-cover rounded-[10px] bg-white"
                   />
                 ) : (
-                  <div className="w-full h-full bg-white/10 backdrop-blur-xs rounded-[14px] flex items-center justify-center text-white">
-                    <Cake className="w-5 h-5 sm:w-6 sm:h-6 animate-float" />
+                  <div className="w-full h-full bg-white/10 backdrop-blur-xs rounded-[10px] flex items-center justify-center text-white">
+                    <Cake className="w-4 h-4 sm:w-5 sm:h-5 animate-float" />
                   </div>
                 )}
               </div>
               <span className="absolute -top-1 -right-1 bg-amber-400 text-amber-950 p-0.5 rounded-full shadow-xs">
-                <Crown className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
+                <Crown className="w-2.5 h-2.5" />
               </span>
             </div>
 
             <div>
-              <div className="flex items-center gap-1.5 sm:gap-2">
-                <h1 className="text-sm sm:text-xl font-black tracking-tight text-slate-900 flex items-center gap-1">
-                  <span className="max-w-[120px] sm:max-w-none truncate">
+              <div className="flex items-center gap-1.5">
+                <h1 className="text-xs sm:text-sm md:text-[15px] font-bold text-slate-800 flex items-center gap-1">
+                  <span className="max-w-[140px] sm:max-w-xs lg:max-w-none truncate">
                     {lang === 'km' ? storeInfo.nameKh : storeInfo.nameEn}
                   </span>
-                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-rose-600 via-pink-600 to-amber-600">
+                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-rose-600 via-pink-600 to-amber-600 font-black text-xs sm:text-sm">
                     POS
                   </span>
                 </h1>
-                <span className="hidden sm:inline-block text-[10px] uppercase font-black tracking-wider bg-gradient-to-r from-rose-600 to-pink-600 text-white px-2.5 py-0.5 rounded-full shadow-xs">
+                <span className="hidden sm:inline-block text-[9px] uppercase font-black tracking-wider bg-gradient-to-r from-rose-600 to-pink-600 text-white px-2 py-0.5 rounded-full shadow-2xs">
                   PRO ★
                 </span>
               </div>
-              <p className="hidden md:flex text-xs text-slate-600 items-center gap-1.5 mt-0.5">
-                <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                <span className="font-bold text-rose-700">
+              <p className="hidden md:flex text-[11px] text-slate-500 items-center gap-1.5 mt-0.5">
+                <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                <span className="font-semibold text-rose-600">
                   {lang === 'km' ? greetingKh : greetingEn}
                 </span>
               </p>
