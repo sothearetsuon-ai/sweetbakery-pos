@@ -133,6 +133,7 @@ export const NewExpenseModal: React.FC<NewExpenseModalProps> = ({
     staffMembers,
     ingredients,
     restockIngredient,
+    reserveFund,
   } = useBakery();
 
   const [expenseType, setExpenseType] = useState<ExpenseType>('INGREDIENT');
@@ -151,7 +152,7 @@ export const NewExpenseModal: React.FC<NewExpenseModalProps> = ({
 
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [paidBy, setPaidBy] = useState(currentStaff?.name || 'មេការហាង (Manager)');
-  const [paymentMethod, setPaymentMethod] = useState<'CASH_USD' | 'CASH_KHR' | 'BANK_TRANSFER'>('CASH_KHR');
+  const [paymentMethod, setPaymentMethod] = useState<'CASH_USD' | 'CASH_KHR' | 'BANK_TRANSFER' | 'RESERVE_FUND'>('CASH_KHR');
   const [receiptImage, setReceiptImage] = useState('');
   const [notes, setNotes] = useState('');
   const [isCameraOpen, setIsCameraOpen] = useState(false);
@@ -846,11 +847,12 @@ export const NewExpenseModal: React.FC<NewExpenseModalProps> = ({
           {/* Payment Method */}
           <div>
             <label className="block text-xs font-bold text-slate-700 mb-1">វិធីសាស្ត្រទូទាត់ប្រាក់</label>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               {[
                 { id: 'CASH_KHR', label: 'សាច់ប្រាក់ (៛ KHR)' },
                 { id: 'BANK_TRANSFER', label: 'ផ្ទេរធនាគារ / ABA' },
                 { id: 'CASH_USD', label: 'សាច់ប្រាក់ ($ USD)' },
+                { id: 'RESERVE_FUND', label: '🏦 ដកពីទុនបម្រុង' },
               ].map((m) => (
                 <button
                   key={m.id}
@@ -858,7 +860,9 @@ export const NewExpenseModal: React.FC<NewExpenseModalProps> = ({
                   onClick={() => setPaymentMethod(m.id as any)}
                   className={`py-2 px-2 text-xs rounded-xl font-bold border transition-all cursor-pointer ${
                     paymentMethod === m.id
-                      ? 'bg-rose-50 border-rose-500 text-rose-700 shadow-2xs ring-1 ring-rose-400/30'
+                      ? m.id === 'RESERVE_FUND'
+                        ? 'bg-emerald-50 border-emerald-500 text-emerald-800 shadow-2xs ring-1 ring-emerald-400/30'
+                        : 'bg-rose-50 border-rose-500 text-rose-700 shadow-2xs ring-1 ring-rose-400/30'
                       : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
                   }`}
                 >
@@ -866,6 +870,20 @@ export const NewExpenseModal: React.FC<NewExpenseModalProps> = ({
                 </button>
               ))}
             </div>
+
+            {paymentMethod === 'RESERVE_FUND' && (
+              <div className="mt-2.5 p-3 bg-emerald-50/90 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 rounded-xl text-xs flex items-start gap-2.5 text-emerald-900 dark:text-emerald-200">
+                <span className="text-base">🏦</span>
+                <div>
+                  <div className="font-bold">
+                    ទុនបម្រុងបច្ចុប្បន្ន៖ {reserveFund.currentBalanceKhr.toLocaleString()} ៛ (${reserveFund.currentBalanceUsd.toFixed(2)})
+                  </div>
+                  <div className="text-[11px] text-emerald-700 dark:text-emerald-400 mt-0.5">
+                    ប្រព័ន្ធនឹងកាត់ចេញពីទុនបម្រុងដោយស្វ័យប្រវត្ត។ នៅពេលដកចំណាយរួច អ្នកអាចបូកបង្គ្រប់ត្រឡប់ទៅទុនបម្រុងវិញគ្រប់ចំនួនគោលដៅ ({reserveFund.targetAmountKhr.toLocaleString()} ៛)។
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Receipt Image Upload */}

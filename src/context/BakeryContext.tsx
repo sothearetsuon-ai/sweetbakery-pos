@@ -17,6 +17,8 @@ import {
   BakeryBackupData,
   PartyAddon,
   Recipe,
+  ReserveFund,
+  ReserveFundTransaction,
 } from '../types';
 import {
   initialCategories,
@@ -340,6 +342,12 @@ interface BakeryContextType {
   clearAllExpenses: () => void;
   totalExpensesUsd: number;
   totalExpensesKhr: number;
+
+  // Reserve Fund (ទុនបម្រុងហាង & Petty Cash)
+  reserveFund: ReserveFund;
+  updateReserveTarget: (targetKhr: number, targetUsd?: number) => void;
+  replenishReserveFund: (amountKhr: number, amountUsd?: number, source?: string, notes?: string) => void;
+  withdrawReserveFund: (amountKhr: number, amountUsd: number, reason: string, expenseId?: string) => void;
 
   sales: CompletedSale[];
   completeSale: (sale: Omit<CompletedSale, 'id' | 'orderNumber' | 'createdAt'>) => CompletedSale;
@@ -925,6 +933,46 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
     return [];
   });
+
+  // Reserve Fund (ទុនបម្រុងហាង & Petty Cash) state
+  const [reserveFund, setReserveFund] = useState<ReserveFund>(() => {
+    const defaultTargetKhr = 1000000;
+    const defaultTargetUsd = 250;
+    const saved = localStorage.getItem('bakery_reserve_fund');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (parsed && typeof parsed.targetAmountKhr === 'number') {
+          return parsed;
+        }
+      } catch (e) {}
+    }
+    return {
+      targetAmountKhr: defaultTargetKhr,
+      targetAmountUsd: defaultTargetUsd,
+      currentBalanceKhr: defaultTargetKhr,
+      currentBalanceUsd: defaultTargetUsd,
+      history: [
+        {
+          id: 'rf-init',
+          type: 'INITIAL_SET',
+          amountKhr: defaultTargetKhr,
+          amountUsd: defaultTargetUsd,
+          reason: 'កំណត់ទុនបម្រុងដំបូង',
+          source: 'ម្ចាស់ហាង',
+          performedBy: 'ម្ចាស់ហាង (Admin)',
+          date: new Date().toISOString().slice(0, 10),
+          createdAt: new Date().toISOString(),
+        },
+      ],
+      updatedAt: new Date().toISOString(),
+    };
+  });
+
+  useEffect(() => {
+    safeSetStorage('bakery_reserve_fund', JSON.stringify(reserveFund));
+    syncSaveDoc('settings', 'reserveFund', reserveFund);
+  }, [reserveFund]);
 
   // Sales management (including past sales)
   const [sales, setSales] = useState<CompletedSale[]>(() => {
@@ -1816,6 +1864,15 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       }
     });
 
+    // Subscribe to reserve fund
+    const unsubReserveFund = subscribeToFirestoreDoc<ReserveFund>('settings', 'reserveFund', (cloudRf) => {
+      if (globalIsDemoMode || !cloudRf) return;
+      if (typeof cloudRf.targetAmountKhr === 'number') {
+        setReserveFund(cloudRf);
+        safeSetStorage('bakery_reserve_fund', JSON.stringify(cloudRf));
+      }
+    });
+
     return () => {
       unsubProducts();
       unsubSales();
@@ -1826,8 +1883,93 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       unsubRecipes();
       unsubStoreInfo();
       unsubDeletedRecords();
+      unsubReserveFund();
     };
   }, []);
+
+  // Reserve Fund actions
+  const updateReserveTarget = (targetKhr: number, targetUsd?: number) => {
+    const validKhr = Math.max(0, targetKhr);
+    const validUsd = targetUsd !== undefined ? targetUsd : Number((validKhr / exchangeRate).toFixed(2));
+    setReserveFund((prev) => {
+      const diffKhr = validKhr - prev.targetAmountKhr;
+      const newBalanceKhr = Math.max(0, prev.currentBalanceKhr + diffKhr);
+      const newBalanceUsd = Number((newBalanceKhr / exchangeRate).toFixed(2));
+      const tx: ReserveFundTransaction = {
+        id: `rf-adj-${Date.now()}`,
+        type: 'ADJUST_TARGET',
+        amountKhr: validKhr,
+        amountUsd: validUsd,
+        reason: `កែប្រែទុនបម្រុងគោលដៅទៅ ${validKhr.toLocaleString()} ៛`,
+        performedBy: currentStaff?.name || 'ម្ចាស់ហាង (Admin)',
+        date: new Date().toISOString().slice(0, 10),
+        createdAt: new Date().toISOString(),
+      };
+      return {
+        ...prev,
+        targetAmountKhr: validKhr,
+        targetAmountUsd: validUsd,
+        currentBalanceKhr: newBalanceKhr,
+        currentBalanceUsd: newBalanceUsd,
+        history: [tx, ...prev.history].slice(0, 100),
+        updatedAt: new Date().toISOString(),
+      };
+    });
+  };
+
+  const withdrawReserveFund = (amountKhr: number, amountUsd: number, reason: string, expenseId?: string) => {
+    const validKhr = Math.max(0, amountKhr);
+    const validUsd = Math.max(0, amountUsd);
+    setReserveFund((prev) => {
+      const newBalKhr = Math.max(0, prev.currentBalanceKhr - validKhr);
+      const newBalUsd = Math.max(0, Number((newBalKhr / exchangeRate).toFixed(2)));
+      const tx: ReserveFundTransaction = {
+        id: `rf-wd-${Date.now()}`,
+        type: 'WITHDRAW',
+        amountKhr: validKhr,
+        amountUsd: validUsd,
+        reason,
+        expenseId,
+        performedBy: currentStaff?.name || 'ម្ចាស់ហាង (Admin)',
+        date: new Date().toISOString().slice(0, 10),
+        createdAt: new Date().toISOString(),
+      };
+      return {
+        ...prev,
+        currentBalanceKhr: newBalKhr,
+        currentBalanceUsd: newBalUsd,
+        history: [tx, ...prev.history].slice(0, 100),
+        updatedAt: new Date().toISOString(),
+      };
+    });
+  };
+
+  const replenishReserveFund = (amountKhr: number, amountUsd?: number, source?: string, notes?: string) => {
+    const validKhr = Math.max(0, amountKhr);
+    const validUsd = amountUsd !== undefined ? amountUsd : Number((validKhr / exchangeRate).toFixed(2));
+    setReserveFund((prev) => {
+      const newBalKhr = prev.currentBalanceKhr + validKhr;
+      const newBalUsd = Number((newBalKhr / exchangeRate).toFixed(2));
+      const tx: ReserveFundTransaction = {
+        id: `rf-rep-${Date.now()}`,
+        type: 'REPLENISH',
+        amountKhr: validKhr,
+        amountUsd: validUsd,
+        reason: notes || 'បូកបង្គ្រប់ទុនបម្រុងហាង',
+        source: source || 'ពីប្រាក់ចំណូលលក់ប្រចាំថ្ងៃ',
+        performedBy: currentStaff?.name || 'ម្ចាស់ហាង (Admin)',
+        date: new Date().toISOString().slice(0, 10),
+        createdAt: new Date().toISOString(),
+      };
+      return {
+        ...prev,
+        currentBalanceKhr: newBalKhr,
+        currentBalanceUsd: newBalUsd,
+        history: [tx, ...prev.history].slice(0, 100),
+        updatedAt: new Date().toISOString(),
+      };
+    });
+  };
 
   // Expenses actions
   const addExpense = (expenseData: Omit<Expense, 'id' | 'createdAt'>) => {
@@ -1845,6 +1987,16 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ expense: newExpense }),
     }).catch(() => {});
+
+    // If paid via Reserve Fund, automatically withdraw from reserve fund
+    if (newExpense.paymentMethod === 'RESERVE_FUND') {
+      withdrawReserveFund(
+        newExpense.amountKhr,
+        newExpense.amountUsd,
+        `ដកចំណាយ៖ ${newExpense.title}`,
+        newExpense.id
+      );
+    }
 
     setExpenses((prev) => {
       const updated = [newExpense, ...prev];
@@ -1897,6 +2049,17 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     isUpdatingFromLan.current = false;
     if (lanSyncTimer.current) clearTimeout(lanSyncTimer.current);
     recordDeletedId('expenses', id, deletedExpenseIds);
+
+    const targetExp = expenses.find((e) => e.id === id);
+    // If the deleted expense was from Reserve Fund, automatically refund it back
+    if (targetExp && targetExp.paymentMethod === 'RESERVE_FUND') {
+      replenishReserveFund(
+        targetExp.amountKhr,
+        targetExp.amountUsd,
+        'បង្វិលសងវិញពីការលុបចំណាយ',
+        `លុបចំណាយ៖ ${targetExp.title}`
+      );
+    }
 
     // 1. Immediately call atomic server deletion endpoint
     fetch('/api/delete-expense', {
@@ -3490,6 +3653,10 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         clearAllExpenses,
         totalExpensesUsd,
         totalExpensesKhr,
+        reserveFund,
+        updateReserveTarget,
+        replenishReserveFund,
+        withdrawReserveFund,
         sales,
         completeSale,
         addPastSale,

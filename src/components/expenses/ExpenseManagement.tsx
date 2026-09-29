@@ -19,18 +19,21 @@ import {
   AlertTriangle,
   RotateCcw,
   Filter,
+  ShieldCheck,
 } from 'lucide-react';
 import { useBakery } from '../../context/BakeryContext';
 import { Expense, ExpenseCategory } from '../../types';
 import { NewExpenseModal } from './NewExpenseModal';
+import { ReserveFundModal } from './ReserveFundModal';
 import { soundFx } from '../../utils/audio';
 
 type DateFilterPreset = 'ALL' | 'TODAY' | 'YESTERDAY' | 'THIS_MONTH' | 'CUSTOM';
 
 export const ExpenseManagement: React.FC = () => {
-  const { lang, expenses, deleteExpense, clearAllExpenses, sales, exchangeRate } = useBakery();
+  const { lang, expenses, deleteExpense, clearAllExpenses, sales, exchangeRate, reserveFund } = useBakery();
 
   const [isAddExpenseOpen, setIsAddExpenseOpen] = useState(false);
+  const [isReserveFundOpen, setIsReserveFundOpen] = useState(false);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [mainTypeFilter, setMainTypeFilter] = useState<'ALL' | 'INGREDIENTS' | 'GENERAL'>('ALL');
@@ -217,6 +220,13 @@ export const ExpenseManagement: React.FC = () => {
     a.click();
   };
 
+  // Reserve Fund calculations
+  const deficitKhr = Math.max(0, reserveFund.targetAmountKhr - reserveFund.currentBalanceKhr);
+  const deficitUsd = Number((deficitKhr / exchangeRate).toFixed(2));
+  const reserveFundPct = reserveFund.targetAmountKhr > 0
+    ? Math.min(100, Math.max(0, Math.round((reserveFund.currentBalanceKhr / reserveFund.targetAmountKhr) * 100)))
+    : 100;
+
   return (
     <div className="flex-1 flex flex-col p-3 sm:p-6 overflow-y-auto space-y-4 sm:space-y-6 pb-24 md:pb-6">
       {/* Header */}
@@ -258,6 +268,21 @@ export const ExpenseManagement: React.FC = () => {
           <button
             onClick={() => {
               soundFx.playPop();
+              setIsReserveFundOpen(true);
+            }}
+            className="px-3.5 sm:px-4 py-2 sm:py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white text-xs font-black rounded-2xl shadow-lg shadow-emerald-600/25 flex items-center gap-1.5 sm:gap-2 transition-all active:scale-95 cursor-pointer"
+            title="គ្រប់គ្រងទុនបម្រុងហាង & Petty Cash"
+          >
+            <ShieldCheck className="w-4 h-4 stroke-[2.5]" />
+            <span>🏦 ទុនបម្រុងហាង</span>
+            {deficitKhr > 0 && (
+              <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+            )}
+          </button>
+
+          <button
+            onClick={() => {
+              soundFx.playPop();
               setEditingExpense(null);
               setIsAddExpenseOpen(true);
             }}
@@ -265,6 +290,57 @@ export const ExpenseManagement: React.FC = () => {
           >
             <Plus className="w-4 h-4 stroke-[3]" />
             <span>+ កត់ត្រាចំណាយ</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Reserve Fund Banner Widget */}
+      <div className="bg-gradient-to-r from-emerald-950 via-teal-950 to-slate-900 border border-emerald-800/60 rounded-3xl p-4 sm:p-5 text-white shadow-md relative overflow-hidden flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div className="flex items-start sm:items-center gap-3.5">
+          <div className="p-3 bg-emerald-500/20 rounded-2xl border border-emerald-400/30 flex-shrink-0">
+            <ShieldCheck className="w-6 h-6 text-emerald-300" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h3 className="font-bold text-sm sm:text-base tracking-wide flex items-center gap-1.5">
+                ទុនបម្រុងហាង & Petty Cash
+              </h3>
+              <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full ${
+                deficitKhr > 0 ? 'bg-amber-500 text-white' : 'bg-emerald-500 text-white'
+              }`}>
+                {deficitKhr > 0 ? `នៅសល់ ${reserveFundPct}%` : 'គ្រប់ ១០០%'}
+              </span>
+            </div>
+            <p className="text-xs text-emerald-200/80 mt-1">
+              សមតុល្យបច្ចុប្បន្ន៖ <strong className="text-white font-sans text-sm">{reserveFund.currentBalanceKhr.toLocaleString()} ៛</strong> (${reserveFund.currentBalanceUsd.toFixed(2)}) 
+              <span className="mx-2 text-emerald-400">•</span>
+              គោលដៅកំណត់៖ <span className="font-sans text-emerald-300">{reserveFund.targetAmountKhr.toLocaleString()} ៛</span>
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3 w-full md:w-auto justify-between md:justify-end">
+          {deficitKhr > 0 ? (
+            <div className="text-left md:text-right">
+              <div className="text-[11px] text-amber-300 font-medium">ចំនួនត្រូវបូកបង្គ្រប់៖</div>
+              <div className="text-sm font-black text-amber-400 font-sans">
+                +{deficitKhr.toLocaleString()} ៛ (${deficitUsd.toFixed(2)})
+              </div>
+            </div>
+          ) : (
+            <div className="text-left md:text-right text-xs text-emerald-300 font-medium hidden sm:block">
+              ✓ ទុនបម្រុងពេញលេញ ១០០%
+            </div>
+          )}
+          <button
+            onClick={() => {
+              soundFx.playPop();
+              setIsReserveFundOpen(true);
+            }}
+            className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition shadow-md flex items-center gap-1.5 cursor-pointer ml-auto md:ml-0"
+          >
+            <Plus className="w-3.5 h-3.5 stroke-[3]" />
+            <span>{deficitKhr > 0 ? '+ បូកបង្គ្រប់ទុន' : 'គ្រប់គ្រងទុនបម្រុង'}</span>
           </button>
         </div>
       </div>
@@ -863,8 +939,14 @@ export const ExpenseManagement: React.FC = () => {
 
                   <div className="flex items-center gap-1.5">
                     <span className="font-bold text-slate-700 text-[11px]">{expense.paidBy}</span>
-                    <span className="text-[9px] bg-white text-slate-600 px-1.5 py-0.5 rounded border border-slate-200 font-mono">
-                      {expense.paymentMethod === 'CASH_KHR'
+                    <span className={`text-[9px] px-1.5 py-0.5 rounded font-mono ${
+                      expense.paymentMethod === 'RESERVE_FUND'
+                        ? 'bg-emerald-100 text-emerald-800 border border-emerald-300 font-bold'
+                        : 'bg-white text-slate-600 border border-slate-200'
+                    }`}>
+                      {expense.paymentMethod === 'RESERVE_FUND'
+                        ? '🏦 ទុនបម្រុង'
+                        : expense.paymentMethod === 'CASH_KHR'
                         ? 'សាច់ប្រាក់ ៛'
                         : expense.paymentMethod === 'BANK_TRANSFER'
                         ? 'ABA'
@@ -1077,8 +1159,14 @@ export const ExpenseManagement: React.FC = () => {
                         </button>
                         <div className="flex items-center gap-1.5 mt-0.5">
                           <span className="font-bold text-slate-800 text-[11px]">{expense.paidBy}</span>
-                          <span className="text-[9px] bg-slate-100 text-slate-600 px-1.5 py-0.2 rounded font-mono">
-                            {expense.paymentMethod === 'CASH_KHR'
+                          <span className={`text-[9px] px-1.5 py-0.2 rounded font-mono ${
+                            expense.paymentMethod === 'RESERVE_FUND'
+                              ? 'bg-emerald-100 text-emerald-800 border border-emerald-300 font-bold'
+                              : 'bg-slate-100 text-slate-600'
+                          }`}>
+                            {expense.paymentMethod === 'RESERVE_FUND'
+                              ? '🏦 ទុនបម្រុង'
+                              : expense.paymentMethod === 'CASH_KHR'
                               ? 'សាច់ប្រាក់ ៛'
                               : expense.paymentMethod === 'BANK_TRANSFER'
                               ? 'ផ្ទេរ/ABA'
@@ -1184,6 +1272,12 @@ export const ExpenseManagement: React.FC = () => {
           setEditingExpense(null);
         }}
         expenseToEdit={editingExpense}
+      />
+
+      {/* Reserve Fund Management Modal */}
+      <ReserveFundModal
+        isOpen={isReserveFundOpen}
+        onClose={() => setIsReserveFundOpen(false)}
       />
 
       {/* Touch-Friendly Delete Expense Modal (Portal to Body) */}

@@ -225,11 +225,33 @@ export interface Expense {
   amountUsd: number;       // សរុប ($ USD)
   amountKhr: number;       // សរុប (៛ KHR)
   paidBy: string;
-  paymentMethod: 'CASH_USD' | 'CASH_KHR' | 'BANK_TRANSFER';
+  paymentMethod: 'CASH_USD' | 'CASH_KHR' | 'BANK_TRANSFER' | 'RESERVE_FUND';
   receiptImage?: string;
   notes?: string;
   date: string;
   createdAt: string;
+}
+
+export interface ReserveFundTransaction {
+  id: string;
+  type: 'WITHDRAW' | 'REPLENISH' | 'ADJUST_TARGET';
+  amountKhr: number;
+  amountUsd: number;
+  reason: string;
+  source?: string; // e.g. 'ពីប្រាក់ចំណូលលក់', 'ម្ចាស់ហាងបញ្ចូលបង្គ្រប់', 'ដកទិញទំនិញ/គ្រឿងផ្សំ'
+  expenseId?: string;
+  performedBy: string;
+  date: string;
+  createdAt: string;
+}
+
+export interface ReserveFund {
+  targetAmountKhr: number;
+  targetAmountUsd: number;
+  currentBalanceKhr: number;
+  currentBalanceUsd: number;
+  history: ReserveFundTransaction[];
+  updatedAt: string;
 }
 
 export type StaffRole = 'ADMIN' | 'CASHIER' | 'BAKER' | 'INVENTORY';
