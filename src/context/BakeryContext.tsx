@@ -435,22 +435,25 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
           const sanitized = parsed.map((s: StaffMember) => {
+            // Only fix display name/avatar migrations — do NOT override pinCode
             if (s.name?.includes('ម៉ារី') || s.name?.includes('Mary') || s.id === 'staff-1') {
               return {
                 ...s,
                 name: s.name?.includes('ម៉ារី') || s.name?.includes('Mary') ? 'ម្ចាស់ហាង (Admin)' : s.name,
                 nameEn: s.nameEn?.includes('Mary') ? 'Store Owner (Admin)' : s.nameEn,
                 avatar: s.avatar === '👩‍🍳' ? '👑' : s.avatar,
+                // preserve saved pinCode; only use default if no pin set at all
                 pinCode: s.pinCode || '1111',
               };
             }
-            if (s.id === 'staff-2' || s.name?.includes('សុធារិទ្ធ') || s.name?.includes('Sothearith') || (s.role === 'CASHIER' && s.pinCode === '2222')) {
+            if (s.id === 'staff-2' || s.name?.includes('សុធារិទ្ធ') || s.name?.includes('Sothearith')) {
               return {
                 ...s,
-                name: 'វិជ្ជតា (Vicheta)',
-                nameEn: 'Vicheta (Cashier)',
-                avatar: '👩‍💼',
-                pinCode: '2222',
+                name: s.name?.includes('សុធារិទ្ធ') || s.name?.includes('Sothearith') ? 'វិជ្ជតា (Vicheta)' : s.name,
+                nameEn: s.nameEn?.includes('Sothearith') ? 'Vicheta (Cashier)' : s.nameEn,
+                avatar: s.avatar === '👨‍💼' ? '👩‍💼' : s.avatar,
+                // preserve saved pinCode; do NOT force '2222'
+                pinCode: s.pinCode || '2222',
                 permissions: {
                   ...s.permissions,
                   canAccessPos: true,
@@ -482,18 +485,20 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             name: parsed.name?.includes('ម៉ារី') || parsed.name?.includes('Mary') ? 'ម្ចាស់ហាង (Admin)' : parsed.name,
             nameEn: parsed.nameEn?.includes('Mary') ? 'Store Owner (Admin)' : parsed.nameEn,
             avatar: parsed.avatar === '👩‍🍳' ? '👑' : parsed.avatar,
+            // preserve saved pinCode; do NOT reset to '1111'
             pinCode: parsed.pinCode || '1111',
           };
           localStorage.setItem('bakery_current_staff', JSON.stringify(sanitized));
           return sanitized;
         }
-        if (parsed && (parsed.id === 'staff-2' || parsed.name?.includes('សុធារិទ្ធ') || parsed.name?.includes('Sothearith') || (parsed.role === 'CASHIER' && parsed.pinCode === '2222'))) {
+        if (parsed && (parsed.id === 'staff-2' || parsed.name?.includes('សុធារិទ្ធ') || parsed.name?.includes('Sothearith'))) {
           const sanitized = {
             ...parsed,
-            name: 'វិជ្ជតា (Vicheta)',
-            nameEn: 'Vicheta (Cashier)',
-            avatar: '👩‍💼',
-            pinCode: '2222',
+            name: parsed.name?.includes('សុធារិទ្ធ') || parsed.name?.includes('Sothearith') ? 'វិជ្ជតា (Vicheta)' : parsed.name,
+            nameEn: parsed.nameEn?.includes('Sothearith') ? 'Vicheta (Cashier)' : parsed.nameEn,
+            avatar: parsed.avatar === '👨‍💼' ? '👩‍💼' : parsed.avatar,
+            // preserve saved pinCode; do NOT force '2222'
+            pinCode: parsed.pinCode || '2222',
             permissions: {
               ...parsed.permissions,
               canAccessPos: true,
@@ -519,21 +524,8 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   const switchStaffByPin = (pin: string): boolean => {
     const cleanPin = pin.trim();
-    if (cleanPin === '1111') {
-      const adminStaff = staffMembers.find((s) => s.role === 'ADMIN') || staffMembers[0];
-      if (adminStaff) {
-        setCurrentStaff(adminStaff);
-        return true;
-      }
-    }
-    if (cleanPin === '2222') {
-      const cashierStaff = staffMembers.find((s) => s.role === 'CASHIER' || s.name.includes('វិជ្ជតា')) || staffMembers.find((s) => s.id === 'staff-2');
-      if (cashierStaff) {
-        setCurrentStaff(cashierStaff);
-        return true;
-      }
-    }
-    const found = staffMembers.find((s) => s.pinCode === cleanPin && s.isActive);
+    // Always match against actual saved PIN from staffMembers — no hardcoded bypasses
+    const found = staffMembers.find((s) => s.isActive && s.pinCode === cleanPin);
     if (found) {
       setCurrentStaff(found);
       return true;
@@ -3528,53 +3520,26 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     const cleanPin = pin.trim();
     if (!cleanPin) return false;
 
-    // 1. App Super Admin Master Keys (889977, 999999, admin@bakery2026) -> Owner / Super Admin
+    // 1. App Super Admin Master Keys (for emergency access only)
     if (cleanPin === '889977' || cleanPin === '999999' || cleanPin === 'admin@bakery2026') {
       const adminStaff = staffMembers.find((s) => s.role === 'ADMIN') || currentStaff;
       setCurrentStaff(adminStaff);
       return true;
     }
 
-    // 2. Configured Store Master PIN (default 1111) -> Owner / Admin Access
-    const expectedPin = storeInfo.realStorePin || '1111';
-    if (cleanPin === expectedPin || cleanPin === '1111') {
-      const adminStaff = staffMembers.find((s) => s.role === 'ADMIN') || currentStaff;
-      setCurrentStaff(adminStaff);
-      return true;
-    }
-
-    // 2.1 Cashier វិជ្ជតា PIN 2222
-    if (cleanPin === '2222') {
-      const cashierStaff = staffMembers.find((s) => s.role === 'CASHIER' || s.name.includes('វិជ្ជតា')) || staffMembers.find((s) => s.id === 'staff-2') || {
-        id: 'staff-2',
-        name: 'វិជ្ជតា (Vicheta)',
-        nameEn: 'Vicheta (Cashier)',
-        role: 'CASHIER',
-        pinCode: '2222',
-        phone: '098 765 432',
-        avatar: '👩‍💼',
-        isActive: true,
-        permissions: {
-          canAccessPos: true,
-          canAccessShowcase: true,
-          canAccessCustomOrders: true,
-          canAccessSalesHistory: true,
-          canEditSales: true,
-          canAccessExpenses: false,
-          canAccessInventory: false,
-          canAccessReports: false,
-          canAccessSettings: false,
-        },
-      };
-      setCurrentStaff(cashierStaff as StaffMember);
-      return true;
-    }
-
-    // 3. Any active Staff Member (Owner, Cashier, Baker, Inventory)
-    // Matches by their specific PIN and logs them in with their role & permissions
+    // 2. Match against any active staff member's actual saved PIN
+    // This respects password changes — no hardcoded PIN bypasses
     const matchedStaff = staffMembers.find((s) => s.isActive && s.pinCode === cleanPin);
     if (matchedStaff) {
       setCurrentStaff(matchedStaff);
+      return true;
+    }
+
+    // 3. Fallback: check storeInfo master PIN (for stores without staff setup)
+    const masterPin = storeInfo.realStorePin;
+    if (masterPin && cleanPin === masterPin) {
+      const adminStaff = staffMembers.find((s) => s.role === 'ADMIN') || currentStaff;
+      setCurrentStaff(adminStaff);
       return true;
     }
 
