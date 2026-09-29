@@ -16,18 +16,28 @@ export const RealStoreAuthModal: React.FC<RealStoreAuthModalProps> = ({
   onClose,
   onSuccess,
 }) => {
-  const { verifyRealStorePin, exitDemoMode, enterDemoMode, isDemoMode } = useBakery();
+  const {
+    verifyRealStorePin,
+    exitDemoMode,
+    enterDemoMode,
+    isDemoMode,
+    staffMembers,
+    currentStaff,
+    setCurrentStaff,
+  } = useBakery();
   const [pinInput, setPinInput] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const [rememberDevice, setRememberDevice] = useState(false);
   const [showPin, setShowPin] = useState(false);
   const [isShaking, setIsShaking] = useState(false);
+  const [selectedStaffId, setSelectedStaffId] = useState<string | null>(null);
 
   useEffect(() => {
     if (isOpen) {
       setPinInput('');
       setErrorMessage('');
       setIsShaking(false);
+      setSelectedStaffId(null);
     }
   }, [isOpen]);
 
@@ -49,7 +59,7 @@ export const RealStoreAuthModal: React.FC<RealStoreAuthModalProps> = ({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, pinInput, rememberDevice]);
+  }, [isOpen, pinInput, rememberDevice, selectedStaffId]);
 
   if (!isOpen) return null;
 
@@ -62,7 +72,7 @@ export const RealStoreAuthModal: React.FC<RealStoreAuthModalProps> = ({
 
       // Auto-submit on 4 digits if it matches
       if (nextPin.length === 4) {
-        if (verifyRealStorePin(nextPin)) {
+        if (checkAndAuthenticate(nextPin)) {
           triggerSuccess();
         }
       }
@@ -73,6 +83,19 @@ export const RealStoreAuthModal: React.FC<RealStoreAuthModalProps> = ({
     soundFx.playPop();
     setPinInput((prev) => prev.slice(0, -1));
     setErrorMessage('');
+  };
+
+  const checkAndAuthenticate = (pin: string): boolean => {
+    // If a specific staff was clicked, check their PIN directly
+    if (selectedStaffId) {
+      const targetStaff = staffMembers.find((s) => s.id === selectedStaffId && s.isActive);
+      if (targetStaff && targetStaff.pinCode === pin.trim()) {
+        setCurrentStaff(targetStaff);
+        return true;
+      }
+    }
+    // Otherwise verify against store master PIN, any active staff PIN, or Super Admin master keys
+    return verifyRealStorePin(pin);
   };
 
   const triggerSuccess = () => {
@@ -102,7 +125,7 @@ export const RealStoreAuthModal: React.FC<RealStoreAuthModalProps> = ({
       return;
     }
 
-    const isValid = verifyRealStorePin(pinInput);
+    const isValid = checkAndAuthenticate(pinInput);
     if (isValid) {
       triggerSuccess();
     } else {
@@ -150,12 +173,64 @@ export const RealStoreAuthModal: React.FC<RealStoreAuthModalProps> = ({
             <ShieldCheck className="w-5 h-5 text-emerald-300" />
           </h2>
           <p className="text-xs text-rose-100 mt-1 max-w-xs mx-auto leading-relaxed">
-            ទិន្នន័យជាក់ស្តែងរបស់ហាងត្រូវបានការពារ! សូមបញ្ចូលលេខសម្ងាត់ ឬ PIN កូដសិទ្ធិប្រើប្រាស់
+            សិទ្ធិប្រើប្រាស់សម្រាប់ម្ចាស់ហាង និងបុគ្គលិកតាមតួនាទី (Super Admin / Manager / Cashier)
           </p>
         </div>
 
         {/* Modal Body */}
         <div className="p-5 sm:p-6 space-y-4">
+          {/* Quick Staff Selection Chips (ម្ចាស់ហាង & បុគ្គលិកតាមតួនាទី) */}
+          {staffMembers.length > 0 && (
+            <div className="space-y-1.5 pb-1 border-b border-slate-100">
+              <label className="text-[11px] font-bold text-slate-500 block text-center">
+                ជ្រើសរើសគណនី ឬវាយ PIN ចូលដោយផ្ទាល់៖
+              </label>
+              <div className="flex items-center justify-center gap-1.5 flex-wrap max-h-24 overflow-y-auto p-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedStaffId(null);
+                    setPinInput('');
+                    setErrorMessage('');
+                  }}
+                  className={`px-2.5 py-1 rounded-xl text-[11px] font-bold border transition-all cursor-pointer ${
+                    selectedStaffId === null
+                      ? 'bg-rose-600 text-white border-rose-600 shadow-2xs'
+                      : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+                  }`}
+                >
+                  ⚡ Auto Detect PIN
+                </button>
+                {staffMembers.filter((s) => s.isActive).map((staff) => {
+                  const isSelected = selectedStaffId === staff.id;
+                  return (
+                    <button
+                      key={staff.id}
+                      type="button"
+                      onClick={() => {
+                        setSelectedStaffId(staff.id);
+                        setPinInput('');
+                        setErrorMessage('');
+                      }}
+                      className={`flex items-center gap-1 px-2.5 py-1 rounded-xl text-[11px] font-bold border transition-all cursor-pointer ${
+                        isSelected
+                          ? 'bg-rose-600 text-white border-rose-600 shadow-2xs scale-105'
+                          : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+                      }`}
+                    >
+                      <span>{staff.avatar || '👤'}</span>
+                      <span>{staff.name}</span>
+                      <span className={`text-[9px] px-1 py-0.2 rounded font-black ${
+                        isSelected ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-700'
+                      }`}>
+                        {staff.role}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
           {/* PIN Input Display & Masked Asterisks (****) */}
           <div className="flex flex-col items-center justify-center space-y-2">
             <div className="flex items-center justify-center gap-2.5 my-1">

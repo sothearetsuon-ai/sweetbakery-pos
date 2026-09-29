@@ -2807,18 +2807,26 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     const cleanPin = pin.trim();
     if (!cleanPin) return false;
 
-    // 1. Configured Store PIN (default 1111)
-    const expectedPin = storeInfo.realStorePin || '1111';
-    if (cleanPin === expectedPin) return true;
-
-    // 2. Any active Admin Staff PIN
-    const isStaffAdmin = staffMembers
-      .filter((s) => s.isActive && s.role === 'ADMIN')
-      .some((s) => s.pinCode === cleanPin);
-    if (isStaffAdmin) return true;
-
-    // 3. App Super Admin Master Keys (889977, 999999, admin@bakery2026)
+    // 1. App Super Admin Master Keys (889977, 999999, admin@bakery2026) -> Owner / Super Admin
     if (cleanPin === '889977' || cleanPin === '999999' || cleanPin === 'admin@bakery2026') {
+      const adminStaff = staffMembers.find((s) => s.role === 'ADMIN') || currentStaff;
+      setCurrentStaff(adminStaff);
+      return true;
+    }
+
+    // 2. Configured Store Master PIN (default 1111) -> Owner / Admin Access
+    const expectedPin = storeInfo.realStorePin || '1111';
+    if (cleanPin === expectedPin) {
+      const adminStaff = staffMembers.find((s) => s.role === 'ADMIN') || currentStaff;
+      setCurrentStaff(adminStaff);
+      return true;
+    }
+
+    // 3. Any active Staff Member (Owner, Cashier, Baker, Inventory)
+    // Matches by their specific PIN and logs them in with their role & permissions
+    const matchedStaff = staffMembers.find((s) => s.isActive && s.pinCode === cleanPin);
+    if (matchedStaff) {
+      setCurrentStaff(matchedStaff);
       return true;
     }
 
