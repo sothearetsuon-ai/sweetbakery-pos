@@ -14,6 +14,7 @@ import {
   ExternalLink,
   ShieldCheck,
   Cloud,
+  FlaskConical,
 } from 'lucide-react';
 import { useBakery } from '../../context/BakeryContext';
 import { soundFx } from '../../utils/audio';
@@ -31,7 +32,7 @@ export const MobileConnectModal: React.FC<MobileConnectModalProps> = ({ isOpen, 
   const [port, setPort] = useState('3000');
   const [isEditingIp, setIsEditingIp] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [activeTab, setActiveTab] = useState<'cloud' | 'wifi'>('cloud');
+  const [activeTab, setActiveTab] = useState<'cloud' | 'wifi' | 'demo'>('cloud');
 
   if (!isOpen) return null;
 
@@ -40,7 +41,13 @@ export const MobileConnectModal: React.FC<MobileConnectModalProps> = ({ isOpen, 
       ? window.location.origin
       : 'https://sweetbakery-pos.surge.sh';
 
-  const mobileUrl = activeTab === 'cloud' ? cloudUrl : `http://${localIp}:${port}`;
+  const demoUrl =
+    typeof window !== 'undefined'
+      ? `${window.location.origin}${window.location.pathname}?demo=true`
+      : `${cloudUrl}?demo=true`;
+
+  const mobileUrl =
+    activeTab === 'demo' ? demoUrl : activeTab === 'cloud' ? cloudUrl : `http://${localIp}:${port}`;
   const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=280x280&data=${encodeURIComponent(
     mobileUrl
   )}`;
@@ -65,7 +72,7 @@ export const MobileConnectModal: React.FC<MobileConnectModalProps> = ({ isOpen, 
               <h3 className="font-black text-slate-800 text-base">
                 ដំណើរការប្រើប្រាស់តាមទូរស័ព្ទដៃ (Mobile Phone Access)
               </h3>
-              <p className="text-xs text-slate-500">ស្កេនភ្ជាប់ទូរស័ព្ទបុគ្គលិកដើម្បីប្រើប្រាស់គ្រប់ទីកន្លែង</p>
+              <p className="text-xs text-slate-500">ស្កេនភ្ជាប់ទូរស័ព្ទ ឬចែករំលែក Link Demo ឱ្យអ្នកដទៃសាកល្បង</p>
             </div>
           </div>
 
@@ -80,23 +87,23 @@ export const MobileConnectModal: React.FC<MobileConnectModalProps> = ({ isOpen, 
           </button>
         </div>
 
-        {/* Mode Switch Tabs: Online Cloud vs Wi-Fi Local */}
+        {/* Mode Switch Tabs: Online Cloud vs Wi-Fi Local vs Demo Sandbox */}
         <div className="px-6 pt-4 bg-slate-50/50">
-          <div className="grid grid-cols-2 p-1 bg-slate-100 rounded-2xl border border-slate-200 text-xs font-bold">
+          <div className="grid grid-cols-3 p-1 bg-slate-100 rounded-2xl border border-slate-200 text-xs font-bold gap-1">
             <button
               type="button"
               onClick={() => {
                 soundFx.playPop();
                 setActiveTab('cloud');
               }}
-              className={`py-2 rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+              className={`py-2 rounded-xl transition-all flex items-center justify-center gap-1 cursor-pointer text-[11px] sm:text-xs ${
                 activeTab === 'cloud'
                   ? 'bg-white text-purple-700 shadow-xs font-black'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              <Cloud className="w-4 h-4 text-purple-600" />
-              <span>១. តាម Cloud Online (ណែនាំ) 🚀</span>
+              <Cloud className="w-3.5 h-3.5 text-purple-600" />
+              <span>១. Cloud 🚀</span>
             </button>
             <button
               type="button"
@@ -104,14 +111,29 @@ export const MobileConnectModal: React.FC<MobileConnectModalProps> = ({ isOpen, 
                 soundFx.playPop();
                 setActiveTab('wifi');
               }}
-              className={`py-2 rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+              className={`py-2 rounded-xl transition-all flex items-center justify-center gap-1 cursor-pointer text-[11px] sm:text-xs ${
                 activeTab === 'wifi'
                   ? 'bg-white text-pink-600 shadow-xs font-black'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              <Wifi className="w-4 h-4 text-pink-600" />
-              <span>២. តាម Wi-Fi ក្នុងហាង</span>
+              <Wifi className="w-3.5 h-3.5 text-pink-600" />
+              <span>២. Wi-Fi</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                soundFx.playPop();
+                setActiveTab('demo');
+              }}
+              className={`py-2 rounded-xl transition-all flex items-center justify-center gap-1 cursor-pointer text-[11px] sm:text-xs ${
+                activeTab === 'demo'
+                  ? 'bg-gradient-to-r from-amber-500 to-rose-500 text-white shadow-xs font-black'
+                  : 'text-amber-800 hover:text-amber-950 bg-amber-50/60'
+              }`}
+            >
+              <FlaskConical className={`w-3.5 h-3.5 ${activeTab === 'demo' ? 'text-white' : 'text-amber-600'}`} />
+              <span>៣. Demo 🧪</span>
             </button>
           </div>
         </div>
@@ -120,7 +142,12 @@ export const MobileConnectModal: React.FC<MobileConnectModalProps> = ({ isOpen, 
         <div className="p-6 space-y-5 overflow-y-auto flex-1">
           {/* QR Code Card */}
           <div className="p-5 bg-gradient-to-b from-purple-50/40 via-pink-50/30 to-white border border-rose-100 rounded-3xl text-center space-y-3">
-            {activeTab === 'cloud' ? (
+            {activeTab === 'demo' ? (
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-50 text-amber-800 rounded-full text-xs font-bold border border-amber-300">
+                <FlaskConical className="w-3.5 h-3.5 text-amber-600 animate-pulse" />
+                <span>របៀបសាកល្បង Demo (?demo=true) - មិនប៉ះពាល់ហាងពិត!</span>
+              </div>
+            ) : activeTab === 'cloud' ? (
               <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-50 text-emerald-700 rounded-full text-xs font-bold border border-emerald-200">
                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                 <span>ដំណើរការលើ Cloud Online រួចរាល់ (Free ១០០%)</span>
@@ -154,8 +181,10 @@ export const MobileConnectModal: React.FC<MobileConnectModalProps> = ({ isOpen, 
                 <span>{copied ? 'បានចម្លង!' : 'ចម្លង Link'}</span>
               </button>
             </div>
-            <p className="text-[11px] text-slate-400">
-              {activeTab === 'cloud'
+            <p className="text-[11px] text-slate-500">
+              {activeTab === 'demo'
+                ? '🧪 ផ្ញើ Link ឬឱ្យអ្នកផ្សេងស្កេន QR នេះដើម្បីសាកល្បង App ដោយសេរី ដោយមិនប៉ះពាល់ដល់ទិន្នន័យជាក់ស្តែងរបស់ហាងឡើយ!'
+                : activeTab === 'cloud'
                 ? '✨ បុគ្គលិកអាចប្រើបានពីគ្រប់ទីកន្លែង ទោះនៅហាង ក្រៅហាង តាម Wi-Fi ឬ 4G/5G'
                 : '⚠️ ទូរស័ព្ទបុគ្គលិក និងកុំព្យូទ័រត្រូវភ្ជាប់ Wi-Fi តែមួយក្នុងហាង'}
             </p>

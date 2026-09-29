@@ -22,6 +22,7 @@ import {
   Key,
   Link as LinkIcon,
   RefreshCw,
+  FlaskConical,
 } from 'lucide-react';
 import { useBakery } from '../../context/BakeryContext';
 import { useMusic } from '../../context/MusicContext';
@@ -67,6 +68,9 @@ export const Navbar: React.FC<NavbarProps> = ({
     offlineSyncStatus,
     pendingSyncCount,
     triggerAutoCloudSync,
+    isDemoMode,
+    enterDemoMode,
+    exitDemoMode,
   } = useBakery();
   const { isPlaying: isMusicPlaying, setIsPlayerOpen: setIsMusicPlayerOpen } = useMusic();
   const text = t[lang];
@@ -297,6 +301,38 @@ export const Navbar: React.FC<NavbarProps> = ({
             }`}
           >
             {soundEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
+          </button>
+
+          {/* Demo Sandbox Mode Quick Toggle */}
+          <button
+            type="button"
+            onClick={() => {
+              soundFx.playPop();
+              if (isDemoMode) {
+                if (window.confirm('តើអ្នកចង់ចាកចេញពីរបៀបសាកល្បង (Demo Sandbox) ត្រឡប់ទៅហាងពិតវិញមែនទេ?')) {
+                  exitDemoMode();
+                }
+              } else {
+                if (window.confirm('តើអ្នកចង់បើករបៀបសាកល្បង (Demo Sandbox Mode) មែនទេ? \n\n✨ រាល់ការលក់ បញ្ចូលនំ ឬកែប្រែទិន្នន័យ នឹងត្រូវបានញែកដាច់ដោយឡែក ហើយមិនប៉ះពាល់ទិន្នន័យជាក់ស្តែងរបស់ហាងឡើយ!')) {
+                  enterDemoMode();
+                }
+              }
+            }}
+            title={
+              isDemoMode
+                ? '🧪 កំពុងស្ថិតក្នុង Demo Sandbox Mode (ចុចដើម្បីចាកចេញ)'
+                : '🧪 បើករបៀបសាកល្បង (Demo Sandbox Mode - សាកបានដោយសុវត្ថិភាព)'
+            }
+            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-2xl text-xs font-black transition-all border shadow-2xs cursor-pointer active:scale-95 ${
+              isDemoMode
+                ? 'bg-gradient-to-r from-amber-500 to-rose-500 text-white border-amber-300 animate-pulse'
+                : 'bg-amber-50/80 text-amber-800 border-amber-200 hover:bg-amber-100 hover:border-amber-300'
+            }`}
+          >
+            <FlaskConical className={`w-3.5 h-3.5 ${isDemoMode ? 'text-white' : 'text-amber-600'}`} />
+            <span className="hidden sm:inline">
+              {isDemoMode ? 'Demo សកម្ម' : '🧪 Demo'}
+            </span>
           </button>
 
           {/* Quick Counter KHQR Standee Button */}

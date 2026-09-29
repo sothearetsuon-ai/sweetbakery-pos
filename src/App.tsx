@@ -26,6 +26,7 @@ import { isSuperAdminAuthenticated, onSuperAdminAuthChange, deauthenticateSuperA
 import { CustomerOrderPortal } from './components/customer-order/CustomerOrderPortal';
 import { CustomerOrderLinkModal } from './components/customer-order/CustomerOrderLinkModal';
 import { OfflineAutoSyncToast } from './components/common/OfflineAutoSyncToast';
+import { DemoModeBanner } from './components/common/DemoModeBanner';
 import { soundFx } from './utils/audio';
 import confetti from 'canvas-confetti';
 
@@ -140,6 +141,9 @@ export const App: React.FC = () => {
       className={`min-h-screen ${currentTheme.bgClass} flex flex-col font-sans selection:bg-pink-100 selection:text-pink-700 overflow-x-hidden transition-colors duration-300`}
       style={currentTheme.bgStyle}
     >
+      {/* Demo Sandbox Mode Sticky Banner */}
+      <DemoModeBanner />
+
       {/* Background Notification Scheduler & Polite Banner */}
       <NotificationReminderScheduler />
 

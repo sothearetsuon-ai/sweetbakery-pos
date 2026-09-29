@@ -37,26 +37,159 @@ import {
   getFirestoreDb,
   subscribeToFirestoreCollection,
   subscribeToFirestoreDoc,
-  saveFirestoreDoc,
-  deleteFirestoreDoc,
+  saveFirestoreDoc as rawSaveFirestoreDoc,
+  deleteFirestoreDoc as rawDeleteFirestoreDoc,
 } from '../services/firebase';
 import {
-  notifyTelegramSale,
-  notifyTelegramCustomOrder,
-  notifyTelegramExpense,
-  notifyTelegramShiftClose,
+  notifyTelegramSale as rawNotifyTelegramSale,
+  notifyTelegramCustomOrder as rawNotifyTelegramCustomOrder,
+  notifyTelegramExpense as rawNotifyTelegramExpense,
+  notifyTelegramShiftClose as rawNotifyTelegramShiftClose,
   getStoredTelegramConfig,
   saveStoredTelegramConfig,
 } from '../services/telegram';
 import { offlineSyncService, SyncState } from '../services/offlineSyncService';
 
+// Global demo mode flag to safely block cloud sync, LAN disk writes, and Telegram alerts during Demo mode
+let globalIsDemoMode = false;
+export const setGlobalIsDemoMode = (val: boolean) => {
+  globalIsDemoMode = val;
+};
+export const getGlobalIsDemoMode = () => globalIsDemoMode;
+
+export const checkInitialDemoMode = (): boolean => {
+  if (typeof window === 'undefined') return false;
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('demo') === 'true' || window.location.hash === '#demo') {
+    return true;
+  }
+  return localStorage.getItem('bakery_is_demo_mode') === 'true';
+};
+
+globalIsDemoMode = checkInitialDemoMode();
+
+// Safely block writes and notifications during Demo Mode
+const saveFirestoreDoc = (collectionName: string, docId: string, data: any) => {
+  if (globalIsDemoMode) return Promise.resolve(false);
+  return rawSaveFirestoreDoc(collectionName, docId, data);
+};
+
+const deleteFirestoreDoc = (collectionName: string, docId: string) => {
+  if (globalIsDemoMode) return Promise.resolve(false);
+  return rawDeleteFirestoreDoc(collectionName, docId);
+};
+
+const notifyTelegramSale = async (...args: Parameters<typeof rawNotifyTelegramSale>) => {
+  if (globalIsDemoMode) return null;
+  return rawNotifyTelegramSale(...args);
+};
+
+const notifyTelegramCustomOrder = async (...args: Parameters<typeof rawNotifyTelegramCustomOrder>) => {
+  if (globalIsDemoMode) return null;
+  return rawNotifyTelegramCustomOrder(...args);
+};
+
+const notifyTelegramExpense = async (...args: Parameters<typeof rawNotifyTelegramExpense>) => {
+  if (globalIsDemoMode) return null;
+  return rawNotifyTelegramExpense(...args);
+};
+
+const notifyTelegramShiftClose = async (...args: Parameters<typeof rawNotifyTelegramShiftClose>) => {
+  if (globalIsDemoMode) return null;
+  return rawNotifyTelegramShiftClose(...args);
+};
+
+// Safe LAN Fetch: prevents any write/sync to backend JSON disk files during Demo Mode
+const fetch: typeof window.fetch = (input, init) => {
+  if (globalIsDemoMode) {
+    const urlStr = typeof input === 'string' ? input : input instanceof URL ? input.toString() : (input as Request).url;
+    if (urlStr.includes('/api/')) {
+      return Promise.resolve(new Response(JSON.stringify({ success: true, demo: true, exists: false })));
+    }
+  }
+  return window.fetch(input, init);
+};
+
+export const demoStoreInfo: StoreInfo = {
+  nameKh: 'ហាងនំគំរូ សាកល្បង (SweetBakery Demo)',
+  nameEn: 'SweetBakery Demo Sandbox',
+  logoUrl: '/uploads/products/prod_1789651345094_x6k2.jpg',
+  phone: '012 345 678',
+  address: 'រាជធានីភ្នំពេញ (ទីតាំងគំរូ Demo)',
+  tagline: '✨ របៀបសាកល្បង Demo - មិនប៉ះពាល់ទិន្នន័យជាក់ស្តែងរបស់ហាងឡើយ',
+  khqrQrImage: '/uploads/products/prod_1789651425146_asp0.jpg',
+  khqrMerchantName: 'SWEET BAKERY DEMO',
+  khqrBakongId: 'demo_bakery@aba',
+  khqrAccountNumber: '000000000',
+  khqrBankName: 'Demo Bank / Bakong',
+};
+
+export const defaultStoreInfo: StoreInfo = {
+  nameKh: 'ហាងនំខកនិងនំបុ័ងវិជ្ជតា',
+  nameEn: 'SweetBakery & Cafe',
+  logoUrl: '/uploads/products/prod_1789651345094_x6k2.jpg',
+  phone: '0978707000',
+  address: 'រតនៈគីរី អូរយ៉ាដាវ',
+  tagline: 'នំខេកឆ្ងាញ់ប្រណិត ស្រស់ៗរាល់ថ្ងៃ • មានទទួលកុម្ម៉ង់គ្រប់ម៉ូដ',
+  khqrQrImage: '/uploads/products/prod_1789651425146_asp0.jpg',
+  khqrMerchantName: 'Suon Sothearet',
+  khqrBakongId: 'sweet_bakery@aba',
+  khqrAccountNumber: '012629160',
+  khqrBankName: 'ACLEDA Bank / Bakong',
+};
+
+export const initialPartyAddons: PartyAddon[] = [
+  { id: 'hat', nameKh: '🎩 មួកខួបកំណើត (Pack 5)', priceUsd: 2.0, priceKhr: 8000 },
+  { id: 'num-candle', nameKh: '🕯️ ទៀនលេខ 0-9 ពណ៌មាស', priceUsd: 0.75, priceKhr: 3000 },
+  { id: 'sparkler', nameKh: '🎆 ទៀនកាំជ្រួចភ្លើង (Fountain)', priceUsd: 1.5, priceKhr: 6000 },
+  { id: 'spray', nameKh: '❄️ ស្ព្រាយបាញ់ព្រិល/ខ្សែពណ៌', priceUsd: 1.5, priceKhr: 6000 },
+  { id: 'topper', nameKh: '✨ ស្លាក Happy Birthday Acrylic', priceUsd: 1.2, priceKhr: 4800 },
+  { id: 'card', nameKh: '💌 កាតជូនពរប្រណិត', priceUsd: 1.0, priceKhr: 4000 },
+];
+
+export const seedDemoDataIfMissing = () => {
+  if (typeof window === 'undefined') return;
+  if (!localStorage.getItem('demo_bakery_products')) {
+    localStorage.setItem('demo_bakery_products', JSON.stringify(initialProducts));
+  }
+  if (!localStorage.getItem('demo_bakery_sales')) {
+    localStorage.setItem('demo_bakery_sales', JSON.stringify(initialSales));
+  }
+  if (!localStorage.getItem('demo_bakery_custom_orders')) {
+    localStorage.setItem('demo_bakery_custom_orders', JSON.stringify(initialOrders));
+  }
+  if (!localStorage.getItem('demo_bakery_expenses')) {
+    localStorage.setItem('demo_bakery_expenses', JSON.stringify(initialExpenses));
+  }
+  if (!localStorage.getItem('demo_bakery_ingredients')) {
+    localStorage.setItem('demo_bakery_ingredients', JSON.stringify(initialIngredients));
+  }
+  if (!localStorage.getItem('demo_bakery_recipes')) {
+    localStorage.setItem('demo_bakery_recipes', JSON.stringify(initialRecipes));
+  }
+  if (!localStorage.getItem('demo_bakery_party_addons')) {
+    localStorage.setItem('demo_bakery_party_addons', JSON.stringify(initialPartyAddons));
+  }
+  if (!localStorage.getItem('demo_bakery_flavors')) {
+    localStorage.setItem('demo_bakery_flavors', JSON.stringify(initialFlavors));
+  }
+  if (!localStorage.getItem('demo_bakery_shift')) {
+    localStorage.setItem('demo_bakery_shift', JSON.stringify(initialShift));
+  }
+  if (!localStorage.getItem('demo_bakery_store_info')) {
+    localStorage.setItem('demo_bakery_store_info', JSON.stringify(demoStoreInfo));
+  }
+};
+
 // Unified wrapper to guarantee every write & delete is queued for offline-to-cloud automatic sync
 const syncSaveDoc = (collectionName: string, docId: string, data: any) => {
+  if (globalIsDemoMode) return; // Completely isolated from cloud in Demo mode
   saveFirestoreDoc(collectionName, docId, data);
   offlineSyncService.queueMutation(collectionName, docId, 'set', data);
 };
 
 const syncDeleteDoc = (collectionName: string, docId: string) => {
+  if (globalIsDemoMode) return; // Completely isolated from cloud in Demo mode
   deleteFirestoreDoc(collectionName, docId);
   offlineSyncService.queueMutation(collectionName, docId, 'delete');
 };
@@ -66,6 +199,12 @@ interface BakeryContextType {
   setLang: (lang: Language) => void;
   exchangeRate: number; // e.g. 4100
   setExchangeRate: (rate: number) => void;
+
+  // Demo Sandbox Mode
+  isDemoMode: boolean;
+  enterDemoMode: () => void;
+  exitDemoMode: () => void;
+  resetDemoData: () => void;
 
   isFirebaseConnected: boolean;
   firebaseSyncStatus: 'connected' | 'disconnected' | 'syncing';
@@ -179,6 +318,24 @@ interface BakeryContextType {
 const BakeryContext = createContext<BakeryContextType | undefined>(undefined);
 
 export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  // Demo Sandbox Mode state
+  const [isDemoMode, setIsDemoMode] = useState<boolean>(() => {
+    const isDemo = checkInitialDemoMode();
+    if (isDemo) {
+      seedDemoDataIfMissing();
+    }
+    return isDemo;
+  });
+
+  useEffect(() => {
+    setGlobalIsDemoMode(isDemoMode);
+    if (isDemoMode) {
+      localStorage.setItem('bakery_is_demo_mode', 'true');
+    } else {
+      localStorage.removeItem('bakery_is_demo_mode');
+    }
+  }, [isDemoMode]);
+
   const [lang, setLang] = useState<Language>(() => {
     return (localStorage.getItem('bakery_lang') as Language) || 'km';
   });
@@ -290,6 +447,17 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   };
 
   const [storeInfo, setStoreInfo] = useState<StoreInfo>(() => {
+    if (globalIsDemoMode) {
+      seedDemoDataIfMissing();
+      const savedDemo = localStorage.getItem('demo_bakery_store_info');
+      if (savedDemo) {
+        try {
+          return { ...demoStoreInfo, ...JSON.parse(savedDemo) };
+        } catch (e) {}
+      }
+      return demoStoreInfo;
+    }
+
     const saved = localStorage.getItem('bakery_store_info');
     const defaultInfo: StoreInfo = {
       nameKh: 'ហាងនំខកនិងនំបុ័ងវិជ្ជតា',
@@ -325,6 +493,19 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   });
 
   const updateStoreInfo = (info: Partial<StoreInfo>) => {
+    if (globalIsDemoMode) {
+      setStoreInfo((prev) => {
+        const updated = {
+          ...prev,
+          ...info,
+          address: info.address || (info as any).addressKh || prev.address || '',
+        };
+        try { localStorage.setItem('demo_bakery_store_info', JSON.stringify(updated)); } catch (e) {}
+        return updated;
+      });
+      return;
+    }
+
     isUpdatingFromLan.current = false;
     if (lanSyncTimer.current) clearTimeout(lanSyncTimer.current);
 
@@ -390,6 +571,17 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   // Products with seamless merge for party supplies & cake items (newest images/products first)
   const [products, setProducts] = useState<Product[]>(() => {
+    if (globalIsDemoMode) {
+      seedDemoDataIfMissing();
+      const savedDemo = localStorage.getItem('demo_bakery_products');
+      if (savedDemo) {
+        try {
+          return sortProductsNewestFirst(JSON.parse(savedDemo));
+        } catch (e) {}
+      }
+      return sortProductsNewestFirst(initialProducts);
+    }
+
     const saved = localStorage.getItem('bakery_products');
     if (saved) {
       try {
@@ -408,6 +600,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   // Auto-heal products in localStorage on mount
   useEffect(() => {
+    if (globalIsDemoMode) return;
     try {
       const saved = localStorage.getItem('bakery_products');
       if (saved) {
@@ -434,6 +627,11 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   // Dynamic Flavors list
   const [flavors, setFlavors] = useState<string[]>(() => {
+    if (globalIsDemoMode) {
+      seedDemoDataIfMissing();
+      const saved = localStorage.getItem('demo_bakery_flavors');
+      return saved ? JSON.parse(saved) : initialFlavors;
+    }
     const saved = localStorage.getItem('bakery_flavors');
     return saved ? JSON.parse(saved) : initialFlavors;
   });
@@ -449,6 +647,16 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   ];
 
   const [partyAddons, setPartyAddons] = useState<PartyAddon[]>(() => {
+    if (globalIsDemoMode) {
+      seedDemoDataIfMissing();
+      const saved = localStorage.getItem('demo_bakery_party_addons');
+      if (saved) {
+        try {
+          return JSON.parse(saved);
+        } catch (e) {}
+      }
+      return initialPartyAddons;
+    }
     const saved = localStorage.getItem('bakery_party_addons');
     if (saved) {
       try {
@@ -503,6 +711,13 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   };
 
   const safeSetStorage = (key: string, value: string) => {
+    if (globalIsDemoMode) {
+      try {
+        localStorage.setItem(`demo_${key}`, value);
+      } catch (e) {}
+      return;
+    }
+
     // 1. Always persist full durable data to IndexedDB (asynchronously, unlimited capacity)
     idbSet(key, value).catch(() => {});
 
@@ -548,28 +763,53 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [cart, setCart] = useState<CartItem[]>([]);
 
   const [customOrders, setCustomOrders] = useState<CustomCakeOrder[]>(() => {
+    if (globalIsDemoMode) {
+      seedDemoDataIfMissing();
+      const saved = localStorage.getItem('demo_bakery_custom_orders');
+      return saved ? JSON.parse(saved) : initialOrders;
+    }
     const saved = localStorage.getItem('bakery_custom_orders');
     return saved ? JSON.parse(saved) : initialOrders;
   });
 
   const [ingredients, setIngredients] = useState<Ingredient[]>(() => {
+    if (globalIsDemoMode) {
+      seedDemoDataIfMissing();
+      const saved = localStorage.getItem('demo_bakery_ingredients');
+      return saved ? JSON.parse(saved) : initialIngredients;
+    }
     const saved = localStorage.getItem('bakery_ingredients');
     return saved ? JSON.parse(saved) : initialIngredients;
   });
 
   const [recipes, setRecipes] = useState<Recipe[]>(() => {
+    if (globalIsDemoMode) {
+      seedDemoDataIfMissing();
+      const saved = localStorage.getItem('demo_bakery_recipes');
+      return saved ? JSON.parse(saved) : initialRecipes;
+    }
     const saved = localStorage.getItem('bakery_recipes');
     return saved ? JSON.parse(saved) : initialRecipes;
   });
 
   // Expenses management
   const [expenses, setExpenses] = useState<Expense[]>(() => {
+    if (globalIsDemoMode) {
+      seedDemoDataIfMissing();
+      const saved = localStorage.getItem('demo_bakery_expenses');
+      return saved ? JSON.parse(saved) : initialExpenses;
+    }
     const saved = localStorage.getItem('bakery_expenses');
     return saved ? JSON.parse(saved) : initialExpenses;
   });
 
   // Sales management (including past sales)
   const [sales, setSales] = useState<CompletedSale[]>(() => {
+    if (globalIsDemoMode) {
+      seedDemoDataIfMissing();
+      const saved = localStorage.getItem('demo_bakery_sales');
+      return saved ? JSON.parse(saved) : initialSales;
+    }
     const saved = localStorage.getItem('bakery_sales');
     return saved ? JSON.parse(saved) : initialSales;
   });
@@ -577,6 +817,11 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [activeReceipt, setActiveReceipt] = useState<CompletedSale | null>(null);
 
   const [currentShift, setCurrentShift] = useState<Shift | null>(() => {
+    if (globalIsDemoMode) {
+      seedDemoDataIfMissing();
+      const saved = localStorage.getItem('demo_bakery_shift');
+      return saved ? JSON.parse(saved) : initialShift;
+    }
     const saved = localStorage.getItem('bakery_shift');
     return saved ? JSON.parse(saved) : initialShift;
   });
@@ -626,6 +871,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const isIdbHydrated = useRef(false);
   useEffect(() => {
     if (isIdbHydrated.current) return;
+    if (globalIsDemoMode) return;
     isIdbHydrated.current = true;
 
     const hydrateFromIdb = async () => {
@@ -699,6 +945,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   // Auto-sync any DELIVERED custom orders that are not yet recorded in sales (e.g. historical/existing orders)
   useEffect(() => {
+    if (globalIsDemoMode) return;
     const deliveredOrders = customOrders.filter((o) => o.status === 'DELIVERED');
     if (deliveredOrders.length === 0) return;
 
@@ -779,6 +1026,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const deletedProductIds = useRef<Set<string>>(new Set());
 
   const saveToLanSync = (payload: any, force: boolean = false) => {
+    if (globalIsDemoMode) return;
     if (!force && isUpdatingFromLan.current) return;
     try {
       fetch('/api/lan-sync', {
@@ -790,6 +1038,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   };
 
   const applyLanData = (data: any) => {
+    if (globalIsDemoMode) return;
     if (!data || data.exists === false) return;
     isUpdatingFromLan.current = true;
     if (lanSyncTimer.current) clearTimeout(lanSyncTimer.current);
@@ -934,6 +1183,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
     // 2. Window focus & visibility sync (immediately sync when switching tabs/windows)
     const handleSyncOnFocus = () => {
+      if (globalIsDemoMode) return;
       fetch('/api/lan-sync')
         .then((res) => res.json())
         .then((data) => applyLanData(data))
@@ -973,6 +1223,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   // Broadcast any state updates to LAN server (debounced)
   const isInitialMount = useRef<boolean>(true);
   useEffect(() => {
+    if (globalIsDemoMode) return;
     if (isInitialMount.current) {
       isInitialMount.current = false;
       return;
@@ -1027,10 +1278,13 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setFirebaseSyncStatus('connected');
 
     // Automatically trigger queue processing when Firebase initializes & connects
-    offlineSyncService.processQueue().catch(() => {});
+    if (!globalIsDemoMode) {
+      offlineSyncService.processQueue().catch(() => {});
+    }
 
     // Subscribe to products
     const unsubProducts = subscribeToFirestoreCollection<Product>('products', (cloudProducts) => {
+      if (globalIsDemoMode) return;
       if (Array.isArray(cloudProducts) && cloudProducts.length > 0) {
         const filtered = sortProductsNewestFirst(cloudProducts.filter((p) => p && p.id && !deletedProductIds.current.has(p.id)));
         setProducts((prev) => {
@@ -1046,6 +1300,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
     // Subscribe to sales
     const unsubSales = subscribeToFirestoreCollection<CompletedSale>('sales', (cloudSales) => {
+      if (globalIsDemoMode) return;
       if (Array.isArray(cloudSales) && cloudSales.length > 0) {
         const filtered = cloudSales
           .filter((s) => s && s.id && !deletedSaleIds.current.has(s.id))
@@ -1065,6 +1320,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
     // Subscribe to custom orders
     const unsubOrders = subscribeToFirestoreCollection<CustomCakeOrder>('customOrders', (cloudOrders) => {
+      if (globalIsDemoMode) return;
       if (Array.isArray(cloudOrders) && cloudOrders.length > 0) {
         setCustomOrders((prev) => {
           const map = new Map<string, CustomCakeOrder>();
@@ -1081,6 +1337,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
     // Subscribe to expenses
     const unsubExpenses = subscribeToFirestoreCollection<Expense>('expenses', (cloudExpenses) => {
+      if (globalIsDemoMode) return;
       if (Array.isArray(cloudExpenses) && cloudExpenses.length > 0) {
         const sorted = cloudExpenses
           .filter((e) => e && e.id && !deletedExpenseIds.current.has(e.id))
@@ -1103,6 +1360,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
     // Subscribe to staff members
     const unsubStaff = subscribeToFirestoreCollection<StaffMember>('staffMembers', (cloudStaff) => {
+      if (globalIsDemoMode) return;
       if (cloudStaff && cloudStaff.length > 0) {
         const sanitizedCloud = cloudStaff.map((s) => {
           if (s.name?.includes('ម៉ារី') || s.name?.includes('Mary') || s.id === 'staff-1') {
@@ -1125,6 +1383,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
     // Subscribe to ingredients
     const unsubIngredients = subscribeToFirestoreCollection<Ingredient>('ingredients', (cloudIngredients) => {
+      if (globalIsDemoMode) return;
       if (Array.isArray(cloudIngredients)) {
         setIngredients(cloudIngredients);
         safeSetStorage('bakery_ingredients', JSON.stringify(cloudIngredients));
@@ -1133,6 +1392,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
     // Subscribe to recipes
     const unsubRecipes = subscribeToFirestoreCollection<Recipe>('recipes', (cloudRecipes) => {
+      if (globalIsDemoMode) return;
       if (Array.isArray(cloudRecipes)) {
         setRecipes(cloudRecipes);
         safeSetStorage('bakery_recipes', JSON.stringify(cloudRecipes));
@@ -1141,6 +1401,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
     // Subscribe to store info
     const unsubStoreInfo = subscribeToFirestoreDoc<StoreInfo>('settings', 'storeInfo', (cloudStoreInfo) => {
+      if (globalIsDemoMode) return;
       if (cloudStoreInfo && cloudStoreInfo.nameKh) {
         setStoreInfo((prev) => {
           const merged = { ...prev, ...cloudStoreInfo };
@@ -2394,6 +2655,127 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     URL.revokeObjectURL(url);
   };
 
+  const enterDemoMode = () => {
+    seedDemoDataIfMissing();
+    setGlobalIsDemoMode(true);
+    localStorage.setItem('bakery_is_demo_mode', 'true');
+    setIsDemoMode(true);
+
+    try {
+      const demoProd = localStorage.getItem('demo_bakery_products');
+      setProducts(demoProd ? sortProductsNewestFirst(JSON.parse(demoProd)) : sortProductsNewestFirst(initialProducts));
+
+      const demoSales = localStorage.getItem('demo_bakery_sales');
+      setSales(demoSales ? JSON.parse(demoSales) : initialSales);
+
+      const demoOrders = localStorage.getItem('demo_bakery_custom_orders');
+      setCustomOrders(demoOrders ? JSON.parse(demoOrders) : initialOrders);
+
+      const demoExpenses = localStorage.getItem('demo_bakery_expenses');
+      setExpenses(demoExpenses ? JSON.parse(demoExpenses) : initialExpenses);
+
+      const demoIngredients = localStorage.getItem('demo_bakery_ingredients');
+      setIngredients(demoIngredients ? JSON.parse(demoIngredients) : initialIngredients);
+
+      const demoRecipes = localStorage.getItem('demo_bakery_recipes');
+      setRecipes(demoRecipes ? JSON.parse(demoRecipes) : initialRecipes);
+
+      const demoAddons = localStorage.getItem('demo_bakery_party_addons');
+      setPartyAddons(demoAddons ? JSON.parse(demoAddons) : initialPartyAddons);
+
+      const demoFlavorsList = localStorage.getItem('demo_bakery_flavors');
+      setFlavors(demoFlavorsList ? JSON.parse(demoFlavorsList) : initialFlavors);
+
+      const demoShiftData = localStorage.getItem('demo_bakery_shift');
+      setCurrentShift(demoShiftData ? JSON.parse(demoShiftData) : initialShift);
+
+      const demoStore = localStorage.getItem('demo_bakery_store_info');
+      setStoreInfo(demoStore ? JSON.parse(demoStore) : demoStoreInfo);
+
+      setCart([]);
+      setActiveReceipt(null);
+    } catch (e) {
+      console.error('Error entering demo mode:', e);
+    }
+  };
+
+  const exitDemoMode = async () => {
+    setGlobalIsDemoMode(false);
+    localStorage.removeItem('bakery_is_demo_mode');
+    setIsDemoMode(false);
+
+    if (typeof window !== 'undefined') {
+      const url = new URL(window.location.href);
+      if (url.searchParams.has('demo')) {
+        url.searchParams.delete('demo');
+        window.history.replaceState({}, '', url.pathname + (url.search ? url.search : '') + url.hash);
+      }
+    }
+
+    try {
+      const liveProd = (await idbGet('bakery_products')) || localStorage.getItem('bakery_products');
+      if (liveProd) setProducts(sortProductsNewestFirst(JSON.parse(liveProd)));
+
+      const liveSales = (await idbGet('bakery_sales')) || localStorage.getItem('bakery_sales');
+      if (liveSales) setSales(JSON.parse(liveSales));
+
+      const liveOrders = (await idbGet('bakery_custom_orders')) || localStorage.getItem('bakery_custom_orders');
+      if (liveOrders) setCustomOrders(JSON.parse(liveOrders));
+
+      const liveExpenses = (await idbGet('bakery_expenses')) || localStorage.getItem('bakery_expenses');
+      if (liveExpenses) setExpenses(JSON.parse(liveExpenses));
+
+      const liveIngredients = (await idbGet('bakery_ingredients')) || localStorage.getItem('bakery_ingredients');
+      if (liveIngredients) setIngredients(JSON.parse(liveIngredients));
+
+      const liveRecipes = (await idbGet('bakery_recipes')) || localStorage.getItem('bakery_recipes');
+      if (liveRecipes) setRecipes(JSON.parse(liveRecipes));
+
+      const liveAddons = localStorage.getItem('bakery_party_addons');
+      if (liveAddons) setPartyAddons(JSON.parse(liveAddons));
+
+      const liveFlavors = localStorage.getItem('bakery_flavors');
+      if (liveFlavors) setFlavors(JSON.parse(liveFlavors));
+
+      const liveShift = localStorage.getItem('bakery_shift');
+      if (liveShift) setCurrentShift(JSON.parse(liveShift));
+
+      const liveStore = localStorage.getItem('bakery_store_info');
+      if (liveStore) setStoreInfo(JSON.parse(liveStore));
+
+      setCart([]);
+      setActiveReceipt(null);
+    } catch (e) {
+      console.error('Error reloading live store data:', e);
+    }
+  };
+
+  const resetDemoData = () => {
+    localStorage.setItem('demo_bakery_products', JSON.stringify(initialProducts));
+    localStorage.setItem('demo_bakery_sales', JSON.stringify(initialSales));
+    localStorage.setItem('demo_bakery_custom_orders', JSON.stringify(initialOrders));
+    localStorage.setItem('demo_bakery_expenses', JSON.stringify(initialExpenses));
+    localStorage.setItem('demo_bakery_ingredients', JSON.stringify(initialIngredients));
+    localStorage.setItem('demo_bakery_recipes', JSON.stringify(initialRecipes));
+    localStorage.setItem('demo_bakery_party_addons', JSON.stringify(initialPartyAddons));
+    localStorage.setItem('demo_bakery_flavors', JSON.stringify(initialFlavors));
+    localStorage.setItem('demo_bakery_shift', JSON.stringify(initialShift));
+    localStorage.setItem('demo_bakery_store_info', JSON.stringify(demoStoreInfo));
+
+    setProducts(sortProductsNewestFirst(initialProducts));
+    setSales(initialSales);
+    setCustomOrders(initialOrders);
+    setExpenses(initialExpenses);
+    setIngredients(initialIngredients);
+    setRecipes(initialRecipes);
+    setPartyAddons(initialPartyAddons);
+    setFlavors(initialFlavors);
+    setCurrentShift(initialShift);
+    setStoreInfo(demoStoreInfo);
+    setCart([]);
+    setActiveReceipt(null);
+  };
+
   return (
     <BakeryContext.Provider
       value={{
@@ -2401,6 +2783,10 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         setLang,
         exchangeRate,
         setExchangeRate,
+        isDemoMode,
+        enterDemoMode,
+        exitDemoMode,
+        resetDemoData,
         storeInfo,
         updateStoreInfo,
         staffMembers,
