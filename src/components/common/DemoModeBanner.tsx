@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { FlaskConical, RotateCcw, Share2, Check, LogOut, Sparkles } from 'lucide-react';
+import { FlaskConical, RotateCcw, Share2, Check, Lock, Sparkles } from 'lucide-react';
 import { useBakery } from '../../context/BakeryContext';
 import { soundFx } from '../../utils/audio';
 
 export const DemoModeBanner: React.FC = () => {
-  const { isDemoMode, exitDemoMode, resetDemoData } = useBakery();
+  const { isDemoMode, requestExitDemoMode, resetDemoData } = useBakery();
   const [copied, setCopied] = useState(false);
 
   if (!isDemoMode) return null;
@@ -61,14 +61,15 @@ export const DemoModeBanner: React.FC = () => {
           <span>{copied ? 'បានចម្លង!' : '🔗 ចម្លង Link Demo'}</span>
         </button>
 
-        {/* Exit to Live Store Button */}
+        {/* Exit to Live Store Button (Passcode Protected) */}
         <button
           type="button"
-          onClick={exitDemoMode}
-          className="px-3 py-1 bg-white text-rose-700 hover:bg-rose-50 rounded-lg flex items-center gap-1 transition-all active:scale-95 cursor-pointer font-black text-xs shadow-md"
+          onClick={requestExitDemoMode}
+          className="px-3 py-1 bg-white text-rose-700 hover:bg-rose-50 rounded-lg flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer font-black text-xs shadow-md border border-rose-100"
+          title="តម្រូវឱ្យបញ្ចូលលេខសម្ងាត់សិទ្ធិប្រើប្រាស់ដើម្បីចូលហាងពិត"
         >
-          <LogOut className="w-3.5 h-3.5" />
-          <span>ចាកចេញទៅហាងពិត</span>
+          <Lock className="w-3.5 h-3.5 text-rose-600" />
+          <span>ចូលហាងពិត 🔐</span>
         </button>
       </div>
     </div>

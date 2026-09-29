@@ -71,6 +71,7 @@ export const Navbar: React.FC<NavbarProps> = ({
     isDemoMode,
     enterDemoMode,
     exitDemoMode,
+    requestExitDemoMode,
   } = useBakery();
   const { isPlaying: isMusicPlaying, setIsPlayerOpen: setIsMusicPlayerOpen } = useMusic();
   const text = t[lang];
@@ -290,9 +291,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             onClick={() => {
               soundFx.playPop();
               if (isDemoMode) {
-                if (window.confirm('តើអ្នកចង់ចាកចេញពីរបៀបសាកល្បង (Demo Sandbox) ត្រឡប់ទៅហាងពិតវិញមែនទេ?')) {
-                  exitDemoMode();
-                }
+                requestExitDemoMode();
               } else {
                 if (window.confirm('តើអ្នកចង់បើករបៀបសាកល្បង (Demo Sandbox Mode) មែនទេ? \n\n✨ រាល់ការលក់ បញ្ចូលនំ ឬកែប្រែទិន្នន័យ នឹងត្រូវបានញែកដាច់ដោយឡែក ហើយមិនប៉ះពាល់ទិន្នន័យជាក់ស្តែងរបស់ហាងឡើយ!')) {
                   enterDemoMode();

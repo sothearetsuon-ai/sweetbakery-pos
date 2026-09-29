@@ -136,6 +136,8 @@ export const defaultStoreInfo: StoreInfo = {
   khqrBakongId: 'sweet_bakery@aba',
   khqrAccountNumber: '012629160',
   khqrBankName: 'ACLEDA Bank / Bakong',
+  realStorePin: '1111',
+  requireRealStorePin: true,
 };
 
 export const initialPartyAddons: PartyAddon[] = [
@@ -204,7 +206,15 @@ interface BakeryContextType {
   isDemoMode: boolean;
   enterDemoMode: () => void;
   exitDemoMode: () => void;
+  requestExitDemoMode: () => void;
+  lockRealStoreToDemo: () => void;
   resetDemoData: () => void;
+
+  // Real Store Passcode Authentication
+  isRealStoreAuthModalOpen: boolean;
+  openRealStoreAuthModal: (onSuccessCallback?: () => void) => void;
+  closeRealStoreAuthModal: () => void;
+  verifyRealStorePin: (pin: string) => boolean;
 
   isFirebaseConnected: boolean;
   firebaseSyncStatus: 'connected' | 'disconnected' | 'syncing';
@@ -2776,6 +2786,61 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setActiveReceipt(null);
   };
 
+  const [isRealStoreAuthModalOpen, setIsRealStoreAuthModalOpen] = useState(false);
+  const [realStoreAuthSuccessCallback, setRealStoreAuthSuccessCallback] = useState<(() => void) | null>(null);
+
+  const openRealStoreAuthModal = (onSuccess?: () => void) => {
+    if (onSuccess) {
+      setRealStoreAuthSuccessCallback(() => onSuccess);
+    } else {
+      setRealStoreAuthSuccessCallback(null);
+    }
+    setIsRealStoreAuthModalOpen(true);
+  };
+
+  const closeRealStoreAuthModal = () => {
+    setIsRealStoreAuthModalOpen(false);
+    setRealStoreAuthSuccessCallback(null);
+  };
+
+  const verifyRealStorePin = (pin: string): boolean => {
+    const cleanPin = pin.trim();
+    if (!cleanPin) return false;
+
+    // 1. Configured Store PIN (default 1111)
+    const expectedPin = storeInfo.realStorePin || '1111';
+    if (cleanPin === expectedPin) return true;
+
+    // 2. Any active Admin Staff PIN
+    const isStaffAdmin = staffMembers
+      .filter((s) => s.isActive && s.role === 'ADMIN')
+      .some((s) => s.pinCode === cleanPin);
+    if (isStaffAdmin) return true;
+
+    // 3. App Super Admin Master Keys (889977, 999999, admin@bakery2026)
+    if (cleanPin === '889977' || cleanPin === '999999' || cleanPin === 'admin@bakery2026') {
+      return true;
+    }
+
+    return false;
+  };
+
+  const requestExitDemoMode = () => {
+    // If PIN protection is enabled, require authentication
+    if (storeInfo.requireRealStorePin !== false) {
+      openRealStoreAuthModal(() => {
+        exitDemoMode();
+      });
+    } else {
+      exitDemoMode();
+    }
+  };
+
+  const lockRealStoreToDemo = () => {
+    sessionStorage.removeItem('bakery_real_store_unlocked');
+    enterDemoMode();
+  };
+
   return (
     <BakeryContext.Provider
       value={{
@@ -2786,7 +2851,13 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         isDemoMode,
         enterDemoMode,
         exitDemoMode,
+        requestExitDemoMode,
+        lockRealStoreToDemo,
         resetDemoData,
+        isRealStoreAuthModalOpen,
+        openRealStoreAuthModal,
+        closeRealStoreAuthModal,
+        verifyRealStorePin,
         storeInfo,
         updateStoreInfo,
         staffMembers,

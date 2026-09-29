@@ -110,6 +110,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [khqrBankName, setKhqrBankName] = useState(storeInfo?.khqrBankName || 'ABA Bank / Bakong');
   const [isStandeeOpen, setIsStandeeOpen] = useState(false);
 
+  // Real Store Security Passcode state
+  const [realStorePin, setRealStorePin] = useState(storeInfo?.realStorePin || '1111');
+  const [requireRealStorePin, setRequireRealStorePin] = useState(storeInfo?.requireRealStorePin !== false);
+
   const [savedSuccess, setSavedSuccess] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
@@ -135,6 +139,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       setKhqrBakongId(storeInfo.khqrBakongId || 'sweet_bakery@aba');
       setKhqrAccountNumber(storeInfo.khqrAccountNumber || '001 234 567');
       setKhqrBankName(storeInfo.khqrBankName || 'ABA Bank / Bakong');
+      setRealStorePin(storeInfo.realStorePin || '1111');
+      setRequireRealStorePin(storeInfo.requireRealStorePin !== false);
     } else if (!isOpen) {
       isInitializedRef.current = false;
     }
@@ -329,6 +335,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       khqrBakongId: khqrBakongId.trim(),
       khqrAccountNumber: khqrAccountNumber.trim(),
       khqrBankName: khqrBankName.trim(),
+      realStorePin: realStorePin.trim() || '1111',
+      requireRealStorePin: requireRealStorePin,
     };
 
     updateStoreInfo(updatedStoreData);
@@ -879,6 +887,66 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                         placeholder="ឧ. ផ្ទះលេខ 128E, ផ្លូវ 271, ភ្នំពេញ"
                         className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500 font-semibold"
                       />
+                    </div>
+                  </div>
+
+                  {/* Real Store Access Security & Passcode (ការការពារទិន្នន័យហាងពិត) */}
+                  <div className="p-4 rounded-2xl bg-gradient-to-r from-rose-50 to-pink-50 border border-rose-200 space-y-3">
+                    <div className="flex items-center justify-between flex-wrap gap-2">
+                      <div className="flex items-center gap-2">
+                        <div className="p-1.5 bg-rose-600 text-white rounded-xl shadow-xs">
+                          <ShieldCheck className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <h4 className="text-xs font-black text-rose-950 flex items-center gap-1.5">
+                            <span>លេខសម្ងាត់សិទ្ធិចូលហាងពិត (Live Store PIN)</span>
+                            <span className="text-[10px] bg-rose-200 text-rose-800 font-black px-1.5 py-0.5 rounded-md">
+                              សុវត្ថិភាពទិន្នន័យ
+                            </span>
+                          </h4>
+                          <p className="text-[11px] text-rose-700">
+                            ការពារទិន្នន័យជាក់ស្តែងរបស់ហាង មិនឱ្យអ្នកសាកល្បង Demo ឬអ្នកក្រៅចូលមើល/កែប្រែដោយគ្មានការអនុញ្ញាត
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 mb-1 flex items-center gap-1">
+                          <Key className="w-3.5 h-3.5 text-rose-500" />
+                          <span>លេខកូដសម្ងាត់ហាងពិត (PIN / Password)</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={realStorePin}
+                          onChange={(e) => setRealStorePin(e.target.value)}
+                          placeholder="ឧ. 1111 (៤ ខ្ទង់)"
+                          className="w-full px-3 py-2 text-sm border border-rose-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 font-black text-rose-900 bg-white shadow-2xs"
+                        />
+                        <p className="text-[10px] text-slate-500 mt-1">
+                          * អាចប្រើ PIN បុគ្គលិកថ្នាក់គ្រប់គ្រង (Admin/Manager) ឬ PIN 1111 នេះបាន
+                        </p>
+                      </div>
+
+                      <div className="flex flex-col justify-center">
+                        <label className="flex items-center gap-2.5 p-2.5 bg-white/80 rounded-xl border border-rose-200/80 cursor-pointer select-none hover:bg-white transition-all">
+                          <input
+                            type="checkbox"
+                            checked={requireRealStorePin}
+                            onChange={(e) => setRequireRealStorePin(e.target.checked)}
+                            className="w-4 h-4 text-rose-600 rounded border-slate-300 focus:ring-rose-500 cursor-pointer"
+                          />
+                          <div>
+                            <span className="text-xs font-bold text-slate-800 block">
+                              ទាមទារលេខសម្ងាត់ពេលចូលហាងពិត
+                            </span>
+                            <span className="text-[10px] text-slate-500 block">
+                              (បើបិទ៖ អាចចូលហាងពិតដោយផ្ទាល់មិនបាច់វាយ PIN)
+                            </span>
+                          </div>
+                        </label>
+                      </div>
                     </div>
                   </div>
                 </>

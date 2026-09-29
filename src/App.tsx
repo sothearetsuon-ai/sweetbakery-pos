@@ -27,6 +27,8 @@ import { CustomerOrderPortal } from './components/customer-order/CustomerOrderPo
 import { CustomerOrderLinkModal } from './components/customer-order/CustomerOrderLinkModal';
 import { OfflineAutoSyncToast } from './components/common/OfflineAutoSyncToast';
 import { DemoModeBanner } from './components/common/DemoModeBanner';
+import { RealStoreAuthModal } from './components/auth/RealStoreAuthModal';
+import { useBakery } from './context/BakeryContext';
 import { soundFx } from './utils/audio';
 import confetti from 'canvas-confetti';
 
@@ -42,6 +44,29 @@ export const App: React.FC = () => {
   // App Super Admin Portal State
   const [isSuperAdmin, setIsSuperAdmin] = useState(() => isSuperAdminAuthenticated());
   const [isSuperAdminModalOpen, setIsSuperAdminModalOpen] = useState(false);
+
+  // Bakery Context for Demo & Real Store Security
+  const {
+    isDemoMode,
+    isRealStoreAuthModalOpen,
+    closeRealStoreAuthModal,
+    openRealStoreAuthModal,
+    storeInfo,
+  } = useBakery();
+
+  // Check if real store requires authentication on initial visit (if not demo mode and device/session not yet authorized)
+  React.useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (isDemoMode) return; // In demo mode, auth is only requested when exiting demo
+
+    const isUnlockedSession = sessionStorage.getItem('bakery_real_store_unlocked') === 'true';
+    const isTrustedDevice = localStorage.getItem('bakery_real_store_authorized_device') === 'true';
+
+    // If real store passcode is required and neither session nor device is authorized
+    if (storeInfo.requireRealStorePin !== false && !isUnlockedSession && !isTrustedDevice) {
+      openRealStoreAuthModal();
+    }
+  }, [isDemoMode, storeInfo.requireRealStorePin]);
 
   // 35-Day Trial License State
   const [licenseInfo, setLicenseInfo] = useState<LicenseInfo>(() => getLicenseInfo());
@@ -263,6 +288,12 @@ export const App: React.FC = () => {
 
       {/* Floating Offline-to-Cloud Auto-Sync Toast */}
       <OfflineAutoSyncToast />
+
+      {/* Real Store Passcode Authentication Lock Modal */}
+      <RealStoreAuthModal
+        isOpen={isRealStoreAuthModalOpen}
+        onClose={closeRealStoreAuthModal}
+      />
     </div>
   );
 };

@@ -13,6 +13,8 @@ export interface StoreInfo {
   khqrBakongId?: string;
   khqrAccountNumber?: string;
   khqrBankName?: string;
+  realStorePin?: string;
+  requireRealStorePin?: boolean;
 }
 
 export interface Category {
