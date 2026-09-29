@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Cake,
   Sparkles,
@@ -82,6 +82,20 @@ export const Navbar: React.FC<NavbarProps> = ({
   const [isStaffDropdownOpen, setIsStaffDropdownOpen] = useState(false);
   const [isMobileConnectOpen, setIsMobileConnectOpen] = useState(false);
   const [isOnline, setIsOnline] = useState(() => navigator.onLine);
+  const [isQuickToolsOpen, setIsQuickToolsOpen] = useState(false);
+  const quickToolsRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (quickToolsRef.current && !quickToolsRef.current.contains(e.target as Node)) {
+        setIsQuickToolsOpen(false);
+      }
+    };
+    if (isQuickToolsOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isQuickToolsOpen]);
 
   // Live real-time clock
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -198,54 +212,41 @@ export const Navbar: React.FC<NavbarProps> = ({
             </div>
           </div>
 
-          {/* Bakery Music Player Button (Left Side) */}
-          <button
-            type="button"
-            onClick={() => {
-              soundFx.playPop();
-              setIsMusicPlayerOpen(true);
-            }}
-            title="ម៉ាស៊ីនចាក់ភ្លេងហាងនំ (Bakery Music Player & Upload)"
-            className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-2xl text-xs font-bold transition-all shadow-2xs border cursor-pointer active:scale-95 shrink-0 ${
-              isMusicPlaying
-                ? 'bg-gradient-to-r from-pink-600 to-rose-500 text-white border-pink-500 shadow-pink-500/25'
-                : 'bg-white/90 border-slate-200/80 hover:bg-pink-50 hover:border-pink-300 text-slate-700 hover:text-pink-600'
-            }`}
-          >
-            <Music className={`w-3.5 h-3.5 ${isMusicPlaying ? 'text-white animate-bounce' : 'text-pink-500'}`} />
-            <span className="hidden sm:inline">ភ្លេងហាងនំ</span>
-            {isMusicPlaying && (
-              <span className="flex items-end gap-0.5 h-3">
-                <span className="w-0.5 h-2 bg-white rounded-full animate-pulse" />
-                <span className="w-0.5 h-3 bg-white rounded-full animate-pulse delay-75" />
-                <span className="w-0.5 h-1.5 bg-white rounded-full animate-pulse delay-150" />
-              </span>
-            )}
-          </button>
+          {/* Low Stock Badge (Compact) */}
+          {lowStockCount > 0 && (
+            <div className="hidden lg:flex items-center gap-1 bg-rose-50 border border-rose-200 text-rose-700 px-2.5 py-1 rounded-2xl text-[11px] font-bold shadow-2xs animate-bounce">
+              <AlertTriangle className="w-3.5 h-3.5 text-rose-500" />
+              <span>{lowStockCount} អស់ស្តុក!</span>
+            </div>
+          )}
         </div>
 
         {/* Right Side: Live Clock & Actions */}
-        <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
-          {/* Live Digital Clock */}
-          <div className="hidden lg:flex items-center gap-2 bg-white border border-slate-200/90 px-3 py-1.5 rounded-2xl text-xs shadow-2xs">
+        <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+          {/* Live Digital Clock (Large screens only) */}
+          <div className="hidden 2xl:flex items-center gap-1.5 bg-slate-50 border border-slate-200/90 px-2.5 py-1 rounded-2xl text-xs shadow-2xs font-mono font-bold text-slate-700">
             <Clock className="w-3.5 h-3.5 text-rose-500 animate-spin-slow" />
-            <span className="font-mono font-black text-slate-800">{timeString}</span>
+            <span>{timeString}</span>
           </div>
 
-          {/* Exchange Rate Badge */}
-          <div className="hidden sm:flex items-center gap-2 bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-amber-300 px-3 py-1.5 rounded-2xl text-xs shadow-2xs">
-            <span className="text-amber-800 font-bold">{text.exchangeRateLabel}:</span>
-            <strong className="text-amber-950 font-black">$1 = {exchangeRate.toLocaleString()} ៛</strong>
+          {/* Exchange Rate Badge (Compact) */}
+          <div
+            onClick={() => onOpenSettingsModal('store')}
+            title="អត្រាប្តូរប្រាក់ (ចុចដើម្បីកែប្រែ)"
+            className="hidden md:flex items-center gap-1 bg-amber-50/80 border border-amber-200 px-2 py-1 rounded-2xl text-xs shadow-2xs text-amber-900 font-black cursor-pointer hover:bg-amber-100 transition-all active:scale-95"
+          >
+            <span className="text-amber-700 text-[11px]">$1 =</span>
+            <span>{exchangeRate.toLocaleString()}៛</span>
           </div>
 
-          {/* Cloud Auto-Sync & Online/Offline Status Indicator */}
+          {/* Unified Cloud Auto-Sync & Status Indicator (Single Pill) */}
           <button
             type="button"
             onClick={() => {
               soundFx.playPop();
               triggerAutoCloudSync();
             }}
-            className={`hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-2xl border text-xs font-bold cursor-pointer transition-all active:scale-95 shadow-2xs ${
+            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-2xl border text-xs font-bold cursor-pointer transition-all active:scale-95 shadow-2xs ${
               !isOnline || offlineSyncStatus === 'offline'
                 ? 'bg-amber-50 border-amber-200 text-amber-800 hover:bg-amber-100'
                 : offlineSyncStatus === 'syncing'
@@ -256,51 +257,31 @@ export const Navbar: React.FC<NavbarProps> = ({
             }`}
             title={
               !isOnline
-                ? `កំពុង Offline (${pendingSyncCount} ទិន្នន័យរង់ចាំ Auto Sync ទៅ Cloud ពេល Online វិញ)`
+                ? `កំពុង Offline (${pendingSyncCount} ទិន្នន័យរង់ចាំ Auto Sync)`
                 : offlineSyncStatus === 'syncing'
-                ? 'កំពុងធ្វើសមកាលកម្មទិន្នន័យទៅ Google Cloud...'
+                ? 'កំពុងធ្វើសមកាលកម្មទិន្នន័យទៅ Cloud...'
                 : pendingSyncCount > 0
-                ? `${pendingSyncCount} ទិន្នន័យរង់ចាំ Sync (ចុចដើម្បី Sync ឥឡូវនេះ)`
-                : 'Cloud Synced រួចរាល់ (ចុចដើម្បី Re-Sync)'
+                ? `${pendingSyncCount} ទិន្នន័យរង់ចាំ Sync (ចុចដើម្បី Sync)`
+                : 'Google Cloud Live (ចុចដើម្បី Re-Sync / Settings)'
             }
           >
             {!isOnline ? (
               <>
                 <WifiOff className="w-3.5 h-3.5 text-amber-600" />
-                <span>Offline {pendingSyncCount > 0 ? `(${pendingSyncCount})` : ''}</span>
+                <span className="hidden sm:inline">Offline {pendingSyncCount > 0 ? `(${pendingSyncCount})` : ''}</span>
               </>
             ) : offlineSyncStatus === 'syncing' ? (
               <>
                 <RefreshCw className="w-3.5 h-3.5 text-blue-600 animate-spin" />
-                <span>Syncing...</span>
+                <span className="hidden sm:inline">Syncing...</span>
               </>
             ) : (
               <>
                 <Cloud className="w-3.5 h-3.5 text-emerald-600" />
-                <span>Online (Cloud)</span>
+                <span className="hidden lg:inline text-[11px]">Cloud Live</span>
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
               </>
             )}
-          </button>
-
-          {/* Low Stock Badge */}
-          {lowStockCount > 0 && (
-            <div className="hidden md:flex items-center gap-1.5 bg-rose-50 border border-rose-200 text-rose-700 px-3 py-1.5 rounded-2xl text-xs font-bold shadow-2xs animate-bounce">
-              <AlertTriangle className="w-3.5 h-3.5 text-rose-500" />
-              <span>{lowStockCount} គ្រឿងផ្សំជិតអស់!</span>
-            </div>
-          )}
-
-          {/* Sound Toggle (Desktop/Tablet) */}
-          <button
-            onClick={toggleSound}
-            title={soundEnabled ? 'បិទសំឡេង (Mute)' : 'បើកសំឡេង (Unmute)'}
-            className={`hidden sm:flex w-9 h-9 rounded-2xl border items-center justify-center transition-all ${
-              soundEnabled
-                ? 'bg-pink-50 border-pink-200 text-pink-600 hover:bg-pink-100 shadow-2xs'
-                : 'bg-slate-100 border-slate-200 text-slate-400 hover:bg-slate-200'
-            }`}
-          >
-            {soundEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
           </button>
 
           {/* Demo Sandbox Mode Quick Toggle */}
@@ -323,16 +304,14 @@ export const Navbar: React.FC<NavbarProps> = ({
                 ? '🧪 កំពុងស្ថិតក្នុង Demo Sandbox Mode (ចុចដើម្បីចាកចេញ)'
                 : '🧪 បើករបៀបសាកល្បង (Demo Sandbox Mode - សាកបានដោយសុវត្ថិភាព)'
             }
-            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-2xl text-xs font-black transition-all border shadow-2xs cursor-pointer active:scale-95 ${
+            className={`flex items-center gap-1 px-2.5 py-1.5 rounded-2xl text-xs font-black transition-all border shadow-2xs cursor-pointer active:scale-95 ${
               isDemoMode
                 ? 'bg-gradient-to-r from-amber-500 to-rose-500 text-white border-amber-300 animate-pulse'
-                : 'bg-amber-50/80 text-amber-800 border-amber-200 hover:bg-amber-100 hover:border-amber-300'
+                : 'bg-amber-50/90 text-amber-900 border-amber-200 hover:bg-amber-100 hover:border-amber-300'
             }`}
           >
             <FlaskConical className={`w-3.5 h-3.5 ${isDemoMode ? 'text-white' : 'text-amber-600'}`} />
-            <span className="hidden sm:inline">
-              {isDemoMode ? 'Demo សកម្ម' : '🧪 Demo'}
-            </span>
+            <span>{isDemoMode ? 'Demo សកម្ម' : '🧪 Demo'}</span>
           </button>
 
           {/* Quick Counter KHQR Standee Button */}
@@ -342,10 +321,10 @@ export const Navbar: React.FC<NavbarProps> = ({
               setIsStandeeOpen(true);
             }}
             title="បង្ហាញផ្ទាំង KHQR លើតុគិតប្រាក់ (Counter Standee)"
-            className="flex items-center gap-1.5 px-2.5 py-1.5 sm:px-3 sm:py-1.5 rounded-2xl bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 text-white text-xs font-black shadow-md shadow-red-500/20 transition-all active:scale-95 cursor-pointer"
+            className="flex items-center gap-1 px-2.5 py-1.5 rounded-2xl bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 text-white text-xs font-black shadow-xs transition-all active:scale-95 cursor-pointer"
           >
-            <QrCode className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
-            <span className="hidden sm:inline">KHQR លើតុ</span>
+            <QrCode className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">KHQR</span>
           </button>
 
           {/* Customer Order Link & QR Button */}
@@ -357,105 +336,238 @@ export const Navbar: React.FC<NavbarProps> = ({
                 onOpenCustomerOrderLinkModal();
               }}
               title="លីងកុម្ម៉ង់សម្រាប់ភ្ញៀវ (Customer Self-Ordering Link & QR)"
-              className="flex items-center gap-1.5 px-2.5 py-1.5 sm:px-3 sm:py-1.5 rounded-2xl bg-gradient-to-r from-pink-600 to-rose-500 hover:from-pink-700 hover:to-rose-600 text-white text-xs font-black shadow-md shadow-pink-500/20 transition-all active:scale-95 cursor-pointer"
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-2xl bg-gradient-to-r from-pink-600 to-rose-500 hover:from-pink-700 hover:to-rose-600 text-white text-xs font-black shadow-xs transition-all active:scale-95 cursor-pointer"
             >
-              <LinkIcon className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
+              <LinkIcon className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">លីងភ្ញៀវ</span>
             </button>
           )}
 
-          {/* Background Theme Switcher Button */}
-          {onOpenThemePicker && (
+          {/* Quick Secondary Tools: Expanded on Large screens (xl+) */}
+          <div className="hidden xl:flex items-center gap-1 bg-slate-50/80 p-0.5 rounded-2xl border border-slate-200/80">
+            {/* Music Player Button */}
             <button
               type="button"
               onClick={() => {
                 soundFx.playPop();
-                onOpenThemePicker();
+                setIsMusicPlayerOpen(true);
               }}
-              title="ផ្លាស់ប្តូរពណ៌ផ្ទៃខាងក្រោយ (Background Theme Color)"
-              className="flex items-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-2xl text-xs font-bold transition-all shadow-2xs border bg-white border-slate-200/80 hover:bg-pink-50 hover:border-pink-300 text-slate-700 hover:text-pink-600 cursor-pointer active:scale-95"
+              title="ម៉ាស៊ីនចាក់ភ្លេងហាងនំ (Bakery Music Player)"
+              className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all cursor-pointer ${
+                isMusicPlaying
+                  ? 'bg-pink-500 text-white shadow-xs animate-pulse'
+                  : 'text-slate-600 hover:text-pink-600 hover:bg-white'
+              }`}
             >
-              <Palette className="w-3.5 h-3.5 text-pink-500" />
-              <span className="hidden md:inline">ពណ៌ផ្ទៃ 🎨</span>
+              <Music className="w-4 h-4" />
             </button>
-          )}
 
-          {/* Cloud Sync Status Indicator */}
-          <button
-            type="button"
-            onClick={() => {
-              soundFx.playPop();
-              onOpenSettingsModal('firebase');
-            }}
-            title={
-              isFirebaseConnected
-                ? '🟢 បានភ្ជាប់ Google Firebase Cloud (ទិន្នន័យ Live Sync គ្រប់ឧបករណ៍)'
-                : '⚪ Google Firebase Cloud Sync (ចុចទីនេះដើម្បីភ្ជាប់)'
-            }
-            className={`flex items-center gap-1 px-2 sm:px-2.5 py-1.5 rounded-2xl text-xs font-black transition-all border shadow-2xs cursor-pointer active:scale-95 ${
-              isFirebaseConnected
-                ? 'bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-emerald-100'
-                : 'bg-white text-slate-500 border-slate-200/80 hover:bg-slate-50 hover:text-slate-700'
-            }`}
-          >
-            <Cloud
-              className={`w-3.5 h-3.5 ${
-                isFirebaseConnected ? 'text-emerald-500 animate-pulse' : 'text-slate-400'
-              }`}
-            />
-            <span className="hidden lg:inline text-[11px]">
-              {isFirebaseConnected ? 'Cloud Live' : 'Cloud'}
-            </span>
-            <span
-              className={`w-2 h-2 rounded-full ${
-                isFirebaseConnected ? 'bg-emerald-500 shadow-xs' : 'bg-slate-300'
-              }`}
-            />
-          </button>
+            {/* Theme Picker */}
+            {onOpenThemePicker && (
+              <button
+                type="button"
+                onClick={() => {
+                  soundFx.playPop();
+                  onOpenThemePicker();
+                }}
+                title="ផ្លាស់ប្តូរពណ៌ផ្ទៃខាងក្រោយ (Theme Color)"
+                className="w-8 h-8 rounded-xl flex items-center justify-center text-slate-600 hover:text-pink-600 hover:bg-white transition-all cursor-pointer"
+              >
+                <Palette className="w-4 h-4 text-pink-500" />
+              </button>
+            )}
 
-          {/* Push Notification & Reminder Settings Button */}
-          <button
-            type="button"
-            onClick={() => {
-              soundFx.playPop();
-              onOpenSettingsModal('notifications');
-            }}
-            title="ការដាស់តឿនលើទូរសព្ទ (Staff Reminders & Push Notifications)"
-            className="w-8 h-8 sm:w-9 sm:h-9 rounded-2xl border border-slate-200/80 bg-white hover:bg-pink-50 hover:border-pink-300 text-slate-600 hover:text-pink-600 flex items-center justify-center transition-all shadow-2xs cursor-pointer relative"
-          >
-            <Bell className="w-4 h-4 text-pink-500" />
-            <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-pink-500 animate-pulse" />
-          </button>
-
-          {/* App Super Admin Badge & Portal Button */}
-          {isSuperAdmin && onOpenSuperAdminPortal && (
+            {/* Mobile Connect */}
             <button
               type="button"
               onClick={() => {
                 soundFx.playPop();
-                onOpenSuperAdminPortal();
+                setIsMobileConnectOpen(true);
               }}
-              title="ផ្ទាំងគ្រប់គ្រង App Super Admin (Master License Manager)"
-              className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-2xl bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-500 text-slate-950 font-black text-xs shadow-md shadow-amber-500/25 ring-2 ring-amber-300 animate-pulse hover:scale-105 active:scale-95 transition-all cursor-pointer"
+              title="ភ្ជាប់ទូរស័ព្ទដៃបុគ្គលិក / ចែករំលែក Demo (Mobile Access)"
+              className="w-8 h-8 rounded-xl flex items-center justify-center text-purple-600 hover:bg-white transition-all cursor-pointer"
             >
-              <Key className="w-3.5 h-3.5 text-slate-950" />
-              <span className="hidden sm:inline">Super Admin 👑</span>
+              <Smartphone className="w-4 h-4" />
             </button>
-          )}
 
-          {/* Settings Button */}
-          <button
-            onClick={() => {
-              soundFx.playPop();
-              onOpenSettingsModal();
-            }}
-            title="កំណត់ឈ្មោះហាង Logo និងរូបិយប័ណ្ណ (Store Settings)"
-            className="w-8 h-8 sm:w-9 sm:h-9 rounded-2xl border border-slate-200/80 bg-white hover:bg-pink-50 hover:border-pink-300 text-slate-600 hover:text-pink-600 flex items-center justify-center transition-all shadow-2xs cursor-pointer"
-          >
-            <Settings className="w-4 h-4" />
-          </button>
+            {/* Sound Toggle */}
+            <button
+              type="button"
+              onClick={toggleSound}
+              title={soundEnabled ? 'បិទសំឡេង (Mute)' : 'បើកសំឡេង (Unmute)'}
+              className="w-8 h-8 rounded-xl flex items-center justify-center text-slate-600 hover:text-pink-600 hover:bg-white transition-all cursor-pointer"
+            >
+              {soundEnabled ? <Volume2 className="w-4 h-4 text-pink-500" /> : <VolumeX className="w-4 h-4 text-slate-400" />}
+            </button>
 
-          {/* Active Staff Button with Dropdown right at the top */}
+            {/* Push Notifications & Reminders */}
+            <button
+              type="button"
+              onClick={() => {
+                soundFx.playPop();
+                onOpenSettingsModal('notifications');
+              }}
+              title="ការដាស់តឿនលើទូរសព្ទ (Reminders)"
+              className="w-8 h-8 rounded-xl flex items-center justify-center text-slate-600 hover:text-pink-600 hover:bg-white transition-all cursor-pointer relative"
+            >
+              <Bell className="w-4 h-4 text-pink-500" />
+              <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-pink-500" />
+            </button>
+
+            {/* Store Settings */}
+            <button
+              type="button"
+              onClick={() => {
+                soundFx.playPop();
+                onOpenSettingsModal();
+              }}
+              title="ការកំណត់ហាង (Store Settings)"
+              className="w-8 h-8 rounded-xl flex items-center justify-center text-slate-600 hover:text-slate-900 hover:bg-white transition-all cursor-pointer"
+            >
+              <Settings className="w-4 h-4" />
+            </button>
+
+            {/* App Super Admin Portal Button */}
+            {isSuperAdmin && onOpenSuperAdminPortal && (
+              <button
+                type="button"
+                onClick={() => {
+                  soundFx.playPop();
+                  onOpenSuperAdminPortal();
+                }}
+                title="Super Admin License Manager"
+                className="w-8 h-8 rounded-xl bg-amber-400 text-amber-950 flex items-center justify-center shadow-xs cursor-pointer hover:scale-105 transition-all"
+              >
+                <Key className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+
+          {/* Quick Tools Dropdown for Screens < xl (Tablet/Laptop) */}
+          <div className="relative xl:hidden" ref={quickToolsRef}>
+            <button
+              type="button"
+              onClick={() => {
+                soundFx.playPop();
+                setIsQuickToolsOpen((prev) => !prev);
+              }}
+              title="ឧបករណ៍បន្ថែម (More Tools)"
+              className={`flex items-center gap-1 px-2.5 py-1.5 rounded-2xl border text-xs font-bold transition-all shadow-2xs cursor-pointer active:scale-95 ${
+                isQuickToolsOpen
+                  ? 'bg-pink-100 border-pink-400 text-pink-900'
+                  : 'bg-white border-slate-200/90 text-slate-700 hover:bg-slate-50'
+              }`}
+            >
+              <Sparkles className="w-3.5 h-3.5 text-pink-500" />
+              <span className="hidden sm:inline">ឧបករណ៍</span>
+              <ChevronDown className={`w-3 h-3 text-slate-500 transition-transform ${isQuickToolsOpen ? 'rotate-180' : ''}`} />
+            </button>
+
+            {isQuickToolsOpen && (
+              <div className="absolute right-0 top-full mt-2 w-56 bg-white rounded-2xl shadow-xl border border-slate-100 p-2 z-50 animate-in fade-in zoom-in-95 space-y-1">
+                {/* Music */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsQuickToolsOpen(false);
+                    setIsMusicPlayerOpen(true);
+                  }}
+                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-slate-700 hover:bg-pink-50 hover:text-pink-600 transition-colors text-left cursor-pointer"
+                >
+                  <Music className="w-4 h-4 text-pink-500" />
+                  <span>ម៉ាស៊ីនចាក់ភ្លេងហាងនំ {isMusicPlaying ? '🎵' : ''}</span>
+                </button>
+
+                {/* Theme */}
+                {onOpenThemePicker && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsQuickToolsOpen(false);
+                      onOpenThemePicker();
+                    }}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-slate-700 hover:bg-pink-50 hover:text-pink-600 transition-colors text-left cursor-pointer"
+                  >
+                    <Palette className="w-4 h-4 text-pink-500" />
+                    <span>ពណ៌ផ្ទៃខាងក្រោយ 🎨</span>
+                  </button>
+                )}
+
+                {/* Mobile Connect */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsQuickToolsOpen(false);
+                    setIsMobileConnectOpen(true);
+                  }}
+                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-purple-700 hover:bg-purple-50 transition-colors text-left cursor-pointer"
+                >
+                  <Smartphone className="w-4 h-4 text-purple-600" />
+                  <span>ទូរស័ព្ទបុគ្គលិក / Demo QR 📱</span>
+                </button>
+
+                {/* Sound */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    toggleSound();
+                  }}
+                  className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors text-left cursor-pointer"
+                >
+                  <span className="flex items-center gap-2.5">
+                    {soundEnabled ? <Volume2 className="w-4 h-4 text-pink-500" /> : <VolumeX className="w-4 h-4 text-slate-400" />}
+                    <span>សំឡេងកម្មវិធី</span>
+                  </span>
+                  <span className={`text-[10px] px-1.5 py-0.5 rounded-md ${soundEnabled ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-500'}`}>
+                    {soundEnabled ? 'បើក' : 'បិទ'}
+                  </span>
+                </button>
+
+                {/* Notifications */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsQuickToolsOpen(false);
+                    onOpenSettingsModal('notifications');
+                  }}
+                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors text-left cursor-pointer"
+                >
+                  <Bell className="w-4 h-4 text-pink-500" />
+                  <span>ការដាស់តឿនលើទូរសព្ទ 🔔</span>
+                </button>
+
+                {/* Settings */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsQuickToolsOpen(false);
+                    onOpenSettingsModal();
+                  }}
+                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors text-left cursor-pointer"
+                >
+                  <Settings className="w-4 h-4 text-slate-500" />
+                  <span>ការកំណត់ហាង ⚙️</span>
+                </button>
+
+                {/* Super Admin */}
+                {isSuperAdmin && onOpenSuperAdminPortal && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsQuickToolsOpen(false);
+                      onOpenSuperAdminPortal();
+                    }}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-black text-amber-900 bg-amber-50 hover:bg-amber-100 transition-colors text-left cursor-pointer"
+                  >
+                    <Key className="w-4 h-4 text-amber-600" />
+                    <span>Super Admin 👑</span>
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Active Staff Button with Dropdown (ALWAYS VISIBLE) */}
           <div className="relative">
             <button
               onClick={() => {
@@ -463,7 +575,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 setIsStaffDropdownOpen((prev) => !prev);
               }}
               title="ចុចដើម្បីប្តូរគណនីបុគ្គលិក / វាយលេខកូដ PIN 4 ខ្ទង់"
-              className={`flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1.5 rounded-2xl border text-xs font-bold shadow-2xs transition-all hover:scale-105 active:scale-95 cursor-pointer group ${
+              className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1.5 rounded-2xl border text-xs font-bold shadow-2xs transition-all hover:scale-105 active:scale-95 cursor-pointer group ${
                 isStaffDropdownOpen
                   ? 'bg-purple-100 border-purple-400 text-purple-950 ring-2 ring-purple-300/40'
                   : 'bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-200/80 hover:border-purple-400 text-purple-900'
@@ -472,13 +584,10 @@ export const Navbar: React.FC<NavbarProps> = ({
               <span className="text-base group-hover:scale-110 transition-transform">
                 {currentStaff.avatar || '👤'}
               </span>
-              <div className="text-left hidden sm:block">
-                <div className="flex items-center gap-1.5 font-black text-slate-800 leading-tight">
-                  <span>{currentStaff.name}</span>
-                  <span className="text-[10px] px-1.5 py-0.5 bg-purple-600 text-white rounded-md font-medium">
-                    {currentStaff.role}
-                  </span>
-                </div>
+              <div className="text-left hidden md:block max-w-[80px] lg:max-w-[100px] truncate">
+                <span className="font-black text-slate-800 leading-tight block truncate">
+                  {currentStaff.name}
+                </span>
               </div>
               <ChevronDown
                 className={`w-3.5 h-3.5 text-purple-600 transition-transform duration-200 ${
@@ -495,68 +604,57 @@ export const Navbar: React.FC<NavbarProps> = ({
             />
           </div>
 
-          {/* Mobile Connect Button (Shown only on Desktop/Tablet) */}
-          <button
-            type="button"
-            onClick={() => {
-              soundFx.playPop();
-              setIsMobileConnectOpen(true);
-            }}
-            className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-purple-50 to-pink-50 hover:from-purple-100 hover:to-pink-100 text-purple-700 border border-purple-200/80 rounded-2xl text-xs font-black transition-all shadow-2xs cursor-pointer active:scale-95"
-            title="ភ្ជាប់ទូរស័ព្ទដៃបុគ្គលិក (Mobile Phone Connect)"
-          >
-            <Smartphone className="w-4 h-4 text-purple-600" />
-            <span>ទូរស័ព្ទបុគ្គលិក 📱</span>
-          </button>
-
-          {/* Shift Status Button */}
+          {/* Shift Status Button (ALWAYS VISIBLE) */}
           <button
             onClick={onOpenShiftModal}
-            className={`flex items-center gap-1 sm:gap-2 px-2.5 sm:px-3.5 py-1.5 rounded-2xl text-xs font-bold border transition-all shadow-2xs shrink-0 ${
+            title={currentShift?.status === 'OPEN' ? `វេនលក់កំពុងបើក៖ ${currentShift.cashierName}` : 'វេនលក់ត្រូវបានបិទ (ចុចដើម្បីបើកវេន)'}
+            className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 rounded-2xl text-xs font-bold border transition-all shadow-2xs shrink-0 cursor-pointer active:scale-95 ${
               currentShift?.status === 'OPEN'
                 ? 'bg-emerald-500 text-white border-emerald-600 hover:bg-emerald-600 shadow-emerald-500/20'
                 : 'bg-rose-500 text-white border-rose-600 hover:bg-rose-600 shadow-rose-500/20'
             }`}
           >
             {currentShift?.status === 'OPEN' ? (
-              <ShieldCheck className="w-4 h-4" />
+              <ShieldCheck className="w-3.5 h-3.5" />
             ) : (
-              <Clock className="w-4 h-4" />
+              <Clock className="w-3.5 h-3.5" />
             )}
-            <span className="hidden sm:inline max-w-[130px] truncate">
+            <span className="hidden sm:inline max-w-[90px] truncate">
               {currentShift?.status === 'OPEN' ? currentShift.cashierName : text.shiftClosed}
             </span>
           </button>
 
-          {/* Language Switcher */}
-          <div className="flex items-center bg-white/90 p-0.5 sm:p-1 rounded-2xl border border-rose-100 shadow-2xs shrink-0">
+          {/* Language Switcher (ALWAYS VISIBLE) */}
+          <div className="flex items-center bg-white/90 p-0.5 rounded-2xl border border-rose-100 shadow-2xs shrink-0">
             <button
               onClick={() => {
                 setLang('km');
                 soundFx.playPop();
               }}
-              className={`px-2 sm:px-3 py-1 rounded-xl text-xs font-bold transition-all flex items-center gap-1 ${
+              title="ភាសាខ្មែរ"
+              className={`px-2 py-1 rounded-xl text-xs font-bold transition-all flex items-center gap-1 cursor-pointer ${
                 lang === 'km'
                   ? 'bg-gradient-to-r from-pink-600 to-rose-500 text-white shadow-xs'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
               <span>🇰🇭</span>
-              <span className="hidden sm:inline">ខ្មែរ</span>
+              <span className="hidden sm:inline text-[11px]">ខ្មែរ</span>
             </button>
             <button
               onClick={() => {
                 setLang('en');
                 soundFx.playPop();
               }}
-              className={`px-2 sm:px-3 py-1 rounded-xl text-xs font-bold transition-all flex items-center gap-1 ${
+              title="English"
+              className={`px-2 py-1 rounded-xl text-xs font-bold transition-all flex items-center gap-1 cursor-pointer ${
                 lang === 'en'
                   ? 'bg-gradient-to-r from-pink-600 to-rose-500 text-white shadow-xs'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
               <span>🇬🇧</span>
-              <span className="hidden sm:inline">EN</span>
+              <span className="hidden sm:inline text-[11px]">EN</span>
             </button>
           </div>
         </div>
