@@ -630,7 +630,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             <StaffDropdown
               isOpen={isStaffDropdownOpen}
               onClose={() => setIsStaffDropdownOpen(false)}
-              onOpenStaffManagement={onOpenStaffTab}
+              onOpenStaffManagement={isDemoMode ? undefined : onOpenStaffTab}
             />
           </div>
 

@@ -16,7 +16,7 @@ export const StaffDropdown: React.FC<StaffDropdownProps> = ({
   onClose,
   onOpenStaffManagement,
 }) => {
-  const { staffMembers, currentStaff, setCurrentStaff, switchStaffByPin, logoutAndLock } = useBakery();
+  const { staffMembers, currentStaff, setCurrentStaff, switchStaffByPin, logoutAndLock, isDemoMode } = useBakery();
   const [isPinMode, setIsPinMode] = useState(false);
   const [selectedStaffForPin, setSelectedStaffForPin] = useState<StaffMember | null>(null);
   const [pinInput, setPinInput] = useState('');
@@ -365,7 +365,7 @@ export const StaffDropdown: React.FC<StaffDropdownProps> = ({
 
         {/* Footer: Staff Management & Logout */}
         <div className="p-3 bg-slate-50 border-t border-slate-100 space-y-2 text-xs">
-          {onOpenStaffManagement && (
+          {onOpenStaffManagement && !isDemoMode && (
             <button
               type="button"
               onClick={() => {

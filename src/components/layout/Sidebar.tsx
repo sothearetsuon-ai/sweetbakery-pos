@@ -52,7 +52,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   isMobileOpen = false,
   onCloseMobile,
 }) => {
-  const { lang, customOrders, lowStockCount, expenses, sales, currentStaff, hasPermission, staffMembers, storeInfo, logoutAndLock } = useBakery();
+  const { lang, customOrders, lowStockCount, expenses, sales, currentStaff, hasPermission, staffMembers, storeInfo, logoutAndLock, isDemoMode } = useBakery();
   const { isPlaying: isMusicPlaying, setIsPlayerOpen: setIsMusicPlayerOpen } = useMusic();
   const text = t[lang];
 
@@ -172,17 +172,21 @@ export const Sidebar: React.FC<SidebarProps> = ({
       sectionTitle: 'រដ្ឋបាល & បុគ្គលិក',
       sectionIcon: '👥',
       items: [
-        {
-          id: 'staff',
-          label: 'បុគ្គលិក & សិទ្ធិ 👥',
-          subLabel: 'Staff Management',
-          icon: Users,
-          iconBg: 'bg-violet-100 text-violet-600',
-          iconColor: 'text-violet-600',
-          badge: `${staffMembers.length}`,
-          badgeColor: 'bg-purple-600 text-white font-bold',
-          permission: 'canAccessSettings',
-        },
+        ...(!isDemoMode
+          ? [
+              {
+                id: 'staff' as TabType,
+                label: 'បុគ្គលិក & សិទ្ធិ 👥',
+                subLabel: 'Staff Management',
+                icon: Users,
+                iconBg: 'bg-violet-100 text-violet-600',
+                iconColor: 'text-violet-600',
+                badge: `${staffMembers.length}`,
+                badgeColor: 'bg-purple-600 text-white font-bold',
+                permission: 'canAccessSettings' as keyof StaffPermissions,
+              },
+            ]
+          : []),
         {
           id: 'shifts',
           label: text.shifts || 'វេនលក់បុគ្គលិក ⏰',
@@ -200,6 +204,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   const handleTabClick = (tab: TabType, permission?: keyof StaffPermissions) => {
     if (tab === 'staff') {
+      if (isDemoMode) {
+        soundFx.playPop();
+        alert('🔒 មុខងារគ្រប់គ្រងបុគ្គលិក & សិទ្ធិ ត្រូវបានបិទក្នុង Demo Mode');
+        return;
+      }
       soundFx.playPop();
       onOpenSettings('staff');
       onCloseMobile?.();
@@ -326,16 +335,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <div className="text-[10px] font-bold text-purple-600 uppercase tracking-wider">{currentStaff.role}</div>
             </div>
           </div>
-          <button
-            onClick={() => {
-              onOpenSettings('staff');
-              onCloseMobile?.();
-            }}
-            className="p-1.5 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-700 transition-colors cursor-pointer"
-            title="កំណត់សិទ្ធិបុគ្គលិកក្នុង Settings"
-          >
-            <Users className="w-3.5 h-3.5" />
-          </button>
+          {!isDemoMode && (
+            <button
+              onClick={() => {
+                onOpenSettings('staff');
+                onCloseMobile?.();
+              }}
+              className="p-1.5 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-700 transition-colors cursor-pointer"
+              title="កំណត់សិទ្ធិបុគ្គលិកក្នុង Settings"
+            >
+              <Users className="w-3.5 h-3.5" />
+            </button>
+          )}
         </div>
         {/* Kitchen Oven Status Card */}
         <div className="p-3 rounded-2xl bg-gradient-to-br from-amber-50 to-orange-50/70 border border-amber-200/80 shadow-2xs">

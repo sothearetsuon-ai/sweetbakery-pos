@@ -34,7 +34,24 @@ export const StaffManagement: React.FC<StaffManagementProps> = ({ isEmbedded = f
     addStaffMember,
     updateStaffMember,
     deleteStaffMember,
+    isDemoMode,
   } = useBakery();
+
+  if (isDemoMode) {
+    return (
+      <div className="p-8 text-center bg-white rounded-3xl border border-rose-100 shadow-sm space-y-4 my-6">
+        <div className="w-16 h-16 bg-rose-100 text-rose-600 rounded-full flex items-center justify-center mx-auto shadow-inner">
+          <Shield className="w-8 h-8" />
+        </div>
+        <h3 className="text-lg font-black text-slate-800">
+          មុខងារគ្រប់គ្រងបុគ្គលិក & សិទ្ធិ ត្រូវបានបិទក្នុង Demo Mode
+        </h3>
+        <p className="text-sm text-slate-500 max-w-md mx-auto">
+          ដើម្បីការពារសុវត្ថិភាព និងទិន្នន័យគណនី ផ្ទាំងគ្រប់គ្រងបុគ្គលិក ការកែប្រែ PIN និងសិទ្ធិប្រើប្រាស់ មិនត្រូវបានអនុញ្ញាតឱ្យចូលមើល ឬកែប្រែក្នុងផ្ទាំង Demo ឡើយ។
+        </p>
+      </div>
+    );
+  }
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingStaff, setEditingStaff] = useState<StaffMember | null>(null);
@@ -147,6 +164,10 @@ export const StaffManagement: React.FC<StaffManagementProps> = ({ isEmbedded = f
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (isDemoMode) {
+      alert('មុខងារនេះត្រូវបានបិទក្នុង Demo Mode');
+      return;
+    }
     if (!name || pinCode.length !== 4) return;
 
     soundFx.playSuccess();
@@ -179,6 +200,10 @@ export const StaffManagement: React.FC<StaffManagementProps> = ({ isEmbedded = f
   };
 
   const handleDelete = (id: string, staffName: string) => {
+    if (isDemoMode) {
+      alert('មុខងារនេះត្រូវបានបិទក្នុង Demo Mode');
+      return;
+    }
     if (staffMembers.length <= 1) {
       alert('មិនអាចលុបបុគ្គលិកចុងក្រោយគេបានទេ!');
       return;

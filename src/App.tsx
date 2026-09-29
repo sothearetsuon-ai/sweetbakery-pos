@@ -137,7 +137,11 @@ export const App: React.FC = () => {
   };
 
   const handleOpenSettings = (tab: SettingsTab = 'store') => {
-    setSettingsTab(tab);
+    if (isDemoMode && (tab === 'staff' || tab === 'telegram')) {
+      setSettingsTab('store');
+    } else {
+      setSettingsTab(tab);
+    }
     setIsSettingsModalOpen(true);
   };
 
@@ -145,7 +149,9 @@ export const App: React.FC = () => {
     if (tab === 'shifts') {
       setIsShiftModalOpen(true);
     } else if (tab === 'staff') {
-      handleOpenSettings('staff');
+      if (!isDemoMode) {
+        handleOpenSettings('staff');
+      }
     } else {
       setActiveTab(tab);
     }
@@ -184,7 +190,11 @@ export const App: React.FC = () => {
       <Navbar
         onOpenShiftModal={() => setIsShiftModalOpen(true)}
         onOpenSettingsModal={handleOpenSettings}
-        onOpenStaffTab={() => handleOpenSettings('staff')}
+        onOpenStaffTab={() => {
+          if (!isDemoMode) {
+            handleOpenSettings('staff');
+          }
+        }}
         onToggleMobileDrawer={() => setIsMobileDrawerOpen((prev) => !prev)}
         onOpenThemePicker={() => setIsThemePickerOpen(true)}
         isSuperAdmin={isSuperAdmin}
@@ -212,7 +222,7 @@ export const App: React.FC = () => {
           {activeTab === 'expenses' && <ExpenseManagement />}
           {activeTab === 'inventory' && <InventoryManagement />}
           {activeTab === 'reports' && <ReportsDashboard />}
-          {activeTab === 'staff' && <StaffManagement />}
+          {activeTab === 'staff' && !isDemoMode && <StaffManagement />}
         </main>
       </div>
 

@@ -23,9 +23,28 @@ import {
   saveStoredTelegramConfig,
   testTelegramConnection,
 } from '../../services/telegram';
+import { useBakery } from '../../context/BakeryContext';
 import { soundFx } from '../../utils/audio';
 
 export const TelegramSettingsTab: React.FC = () => {
+  const { isDemoMode } = useBakery();
+
+  if (isDemoMode) {
+    return (
+      <div className="p-8 text-center bg-white rounded-3xl border border-blue-100 shadow-sm space-y-4 my-6">
+        <div className="w-16 h-16 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center mx-auto shadow-inner">
+          <Send className="w-8 h-8" />
+        </div>
+        <h3 className="text-lg font-black text-slate-800">
+          មុខងារ Telegram Bot ត្រូវបានបិទក្នុង Demo Mode
+        </h3>
+        <p className="text-sm text-slate-500 max-w-md mx-auto">
+          ដើម្បីការពារសុវត្ថិភាព Bot Token និង Chat ID ផ្ទាំងកំណត់ប្រព័ន្ធ Telegram Bot មិនត្រូវបានអនុញ្ញាតឱ្យចូលមើល ឬកែប្រែក្នុងផ្ទាំង Demo ឡើយ។
+        </p>
+      </div>
+    );
+  }
+
   const [config, setConfig] = useState<TelegramConfig>(getStoredTelegramConfig());
   const [showToken, setShowToken] = useState(false);
   const [testing, setTesting] = useState(false);
@@ -37,12 +56,17 @@ export const TelegramSettingsTab: React.FC = () => {
   }, []);
 
   const updateConfig = (updated: TelegramConfig) => {
+    if (isDemoMode) return;
     setConfig(updated);
     saveStoredTelegramConfig(updated);
   };
 
   const handleSave = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
+    if (isDemoMode) {
+      alert('មុខងារនេះត្រូវបានបិទក្នុង Demo Mode');
+      return;
+    }
     updateConfig(config);
     soundFx.playSuccess();
     setSavedSuccess(true);

@@ -419,6 +419,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   };
 
   const addStaffMember = (staffData: Omit<StaffMember, 'id'>) => {
+    if (globalIsDemoMode) return;
     const newStaff: StaffMember = {
       ...staffData,
       id: `staff-${Date.now()}`,
@@ -432,6 +433,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   };
 
   const updateStaffMember = (id: string, updates: Partial<StaffMember>) => {
+    if (globalIsDemoMode) return;
     setStaffMembers((prev) => {
       const updated = prev.map((s) => (s.id === id ? { ...s, ...updates } : s));
       localStorage.setItem('bakery_staff_members', JSON.stringify(updated));
@@ -444,6 +446,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   };
 
   const deleteStaffMember = (id: string) => {
+    if (globalIsDemoMode) return;
     setStaffMembers((prev) => {
       const updated = prev.filter((s) => s.id !== id);
       localStorage.setItem('bakery_staff_members', JSON.stringify(updated));

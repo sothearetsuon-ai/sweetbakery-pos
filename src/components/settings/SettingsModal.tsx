@@ -82,16 +82,26 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     importBackupData,
     exportSalesCsv,
     exportExpensesCsv,
+    isDemoMode,
   } = useBakery();
   const text = t[lang];
 
-  const [activeTab, setActiveTab] = useState<SettingsTab>(initialTab);
+  const [activeTab, setActiveTab] = useState<SettingsTab>(() => {
+    if (isDemoMode && (initialTab === 'staff' || initialTab === 'telegram')) {
+      return 'store';
+    }
+    return initialTab;
+  });
 
   useEffect(() => {
     if (isOpen && initialTab) {
-      setActiveTab(initialTab);
+      if (isDemoMode && (initialTab === 'staff' || initialTab === 'telegram')) {
+        setActiveTab('store');
+      } else {
+        setActiveTab(initialTab);
+      }
     }
-  }, [isOpen, initialTab]);
+  }, [isOpen, initialTab, isDemoMode]);
 
   const [rateInput, setRateInput] = useState(exchangeRate.toString());
   const [storeIdInput, setStoreIdInput] = useState(() => getStoreId());
@@ -382,7 +392,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     }
   };
 
-  const tabs: { id: SettingsTab; label: string; icon: any }[] = [
+  const allTabs: { id: SettingsTab; label: string; icon: any }[] = [
     { id: 'store', label: 'ព័ត៌មានហាង & Logo', icon: Store },
     { id: 'khqr', label: 'ប្រព័ន្ធ KHQR', icon: QrCode },
     { id: 'staff', label: 'បុគ្គលិក & សិទ្ធិ 👥', icon: Users },
@@ -392,6 +402,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     { id: 'telegram', label: 'Telegram Bot 📬', icon: Send },
     { id: 'notifications', label: 'ការដាស់តឿន 🔔', icon: Bell },
   ];
+
+  const tabs = allTabs.filter((tab) => {
+    if (isDemoMode && (tab.id === 'staff' || tab.id === 'telegram')) {
+      return false;
+    }
+    return true;
+  });
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-200">
@@ -485,7 +502,21 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         <div className="p-6 overflow-y-auto flex-1">
           {activeTab === 'staff' ? (
             /* Staff & Permissions Tab */
-            <StaffManagement isEmbedded={true} />
+            isDemoMode ? (
+              <div className="p-8 text-center bg-white rounded-3xl border border-rose-100 shadow-sm space-y-4 my-6">
+                <div className="w-16 h-16 bg-rose-100 text-rose-600 rounded-full flex items-center justify-center mx-auto shadow-inner">
+                  <ShieldCheck className="w-8 h-8" />
+                </div>
+                <h3 className="text-lg font-black text-slate-800">
+                  មុខងារគ្រប់គ្រងបុគ្គលិក & សិទ្ធិ ត្រូវបានបិទក្នុង Demo Mode
+                </h3>
+                <p className="text-sm text-slate-500 max-w-md mx-auto">
+                  ដើម្បីការពារសុវត្ថិភាព និងទិន្នន័យគណនី ផ្ទាំងគ្រប់គ្រងបុគ្គលិក ការកែប្រែ PIN និងសិទ្ធិប្រើប្រាស់ មិនត្រូវបានអនុញ្ញាតឱ្យចូលមើល ឬកែប្រែក្នុងផ្ទាំង Demo ឡើយ។
+                </p>
+              </div>
+            ) : (
+              <StaffManagement isEmbedded={true} />
+            )
           ) : activeTab === 'backup' ? (
             /* Backup & Restore Tab */
             <div className="space-y-6">
@@ -685,7 +716,21 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             <FirebaseSettingsTab />
           ) : activeTab === 'telegram' ? (
             /* Telegram Bot Tab */
-            <TelegramSettingsTab />
+            isDemoMode ? (
+              <div className="p-8 text-center bg-white rounded-3xl border border-blue-100 shadow-sm space-y-4 my-6">
+                <div className="w-16 h-16 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto shadow-inner">
+                  <ShieldCheck className="w-8 h-8" />
+                </div>
+                <h3 className="text-lg font-black text-slate-800">
+                  មុខងារ Telegram Bot ត្រូវបានបិទក្នុង Demo Mode
+                </h3>
+                <p className="text-sm text-slate-500 max-w-md mx-auto">
+                  ដើម្បីការពារសុវត្ថិភាព Bot Token និង Chat ID ផ្ទាំងកំណត់ប្រព័ន្ធ Telegram Bot មិនត្រូវបានអនុញ្ញាតឱ្យចូលមើល ឬកែប្រែក្នុងផ្ទាំង Demo ឡើយ។
+                </p>
+              </div>
+            ) : (
+              <TelegramSettingsTab />
+            )
           ) : activeTab === 'notifications' ? (
             /* Device Notifications & Reminders Tab */
             <NotificationSettingsTab />

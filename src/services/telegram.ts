@@ -22,10 +22,28 @@ export const DEFAULT_TELEGRAM_CONFIG: TelegramConfig = {
   notifyShiftClose: true,
 };
 
+export const isDemoModeActive = (): boolean => {
+  if (typeof window === 'undefined') return false;
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('demo') === 'true' || window.location.hash === '#demo') return true;
+  return localStorage.getItem('bakery_is_demo_mode') === 'true';
+};
+
 /**
  * Retrieve saved Telegram config from localStorage
  */
 export const getStoredTelegramConfig = (): TelegramConfig => {
+  if (isDemoModeActive()) {
+    return {
+      botToken: '',
+      chatId: '',
+      enabled: false,
+      notifySales: false,
+      notifyCustomOrders: false,
+      notifyExpenses: false,
+      notifyShiftClose: false,
+    };
+  }
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
@@ -42,6 +60,10 @@ export const getStoredTelegramConfig = (): TelegramConfig => {
  * Save Telegram config to localStorage and server LAN sync
  */
 export const saveStoredTelegramConfig = (config: TelegramConfig): void => {
+  if (isDemoModeActive()) {
+    console.warn('[Telegram] Blocked config saving in Demo mode');
+    return;
+  }
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
     // Also push to server LAN sync if available so other devices (phones) get it
@@ -67,6 +89,9 @@ export const saveStoredTelegramConfig = (config: TelegramConfig): void => {
  */
 export const getStoredTelegramConfigAsync = async (): Promise<TelegramConfig> => {
   let config = getStoredTelegramConfig();
+  if (isDemoModeActive()) {
+    return config;
+  }
   if (config.botToken && config.chatId) {
     return config;
   }
