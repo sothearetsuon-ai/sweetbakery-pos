@@ -533,6 +533,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   const deleteStaffMember = (id: string) => {
     if (globalIsDemoMode) return;
+    recordDeletedId('staff', id, deletedStaffIds);
     setStaffMembers((prev) => {
       const updated = prev.filter((s) => s.id !== id);
       localStorage.setItem('bakery_staff_members', JSON.stringify(updated));
@@ -1128,6 +1129,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const deletedExpenseIds = useRef<Set<string>>(loadDeletedIds('expenses'));
   const deletedProductIds = useRef<Set<string>>(loadDeletedIds('products'));
   const deletedOrderIds = useRef<Set<string>>(loadDeletedIds('orders'));
+  const deletedStaffIds = useRef<Set<string>>(loadDeletedIds('staff'));
   const customOrdersRef = useRef<CustomCakeOrder[]>(customOrders);
   customOrdersRef.current = customOrders;
   const salesRef = useRef<CompletedSale[]>(sales);
@@ -1140,7 +1142,13 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       fetch('/api/lan-sync', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({
+          ...payload,
+          deletedSaleIds: Array.from(deletedSaleIds.current),
+          deletedOrderIds: Array.from(deletedOrderIds.current),
+          deletedExpenseIds: Array.from(deletedExpenseIds.current),
+          deletedProductIds: Array.from(deletedProductIds.current),
+        }),
       }).catch(() => {});
     } catch (e) {}
   };
@@ -1163,15 +1171,10 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         prev.forEach((p: any) => {
           if (p && p.id && !deletedProductIds.current.has(p.id) && !prodMap.has(p.id)) {
             prodMap.set(p.id, p);
-            fetch('/api/save-product', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ product: p }),
-            }).catch(() => {});
           }
         });
         const merged = sortProductsNewestFirst(Array.from(prodMap.values()));
-        try { localStorage.setItem('bakery_products', JSON.stringify(merged)); } catch (e) {}
+        safeSetStorage('bakery_products', JSON.stringify(merged));
         return merged;
       });
     }
@@ -1181,31 +1184,24 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         data.sales.forEach((s: any) => {
           if (s && s.id && !deletedSaleIds.current.has(s.id)) salesMap.set(s.id, s);
         });
-        // Preserve any recent locally created sale (< 5 mins old) so it never disappears!
         prev.forEach((s: any) => {
-          if (s && s.id && !deletedSaleIds.current.has(s.id) && !salesMap.has(s.id)) {
-            const ageMs = Date.now() - new Date(s.createdAt).getTime();
-            if (ageMs < 300000) {
-              salesMap.set(s.id, s);
-              // Re-post to server to ensure it stays in db
-              fetch('/api/save-sale', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ sale: s }),
-              }).catch(() => {});
-            }
+          if (s && s.id && !deletedSaleIds.current.has(s.id)) {
+            salesMap.set(s.id, s);
           }
         });
-        const merged = Array.from(salesMap.values()).sort(
-          (a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-        );
-        try { localStorage.setItem('bakery_sales', JSON.stringify(merged)); } catch (e) {}
+        const merged = Array.from(salesMap.values())
+          .filter((s: any) => !deletedSaleIds.current.has(s.id))
+          .sort(
+            (a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+          );
+        safeSetStorage('bakery_sales', JSON.stringify(merged));
         return merged;
       });
     }
     if (Array.isArray(data.customOrders)) {
-      setCustomOrders(data.customOrders);
-      try { localStorage.setItem('bakery_custom_orders', JSON.stringify(data.customOrders)); } catch (e) {}
+      const filteredOrders = data.customOrders.filter((o: any) => o && o.id && !deletedOrderIds.current.has(o.id));
+      setCustomOrders(filteredOrders);
+      safeSetStorage('bakery_custom_orders', JSON.stringify(filteredOrders));
     }
     if (Array.isArray(data.expenses)) {
       const filtered = data.expenses
@@ -1470,7 +1466,9 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     const unsubStaff = subscribeToFirestoreCollection<StaffMember>('staffMembers', (cloudStaff) => {
       if (globalIsDemoMode) return;
       if (cloudStaff && cloudStaff.length > 0) {
-        const sanitizedCloud = cloudStaff.map((s) => {
+        const sanitizedCloud = cloudStaff
+          .filter((s) => s && s.id && !deletedStaffIds.current.has(s.id))
+          .map((s) => {
           if (s.name?.includes('ម៉ារី') || s.name?.includes('Mary') || s.id === 'staff-1') {
             const clean = {
               ...s,
@@ -2621,11 +2619,21 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       return updated;
     });
     syncDeleteDoc('customOrders', orderId);
+    fetch('/api/delete-custom-order', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: orderId }),
+    }).catch(() => {});
   };
 
   const clearAllCustomOrders = () => {
     isUpdatingFromLan.current = false;
     if (lanSyncTimer.current) clearTimeout(lanSyncTimer.current);
+
+    fetch('/api/clear-all-custom-orders', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+    }).catch(() => {});
 
     // Clean up any custom sales created for these orders
     customOrders.forEach((o) => {

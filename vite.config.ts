@@ -131,26 +131,31 @@ function lanSyncPlugin(): Plugin {
               const incoming = JSON.parse(body);
               const currentDb = getDbData() || {};
 
-              // 1. Merge sales by id so sales never get deleted by a sync push!
+              const deletedSaleIds = new Set(incoming.deletedSaleIds || []);
+              const deletedOrderIds = new Set(incoming.deletedOrderIds || []);
+              const deletedExpenseIds = new Set(incoming.deletedExpenseIds || []);
+              const deletedProductIds = new Set(incoming.deletedProductIds || []);
+
+              // 1. Merge sales by id
               const salesMap = new Map();
-              (currentDb.sales || []).forEach((s: any) => { if (s && s.id) salesMap.set(s.id, s); });
-              (incoming.sales || []).forEach((s: any) => { if (s && s.id) salesMap.set(s.id, s); });
+              (currentDb.sales || []).forEach((s: any) => { if (s && s.id && !deletedSaleIds.has(s.id)) salesMap.set(s.id, s); });
+              (incoming.sales || []).forEach((s: any) => { if (s && s.id && !deletedSaleIds.has(s.id)) salesMap.set(s.id, s); });
               const mergedSales = Array.from(salesMap.values()).sort(
                 (a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
               );
 
               // 2. Merge expenses by id
               const expensesMap = new Map();
-              (currentDb.expenses || []).forEach((e: any) => { if (e && e.id) expensesMap.set(e.id, e); });
-              (incoming.expenses || []).forEach((e: any) => { if (e && e.id) expensesMap.set(e.id, e); });
+              (currentDb.expenses || []).forEach((e: any) => { if (e && e.id && !deletedExpenseIds.has(e.id)) expensesMap.set(e.id, e); });
+              (incoming.expenses || []).forEach((e: any) => { if (e && e.id && !deletedExpenseIds.has(e.id)) expensesMap.set(e.id, e); });
               const mergedExpenses = Array.from(expensesMap.values()).sort(
                 (a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
               );
 
               // 3. Merge customOrders by id
               const ordersMap = new Map();
-              (currentDb.customOrders || []).forEach((o: any) => { if (o && o.id) ordersMap.set(o.id, o); });
-              (incoming.customOrders || []).forEach((o: any) => { if (o && o.id) ordersMap.set(o.id, o); });
+              (currentDb.customOrders || []).forEach((o: any) => { if (o && o.id && !deletedOrderIds.has(o.id)) ordersMap.set(o.id, o); });
+              (incoming.customOrders || []).forEach((o: any) => { if (o && o.id && !deletedOrderIds.has(o.id)) ordersMap.set(o.id, o); });
               const mergedOrders = Array.from(ordersMap.values()).sort(
                 (a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
               );
@@ -284,6 +289,51 @@ function lanSyncPlugin(): Plugin {
           try {
             const dbData = getDbData() || {};
             dbData.sales = [];
+            safeWrite(dbPath, JSON.stringify(dbData, null, 2));
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ success: true }));
+            broadcastEvent('SYNC_UPDATE');
+          } catch (err: any) {
+            res.writeHead(500, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: err.message }));
+          }
+          return;
+        }
+
+        // POST Delete Single Custom Order (Atomic)
+        if (req.url === '/api/delete-custom-order' && req.method === 'POST') {
+          let body = '';
+          req.on('data', (chunk) => { body += chunk; });
+          req.on('end', () => {
+            try {
+              const { id } = JSON.parse(body);
+              const dbData = getDbData() || {};
+              if (Array.isArray(dbData.customOrders)) {
+                dbData.customOrders = dbData.customOrders.filter((o: any) => o.id !== id);
+              }
+              if (Array.isArray(dbData.sales)) {
+                dbData.sales = dbData.sales.filter((s: any) => s.id !== `sale-custom-${id}`);
+              }
+              safeWrite(dbPath, JSON.stringify(dbData, null, 2));
+              res.writeHead(200, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({ success: true, deletedId: id }));
+              broadcastEvent('SYNC_UPDATE');
+            } catch (err: any) {
+              res.writeHead(500, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({ error: err.message }));
+            }
+          });
+          return;
+        }
+
+        // POST Clear All Custom Orders
+        if (req.url === '/api/clear-all-custom-orders' && req.method === 'POST') {
+          try {
+            const dbData = getDbData() || {};
+            dbData.customOrders = [];
+            if (Array.isArray(dbData.sales)) {
+              dbData.sales = dbData.sales.filter((s: any) => !s.id.startsWith('sale-custom-'));
+            }
             safeWrite(dbPath, JSON.stringify(dbData, null, 2));
             res.writeHead(200, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ success: true }));
