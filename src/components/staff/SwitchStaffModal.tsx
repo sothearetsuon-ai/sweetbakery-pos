@@ -215,7 +215,7 @@ export const SwitchStaffModal: React.FC<SwitchStaffModalProps> = ({ isOpen, onCl
                       {/* Card Footer Action */}
                       <div className="flex items-center justify-between pt-1.5 border-t border-slate-100">
                         <span className="text-[10px] text-slate-400 font-mono">
-                          PIN: <strong className="text-slate-600">{staff.pinCode}</strong>
+                          PIN: <strong className="text-slate-600 font-black">****</strong>
                         </span>
                         <button
                           type="button"
@@ -224,7 +224,7 @@ export const SwitchStaffModal: React.FC<SwitchStaffModalProps> = ({ isOpen, onCl
                             handleQuickSwitch(staff);
                           }}
                           className="px-2 py-0.5 bg-white hover:bg-pink-600 hover:text-white text-pink-600 border border-pink-200 rounded-lg text-[10px] font-bold transition-all shadow-2xs flex items-center gap-1 cursor-pointer"
-                          title="ចូលប្រើភ្លាមៗដោយមិនបាច់វាយ PIN"
+                          title="ចូលប្រើភ្លាមៗ"
                         >
                           <span>ចូលភ្លាម</span>
                           <ArrowRight className="w-3 h-3" />
@@ -258,20 +258,22 @@ export const SwitchStaffModal: React.FC<SwitchStaffModalProps> = ({ isOpen, onCl
                   </span>
                 </div>
                 <div className="text-[11px] text-slate-500 font-medium">
-                  វាយលេខកូដ PIN 4 ខ្ទង់ (PIN សាកល្បង: <strong className="text-pink-600 font-mono text-xs">{activeTarget.pinCode}</strong>)
+                  វាយលេខកូដ PIN 4 ខ្ទង់ (សញ្ញា: <strong className="text-pink-600 font-mono text-xs">****</strong>)
                 </div>
 
-                {/* 4 PIN Dots */}
+                {/* 4 PIN Asterisks Display (****) */}
                 <div className="flex items-center justify-center gap-3 my-2">
                   {[0, 1, 2, 3].map((i) => (
                     <div
                       key={i}
-                      className={`w-3.5 h-3.5 rounded-full border-2 transition-all ${
+                      className={`w-7 h-9 rounded-xl border-2 flex items-center justify-center font-black text-base transition-all select-none ${
                         pinInput.length > i
-                          ? 'bg-pink-600 border-pink-600 scale-125 shadow-xs'
-                          : 'bg-white border-slate-300'
+                          ? 'bg-pink-50 border-pink-600 text-pink-600 scale-105 shadow-xs'
+                          : 'bg-white border-slate-300 text-slate-300'
                       }`}
-                    />
+                    >
+                      {pinInput.length > i ? '✱' : '•'}
+                    </div>
                   ))}
                 </div>
 

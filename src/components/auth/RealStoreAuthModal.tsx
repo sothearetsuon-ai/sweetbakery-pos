@@ -156,20 +156,22 @@ export const RealStoreAuthModal: React.FC<RealStoreAuthModalProps> = ({
 
         {/* Modal Body */}
         <div className="p-5 sm:p-6 space-y-4">
-          {/* PIN Input Display & Dots */}
+          {/* PIN Input Display & Masked Asterisks (****) */}
           <div className="flex flex-col items-center justify-center space-y-2">
-            <div className="flex items-center gap-2.5 my-1">
+            <div className="flex items-center justify-center gap-2.5 my-1">
               {[0, 1, 2, 3].map((idx) => {
                 const isFilled = pinInput.length > idx;
                 return (
                   <div
                     key={idx}
-                    className={`w-4 h-4 rounded-full border-2 transition-all duration-200 ${
+                    className={`w-10 h-12 rounded-2xl flex items-center justify-center font-black text-2xl transition-all duration-200 border-2 select-none ${
                       isFilled
-                        ? 'bg-rose-600 border-rose-600 scale-125 shadow-md shadow-rose-500/30'
-                        : 'border-slate-300 bg-slate-100'
+                        ? 'bg-rose-50 border-rose-500 text-rose-600 scale-105 shadow-sm shadow-rose-200'
+                        : 'border-slate-200 bg-slate-50 text-slate-300'
                     }`}
-                  />
+                  >
+                    {isFilled ? '✱' : '•'}
+                  </div>
                 );
               })}
             </div>
@@ -186,8 +188,8 @@ export const RealStoreAuthModal: React.FC<RealStoreAuthModalProps> = ({
                   setPinInput(e.target.value);
                   setErrorMessage('');
                 }}
-                placeholder="វាយលេខកូដ PIN (ឧ. 1111)"
-                className="w-full pl-10 pr-10 py-2.5 text-center text-base font-black tracking-widest bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-rose-500 focus:bg-white transition-all placeholder:text-xs placeholder:font-normal placeholder:tracking-normal placeholder:text-slate-400"
+                placeholder="បញ្ចូលលេខសម្ងាត់ (****)"
+                className="w-full pl-10 pr-10 py-2.5 text-center text-lg font-black tracking-widest bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-rose-500 focus:bg-white transition-all placeholder:text-xs placeholder:font-normal placeholder:tracking-normal placeholder:text-slate-400"
                 autoFocus
               />
               <button
@@ -207,8 +209,9 @@ export const RealStoreAuthModal: React.FC<RealStoreAuthModalProps> = ({
                 <span>{errorMessage}</span>
               </p>
             ) : (
-              <p className="text-[11px] text-slate-400 text-center">
-                លេខកូដសម្ងាត់លំនាំដើមរបស់ហាងគឺ៖ <span className="font-bold text-slate-600">1111</span> (ឬ PIN ប្រធានហាង)
+              <p className="text-[11px] text-slate-500 text-center font-medium flex items-center justify-center gap-1">
+                <Lock className="w-3 h-3 text-slate-400" />
+                <span>លេខសម្ងាត់ត្រូវបានការពារជាសញ្ញា (****)</span>
               </p>
             )}
           </div>

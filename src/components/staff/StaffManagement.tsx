@@ -271,7 +271,7 @@ export const StaffManagement: React.FC<StaffManagementProps> = ({ isEmbedded = f
 
         <div className="flex items-center gap-2 text-xs font-bold text-slate-600">
           <Key className="w-3.5 h-3.5 text-amber-600" />
-          <span>PIN: {currentStaff.pinCode}</span>
+          <span>PIN: ****</span>
         </div>
       </div>
 
@@ -333,7 +333,7 @@ export const StaffManagement: React.FC<StaffManagementProps> = ({ isEmbedded = f
               <div className="grid grid-cols-2 gap-2 text-xs bg-slate-50 p-2.5 rounded-2xl border border-slate-100">
                 <div>
                   <span className="text-[10px] text-slate-400 block font-semibold">លេខកូដ PIN:</span>
-                  <span className="font-mono font-bold text-slate-800">● ● ● ● ({staff.pinCode})</span>
+                  <span className="font-mono font-bold text-slate-800">● ● ● ● (****)</span>
                 </div>
                 <div>
                   <span className="text-[10px] text-slate-400 block font-semibold">លេខទូរស័ព្ទ:</span>

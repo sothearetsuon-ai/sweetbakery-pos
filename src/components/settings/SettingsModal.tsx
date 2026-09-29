@@ -14,6 +14,7 @@ import {
   DollarSign,
   QrCode,
   Eye,
+  EyeOff,
   Users,
   Database,
   Download,
@@ -113,6 +114,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   // Real Store Security Passcode state
   const [realStorePin, setRealStorePin] = useState(storeInfo?.realStorePin || '1111');
   const [requireRealStorePin, setRequireRealStorePin] = useState(storeInfo?.requireRealStorePin !== false);
+  const [showRealStorePin, setShowRealStorePin] = useState(false);
 
   const [savedSuccess, setSavedSuccess] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -917,15 +919,25 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                           <Key className="w-3.5 h-3.5 text-rose-500" />
                           <span>លេខកូដសម្ងាត់ហាងពិត (PIN / Password)</span>
                         </label>
-                        <input
-                          type="text"
-                          value={realStorePin}
-                          onChange={(e) => setRealStorePin(e.target.value)}
-                          placeholder="ឧ. 1111 (៤ ខ្ទង់)"
-                          className="w-full px-3 py-2 text-sm border border-rose-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 font-black text-rose-900 bg-white shadow-2xs"
-                        />
+                        <div className="relative">
+                          <input
+                            type={showRealStorePin ? 'text' : 'password'}
+                            value={realStorePin}
+                            onChange={(e) => setRealStorePin(e.target.value)}
+                            placeholder="•••• •••• (****)"
+                            className="w-full pl-3 pr-10 py-2 text-sm border border-rose-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 font-black tracking-widest text-rose-900 bg-white shadow-2xs"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowRealStorePin((prev) => !prev)}
+                            className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 cursor-pointer"
+                            title={showRealStorePin ? 'លាក់លេខសម្ងាត់' : 'បង្ហាញលេខសម្ងាត់'}
+                          >
+                            {showRealStorePin ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                          </button>
+                        </div>
                         <p className="text-[10px] text-slate-500 mt-1">
-                          * អាចប្រើ PIN បុគ្គលិកថ្នាក់គ្រប់គ្រង (Admin/Manager) ឬ PIN 1111 នេះបាន
+                          * លេខសម្ងាត់ត្រូវបានការពារជាសញ្ញា (****)
                         </p>
                       </div>
 

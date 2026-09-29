@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { ChevronDown, Users, Check, ShieldCheck, KeyRound, ArrowRight, X, Sparkles } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { useBakery } from '../../context/BakeryContext';
@@ -225,7 +225,7 @@ export const StaffDropdown: React.FC<StaffDropdownProps> = ({
                               {labelKh}
                             </span>
                             <span className="text-[10px] text-slate-400 font-mono">
-                              PIN: <strong className="text-slate-600">{staff.pinCode}</strong>
+                              PIN: <strong className="text-slate-600 font-black">****</strong>
                             </span>
                           </div>
                         </div>
@@ -279,7 +279,7 @@ export const StaffDropdown: React.FC<StaffDropdownProps> = ({
                 >
                   ← ត្រឡប់ក្រោយ
                 </button>
-                <span className="text-xs font-black text-slate-700">វាយលេខកូដ PIN 4 ខ្ទង់</span>
+                <span className="text-xs font-black text-slate-700">វាយលេខកូដ PIN (****)</span>
               </div>
 
               {selectedStaffForPin && (
@@ -288,21 +288,23 @@ export const StaffDropdown: React.FC<StaffDropdownProps> = ({
                     <span className="text-base">{selectedStaffForPin.avatar || '👤'}</span>
                     <span className="font-black text-xs text-slate-800">{selectedStaffForPin.name}</span>
                     <span className="text-[10px] text-pink-600 font-mono font-black">
-                      (PIN: {selectedStaffForPin.pinCode})
+                      (PIN: ****)
                     </span>
                   </div>
 
-                  {/* PIN Dots */}
+                  {/* PIN Asterisks Display (****) */}
                   <div className="flex items-center justify-center gap-2.5 my-2">
                     {[0, 1, 2, 3].map((i) => (
                       <div
                         key={i}
-                        className={`w-3.5 h-3.5 rounded-full border-2 transition-all ${
+                        className={`w-7 h-8 rounded-xl border-2 flex items-center justify-center font-black text-sm transition-all select-none ${
                           pinInput.length > i
-                            ? 'bg-pink-600 border-pink-600 scale-125 shadow-xs'
-                            : 'bg-white border-slate-300'
+                            ? 'bg-pink-50 border-pink-600 text-pink-600 scale-105 shadow-xs'
+                            : 'bg-white border-slate-300 text-slate-300'
                         }`}
-                      />
+                      >
+                        {pinInput.length > i ? '✱' : '•'}
+                      </div>
                     ))}
                   </div>
 
