@@ -552,9 +552,12 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setStaffMembers((prev) => {
       const updated = prev.map((s) => (s.id === id ? { ...s, ...updates } : s));
       localStorage.setItem('bakery_staff_members', JSON.stringify(updated));
+      // Save the FULL merged document to Firestore (not just partial updates)
+      // so new pinCode overwrites the old pinCode in the cloud
+      const fullUpdated = updated.find((s) => s.id === id);
+      if (fullUpdated) saveFirestoreDoc('staffMembers', id, fullUpdated);
       return updated;
     });
-    saveFirestoreDoc('staffMembers', id, updates);
     if (currentStaff.id === id) {
       setCurrentStaffState((prev) => ({ ...prev, ...updates }));
     }
@@ -3526,18 +3529,10 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
 
     // 2. Match against any active staff member's actual saved PIN
-    // This respects password changes — no hardcoded PIN bypasses
+    // This is the ONLY check for staff logins — respects all PIN changes
     const matchedStaff = staffMembers.find((s) => s.isActive && s.pinCode === cleanPin);
     if (matchedStaff) {
       setCurrentStaff(matchedStaff);
-      return true;
-    }
-
-    // 3. Fallback: check storeInfo master PIN (for stores without staff setup)
-    const masterPin = storeInfo.realStorePin;
-    if (masterPin && cleanPin === masterPin) {
-      const adminStaff = staffMembers.find((s) => s.role === 'ADMIN') || currentStaff;
-      setCurrentStaff(adminStaff);
       return true;
     }
 
