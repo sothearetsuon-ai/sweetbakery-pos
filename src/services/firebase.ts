@@ -9,6 +9,8 @@ import {
   onSnapshot,
   getDocs,
   enableIndexedDbPersistence,
+  increment,
+  serverTimestamp,
 } from 'firebase/firestore';
 import {
   getStorage,
@@ -305,8 +307,8 @@ export const sanitizeForFirestore = (obj: any): any => {
  *   tenants/{storeId}/{collectionName}
  */
 export const getScopedCollectionRef = (db: Firestore, collectionName: string) => {
-  if (collectionName === 'system_licenses') {
-    return collection(db, 'system_licenses');
+  if (collectionName === 'system_licenses' || collectionName === 'system_analytics') {
+    return collection(db, collectionName);
   }
   const storeId = getStoreId();
   if (isDefaultStore(storeId)) {
@@ -316,8 +318,8 @@ export const getScopedCollectionRef = (db: Firestore, collectionName: string) =>
 };
 
 export const getScopedDocRef = (db: Firestore, collectionName: string, docId: string) => {
-  if (collectionName === 'system_licenses') {
-    return doc(db, 'system_licenses', docId);
+  if (collectionName === 'system_licenses' || collectionName === 'system_analytics') {
+    return doc(db, collectionName, docId);
   }
   const storeId = getStoreId();
   if (isDefaultStore(storeId)) {
@@ -658,6 +660,97 @@ export const deleteAudioFromFirebaseStorage = async (storagePath: string): Promi
     await deleteObject(fileRef);
   } catch (e) {
     console.warn('Error deleting audio file from storage:', e);
+  }
+};
+
+export interface DemoVisitorStats {
+  totalVisits: number;
+  uniqueVisitors: number;
+  lastVisitedAt?: string;
+}
+
+/**
+ * Record a demo visitor (debounced by browser session)
+ */
+export const recordDemoVisitor = async (): Promise<void> => {
+  try {
+    if (typeof window === 'undefined') return;
+
+    const sessionCounted = sessionStorage.getItem('bakery_demo_session_counted');
+    const isFirstDeviceVisit = !localStorage.getItem('bakery_demo_device_counted');
+
+    const cachedVisits = parseInt(localStorage.getItem('bakery_demo_local_visits') || '25', 10);
+    const cachedUnique = parseInt(localStorage.getItem('bakery_demo_local_unique') || '18', 10);
+
+    if (!sessionCounted) {
+      sessionStorage.setItem('bakery_demo_session_counted', 'true');
+      const newVisits = cachedVisits + 1;
+      const newUnique = isFirstDeviceVisit ? cachedUnique + 1 : cachedUnique;
+      localStorage.setItem('bakery_demo_local_visits', newVisits.toString());
+      if (isFirstDeviceVisit) {
+        localStorage.setItem('bakery_demo_device_counted', 'true');
+        localStorage.setItem('bakery_demo_local_unique', newUnique.toString());
+      }
+    }
+
+    const db = getFirestoreDb();
+    if (!db) return;
+
+    if (!sessionCounted) {
+      const docRef = getScopedDocRef(db, 'system_analytics', 'demo_visitors');
+      await setDoc(
+        docRef,
+        {
+          totalVisits: increment(1),
+          ...(isFirstDeviceVisit ? { uniqueVisitors: increment(1) } : {}),
+          lastVisitedAt: new Date().toISOString(),
+          updatedAt: serverTimestamp(),
+        },
+        { merge: true }
+      );
+    }
+  } catch (err) {
+    console.warn('[Demo Analytics] Failed to record demo visitor:', err);
+  }
+};
+
+/**
+ * Subscribe to real-time Demo Visitor Stats from Cloud Firestore
+ */
+export const subscribeToDemoVisitorStats = (
+  callback: (stats: DemoVisitorStats) => void
+): (() => void) => {
+  const initialVisits = parseInt(localStorage.getItem('bakery_demo_local_visits') || '25', 10);
+  const initialUnique = parseInt(localStorage.getItem('bakery_demo_local_unique') || '18', 10);
+  callback({ totalVisits: initialVisits, uniqueVisitors: initialUnique });
+
+  const db = getFirestoreDb();
+  if (!db) return () => {};
+
+  try {
+    const docRef = getScopedDocRef(db, 'system_analytics', 'demo_visitors');
+    const unsub = onSnapshot(
+      docRef,
+      (snapshot) => {
+        if (snapshot.exists()) {
+          const data = snapshot.data();
+          const stats: DemoVisitorStats = {
+            totalVisits: typeof data.totalVisits === 'number' ? data.totalVisits : initialVisits,
+            uniqueVisitors: typeof data.uniqueVisitors === 'number' ? data.uniqueVisitors : initialUnique,
+            lastVisitedAt: data.lastVisitedAt || new Date().toISOString(),
+          };
+          localStorage.setItem('bakery_demo_local_visits', stats.totalVisits.toString());
+          localStorage.setItem('bakery_demo_local_unique', stats.uniqueVisitors.toString());
+          callback(stats);
+        }
+      },
+      (err) => {
+        console.warn('[Demo Analytics] Listener notice:', err);
+      }
+    );
+    return unsub;
+  } catch (e) {
+    return () => {};
   }
 };
 

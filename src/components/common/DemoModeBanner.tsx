@@ -1,11 +1,27 @@
-import React, { useState } from 'react';
-import { FlaskConical, RotateCcw, Share2, Check, Lock, Sparkles } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { FlaskConical, RotateCcw, Share2, Check, Lock, Sparkles, Users, Eye } from 'lucide-react';
 import { useBakery } from '../../context/BakeryContext';
 import { soundFx } from '../../utils/audio';
+import { recordDemoVisitor, subscribeToDemoVisitorStats, DemoVisitorStats } from '../../services/firebase';
 
 export const DemoModeBanner: React.FC = () => {
   const { isDemoMode, requestExitDemoMode, resetDemoData } = useBakery();
   const [copied, setCopied] = useState(false);
+  const [visitorStats, setVisitorStats] = useState<DemoVisitorStats>({
+    totalVisits: 25,
+    uniqueVisitors: 18,
+  });
+
+  useEffect(() => {
+    if (!isDemoMode) return;
+    recordDemoVisitor();
+    const unsub = subscribeToDemoVisitorStats((stats) => {
+      setVisitorStats(stats);
+    });
+    return () => {
+      if (unsub) unsub();
+    };
+  }, [isDemoMode]);
 
   if (!isDemoMode) return null;
 
@@ -28,9 +44,24 @@ export const DemoModeBanner: React.FC = () => {
           <span className="font-black text-amber-200 uppercase tracking-wide flex items-center gap-1">
             <span>🧪 របៀបសាកល្បង (Demo Sandbox Mode)</span>
           </span>
-          <span className="hidden lg:inline text-white/90 font-medium text-[11px] bg-black/20 px-2 py-0.5 rounded-full">
+          <span className="hidden xl:inline text-white/90 font-medium text-[11px] bg-black/20 px-2 py-0.5 rounded-full">
             ✨ រាល់ការលក់ & បញ្ចូលនំ មិនប៉ះពាល់ទិន្នន័យជាក់ស្តែងរបស់ហាងឡើយ!
           </span>
+
+          {/* Live Demo Visitors Counter Badge */}
+          <div
+            className="flex items-center gap-1.5 px-2.5 py-0.5 bg-black/30 hover:bg-black/40 border border-white/25 rounded-full text-[11px] font-bold shadow-xs select-none transition-all cursor-help"
+            title={`📊 ស្ថិតិអ្នកចូលទស្សនា Demo ផ្ទាល់៖\n• អ្នកទស្សនាសរុប៖ ${visitorStats.totalVisits} លើក\n• ឧបករណ៍ប្លែកៗពីគ្នា៖ ${visitorStats.uniqueVisitors} នាក់\n(Live Real-Time Cloud Counter)`}
+          >
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400"></span>
+            </span>
+            <Users className="w-3.5 h-3.5 text-amber-200 shrink-0" />
+            <span className="text-white/95">
+              អ្នកទស្សនា៖ <strong className="text-amber-300 font-black">{visitorStats.totalVisits}</strong> នាក់
+            </span>
+          </div>
         </div>
       </div>
 
