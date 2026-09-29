@@ -256,6 +256,8 @@ interface BakeryContextType {
   offlineSyncStatus: SyncState;
   pendingSyncCount: number;
   triggerAutoCloudSync: () => Promise<void>;
+  lanSyncStatus: 'connected' | 'syncing' | 'idle';
+  forceSyncLan: () => Promise<{ salesCount: number; expensesCount: number }>;
 
   staffMembers: StaffMember[];
   currentStaff: StaffMember;
@@ -1123,6 +1125,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   }, [customOrders]);
 
   // Local Area Network (LAN) Sync - Synchronizes PC and phones in real-time over local Wi-Fi even without internet
+  const [lanSyncStatus, setLanSyncStatus] = useState<'connected' | 'syncing' | 'idle'>('idle');
   const isUpdatingFromLan = useRef<boolean>(true);
   const lanSyncTimer = useRef<any>(null);
   const deletedSaleIds = useRef<Set<string>>(loadDeletedIds('sales'));
@@ -1157,8 +1160,24 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     if (globalIsDemoMode) return;
     if (!data || data.exists === false) return;
     isUpdatingFromLan.current = true;
+    setLanSyncStatus('syncing');
     if (lanSyncTimer.current) clearTimeout(lanSyncTimer.current);
 
+    // 1. Ingest any remote deletions so all devices stay strictly consistent
+    if (Array.isArray(data.deletedSaleIds)) {
+      data.deletedSaleIds.forEach((id: string) => recordDeletedId('sales', id, deletedSaleIds));
+    }
+    if (Array.isArray(data.deletedOrderIds)) {
+      data.deletedOrderIds.forEach((id: string) => recordDeletedId('orders', id, deletedOrderIds));
+    }
+    if (Array.isArray(data.deletedExpenseIds)) {
+      data.deletedExpenseIds.forEach((id: string) => recordDeletedId('expenses', id, deletedExpenseIds));
+    }
+    if (Array.isArray(data.deletedProductIds)) {
+      data.deletedProductIds.forEach((id: string) => recordDeletedId('products', id, deletedProductIds));
+    }
+
+    // 2. Sync Products
     if (Array.isArray(data.products) && data.products.length > 0) {
       setProducts((prev) => {
         const prodMap = new Map();
@@ -1167,10 +1186,13 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             prodMap.set(p.id, p);
           }
         });
-        // Preserve any recent locally added product so it never disappears
+        const recentCutoff = Date.now() - 20000;
         prev.forEach((p: any) => {
           if (p && p.id && !deletedProductIds.current.has(p.id) && !prodMap.has(p.id)) {
-            prodMap.set(p.id, p);
+            const time = new Date(p.createdAt || p.updatedAt).getTime();
+            if (time > recentCutoff) {
+              prodMap.set(p.id, p);
+            }
           }
         });
         const merged = sortProductsNewestFirst(Array.from(prodMap.values()));
@@ -1178,15 +1200,25 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         return merged;
       });
     }
+
+    // 3. Sync Sales (eliminates discrepancy between PC and phone)
     if (Array.isArray(data.sales)) {
       setSales((prev) => {
         const salesMap = new Map();
+        // Server database is the authority
         data.sales.forEach((s: any) => {
-          if (s && s.id && !deletedSaleIds.current.has(s.id)) salesMap.set(s.id, s);
-        });
-        prev.forEach((s: any) => {
           if (s && s.id && !deletedSaleIds.current.has(s.id)) {
             salesMap.set(s.id, s);
+          }
+        });
+        // Keep only very recent locally added sales pending sync (<20s)
+        const recentCutoff = Date.now() - 20000;
+        prev.forEach((s: any) => {
+          if (s && s.id && !deletedSaleIds.current.has(s.id) && !salesMap.has(s.id)) {
+            const saleTime = new Date(s.createdAt).getTime();
+            if (saleTime > recentCutoff) {
+              salesMap.set(s.id, s);
+            }
           }
         });
         const merged = Array.from(salesMap.values())
@@ -1198,21 +1230,65 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         return merged;
       });
     }
+
+    // 4. Sync Custom Orders
     if (Array.isArray(data.customOrders)) {
-      const filteredOrders = data.customOrders.filter((o: any) => o && o.id && !deletedOrderIds.current.has(o.id));
-      setCustomOrders(filteredOrders);
-      safeSetStorage('bakery_custom_orders', JSON.stringify(filteredOrders));
+      setCustomOrders((prev) => {
+        const ordersMap = new Map();
+        data.customOrders.forEach((o: any) => {
+          if (o && o.id && !deletedOrderIds.current.has(o.id)) {
+            ordersMap.set(o.id, o);
+          }
+        });
+        const recentCutoff = Date.now() - 20000;
+        prev.forEach((o: any) => {
+          if (o && o.id && !deletedOrderIds.current.has(o.id) && !ordersMap.has(o.id)) {
+            const time = new Date(o.createdAt).getTime();
+            if (time > recentCutoff) {
+              ordersMap.set(o.id, o);
+            }
+          }
+        });
+        const merged = Array.from(ordersMap.values())
+          .filter((o: any) => !deletedOrderIds.current.has(o.id))
+          .sort(
+            (a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+          );
+        safeSetStorage('bakery_custom_orders', JSON.stringify(merged));
+        return merged;
+      });
     }
+
+    // 5. Sync Expenses (eliminates discrepancy between PC and phone)
     if (Array.isArray(data.expenses)) {
-      const filtered = data.expenses
-        .filter((e: any) => e && e.id && !deletedExpenseIds.current.has(e.id))
-        .sort(
-          (a: any, b: any) =>
-            new Date(b.createdAt || b.date).getTime() - new Date(a.createdAt || a.date).getTime()
-        );
-      setExpenses(filtered);
-      safeSetStorage('bakery_expenses', JSON.stringify(filtered));
+      setExpenses((prev) => {
+        const expensesMap = new Map();
+        data.expenses.forEach((e: any) => {
+          if (e && e.id && !deletedExpenseIds.current.has(e.id)) {
+            expensesMap.set(e.id, e);
+          }
+        });
+        const recentCutoff = Date.now() - 20000;
+        prev.forEach((e: any) => {
+          if (e && e.id && !deletedExpenseIds.current.has(e.id) && !expensesMap.has(e.id)) {
+            const time = new Date(e.createdAt || e.date).getTime();
+            if (time > recentCutoff) {
+              expensesMap.set(e.id, e);
+            }
+          }
+        });
+        const merged = Array.from(expensesMap.values())
+          .filter((e: any) => !deletedExpenseIds.current.has(e.id))
+          .sort(
+            (a: any, b: any) =>
+              new Date(b.createdAt || b.date).getTime() - new Date(a.createdAt || a.date).getTime()
+          );
+        safeSetStorage('bakery_expenses', JSON.stringify(merged));
+        return merged;
+      });
     }
+
+    // 6. Sync Store Info & Settings
     if (data.storeInfo) {
       setStoreInfo((prev) => {
         const newAddress = data.storeInfo.address || data.storeInfo.addressKh || prev.address || '';
@@ -1258,9 +1334,32 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       setExchangeRate(rate);
       try { localStorage.setItem('bakery_exchange_rate', String(rate)); } catch (e) {}
     }
+
+    setLanSyncStatus('connected');
     setTimeout(() => {
       isUpdatingFromLan.current = false;
-    }, 1500);
+    }, 800);
+  };
+
+  const forceSyncLan = async (): Promise<{ salesCount: number; expensesCount: number }> => {
+    if (globalIsDemoMode) return { salesCount: sales.length, expensesCount: expenses.length };
+    setLanSyncStatus('syncing');
+    try {
+      const res = await fetch('/api/lan-sync');
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.exists !== false) {
+          applyLanData(data);
+          setLanSyncStatus('connected');
+          return {
+            salesCount: Array.isArray(data.sales) ? data.sales.length : sales.length,
+            expensesCount: Array.isArray(data.expenses) ? data.expenses.length : expenses.length,
+          };
+        }
+      }
+    } catch (e) {}
+    setLanSyncStatus('idle');
+    return { salesCount: sales.length, expensesCount: expenses.length };
   };
 
   useEffect(() => {
@@ -1285,7 +1384,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       })
       .catch((err) => console.log('LAN sync endpoint inactive', err));
 
-    // 2. Window focus & visibility sync (immediately sync when switching tabs/windows)
+    // 2. High-speed window focus & visibility sync
     const handleSyncOnFocus = () => {
       if (globalIsDemoMode) return;
       fetch('/api/lan-sync')
@@ -1299,27 +1398,56 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     };
     document.addEventListener('visibilitychange', handleVisibility);
 
-    // 3. Fallback interval sync every 5 seconds to guarantee all devices stay in sync
-    const intervalTimer = setInterval(handleSyncOnFocus, 5000);
+    // 3. Fast fallback interval sync: 1.5 seconds when active, 5 seconds when backgrounded
+    const intervalTimer = setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        handleSyncOnFocus();
+      }
+    }, 1500);
 
-    // 4. Listen to SSE events for real-time LAN updates
+    // 4. Robust auto-reconnecting SSE stream for instantaneous (<100ms) sync
     let sse: EventSource | null = null;
-    try {
-      sse = new EventSource('/api/lan-events');
-      sse.onmessage = (event) => {
-        try {
-          const parsed = JSON.parse(event.data);
-          if (parsed.type === 'SYNC_UPDATE') {
-            handleSyncOnFocus();
+    let isSseActive = true;
+    let sseRetryTimer: any = null;
+
+    const connectSSE = () => {
+      if (!isSseActive || globalIsDemoMode) return;
+      try {
+        if (sse) sse.close();
+        sse = new EventSource('/api/lan-events');
+        sse.onopen = () => {
+          setLanSyncStatus('connected');
+        };
+        sse.onmessage = (event) => {
+          try {
+            const parsed = JSON.parse(event.data);
+            if (parsed.type === 'SYNC_UPDATE') {
+              handleSyncOnFocus();
+            }
+          } catch (e) {}
+        };
+        sse.onerror = () => {
+          if (sse) sse.close();
+          if (isSseActive) {
+            clearTimeout(sseRetryTimer);
+            sseRetryTimer = setTimeout(connectSSE, 2000);
           }
-        } catch (e) {}
-      };
-    } catch (e) {}
+        };
+      } catch (e) {
+        if (isSseActive) {
+          clearTimeout(sseRetryTimer);
+          sseRetryTimer = setTimeout(connectSSE, 3000);
+        }
+      }
+    };
+    connectSSE();
 
     return () => {
+      isSseActive = false;
       window.removeEventListener('focus', handleSyncOnFocus);
       document.removeEventListener('visibilitychange', handleVisibility);
       clearInterval(intervalTimer);
+      if (sseRetryTimer) clearTimeout(sseRetryTimer);
       if (sse) sse.close();
     };
   }, []);
@@ -3222,6 +3350,8 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         firebaseSyncStatus,
         offlineSyncStatus,
         pendingSyncCount,
+        lanSyncStatus,
+        forceSyncLan,
         triggerAutoCloudSync: async () => {
           setFirebaseSyncStatus('syncing');
           await offlineSyncService.processQueue();

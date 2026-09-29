@@ -79,10 +79,7 @@ function lanSyncPlugin(): Plugin {
     }
   };
 
-  return {
-    name: 'lan-sync-plugin',
-    configureServer(server) {
-      server.middlewares.use((req, res, next) => {
+  const lanSyncMiddleware = (req: any, res: any, next: any) => {
         // Allow CORS for all API calls
         res.setHeader('Access-Control-Allow-Origin', '*');
         res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, DELETE');
@@ -131,10 +128,22 @@ function lanSyncPlugin(): Plugin {
               const incoming = JSON.parse(body);
               const currentDb = getDbData() || {};
 
-              const deletedSaleIds = new Set(incoming.deletedSaleIds || []);
-              const deletedOrderIds = new Set(incoming.deletedOrderIds || []);
-              const deletedExpenseIds = new Set(incoming.deletedExpenseIds || []);
-              const deletedProductIds = new Set(incoming.deletedProductIds || []);
+              const deletedSaleIds = new Set([
+                ...(currentDb.deletedSaleIds || []),
+                ...(incoming.deletedSaleIds || []),
+              ]);
+              const deletedOrderIds = new Set([
+                ...(currentDb.deletedOrderIds || []),
+                ...(incoming.deletedOrderIds || []),
+              ]);
+              const deletedExpenseIds = new Set([
+                ...(currentDb.deletedExpenseIds || []),
+                ...(incoming.deletedExpenseIds || []),
+              ]);
+              const deletedProductIds = new Set([
+                ...(currentDb.deletedProductIds || []),
+                ...(incoming.deletedProductIds || []),
+              ]);
 
               // 1. Merge sales by id
               const salesMap = new Map();
@@ -149,7 +158,7 @@ function lanSyncPlugin(): Plugin {
               (currentDb.expenses || []).forEach((e: any) => { if (e && e.id && !deletedExpenseIds.has(e.id)) expensesMap.set(e.id, e); });
               (incoming.expenses || []).forEach((e: any) => { if (e && e.id && !deletedExpenseIds.has(e.id)) expensesMap.set(e.id, e); });
               const mergedExpenses = Array.from(expensesMap.values()).sort(
-                (a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+                (a: any, b: any) => new Date(b.createdAt || b.date).getTime() - new Date(a.createdAt || a.date).getTime()
               );
 
               // 3. Merge customOrders by id
@@ -179,8 +188,8 @@ function lanSyncPlugin(): Plugin {
               };
 
               const productsMap = new Map();
-              (currentDb.products || []).forEach((p: any) => { if (p && p.id) productsMap.set(p.id, p); });
-              (incoming.products || []).forEach((p: any) => { if (p && p.id) productsMap.set(p.id, p); });
+              (currentDb.products || []).forEach((p: any) => { if (p && p.id && !deletedProductIds.has(p.id)) productsMap.set(p.id, p); });
+              (incoming.products || []).forEach((p: any) => { if (p && p.id && !deletedProductIds.has(p.id)) productsMap.set(p.id, p); });
               const mergedProducts = Array.from(productsMap.values()).sort(
                 (a: any, b: any) => getProdTimestamp(b) - getProdTimestamp(a)
               );
@@ -192,6 +201,10 @@ function lanSyncPlugin(): Plugin {
                 sales: mergedSales,
                 expenses: mergedExpenses,
                 customOrders: mergedOrders,
+                deletedSaleIds: Array.from(deletedSaleIds),
+                deletedOrderIds: Array.from(deletedOrderIds),
+                deletedExpenseIds: Array.from(deletedExpenseIds),
+                deletedProductIds: Array.from(deletedProductIds),
                 storeInfo: incoming.storeInfo
                   ? {
                       ...(currentDb.storeInfo || {}),
@@ -210,10 +223,10 @@ function lanSyncPlugin(): Plugin {
               safeWrite(dbPath, JSON.stringify(mergedDb, null, 2));
 
               res.writeHead(200, { 'Content-Type': 'application/json' });
-              res.end(JSON.stringify({ success: true, salesCount: mergedSales.length }));
+              res.end(JSON.stringify({ success: true, salesCount: mergedSales.length, expensesCount: mergedExpenses.length }));
 
-              // Broadcast update to all connected phones/PCs
-              broadcastEvent('SYNC_UPDATE');
+              // Broadcast update to all connected phones/PCs immediately
+              broadcastEvent('SYNC_UPDATE', { salesCount: mergedSales.length, expensesCount: mergedExpenses.length });
             } catch (err: any) {
               res.writeHead(500, { 'Content-Type': 'application/json' });
               res.end(JSON.stringify({ error: err.message }));
@@ -233,6 +246,8 @@ function lanSyncPlugin(): Plugin {
               if (Array.isArray(dbData.expenses)) {
                 dbData.expenses = dbData.expenses.filter((e: any) => e.id !== id);
               }
+              if (!Array.isArray(dbData.deletedExpenseIds)) dbData.deletedExpenseIds = [];
+              if (!dbData.deletedExpenseIds.includes(id)) dbData.deletedExpenseIds.push(id);
               safeWrite(dbPath, JSON.stringify(dbData, null, 2));
               res.writeHead(200, { 'Content-Type': 'application/json' });
               res.end(JSON.stringify({ success: true, deletedId: id }));
@@ -249,6 +264,12 @@ function lanSyncPlugin(): Plugin {
         if (req.url === '/api/clear-all-expenses' && req.method === 'POST') {
           try {
             const dbData = getDbData() || {};
+            if (Array.isArray(dbData.expenses)) {
+              if (!Array.isArray(dbData.deletedExpenseIds)) dbData.deletedExpenseIds = [];
+              dbData.expenses.forEach((e: any) => {
+                if (!dbData.deletedExpenseIds.includes(e.id)) dbData.deletedExpenseIds.push(e.id);
+              });
+            }
             dbData.expenses = [];
             safeWrite(dbPath, JSON.stringify(dbData, null, 2));
             res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -272,6 +293,8 @@ function lanSyncPlugin(): Plugin {
               if (Array.isArray(dbData.sales)) {
                 dbData.sales = dbData.sales.filter((s: any) => s.id !== id);
               }
+              if (!Array.isArray(dbData.deletedSaleIds)) dbData.deletedSaleIds = [];
+              if (!dbData.deletedSaleIds.includes(id)) dbData.deletedSaleIds.push(id);
               safeWrite(dbPath, JSON.stringify(dbData, null, 2));
               res.writeHead(200, { 'Content-Type': 'application/json' });
               res.end(JSON.stringify({ success: true, deletedId: id }));
@@ -288,6 +311,12 @@ function lanSyncPlugin(): Plugin {
         if (req.url === '/api/clear-all-sales' && req.method === 'POST') {
           try {
             const dbData = getDbData() || {};
+            if (Array.isArray(dbData.sales)) {
+              if (!Array.isArray(dbData.deletedSaleIds)) dbData.deletedSaleIds = [];
+              dbData.sales.forEach((s: any) => {
+                if (!dbData.deletedSaleIds.includes(s.id)) dbData.deletedSaleIds.push(s.id);
+              });
+            }
             dbData.sales = [];
             safeWrite(dbPath, JSON.stringify(dbData, null, 2));
             res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -314,6 +343,11 @@ function lanSyncPlugin(): Plugin {
               if (Array.isArray(dbData.sales)) {
                 dbData.sales = dbData.sales.filter((s: any) => s.id !== `sale-custom-${id}`);
               }
+              if (!Array.isArray(dbData.deletedOrderIds)) dbData.deletedOrderIds = [];
+              if (!dbData.deletedOrderIds.includes(id)) dbData.deletedOrderIds.push(id);
+              if (!Array.isArray(dbData.deletedSaleIds)) dbData.deletedSaleIds = [];
+              if (!dbData.deletedSaleIds.includes(`sale-custom-${id}`)) dbData.deletedSaleIds.push(`sale-custom-${id}`);
+
               safeWrite(dbPath, JSON.stringify(dbData, null, 2));
               res.writeHead(200, { 'Content-Type': 'application/json' });
               res.end(JSON.stringify({ success: true, deletedId: id }));
@@ -330,6 +364,15 @@ function lanSyncPlugin(): Plugin {
         if (req.url === '/api/clear-all-custom-orders' && req.method === 'POST') {
           try {
             const dbData = getDbData() || {};
+            if (Array.isArray(dbData.customOrders)) {
+              if (!Array.isArray(dbData.deletedOrderIds)) dbData.deletedOrderIds = [];
+              if (!Array.isArray(dbData.deletedSaleIds)) dbData.deletedSaleIds = [];
+              dbData.customOrders.forEach((o: any) => {
+                if (!dbData.deletedOrderIds.includes(o.id)) dbData.deletedOrderIds.push(o.id);
+                const autoSaleId = `sale-custom-${o.id}`;
+                if (!dbData.deletedSaleIds.includes(autoSaleId)) dbData.deletedSaleIds.push(autoSaleId);
+              });
+            }
             dbData.customOrders = [];
             if (Array.isArray(dbData.sales)) {
               dbData.sales = dbData.sales.filter((s: any) => !s.id.startsWith('sale-custom-'));
@@ -359,6 +402,10 @@ function lanSyncPlugin(): Plugin {
               }
               const dbData = getDbData() || {};
               if (!Array.isArray(dbData.sales)) dbData.sales = [];
+              // Un-delete if previously marked
+              if (Array.isArray(dbData.deletedSaleIds)) {
+                dbData.deletedSaleIds = dbData.deletedSaleIds.filter((id: string) => id !== sale.id);
+              }
               dbData.sales = [sale, ...dbData.sales.filter((s: any) => s.id !== sale.id)];
 
               if (Array.isArray(updatedProducts) && updatedProducts.length > 0) {
@@ -391,6 +438,10 @@ function lanSyncPlugin(): Plugin {
               }
               const dbData = getDbData() || {};
               if (!Array.isArray(dbData.expenses)) dbData.expenses = [];
+              // Un-delete if previously marked
+              if (Array.isArray(dbData.deletedExpenseIds)) {
+                dbData.deletedExpenseIds = dbData.deletedExpenseIds.filter((id: string) => id !== expense.id);
+              }
               dbData.expenses = [expense, ...dbData.expenses.filter((e: any) => e.id !== expense.id)];
               safeWrite(dbPath, JSON.stringify(dbData, null, 2));
               res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -418,6 +469,10 @@ function lanSyncPlugin(): Plugin {
               }
               const dbData = getDbData() || {};
               if (!Array.isArray(dbData.customOrders)) dbData.customOrders = [];
+              // Un-delete if previously marked
+              if (Array.isArray(dbData.deletedOrderIds)) {
+                dbData.deletedOrderIds = dbData.deletedOrderIds.filter((id: string) => id !== order.id);
+              }
               dbData.customOrders = [order, ...dbData.customOrders.filter((o: any) => o.id !== order.id)];
               safeWrite(dbPath, JSON.stringify(dbData, null, 2));
               res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -642,7 +697,15 @@ function lanSyncPlugin(): Plugin {
         }
 
         next();
-      });
+  };
+
+  return {
+    name: 'lan-sync-plugin',
+    configureServer(server) {
+      server.middlewares.use(lanSyncMiddleware);
+    },
+    configurePreviewServer(server) {
+      server.middlewares.use(lanSyncMiddleware);
     },
   };
 }

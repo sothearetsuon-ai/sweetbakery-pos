@@ -69,6 +69,8 @@ export const Navbar: React.FC<NavbarProps> = ({
     offlineSyncStatus,
     pendingSyncCount,
     triggerAutoCloudSync,
+    lanSyncStatus,
+    forceSyncLan,
     isDemoMode,
     enterDemoMode,
     exitDemoMode,
@@ -86,6 +88,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   const [isMobileConnectOpen, setIsMobileConnectOpen] = useState(false);
   const [isOnline, setIsOnline] = useState(() => navigator.onLine);
   const [isQuickToolsOpen, setIsQuickToolsOpen] = useState(false);
+  const [isManualSyncing, setIsManualSyncing] = useState(false);
   const quickToolsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -377,6 +380,27 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <Palette className="w-4 h-4 text-pink-500" />
               </button>
             )}
+
+            {/* Instant LAN Sync Button */}
+            <button
+              type="button"
+              onClick={async () => {
+                soundFx.playPop();
+                setIsManualSyncing(true);
+                const res = await forceSyncLan();
+                setIsManualSyncing(false);
+                soundFx.playSuccess();
+              }}
+              title="ធ្វើសមកាលកម្មទិន្នន័យ LAN ភ្លាមៗ (Instant Sync PC & Mobile)"
+              className={`h-8 px-2.5 rounded-xl flex items-center gap-1.5 text-xs font-bold transition-all cursor-pointer ${
+                lanSyncStatus === 'connected'
+                  ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200'
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              }`}
+            >
+              <RefreshCw className={`w-3.5 h-3.5 text-emerald-600 ${isManualSyncing || lanSyncStatus === 'syncing' ? 'animate-spin' : ''}`} />
+              <span className="hidden sm:inline">Sync</span>
+            </button>
 
             {/* Mobile Connect */}
             <button
