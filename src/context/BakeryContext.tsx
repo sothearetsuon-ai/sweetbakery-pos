@@ -435,27 +435,29 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
           const sanitized = parsed.map((s: StaffMember) => {
+            // Ensure isActive defaults to true for old data that may not have this field
+            const staff = { ...s, isActive: s.isActive !== false ? true : false };
             // Only fix display name/avatar migrations — do NOT override pinCode
-            if (s.name?.includes('ម៉ារី') || s.name?.includes('Mary') || s.id === 'staff-1') {
+            if (staff.name?.includes('ម៉ារី') || staff.name?.includes('Mary') || staff.id === 'staff-1') {
               return {
-                ...s,
-                name: s.name?.includes('ម៉ារី') || s.name?.includes('Mary') ? 'ម្ចាស់ហាង (Admin)' : s.name,
-                nameEn: s.nameEn?.includes('Mary') ? 'Store Owner (Admin)' : s.nameEn,
-                avatar: s.avatar === '👩‍🍳' ? '👑' : s.avatar,
+                ...staff,
+                name: staff.name?.includes('ម៉ារី') || staff.name?.includes('Mary') ? 'ម្ចាស់ហាង (Admin)' : staff.name,
+                nameEn: staff.nameEn?.includes('Mary') ? 'Store Owner (Admin)' : staff.nameEn,
+                avatar: staff.avatar === '👩‍🍳' ? '👑' : staff.avatar,
                 // preserve saved pinCode; only use default if no pin set at all
-                pinCode: s.pinCode || '1111',
+                pinCode: staff.pinCode || '1111',
               };
             }
-            if (s.id === 'staff-2' || s.name?.includes('សុធារិទ្ធ') || s.name?.includes('Sothearith')) {
+            if (staff.id === 'staff-2' || staff.name?.includes('សុធារិទ្ធ') || staff.name?.includes('Sothearith')) {
               return {
-                ...s,
-                name: s.name?.includes('សុធារិទ្ធ') || s.name?.includes('Sothearith') ? 'វិជ្ជតា (Vicheta)' : s.name,
-                nameEn: s.nameEn?.includes('Sothearith') ? 'Vicheta (Cashier)' : s.nameEn,
-                avatar: s.avatar === '👨‍💼' ? '👩‍💼' : s.avatar,
+                ...staff,
+                name: staff.name?.includes('សុធារិទ្ធ') || staff.name?.includes('Sothearith') ? 'វិជ្ជតា (Vicheta)' : staff.name,
+                nameEn: staff.nameEn?.includes('Sothearith') ? 'Vicheta (Cashier)' : staff.nameEn,
+                avatar: staff.avatar === '👨‍💼' ? '👩‍💼' : staff.avatar,
                 // preserve saved pinCode; do NOT force '2222'
-                pinCode: s.pinCode || '2222',
+                pinCode: staff.pinCode || '2222',
                 permissions: {
-                  ...s.permissions,
+                  ...staff.permissions,
                   canAccessPos: true,
                   canAccessShowcase: true,
                   canAccessCustomOrders: true,
@@ -464,7 +466,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                 },
               };
             }
-            return s;
+            return staff;
           });
           localStorage.setItem('bakery_staff_members', JSON.stringify(sanitized));
           return sanitized;
@@ -525,7 +527,8 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const switchStaffByPin = (pin: string): boolean => {
     const cleanPin = pin.trim();
     // Always match against actual saved PIN from staffMembers — no hardcoded bypasses
-    const found = staffMembers.find((s) => s.isActive && s.pinCode === cleanPin);
+    // Use isActive !== false to default missing field to active (backward compat with old data)
+    const found = staffMembers.find((s) => s.isActive !== false && s.pinCode === cleanPin);
     if (found) {
       setCurrentStaff(found);
       return true;
@@ -1740,28 +1743,30 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         const sanitizedCloud = cloudStaff
           .filter((s) => s && s.id && !deletedStaffIds.current.has(s.id))
           .map((s) => {
+            // Ensure isActive defaults to true for cloud data that may not have this field
+            const staff = { ...s, isActive: s.isActive !== false ? true : false };
             // Only migrate display name/avatar — NEVER override saved pinCode
-            if (s.name?.includes('ម៉ារី') || s.name?.includes('Mary') || s.id === 'staff-1') {
+            if (staff.name?.includes('ម៉ារី') || staff.name?.includes('Mary') || staff.id === 'staff-1') {
               return {
-                ...s,
-                name: s.name?.includes('ម៉ារី') || s.name?.includes('Mary') ? 'ម្ចាស់ហាង (Admin)' : s.name,
-                nameEn: s.nameEn?.includes('Mary') ? 'Store Owner (Admin)' : s.nameEn,
-                avatar: s.avatar === '👩‍🍳' ? '👑' : s.avatar,
+                ...staff,
+                name: staff.name?.includes('ម៉ារី') || staff.name?.includes('Mary') ? 'ម្ចាស់ហាង (Admin)' : staff.name,
+                nameEn: staff.nameEn?.includes('Mary') ? 'Store Owner (Admin)' : staff.nameEn,
+                avatar: staff.avatar === '👩‍🍳' ? '👑' : staff.avatar,
                 // preserve actual saved pinCode from Firestore
-                pinCode: s.pinCode || '1111',
+                pinCode: staff.pinCode || '1111',
               };
             }
-            if (s.id === 'staff-2' || s.name?.includes('សុធារិទ្ធ') || s.name?.includes('Sothearith')) {
+            if (staff.id === 'staff-2' || staff.name?.includes('សុធារិទ្ធ') || staff.name?.includes('Sothearith')) {
               return {
-                ...s,
-                name: s.name?.includes('សុធារិទ្ធ') || s.name?.includes('Sothearith') ? 'វិជ្ជតា (Vicheta)' : s.name,
-                nameEn: s.nameEn?.includes('Sothearith') ? 'Vicheta (Cashier)' : s.nameEn,
+                ...staff,
+                name: staff.name?.includes('សុធារិទ្ធ') || staff.name?.includes('Sothearith') ? 'វិជ្ជតា (Vicheta)' : staff.name,
+                nameEn: staff.nameEn?.includes('Sothearith') ? 'Vicheta (Cashier)' : staff.nameEn,
                 avatar: '👩‍💼',
                 // preserve actual saved pinCode from Firestore — do NOT force '2222'
-                pinCode: s.pinCode || '2222',
+                pinCode: staff.pinCode || '2222',
               };
             }
-            return s;
+            return staff;
           });
         setStaffMembers(sanitizedCloud);
         localStorage.setItem('bakery_staff_members', JSON.stringify(sanitizedCloud));
@@ -3530,7 +3535,8 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
     // 2. Match against any active staff member's actual saved PIN
     // This is the ONLY check for staff logins — respects all PIN changes
-    const matchedStaff = staffMembers.find((s) => s.isActive && s.pinCode === cleanPin);
+    // Use isActive !== false to default missing field to active (backward compat)
+    const matchedStaff = staffMembers.find((s) => s.isActive !== false && s.pinCode === cleanPin);
     if (matchedStaff) {
       setCurrentStaff(matchedStaff);
       return true;
