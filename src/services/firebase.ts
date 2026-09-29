@@ -322,7 +322,11 @@ export const sanitizeForFirestore = (obj: any): any => {
  *   tenants/{storeId}/{collectionName}
  */
 export const getScopedCollectionRef = (db: Firestore, collectionName: string) => {
-  if (collectionName === 'system_licenses' || collectionName === 'system_analytics') {
+  if (
+    collectionName === 'system_licenses' ||
+    collectionName === 'system_analytics' ||
+    collectionName === 'demo_devices'
+  ) {
     return collection(db, collectionName);
   }
   const storeId = getStoreId();
@@ -333,7 +337,11 @@ export const getScopedCollectionRef = (db: Firestore, collectionName: string) =>
 };
 
 export const getScopedDocRef = (db: Firestore, collectionName: string, docId: string) => {
-  if (collectionName === 'system_licenses' || collectionName === 'system_analytics') {
+  if (
+    collectionName === 'system_licenses' ||
+    collectionName === 'system_analytics' ||
+    collectionName === 'demo_devices'
+  ) {
     return doc(db, collectionName, docId);
   }
   const storeId = getStoreId();

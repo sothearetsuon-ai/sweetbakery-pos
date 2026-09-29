@@ -19,7 +19,9 @@ import {
   Recipe,
   ReserveFund,
   ReserveFundTransaction,
+  DemoDeviceVisitor,
 } from '../types';
+import { recordDemoDeviceVisit, subscribeToDemoDevices } from '../services/demoTracker';
 import {
   initialCategories,
   initialProducts,
@@ -255,6 +257,8 @@ interface BakeryContextType {
   requestExitDemoMode: () => void;
   lockRealStoreToDemo: () => void;
   resetDemoData: () => void;
+  demoDevices: DemoDeviceVisitor[];
+  demoDevicesCount: number;
 
   // Real Store Passcode Authentication & Logout
   isRealStoreAuthModalOpen: boolean;
@@ -392,14 +396,25 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     return isDemo;
   });
 
+  const [demoDevices, setDemoDevices] = useState<DemoDeviceVisitor[]>([]);
+
   useEffect(() => {
     setGlobalIsDemoMode(isDemoMode);
     if (isDemoMode) {
       localStorage.setItem('bakery_is_demo_mode', 'true');
+      recordDemoDeviceVisit().catch(() => {});
     } else {
       localStorage.removeItem('bakery_is_demo_mode');
     }
   }, [isDemoMode]);
+
+  // Subscribe to real-time distinct demo devices from Cloud Firestore
+  useEffect(() => {
+    const unsub = subscribeToDemoDevices((devices) => {
+      setDemoDevices(devices);
+    });
+    return () => unsub();
+  }, []);
 
   const [lang, setLang] = useState<Language>(() => {
     return (localStorage.getItem('bakery_lang') as Language) || 'km';
@@ -3364,6 +3379,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setGlobalIsDemoMode(true);
     localStorage.setItem('bakery_is_demo_mode', 'true');
     setIsDemoMode(true);
+    recordDemoDeviceVisit().catch(() => {});
 
     try {
       const demoProd = localStorage.getItem('demo_bakery_products');
@@ -3591,6 +3607,8 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         lockRealStoreToDemo,
         logoutAndLock,
         resetDemoData,
+        demoDevices,
+        demoDevicesCount: demoDevices.length,
         isRealStoreAuthModalOpen,
         openRealStoreAuthModal,
         closeRealStoreAuthModal,

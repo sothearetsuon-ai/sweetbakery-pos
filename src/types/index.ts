@@ -324,3 +324,27 @@ export interface BakeryBackupData {
   recipes?: Recipe[];
   partyAddons?: PartyAddon[];
 }
+
+export interface DemoDeviceVisitor {
+  id: string; // Device ID, e.g. 'DEV-8B2A-4F91'
+  deviceId: string;
+  deviceType: 'MOBILE' | 'TABLET' | 'DESKTOP';
+  deviceModel: string;
+  browser: string;
+  os: string;
+  firstVisit: string;
+  lastVisit: string;
+  visitCount: number;
+  screenResolution?: string;
+  language?: string;
+  userAgent?: string;
+}
+
+export interface DemoDevicesSummary {
+  totalUniqueDevices: number;
+  totalVisits: number;
+  mobileCount: number;
+  desktopCount: number;
+  tabletCount: number;
+  lastUpdated: string;
+}

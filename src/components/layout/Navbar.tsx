@@ -76,6 +76,7 @@ export const Navbar: React.FC<NavbarProps> = ({
     exitDemoMode,
     requestExitDemoMode,
     logoutAndLock,
+    demoDevicesCount,
   } = useBakery();
   const { isPlaying: isMusicPlaying, setIsPlayerOpen: setIsMusicPlayerOpen } = useMusic();
   const text = t[lang];
@@ -305,10 +306,10 @@ export const Navbar: React.FC<NavbarProps> = ({
             }}
             title={
               isDemoMode
-                ? '🧪 កំពុងស្ថិតក្នុង Demo Sandbox Mode (ចុចដើម្បីចាកចេញ)'
-                : '🧪 បើករបៀបសាកល្បង (Demo Sandbox Mode - សាកបានដោយសុវត្ថិភាព)'
+                ? `🧪 កំពុងស្ថិតក្នុង Demo Sandbox Mode (ឧបករណ៍សាកល្បងសរុប៖ ${demoDevicesCount} គ្រឿង - ចុចដើម្បីចាកចេញ)`
+                : `🧪 បើករបៀបសាកល្បង Demo (ឧបករណ៍បានចូលសាកល្បងសរុប៖ ${demoDevicesCount} គ្រឿង)`
             }
-            className={`flex items-center gap-1 px-2.5 py-1.5 rounded-2xl text-xs font-black transition-all border shadow-2xs cursor-pointer active:scale-95 ${
+            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-2xl text-xs font-black transition-all border shadow-2xs cursor-pointer active:scale-95 ${
               isDemoMode
                 ? 'bg-gradient-to-r from-amber-500 to-rose-500 text-white border-amber-300 animate-pulse'
                 : 'bg-amber-50/90 text-amber-900 border-amber-200 hover:bg-amber-100 hover:border-amber-300'
@@ -316,6 +317,13 @@ export const Navbar: React.FC<NavbarProps> = ({
           >
             <FlaskConical className={`w-3.5 h-3.5 ${isDemoMode ? 'text-white' : 'text-amber-600'}`} />
             <span>{isDemoMode ? 'Demo សកម្ម' : '🧪 Demo'}</span>
+            {demoDevicesCount > 0 && (
+              <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono font-bold ${
+                isDemoMode ? 'bg-white/30 text-white' : 'bg-amber-200/80 text-amber-950'
+              }`}>
+                {demoDevicesCount}
+              </span>
+            )}
           </button>
 
           {/* Quick Counter KHQR Standee Button */}
