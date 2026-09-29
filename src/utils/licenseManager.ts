@@ -8,7 +8,15 @@
  */
 
 import { idbGet, idbSet } from './idbStorage';
-import { saveFirestoreDoc, subscribeToFirestoreDoc, subscribeToFirestoreCollection, getStoreId, isDefaultStore } from '../services/firebase';
+import {
+  saveFirestoreDoc,
+  subscribeToFirestoreDoc,
+  subscribeToFirestoreCollection,
+  getStoreId,
+  setStoreId,
+  isDefaultStore,
+  isPrimaryStoreDevice,
+} from '../services/firebase';
 
 export interface LicenseInfo {
   deviceId: string;
@@ -246,7 +254,15 @@ export const syncRemoteLicense = (
 ): (() => void) => {
   const deviceId = getDeviceId();
   const localInfo = getLicenseInfo();
-  const storeId = getStoreId();
+  let storeId = getStoreId();
+
+  // If this device is not the primary store owner, and storeId is default, assign a dedicated tenant ID
+  if (!isPrimaryStoreDevice() && isDefaultStore(storeId)) {
+    const cleanDev = deviceId.replace(/[^A-Z0-9]/g, '');
+    const autoTenant = `STORE-${cleanDev}`;
+    storeId = autoTenant;
+    setStoreId(autoTenant);
+  }
 
   // 1. Report heartbeat to Firebase so owner sees this client device
   try {
@@ -274,6 +290,25 @@ export const syncRemoteLicense = (
   // 2. Real-time subscription to cloud changes made by owner
   const handleRemoteUpdate = (remoteData: any) => {
     if (!remoteData) return;
+
+    // Apply store tenant ID isolation from Super Admin
+    if (remoteData.storeId && !isPrimaryStoreDevice()) {
+      const currentStoreId = getStoreId();
+      if (currentStoreId !== remoteData.storeId) {
+        setStoreId(remoteData.storeId);
+      }
+    }
+
+    if (remoteData.storeName && !isPrimaryStoreDevice()) {
+      try {
+        const saved = localStorage.getItem('bakery_store_info');
+        const currentInfo = saved ? JSON.parse(saved) : {};
+        if (!currentInfo.nameKh || currentInfo.nameKh === 'SweetBakery Store' || currentInfo.nameKh === 'Sweet Bakery') {
+          currentInfo.nameKh = remoteData.storeName;
+          localStorage.setItem('bakery_store_info', JSON.stringify(currentInfo));
+        }
+      } catch (e) {}
+    }
 
     const now = Date.now();
 
@@ -305,7 +340,7 @@ export const syncRemoteLicense = (
 
   const unsubDevice = subscribeToFirestoreDoc('system_licenses', deviceId, handleRemoteUpdate);
   let unsubDefault: (() => void) | undefined;
-  if (isDefaultStore(storeId)) {
+  if (isDefaultStore(storeId) && isPrimaryStoreDevice()) {
     unsubDefault = subscribeToFirestoreDoc('system_licenses', 'DEFAULT', handleRemoteUpdate);
   }
 
@@ -320,25 +355,34 @@ export const syncRemoteLicense = (
  */
 export const remoteUnlockClientDevice = async (
   targetDeviceId: string,
-  durationDays: number | 'permanent'
+  durationDays: number | 'permanent',
+  targetStoreId?: string,
+  targetStoreName?: string
 ): Promise<{ success: boolean; message: string }> => {
   try {
     const now = Date.now();
+    const cleanDev = targetDeviceId.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+    const finalStoreId = targetStoreId?.trim().toUpperCase().replace(/[^A-Z0-9_-]/g, '') || `STORE-${cleanDev}`;
+
+    const updatePayload: any = {
+      active: true,
+      storeId: finalStoreId,
+      updatedAt: new Date().toISOString(),
+    };
+
+    if (targetStoreName?.trim()) {
+      updatePayload.storeName = targetStoreName.trim();
+    }
+
     if (durationDays === 'permanent') {
-      await saveFirestoreDoc('system_licenses', targetDeviceId, {
-        active: true,
-        permanent: true,
-        updatedAt: new Date().toISOString(),
-      });
-      return { success: true, message: `បានដោះសោអចិន្ត្រៃយ៍ពីចម្ងាយសម្រាប់ ${targetDeviceId}` };
+      updatePayload.permanent = true;
+      await saveFirestoreDoc('system_licenses', targetDeviceId, updatePayload);
+      return { success: true, message: `បានដោះសោអចិន្ត្រៃយ៍ពីចម្ងាយសម្រាប់ ${targetDeviceId} (ហាង៖ ${finalStoreId})` };
     } else {
       const newExpiresAt = now + durationDays * MS_PER_DAY;
-      await saveFirestoreDoc('system_licenses', targetDeviceId, {
-        active: true,
-        expiresAt: newExpiresAt,
-        updatedAt: new Date().toISOString(),
-      });
-      return { success: true, message: `បានពន្យារ ${durationDays} ថ្ងៃពីចម្ងាយសម្រាប់ ${targetDeviceId}` };
+      updatePayload.expiresAt = newExpiresAt;
+      await saveFirestoreDoc('system_licenses', targetDeviceId, updatePayload);
+      return { success: true, message: `បានពន្យារ ${durationDays} ថ្ងៃពីចម្ងាយសម្រាប់ ${targetDeviceId} (ហាង៖ ${finalStoreId})` };
     }
   } catch (err: any) {
     return { success: false, message: `កំហុសក្នុងការតភ្ជាប់: ${err?.message || 'Error'}` };
@@ -358,12 +402,31 @@ export const applyLicenseKey = (rawCode: string): { success: boolean; message: s
   const currentDeviceId = getDeviceId();
   const now = Date.now();
 
+  const ensureClientStoreIsolation = () => {
+    if (!isPrimaryStoreDevice()) {
+      const currentStoreId = getStoreId();
+      if (isDefaultStore(currentStoreId)) {
+        const cleanDev = currentDeviceId.replace(/[^A-Z0-9]/g, '');
+        const autoStoreId = `STORE-${cleanDev}`;
+        setStoreId(autoStoreId);
+      }
+      try {
+        saveFirestoreDoc('system_licenses', currentDeviceId, {
+          deviceId: currentDeviceId,
+          storeId: getStoreId(),
+          updatedAt: new Date().toISOString(),
+        });
+      } catch (e) {}
+    }
+  };
+
   // 1. Check if it is a Device-Bound Key (Locked strictly to this machine)
   const deviceCheck = verifyDeviceBoundKey(currentDeviceId, cleanCode);
   if (deviceCheck.valid && deviceCheck.plan) {
     if (deviceCheck.plan === 'VIP') {
       localStorage.setItem(STORAGE_IS_PERMANENT, 'true');
       idbSet(STORAGE_IS_PERMANENT, 'true').catch(() => {});
+      ensureClientStoreIsolation();
       return {
         success: true,
         message: 'ជោគជ័យ! បានដោះសោសិទ្ធិប្រើប្រាស់ពេញមួយជីវិត (Lifetime Access) សម្រាប់ម៉ាស៊ីននេះ!',
@@ -379,6 +442,7 @@ export const applyLicenseKey = (rawCode: string): { success: boolean; message: s
     localStorage.setItem(STORAGE_EXPIRES_AT, newExpiresAt.toString());
     idbSet(STORAGE_EXPIRES_AT, newExpiresAt.toString()).catch(() => {});
     localStorage.setItem(STORAGE_LAST_TIMESTAMP, now.toString());
+    ensureClientStoreIsolation();
 
     return {
       success: true,
@@ -397,6 +461,7 @@ export const applyLicenseKey = (rawCode: string): { success: boolean; message: s
     if (match.permanent) {
       localStorage.setItem(STORAGE_IS_PERMANENT, 'true');
       idbSet(STORAGE_IS_PERMANENT, 'true').catch(() => {});
+      ensureClientStoreIsolation();
       return {
         success: true,
         message: `ជោគជ័យ! បានដោះសោ ${match.label}`,
@@ -411,6 +476,7 @@ export const applyLicenseKey = (rawCode: string): { success: boolean; message: s
       localStorage.setItem(STORAGE_EXPIRES_AT, newExpiresAt.toString());
       idbSet(STORAGE_EXPIRES_AT, newExpiresAt.toString()).catch(() => {});
       localStorage.setItem(STORAGE_LAST_TIMESTAMP, now.toString());
+      ensureClientStoreIsolation();
 
       return {
         success: true,

@@ -44,6 +44,8 @@ import {
   subscribeToFirestoreDoc,
   saveFirestoreDoc as rawSaveFirestoreDoc,
   deleteFirestoreDoc as rawDeleteFirestoreDoc,
+  subscribeToStoreIdChange,
+  getStoreId,
 } from '../services/firebase';
 import {
   notifyTelegramSale as rawNotifyTelegramSale,
@@ -1594,6 +1596,15 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     return unsub;
   }, []);
 
+  const [currentStoreTenantId, setCurrentStoreTenantId] = useState<string>(() => getStoreId());
+
+  useEffect(() => {
+    const unsub = subscribeToStoreIdChange((newId) => {
+      setCurrentStoreTenantId(newId);
+    });
+    return unsub;
+  }, []);
+
   useEffect(() => {
     const config = getStoredFirebaseConfig();
     if (!config) {
@@ -1900,7 +1911,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       unsubDeletedRecords();
       unsubReserveFund();
     };
-  }, []);
+  }, [currentStoreTenantId]);
 
   // Reserve Fund actions
   const updateReserveTarget = (targetKhr: number, targetUsd?: number) => {

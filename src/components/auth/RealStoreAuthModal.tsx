@@ -104,8 +104,9 @@ export const RealStoreAuthModal: React.FC<RealStoreAuthModalProps> = ({
       confetti({ particleCount: 70, spread: 60, origin: { y: 0.6 } });
     } catch (e) {}
 
-    // Mark session as authenticated for real store
+    // Mark session as authenticated for real store (ហាងវិជ្ជតា)
     sessionStorage.setItem('bakery_real_store_unlocked', 'true');
+    localStorage.setItem('bakery_is_primary_store', 'true');
     if (rememberDevice) {
       localStorage.setItem('bakery_real_store_authorized_device', 'true');
     }

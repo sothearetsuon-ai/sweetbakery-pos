@@ -67,6 +67,7 @@ export const SuperAdminPortalModal: React.FC<SuperAdminPortalModalProps> = ({
   // Generator State
   const [targetDevId, setTargetDevId] = useState('');
   const [targetStoreName, setTargetStoreName] = useState('');
+  const [targetStoreId, setTargetStoreId] = useState('');
   const [selectedPlan, setSelectedPlan] = useState<'35D' | '180D' | '365D' | 'VIP'>('35D');
   const [generatedKey, setGeneratedKey] = useState('');
   const [isRemoteUnlocking, setIsRemoteUnlocking] = useState(false);
@@ -126,7 +127,13 @@ export const SuperAdminPortalModal: React.FC<SuperAdminPortalModalProps> = ({
     setRemoteMessage(null);
 
     const planDays = selectedPlan === 'VIP' ? 'permanent' : selectedPlan === '365D' ? 365 : selectedPlan === '180D' ? 180 : 35;
-    const res = await remoteUnlockClientDevice(targetDevId.trim().toUpperCase(), planDays);
+    const finalTenantStoreId = targetStoreId.trim().toUpperCase() || `STORE-${targetDevId.trim().toUpperCase().replace(/[^A-Z0-9]/g, '')}`;
+    const res = await remoteUnlockClientDevice(
+      targetDevId.trim().toUpperCase(),
+      planDays,
+      finalTenantStoreId,
+      targetStoreName.trim() || undefined
+    );
 
     setIsRemoteUnlocking(false);
     if (res.success) {
@@ -141,24 +148,32 @@ export const SuperAdminPortalModal: React.FC<SuperAdminPortalModalProps> = ({
     }
   };
 
-  const handleQuickUnlockRow = async (deviceId: string, days: number | 'permanent') => {
+  const handleQuickUnlockRow = async (client: ClientLicenseRecord, days: number | 'permanent') => {
     soundFx.playPop();
     setIsRemoteUnlocking(true);
-    const res = await remoteUnlockClientDevice(deviceId, days);
+    const targetStoreIdForClient = client.storeId || `STORE-${(client.deviceId || (client as any).id || '').replace(/[^A-Z0-9]/g, '')}`;
+    const res = await remoteUnlockClientDevice(
+      client.deviceId || (client as any).id,
+      days,
+      targetStoreIdForClient,
+      client.storeName
+    );
     setIsRemoteUnlocking(false);
     if (res.success) {
       soundFx.playSuccess();
       try {
         confetti({ particleCount: 45, spread: 50, origin: { y: 0.6 } });
       } catch (e) {}
-      setRemoteMessage({ success: true, text: `✅ ${res.message} សម្រាប់ ${deviceId}` });
+      setRemoteMessage({ success: true, text: `✅ ${res.message} សម្រាប់ ${client.deviceId || (client as any).id}` });
     }
   };
 
   const handleSelectClientRow = (client: ClientLicenseRecord) => {
     soundFx.playPop();
-    setTargetDevId(client.deviceId);
+    const devId = client.deviceId || (client as any).id || '';
+    setTargetDevId(devId);
     setTargetStoreName(client.storeName || '');
+    setTargetStoreId(client.storeId || `STORE-${devId.replace(/[^A-Z0-9]/g, '')}`);
     setActiveTab('generator');
     setGeneratedKey('');
     setRemoteMessage(null);
@@ -171,6 +186,7 @@ export const SuperAdminPortalModal: React.FC<SuperAdminPortalModalProps> = ({
       `ជំរាបសួរ! នេះជាកូដបន្តសុពលភាពសម្រាប់កម្មវិធី SweetBakery POS:\n\n` +
       `🔑 License Key: ${generatedKey}\n` +
       `💻 សម្រាប់ម៉ាស៊ីន (Device ID): ${targetDevId}\n` +
+      (targetStoreId ? `🏬 Store ID: ${targetStoreId}\n` : '') +
       `⏳ រយៈពេល: ${planText}\n\n` +
       `សូមបើកកម្មវិធី POS -> ចុច "បញ្ចូលកូដ" ហើយបិទភ្ជាប់កូដខាងលើ។ សូមអរគុណ!`
     );
@@ -383,11 +399,11 @@ Super Admin Master Vault • Confidential
                   </div>
                 </div>
 
-                {/* Device ID Input */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {/* Device ID, Store Name & Store Tenant ID Inputs */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div>
                     <label className="block text-xs font-bold text-slate-700 mb-1">
-                      លេខសម្គាល់ម៉ាស៊ីនភ្ញៀវ (Client Device ID) *
+                      លេខសម្គាល់ម៉ាស៊ីនភ្ញៀវ (Device ID) *
                     </label>
                     <input
                       type="text"
@@ -395,7 +411,11 @@ Super Admin Master Vault • Confidential
                       placeholder="ឧ. DEV-4A82-9B7C"
                       value={targetDevId}
                       onChange={(e) => {
-                        setTargetDevId(e.target.value.toUpperCase());
+                        const val = e.target.value.toUpperCase();
+                        setTargetDevId(val);
+                        if (!targetStoreId || targetStoreId.startsWith('STORE-')) {
+                          setTargetStoreId(val ? `STORE-${val.replace(/[^A-Z0-9]/g, '')}` : '');
+                        }
                         setGeneratedKey('');
                         setRemoteMessage(null);
                       }}
@@ -405,16 +425,35 @@ Super Admin Master Vault • Confidential
 
                   <div>
                     <label className="block text-xs font-bold text-slate-700 mb-1">
-                      ឈ្មោះហាងអតិថិជន (Store Name - ស្រេចចិត្ត)
+                      ឈ្មោះហាងអតិថិជន (Store Name)
                     </label>
                     <input
                       type="text"
-                      placeholder="ឧ. ហាងនំផ្អែម Sweet Bakery"
+                      placeholder="ឧ. Bakery Cafe"
                       value={targetStoreName}
                       onChange={(e) => setTargetStoreName(e.target.value)}
                       className="w-full px-3.5 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:outline-none focus:border-pink-500 shadow-2xs"
                     />
                   </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                      បន្ទប់ទិន្នន័យហាង (Store Tenant ID) *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="ឧ. STORE-SHOP1"
+                      value={targetStoreId}
+                      onChange={(e) => setTargetStoreId(e.target.value.toUpperCase().replace(/[^A-Z0-9_-]/g, ''))}
+                      className="w-full px-3.5 py-2 text-xs font-mono font-black uppercase bg-white border border-slate-300 rounded-xl focus:outline-none focus:border-pink-500 shadow-2xs"
+                    />
+                  </div>
+                </div>
+
+                <div className="p-2.5 bg-emerald-50/90 border border-emerald-200 rounded-xl flex items-center gap-2 text-[11px] text-emerald-800">
+                  <span className="font-bold text-emerald-600 shrink-0">🔒 ធានាសុវត្ថិភាពទិន្នន័យ៖</span>
+                  <span>រាល់ទិន្នន័យ (ការលក់, បញ្ជីទំនិញ, ចំណាយ) របស់ហាងនេះ នឹងត្រូវញែកដាច់ដោយឡែកក្នុង Firestore (`tenants/{targetStoreId || 'STORE-XXXX'}/*`) ធានាមិនជាន់ជាមួយហាងវិជ្ជតាឡើយ។</span>
                 </div>
 
                 {/* Plan Selector */}
@@ -643,7 +682,7 @@ Super Admin Master Vault • Confidential
 
                           <button
                             type="button"
-                            onClick={() => handleQuickUnlockRow(client.deviceId || (client as any).id, 35)}
+                            onClick={() => handleQuickUnlockRow(client, 35)}
                             className="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-lg text-xs font-bold transition-all border border-emerald-200 cursor-pointer"
                           >
                             +35 ថ្ងៃ
@@ -651,7 +690,7 @@ Super Admin Master Vault • Confidential
 
                           <button
                             type="button"
-                            onClick={() => handleQuickUnlockRow(client.deviceId || (client as any).id, 365)}
+                            onClick={() => handleQuickUnlockRow(client, 365)}
                             className="px-2.5 py-1 bg-teal-50 hover:bg-teal-100 text-teal-700 rounded-lg text-xs font-bold transition-all border border-teal-200 cursor-pointer"
                           >
                             +1 ឆ្នាំ
@@ -659,7 +698,7 @@ Super Admin Master Vault • Confidential
 
                           <button
                             type="button"
-                            onClick={() => handleQuickUnlockRow(client.deviceId || (client as any).id, 'permanent')}
+                            onClick={() => handleQuickUnlockRow(client, 'permanent')}
                             className="px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-amber-800 rounded-lg text-xs font-bold transition-all border border-amber-300 cursor-pointer"
                           >
                             VIP
