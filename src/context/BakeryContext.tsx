@@ -1737,31 +1737,29 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         const sanitizedCloud = cloudStaff
           .filter((s) => s && s.id && !deletedStaffIds.current.has(s.id))
           .map((s) => {
-          if (s.name?.includes('ម៉ារី') || s.name?.includes('Mary') || s.id === 'staff-1') {
-            const clean = {
-              ...s,
-              name: s.name?.includes('ម៉ារី') || s.name?.includes('Mary') ? 'ម្ចាស់ហាង (Admin)' : s.name,
-              nameEn: s.nameEn?.includes('Mary') ? 'Store Owner (Admin)' : s.nameEn,
-              avatar: s.avatar === '👩‍🍳' ? '👑' : s.avatar,
-              pinCode: s.pinCode || '1111',
-            };
-            // Automatically update Cloud doc as well
-            saveFirestoreDoc('staffMembers', clean.id, clean);
-            return clean;
-          }
-          if (s.id === 'staff-2' || s.name?.includes('សុធារិទ្ធ') || s.name?.includes('Sothearith') || (s.role === 'CASHIER' && s.pinCode === '2222')) {
-            const clean = {
-              ...s,
-              name: 'វិជ្ជតា (Vicheta)',
-              nameEn: 'Vicheta (Cashier)',
-              avatar: '👩‍💼',
-              pinCode: '2222',
-            };
-            saveFirestoreDoc('staffMembers', clean.id, clean);
-            return clean;
-          }
-          return s;
-        });
+            // Only migrate display name/avatar — NEVER override saved pinCode
+            if (s.name?.includes('ម៉ារី') || s.name?.includes('Mary') || s.id === 'staff-1') {
+              return {
+                ...s,
+                name: s.name?.includes('ម៉ារី') || s.name?.includes('Mary') ? 'ម្ចាស់ហាង (Admin)' : s.name,
+                nameEn: s.nameEn?.includes('Mary') ? 'Store Owner (Admin)' : s.nameEn,
+                avatar: s.avatar === '👩‍🍳' ? '👑' : s.avatar,
+                // preserve actual saved pinCode from Firestore
+                pinCode: s.pinCode || '1111',
+              };
+            }
+            if (s.id === 'staff-2' || s.name?.includes('សុធារិទ្ធ') || s.name?.includes('Sothearith')) {
+              return {
+                ...s,
+                name: s.name?.includes('សុធារិទ្ធ') || s.name?.includes('Sothearith') ? 'វិជ្ជតា (Vicheta)' : s.name,
+                nameEn: s.nameEn?.includes('Sothearith') ? 'Vicheta (Cashier)' : s.nameEn,
+                avatar: '👩‍💼',
+                // preserve actual saved pinCode from Firestore — do NOT force '2222'
+                pinCode: s.pinCode || '2222',
+              };
+            }
+            return s;
+          });
         setStaffMembers(sanitizedCloud);
         localStorage.setItem('bakery_staff_members', JSON.stringify(sanitizedCloud));
       }
