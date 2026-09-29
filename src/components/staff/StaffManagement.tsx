@@ -143,7 +143,7 @@ export const StaffManagement: React.FC<StaffManagementProps> = ({ isEmbedded = f
     setEditingStaff(null);
     setName('');
     setNameEn('');
-    setPinCode(`${Math.floor(1000 + Math.random() * 9000)}`);
+    setPinCode(`${Math.floor(100000 + Math.random() * 900000)}`);
     setPhone('');
     handleRoleChange('CASHIER');
     setIsAddModalOpen(true);
@@ -168,7 +168,7 @@ export const StaffManagement: React.FC<StaffManagementProps> = ({ isEmbedded = f
       alert('មុខងារនេះត្រូវបានបិទក្នុង Demo Mode');
       return;
     }
-    if (!name || pinCode.length !== 4) return;
+    if (!name || pinCode.length < 4) return;
 
     soundFx.playSuccess();
     confetti({ particleCount: 50, spread: 60, origin: { y: 0.7 } });
@@ -543,15 +543,15 @@ export const StaffManagement: React.FC<StaffManagementProps> = ({ isEmbedded = f
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">
-                    លេខកូដ PIN សម្ងាត់ (4 ខ្ទង់) *
+                    លេខកូដ PIN សម្ងាត់ (4+ ខ្ទង់) *
                   </label>
                   <input
                     type="text"
-                    maxLength={4}
+                    maxLength={12}
                     required
                     value={pinCode}
                     onChange={(e) => setPinCode(e.target.value.replace(/\D/g, ''))}
-                    placeholder="ឧ. 1234"
+                    placeholder="ឧ. 1234 ឬ 123456"
                     className="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500 font-mono font-bold text-center tracking-widest text-pink-600"
                   />
                 </div>

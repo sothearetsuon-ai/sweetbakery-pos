@@ -70,8 +70,8 @@ export const RealStoreAuthModal: React.FC<RealStoreAuthModalProps> = ({
       setPinInput(nextPin);
       setErrorMessage('');
 
-      // Auto-submit on 4 digits if it matches
-      if (nextPin.length === 4) {
+      // Auto-submit when PIN length >= 4 and matches any staff member or master key
+      if (nextPin.length >= 4) {
         if (checkAndAuthenticate(nextPin)) {
           triggerSuccess();
         }
@@ -88,7 +88,7 @@ export const RealStoreAuthModal: React.FC<RealStoreAuthModalProps> = ({
   const checkAndAuthenticate = (pin: string): boolean => {
     // If a specific staff was clicked, check their PIN directly
     if (selectedStaffId) {
-      const targetStaff = staffMembers.find((s) => s.id === selectedStaffId && s.isActive);
+      const targetStaff = staffMembers.find((s) => s.id === selectedStaffId && s.isActive !== false);
       if (targetStaff && targetStaff.pinCode === pin.trim()) {
         setCurrentStaff(targetStaff);
         return true;
@@ -232,15 +232,15 @@ export const RealStoreAuthModal: React.FC<RealStoreAuthModalProps> = ({
               </div>
             </div>
           )}
-          {/* PIN Input Display & Masked Asterisks (****) */}
+          {/* PIN Input Display & Masked Dots (dynamic based on input length) */}
           <div className="flex flex-col items-center justify-center space-y-2">
-            <div className="flex items-center justify-center gap-2.5 my-1">
-              {[0, 1, 2, 3].map((idx) => {
+            <div className="flex items-center justify-center gap-1.5 my-1 flex-wrap">
+              {Array.from({ length: Math.max(4, pinInput.length) }).map((_, idx) => {
                 const isFilled = pinInput.length > idx;
                 return (
                   <div
                     key={idx}
-                    className={`w-10 h-12 rounded-2xl flex items-center justify-center font-black text-2xl transition-all duration-200 border-2 select-none ${
+                    className={`w-8 h-10 rounded-xl flex items-center justify-center font-black text-xl transition-all duration-200 border-2 select-none ${
                       isFilled
                         ? 'bg-rose-50 border-rose-500 text-rose-600 scale-105 shadow-sm shadow-rose-200'
                         : 'border-slate-200 bg-slate-50 text-slate-300'
@@ -264,7 +264,7 @@ export const RealStoreAuthModal: React.FC<RealStoreAuthModalProps> = ({
                   setPinInput(e.target.value);
                   setErrorMessage('');
                 }}
-                placeholder="បញ្ចូលលេខសម្ងាត់ (****)"
+                placeholder="បញ្ចូលលេខសម្ងាត់ (4+ ខ្ទង់)"
                 className="w-full pl-10 pr-10 py-2.5 text-center text-lg font-black tracking-widest bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-rose-500 focus:bg-white transition-all placeholder:text-xs placeholder:font-normal placeholder:tracking-normal placeholder:text-slate-400"
                 autoFocus
               />
