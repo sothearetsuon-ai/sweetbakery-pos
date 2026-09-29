@@ -892,7 +892,7 @@ export const initialStaffMembers: StaffMember[] = [
       canAccessShowcase: true,
       canAccessCustomOrders: true,
       canAccessSalesHistory: true,
-      canEditSales: false,
+      canEditSales: true,
       canAccessExpenses: false,
       canAccessInventory: false,
       canAccessReports: false,

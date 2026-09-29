@@ -90,6 +90,39 @@ const notifyTelegramCustomOrder = async (...args: Parameters<typeof rawNotifyTel
   return rawNotifyTelegramCustomOrder(...args);
 };
 
+// Persistent deletion tracking across sessions & page reloads
+const loadDeletedIds = (key: string): Set<string> => {
+  if (typeof window === 'undefined') return new Set();
+  try {
+    const raw = localStorage.getItem(`bakery_deleted_${key}_ids`);
+    if (raw) {
+      const arr = JSON.parse(raw);
+      if (Array.isArray(arr)) return new Set(arr);
+    }
+  } catch (e) {}
+  return new Set();
+};
+
+const recordDeletedId = (key: string, id: string, setRef?: React.MutableRefObject<Set<string>>) => {
+  if (setRef?.current) {
+    setRef.current.add(id);
+  }
+  if (typeof window === 'undefined') return;
+  try {
+    let currentArr: string[] = [];
+    const raw = localStorage.getItem(`bakery_deleted_${key}_ids`);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) currentArr = parsed;
+    }
+    if (!currentArr.includes(id)) {
+      currentArr.push(id);
+    }
+    const trimmed = currentArr.slice(-500);
+    localStorage.setItem(`bakery_deleted_${key}_ids`, JSON.stringify(trimmed));
+  } catch (e) {}
+};
+
 const notifyTelegramExpense = async (...args: Parameters<typeof rawNotifyTelegramExpense>) => {
   if (globalIsDemoMode) return null;
   return rawNotifyTelegramExpense(...args);
@@ -381,6 +414,14 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                 nameEn: 'Vicheta (Cashier)',
                 avatar: '👩‍💼',
                 pinCode: '2222',
+                permissions: {
+                  ...s.permissions,
+                  canAccessPos: true,
+                  canAccessShowcase: true,
+                  canAccessCustomOrders: true,
+                  canAccessSalesHistory: true,
+                  canEditSales: true,
+                },
               };
             }
             return s;
@@ -416,6 +457,14 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             nameEn: 'Vicheta (Cashier)',
             avatar: '👩‍💼',
             pinCode: '2222',
+            permissions: {
+              ...parsed.permissions,
+              canAccessPos: true,
+              canAccessShowcase: true,
+              canAccessCustomOrders: true,
+              canAccessSalesHistory: true,
+              canEditSales: true,
+            },
           };
           localStorage.setItem('bakery_current_staff', JSON.stringify(sanitized));
           return sanitized;
@@ -933,7 +982,8 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           try {
             const parsed = JSON.parse(idbProductsStr);
             if (Array.isArray(parsed) && parsed.length > 0) {
-              setProducts(sortProductsNewestFirst(parsed));
+              const active = parsed.filter((p: any) => p && p.id && !deletedProductIds.current.has(p.id));
+              setProducts(sortProductsNewestFirst(active));
             }
           } catch (e) {}
         }
@@ -943,7 +993,8 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           try {
             const parsed = JSON.parse(idbSalesStr);
             if (Array.isArray(parsed) && parsed.length > 0) {
-              setSales(parsed);
+              const active = parsed.filter((s: any) => s && s.id && !deletedSaleIds.current.has(s.id));
+              setSales(active);
             }
           } catch (e) {}
         }
@@ -953,7 +1004,8 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           try {
             const parsed = JSON.parse(idbOrdersStr);
             if (Array.isArray(parsed) && parsed.length > 0) {
-              setCustomOrders(parsed);
+              const active = parsed.filter((o: any) => o && o.id && !deletedOrderIds.current.has(o.id));
+              setCustomOrders(active);
             }
           } catch (e) {}
         }
@@ -963,7 +1015,8 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           try {
             const parsed = JSON.parse(idbExpensesStr);
             if (Array.isArray(parsed) && parsed.length > 0) {
-              setExpenses(parsed);
+              const active = parsed.filter((e: any) => e && e.id && !deletedExpenseIds.current.has(e.id));
+              setExpenses(active);
             }
           } catch (e) {}
         }
@@ -1071,9 +1124,10 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   // Local Area Network (LAN) Sync - Synchronizes PC and phones in real-time over local Wi-Fi even without internet
   const isUpdatingFromLan = useRef<boolean>(true);
   const lanSyncTimer = useRef<any>(null);
-  const deletedSaleIds = useRef<Set<string>>(new Set());
-  const deletedExpenseIds = useRef<Set<string>>(new Set());
-  const deletedProductIds = useRef<Set<string>>(new Set());
+  const deletedSaleIds = useRef<Set<string>>(loadDeletedIds('sales'));
+  const deletedExpenseIds = useRef<Set<string>>(loadDeletedIds('expenses'));
+  const deletedProductIds = useRef<Set<string>>(loadDeletedIds('products'));
+  const deletedOrderIds = useRef<Set<string>>(loadDeletedIds('orders'));
   const customOrdersRef = useRef<CustomCakeOrder[]>(customOrders);
   customOrdersRef.current = customOrders;
   const salesRef = useRef<CompletedSale[]>(sales);
@@ -1363,9 +1417,9 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           const map = new Map<string, CompletedSale>();
           prev.forEach((s) => { if (s && s.id && !deletedSaleIds.current.has(s.id)) map.set(s.id, s); });
           filtered.forEach((s) => { if (s && s.id && !deletedSaleIds.current.has(s.id)) map.set(s.id, s); });
-          const merged = Array.from(map.values()).sort(
-            (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-          );
+          const merged = Array.from(map.values())
+            .filter((s) => !deletedSaleIds.current.has(s.id))
+            .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
           safeSetStorage('bakery_sales', JSON.stringify(merged));
           return merged;
         });
@@ -1378,11 +1432,11 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       if (Array.isArray(cloudOrders) && cloudOrders.length > 0) {
         setCustomOrders((prev) => {
           const map = new Map<string, CustomCakeOrder>();
-          prev.forEach((o) => { if (o && o.id) map.set(o.id, o); });
-          cloudOrders.forEach((o) => { if (o && o.id) map.set(o.id, o); });
-          const merged = Array.from(map.values()).sort(
-            (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-          );
+          prev.forEach((o) => { if (o && o.id && !deletedOrderIds.current.has(o.id)) map.set(o.id, o); });
+          cloudOrders.forEach((o) => { if (o && o.id && !deletedOrderIds.current.has(o.id)) map.set(o.id, o); });
+          const merged = Array.from(map.values())
+            .filter((o) => !deletedOrderIds.current.has(o.id))
+            .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
           safeSetStorage('bakery_custom_orders', JSON.stringify(merged));
           return merged;
         });
@@ -1403,9 +1457,9 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           const map = new Map<string, Expense>();
           prev.forEach((e) => { if (e && e.id && !deletedExpenseIds.current.has(e.id)) map.set(e.id, e); });
           sorted.forEach((e) => { if (e && e.id && !deletedExpenseIds.current.has(e.id)) map.set(e.id, e); });
-          const merged = Array.from(map.values()).sort(
-            (a, b) => new Date(b.createdAt || b.date).getTime() - new Date(a.createdAt || a.date).getTime()
-          );
+          const merged = Array.from(map.values())
+            .filter((e) => !deletedExpenseIds.current.has(e.id))
+            .sort((a, b) => new Date(b.createdAt || b.date).getTime() - new Date(a.createdAt || a.date).getTime());
           safeSetStorage('bakery_expenses', JSON.stringify(merged));
           return merged;
         });
@@ -1556,7 +1610,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const deleteExpense = (id: string) => {
     isUpdatingFromLan.current = false;
     if (lanSyncTimer.current) clearTimeout(lanSyncTimer.current);
-    deletedExpenseIds.current.add(id);
+    recordDeletedId('expenses', id, deletedExpenseIds);
 
     // 1. Immediately call atomic server deletion endpoint
     fetch('/api/delete-expense', {
@@ -1749,7 +1803,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const deleteProduct = (productId: string) => {
     isUpdatingFromLan.current = false;
     if (lanSyncTimer.current) clearTimeout(lanSyncTimer.current);
-    deletedProductIds.current.add(productId);
+    recordDeletedId('products', productId, deletedProductIds);
 
     setProducts((prev) => {
       const updated = prev.filter((p) => p.id !== productId);
@@ -2118,7 +2172,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
     setSales((prev) => {
       const updated = prev.map((s) => (s.id === updatedSale.id ? updatedSale : s));
-      try { localStorage.setItem('bakery_sales', JSON.stringify(updated)); } catch (e) {}
+      safeSetStorage('bakery_sales', JSON.stringify(updated));
       saveToLanSync({
         products,
         sales: updated,
@@ -2137,7 +2191,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const deleteSale = (id: string) => {
     isUpdatingFromLan.current = false;
     if (lanSyncTimer.current) clearTimeout(lanSyncTimer.current);
-    deletedSaleIds.current.add(id);
+    recordDeletedId('sales', id, deletedSaleIds);
 
     // 1. Immediately call atomic server deletion endpoint
     fetch('/api/delete-sale', {
@@ -2146,12 +2200,10 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       body: JSON.stringify({ id }),
     }).catch(() => {});
 
-    // 2. Optimistically update local React state & LocalStorage
+    // 2. Optimistically update local React state & LocalStorage + IndexedDB
     setSales((prev) => {
       const updated = prev.filter((s) => s.id !== id);
-      try {
-        localStorage.setItem('bakery_sales', JSON.stringify(updated));
-      } catch (e) {}
+      safeSetStorage('bakery_sales', JSON.stringify(updated));
       saveToLanSync({
         products,
         sales: updated,
@@ -2169,7 +2221,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const clearAllSales = () => {
     isUpdatingFromLan.current = false;
     if (lanSyncTimer.current) clearTimeout(lanSyncTimer.current);
-    sales.forEach((s) => deletedSaleIds.current.add(s.id));
+    sales.forEach((s) => recordDeletedId('sales', s.id, deletedSaleIds));
 
     // 1. Immediately call atomic server clear endpoint
     fetch('/api/clear-all-sales', {
@@ -2181,9 +2233,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       syncDeleteDoc('sales', s.id);
     });
     setSales([]);
-    try {
-      localStorage.setItem('bakery_sales', JSON.stringify([]));
-    } catch (e) {}
+    safeSetStorage('bakery_sales', JSON.stringify([]));
     saveToLanSync({
       products,
       sales: [],
@@ -2539,13 +2589,14 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const deleteCustomOrder = (orderId: string) => {
     isUpdatingFromLan.current = false;
     if (lanSyncTimer.current) clearTimeout(lanSyncTimer.current);
+    recordDeletedId('orders', orderId, deletedOrderIds);
 
     const autoSaleId = `sale-custom-${orderId}`;
+    recordDeletedId('sales', autoSaleId, deletedSaleIds);
+
     setSales((prevSales) => {
       const updatedSales = prevSales.filter((s) => s.id !== autoSaleId);
-      try {
-        localStorage.setItem('bakery_sales', JSON.stringify(updatedSales));
-      } catch (e) {}
+      safeSetStorage('bakery_sales', JSON.stringify(updatedSales));
       return updatedSales;
     });
     syncDeleteDoc('sales', autoSaleId);
@@ -2557,9 +2608,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
     setCustomOrders((prev) => {
       const updated = prev.filter((o) => o.id !== orderId);
-      try {
-        localStorage.setItem('bakery_custom_orders', JSON.stringify(updated));
-      } catch (e) {}
+      safeSetStorage('bakery_custom_orders', JSON.stringify(updated));
       saveToLanSync({
         products,
         sales: sales.filter((s) => s.id !== autoSaleId),
@@ -2568,7 +2617,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         storeInfo,
         flavors,
         telegramConfig: getStoredTelegramConfig(),
-      });
+      }, true);
       return updated;
     });
     syncDeleteDoc('customOrders', orderId);
@@ -2579,22 +2628,22 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     if (lanSyncTimer.current) clearTimeout(lanSyncTimer.current);
 
     // Clean up any custom sales created for these orders
+    customOrders.forEach((o) => {
+      recordDeletedId('orders', o.id, deletedOrderIds);
+      const autoSaleId = `sale-custom-${o.id}`;
+      recordDeletedId('sales', autoSaleId, deletedSaleIds);
+      syncDeleteDoc('customOrders', o.id);
+      syncDeleteDoc('sales', autoSaleId);
+    });
+
     setSales((prevSales) => {
       const updatedSales = prevSales.filter((s) => !s.id.startsWith('sale-custom-'));
-      try {
-        localStorage.setItem('bakery_sales', JSON.stringify(updatedSales));
-      } catch (e) {}
+      safeSetStorage('bakery_sales', JSON.stringify(updatedSales));
       return updatedSales;
     });
 
-    customOrders.forEach((o) => {
-      syncDeleteDoc('customOrders', o.id);
-      syncDeleteDoc('sales', `sale-custom-${o.id}`);
-    });
     setCustomOrders([]);
-    try {
-      localStorage.setItem('bakery_custom_orders', JSON.stringify([]));
-    } catch (e) {}
+    safeSetStorage('bakery_custom_orders', JSON.stringify([]));
     saveToLanSync({
       products,
       sales: sales.filter((s) => !s.id.startsWith('sale-custom-')),
@@ -2603,7 +2652,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       storeInfo,
       flavors,
       telegramConfig: getStoredTelegramConfig(),
-    });
+    }, true);
   };
 
 
@@ -3001,7 +3050,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           canAccessShowcase: true,
           canAccessCustomOrders: true,
           canAccessSalesHistory: true,
-          canEditSales: false,
+          canEditSales: true,
           canAccessExpenses: false,
           canAccessInventory: false,
           canAccessReports: false,
