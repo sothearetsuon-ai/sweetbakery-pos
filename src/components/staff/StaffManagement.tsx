@@ -150,6 +150,12 @@ export const StaffManagement: React.FC<StaffManagementProps> = ({ isEmbedded = f
   };
 
   const handleOpenEdit = (staff: StaffMember) => {
+    // Non-admin cannot edit admin staff
+    if (staff.role === 'ADMIN' && currentStaff.role !== 'ADMIN') {
+      soundFx.playPop();
+      alert('អ្នកមិនមានសិទ្ធិកែសម្រួលបុគ្គលិកតួនាទីម្ចាស់ហាង (Admin) ឡើយឡេឯាយ!');
+      return;
+    }
     soundFx.playPop();
     setEditingStaff(staff);
     setName(staff.name);
@@ -169,6 +175,12 @@ export const StaffManagement: React.FC<StaffManagementProps> = ({ isEmbedded = f
       return;
     }
     if (!name || pinCode.length < 4) return;
+
+    // Safety check: non-admin cannot save changes to admin staff
+    if (editingStaff && editingStaff.role === 'ADMIN' && currentStaff.role !== 'ADMIN') {
+      alert('អ្នកមិនមានសិទ្ធិកែសម្រួលបុគ្គលិកតួនាទីម្ចាស់ហាង (Admin) ឡើយឡេឯាយ!');
+      return;
+    }
 
     soundFx.playSuccess();
     confetti({ particleCount: 50, spread: 60, origin: { y: 0.7 } });
@@ -335,14 +347,18 @@ export const StaffManagement: React.FC<StaffManagementProps> = ({ isEmbedded = f
                 </div>
 
                 <div className="flex items-center gap-1">
-                  <button
-                    onClick={() => handleOpenEdit(staff)}
-                    title="កែសម្រួលព័ត៌មាន & សិទ្ធិ"
-                    className="w-8 h-8 rounded-xl bg-slate-50 hover:bg-pink-50 text-slate-500 hover:text-pink-600 flex items-center justify-center transition-colors cursor-pointer"
-                  >
-                    <Edit2 className="w-3.5 h-3.5" />
-                  </button>
-                  {staffMembers.length > 1 && (
+                  {/* Only show edit button if current user is admin OR target is not admin */}
+                  {(currentStaff.role === 'ADMIN' || staff.role !== 'ADMIN') && (
+                    <button
+                      onClick={() => handleOpenEdit(staff)}
+                      title="កែសម្រួលព័ត៌មាន & សិទ្ធិ"
+                      className="w-8 h-8 rounded-xl bg-slate-50 hover:bg-pink-50 text-slate-500 hover:text-pink-600 flex items-center justify-center transition-colors cursor-pointer"
+                    >
+                      <Edit2 className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                  {/* Non-admin cannot delete admin; also need at least 1 staff */}
+                  {staffMembers.length > 1 && (currentStaff.role === 'ADMIN' || staff.role !== 'ADMIN') && (
                     <button
                       onClick={() => handleDelete(staff.id, staff.name)}
                       title="លុបបុគ្គលិក"
