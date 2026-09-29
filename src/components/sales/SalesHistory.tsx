@@ -24,7 +24,8 @@ export const SalesHistory: React.FC = () => {
   const { sales, expenses, deleteSale, clearAllSales, exchangeRate } = useBakery();
 
   const [searchQuery, setSearchQuery] = useState('');
-  const [dateFilter, setDateFilter] = useState<'all' | 'today' | 'yesterday' | 'month'>('all');
+  const [dateFilter, setDateFilter] = useState<'all' | 'today' | 'yesterday' | 'month' | 'custom'>('all');
+  const [customDate, setCustomDate] = useState<string>('');
 
   // Modals state
   const [isAddPastOpen, setIsAddPastOpen] = useState(false);
@@ -33,47 +34,96 @@ export const SalesHistory: React.FC = () => {
   const [saleToDelete, setSaleToDelete] = useState<CompletedSale | null>(null);
   const [isConfirmClearAllSales, setIsConfirmClearAllSales] = useState(false);
 
-  const todayStr = new Date().toISOString().slice(0, 10);
+  // Helper to extract local YYYY-MM-DD
+  const getLocalDateStr = (d?: string | Date) => {
+    if (!d) return '';
+    if (typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d.trim())) {
+      return d.trim();
+    }
+    const date = typeof d === 'string' ? new Date(d) : d;
+    if (isNaN(date.getTime())) return String(d).slice(0, 10);
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  };
+
+  const todayStr = getLocalDateStr(new Date());
   const yesterday = new Date();
   yesterday.setDate(yesterday.getDate() - 1);
-  const yesterdayStr = yesterday.toISOString().slice(0, 10);
+  const yesterdayStr = getLocalDateStr(yesterday);
+  const currentMonthStr = todayStr.slice(0, 7);
 
-  // Financial totals
-  const totalSalesKhr = sales.reduce((sum, s) => sum + s.totalKhr, 0);
-  const totalSalesUsd = sales.reduce((sum, s) => sum + s.totalUsd, 0);
+  // Date-filtered sales (strictly updates summary cards according to selected date/month)
+  const dateFilteredSales = useMemo(() => {
+    return sales.filter((s) => {
+      const saleDate = getLocalDateStr(s.createdAt);
+      if (dateFilter === 'today') return saleDate === todayStr;
+      if (dateFilter === 'yesterday') return saleDate === yesterdayStr;
+      if (dateFilter === 'month') return saleDate.slice(0, 7) === currentMonthStr;
+      if (dateFilter === 'custom' && customDate) return saleDate === customDate;
+      return true;
+    });
+  }, [sales, dateFilter, customDate, todayStr, yesterdayStr, currentMonthStr]);
 
-  const totalExpensesKhr = expenses.reduce(
-    (sum, exp) => sum + (exp.amountKhr ?? Math.round(exp.amountUsd * exchangeRate)),
-    0
+  // Date-filtered expenses (for net profit calculation of that specific period)
+  const dateFilteredExpenses = useMemo(() => {
+    return expenses.filter((e) => {
+      const expDate = getLocalDateStr(e.date || e.createdAt);
+      if (dateFilter === 'today') return expDate === todayStr;
+      if (dateFilter === 'yesterday') return expDate === yesterdayStr;
+      if (dateFilter === 'month') return expDate.slice(0, 7) === currentMonthStr;
+      if (dateFilter === 'custom' && customDate) return expDate === customDate;
+      return true;
+    });
+  }, [expenses, dateFilter, customDate, todayStr, yesterdayStr, currentMonthStr]);
+
+  // Financial totals calculated strictly according to selected date period
+  const totalSalesKhr = useMemo(
+    () => dateFilteredSales.reduce((sum, s) => sum + s.totalKhr, 0),
+    [dateFilteredSales]
   );
-  const totalExpensesUsd = expenses.reduce((sum, exp) => sum + exp.amountUsd, 0);
+  const totalSalesUsd = useMemo(
+    () => dateFilteredSales.reduce((sum, s) => sum + s.totalUsd, 0),
+    [dateFilteredSales]
+  );
+
+  const totalExpensesKhr = useMemo(
+    () =>
+      dateFilteredExpenses.reduce(
+        (sum, exp) => sum + (exp.amountKhr ?? Math.round(exp.amountUsd * exchangeRate)),
+        0
+      ),
+    [dateFilteredExpenses, exchangeRate]
+  );
+  const totalExpensesUsd = useMemo(
+    () => dateFilteredExpenses.reduce((sum, exp) => sum + exp.amountUsd, 0),
+    [dateFilteredExpenses]
+  );
 
   const netProfitKhr = totalSalesKhr - totalExpensesKhr;
   const netProfitUsd = totalSalesUsd - totalExpensesUsd;
 
+  const periodLabelKh = useMemo(() => {
+    if (dateFilter === 'today') return 'ថ្ងៃនេះ';
+    if (dateFilter === 'yesterday') return 'ម្សិលមិញ';
+    if (dateFilter === 'month') return 'ខែនេះ';
+    if (dateFilter === 'custom' && customDate) return `ថ្ងៃទី ${customDate}`;
+    return 'សរុបទាំងអស់';
+  }, [dateFilter, customDate]);
+
   const filteredSales = useMemo(() => {
-    return sales.filter((s) => {
+    return dateFilteredSales.filter((s) => {
       const q = searchQuery.toLowerCase().trim();
-      const matchSearch =
-        !q ||
+      if (!q) return true;
+      return (
         s.orderNumber.toLowerCase().includes(q) ||
         s.cashierName.toLowerCase().includes(q) ||
         (s.customerName && s.customerName.toLowerCase().includes(q)) ||
-        s.items.some((item) => item.nameKh.toLowerCase().includes(q));
-
-      const saleDate = s.createdAt.slice(0, 10);
-      let matchDate = true;
-      if (dateFilter === 'today') {
-        matchDate = saleDate === todayStr;
-      } else if (dateFilter === 'yesterday') {
-        matchDate = saleDate === yesterdayStr;
-      } else if (dateFilter === 'month') {
-        matchDate = saleDate.slice(0, 7) === todayStr.slice(0, 7);
-      }
-
-      return matchSearch && matchDate;
+        s.items.some((item) => item.nameKh.toLowerCase().includes(q))
+      );
     });
-  }, [sales, searchQuery, dateFilter, todayStr, yesterdayStr]);
+  }, [dateFilteredSales, searchQuery]);
 
   // Export CSV
   const handleExportCsv = () => {
@@ -153,12 +203,17 @@ export const SalesHistory: React.FC = () => {
         </div>
       </div>
 
-      {/* Summary Cards - KHR ៛ FIRST */}
+      {/* Summary Cards - KHR ៛ FIRST (Dynamically updates with selected Date/Month) */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="bg-white p-5 rounded-3xl border border-rose-100 shadow-sm space-y-2">
-          <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
-            ចំណូលលក់សរុប (គិតជាលុយរៀល)
-          </span>
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
+              ចំណូលលក់សរុប (គិតជាលុយរៀល)
+            </span>
+            <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-pink-50 text-pink-700 border border-pink-100">
+              {periodLabelKh}
+            </span>
+          </div>
           <div className="text-2xl font-black text-pink-600 tracking-tight">
             {totalSalesKhr.toLocaleString()} ៛
           </div>
@@ -168,14 +223,19 @@ export const SalesHistory: React.FC = () => {
         </div>
 
         <div className="bg-white p-5 rounded-3xl border border-rose-100 shadow-sm space-y-2">
-          <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
-            ចំនួនវិក្កយបត្រលក់សរុប
-          </span>
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
+              ចំនួនវិក្កយបត្រលក់សរុប
+            </span>
+            <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-slate-100 text-slate-700">
+              {periodLabelKh}
+            </span>
+          </div>
           <div className="text-2xl font-black text-slate-800 tracking-tight">
-            {sales.length} វិក្កយបត្រ
+            {dateFilteredSales.length} វិក្កយបត្រ
           </div>
           <div className="text-xs text-emerald-600 font-semibold">
-            រួមទាំងការលក់កន្លងមក
+            {dateFilter === 'all' ? 'រួមទាំងការលក់កន្លងមក' : `វិក្កយបត្រលក់ (${periodLabelKh})`}
           </div>
         </div>
 
@@ -185,7 +245,7 @@ export const SalesHistory: React.FC = () => {
             <span className={`text-[10px] px-2 py-0.5 rounded-full font-black ${
               netProfitKhr >= 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'
             }`}>
-              {netProfitKhr >= 0 ? 'ចំណេញ' : 'ខាត'}
+              {netProfitKhr >= 0 ? 'ចំណេញ' : 'ខាត'} • {periodLabelKh}
             </span>
           </span>
           <div className={`text-2xl font-black tracking-tight ${
@@ -194,14 +254,14 @@ export const SalesHistory: React.FC = () => {
             {netProfitKhr >= 0 ? '+' : ''}{netProfitKhr.toLocaleString()} ៛
           </div>
           <div className="text-xs text-slate-500 font-semibold">
-            {netProfitUsd >= 0 ? 'ចំណេញ៖' : 'ខាត៖'} ~ ${netProfitUsd >= 0 ? '+' : ''}{netProfitUsd.toFixed(2)} USD (ដកចំណាយ)
+            {netProfitUsd >= 0 ? 'ចំណេញ៖' : 'ខាត៖'} ~ ${netProfitUsd >= 0 ? '+' : ''}{netProfitUsd.toFixed(2)} USD (ដកចំណាយ {periodLabelKh})
           </div>
         </div>
       </div>
 
       {/* Filters & Search */}
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <div className="flex items-center gap-1.5 bg-white/90 p-1 rounded-2xl border border-rose-100 shadow-2xs">
+        <div className="flex items-center gap-1.5 bg-white/90 p-1.5 rounded-2xl border border-rose-100 shadow-2xs flex-wrap">
           {[
             { id: 'all', label: `ទាំងអស់ (${sales.length})` },
             { id: 'today', label: 'ថ្ងៃនេះ' },
@@ -213,9 +273,10 @@ export const SalesHistory: React.FC = () => {
               onClick={() => {
                 soundFx.playPop();
                 setDateFilter(tab.id as any);
+                setCustomDate('');
               }}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
-                dateFilter === tab.id
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                dateFilter === tab.id && !customDate
                   ? 'bg-gradient-to-r from-pink-600 to-rose-500 text-white shadow-xs'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
@@ -223,6 +284,45 @@ export const SalesHistory: React.FC = () => {
               {tab.label}
             </button>
           ))}
+
+          {/* Custom Date Picker */}
+          <div className="flex items-center gap-1 pl-2 border-l border-slate-200">
+            <Calendar className="w-3.5 h-3.5 text-slate-400" />
+            <input
+              type="date"
+              value={customDate}
+              onChange={(e) => {
+                const val = e.target.value;
+                setCustomDate(val);
+                if (val) {
+                  soundFx.playPop();
+                  setDateFilter('custom');
+                } else {
+                  setDateFilter('all');
+                }
+              }}
+              className={`px-2.5 py-1 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                dateFilter === 'custom' && customDate
+                  ? 'bg-pink-50 border-pink-400 text-pink-700 font-black'
+                  : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300'
+              }`}
+              title="ជ្រើសរើសថ្ងៃជាក់លាក់"
+            />
+            {customDate && (
+              <button
+                type="button"
+                onClick={() => {
+                  soundFx.playPop();
+                  setCustomDate('');
+                  setDateFilter('all');
+                }}
+                className="text-xs text-rose-500 hover:text-rose-700 font-bold px-1"
+                title="លុបការជ្រើសរើសថ្ងៃ"
+              >
+                ✕
+              </button>
+            )}
+          </div>
         </div>
 
         <div className="relative w-72">
