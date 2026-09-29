@@ -1345,6 +1345,26 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     if (globalIsDemoMode) return { salesCount: sales.length, expensesCount: expenses.length };
     setLanSyncStatus('syncing');
     try {
+      // 1. Push local deletions & current state to LAN server first
+      await fetch('/api/lan-sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          products,
+          sales,
+          customOrders,
+          expenses,
+          storeInfo,
+          flavors,
+          telegramConfig: getStoredTelegramConfig(),
+          deletedSaleIds: Array.from(deletedSaleIds.current),
+          deletedOrderIds: Array.from(deletedOrderIds.current),
+          deletedExpenseIds: Array.from(deletedExpenseIds.current),
+          deletedProductIds: Array.from(deletedProductIds.current),
+        }),
+      }).catch(() => {});
+
+      // 2. Fetch the authoritative merged state
       const res = await fetch('/api/lan-sync');
       if (res.ok) {
         const data = await res.json();

@@ -25,12 +25,14 @@ function lanSyncPlugin(): Plugin {
   // Safe JSON write to avoid Windows renameSync file lock errors
   const safeWrite = (filePath: string, jsonString: string) => {
     try {
-      fs.writeFileSync(filePath, jsonString, 'utf-8');
+      const cleanString = jsonString.charCodeAt(0) === 0xFEFF ? jsonString.slice(1) : jsonString;
+      fs.writeFileSync(filePath, cleanString, 'utf-8');
     } catch (err) {
       console.error('Error writing file synchronously:', filePath, err);
       try {
         const tmpPath = `${filePath}.tmp`;
-        fs.writeFileSync(tmpPath, jsonString, 'utf-8');
+        const cleanString = jsonString.charCodeAt(0) === 0xFEFF ? jsonString.slice(1) : jsonString;
+        fs.writeFileSync(tmpPath, cleanString, 'utf-8');
         fs.copyFileSync(tmpPath, filePath);
         fs.unlinkSync(tmpPath);
       } catch (fallbackErr) {
@@ -42,8 +44,12 @@ function lanSyncPlugin(): Plugin {
   const getDbData = () => {
     try {
       if (fs.existsSync(dbPath)) {
-        const raw = fs.readFileSync(dbPath, 'utf-8');
-        if (raw && raw.trim().length > 0 && !raw.startsWith('\0')) {
+        let raw = fs.readFileSync(dbPath, 'utf-8');
+        if (raw.charCodeAt(0) === 0xFEFF) {
+          raw = raw.slice(1);
+        }
+        raw = raw.trim();
+        if (raw && raw.length > 0 && !raw.startsWith('\0')) {
           return JSON.parse(raw);
         }
       }
@@ -56,8 +62,12 @@ function lanSyncPlugin(): Plugin {
   const getSongsData = (): any[] => {
     try {
       if (fs.existsSync(songsDbPath)) {
-        const raw = fs.readFileSync(songsDbPath, 'utf-8');
-        if (raw && raw.trim().length > 0 && !raw.startsWith('\0')) {
+        let raw = fs.readFileSync(songsDbPath, 'utf-8');
+        if (raw.charCodeAt(0) === 0xFEFF) {
+          raw = raw.slice(1);
+        }
+        raw = raw.trim();
+        if (raw && raw.length > 0 && !raw.startsWith('\0')) {
           const parsed = JSON.parse(raw);
           return Array.isArray(parsed) ? parsed : [];
         }
