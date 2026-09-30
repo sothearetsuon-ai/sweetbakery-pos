@@ -154,7 +154,7 @@ export const Navbar: React.FC<NavbarProps> = ({
       : 'Good Evening 🧁 Ready for cake pickups';
 
   return (
-    <header className="bg-white/95 backdrop-blur-md border-b border-slate-200/90 sticky top-0 z-40 px-3 sm:px-6 py-2.5 sm:py-3 shadow-xs">
+    <header className="bg-white/95 backdrop-blur-md border-b border-[#F2DBD3] sticky top-0 z-40 px-3 sm:px-6 py-2.5 sm:py-3 shadow-xs">
       <div className="flex items-center justify-between gap-2">
         {/* Left Side: Mobile Hamburger Menu + Brand */}
         <div className="flex items-center gap-2 sm:gap-3.5 shrink-0">
@@ -162,7 +162,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           <button
             type="button"
             onClick={onToggleMobileDrawer}
-            className="md:hidden w-9 h-9 rounded-2xl bg-white border border-slate-200 text-slate-700 flex items-center justify-center hover:bg-slate-50 active:scale-95 shadow-2xs cursor-pointer"
+            className="md:hidden w-9 h-9 rounded-2xl bg-white border border-[#EADBCE] text-slate-700 flex items-center justify-center hover:bg-[#FFF5F2] active:scale-95 shadow-2xs cursor-pointer"
             title="បើកម៉ឺនុយចម្បង"
           >
             <Menu className="w-5 h-5 text-slate-800" />
@@ -178,7 +178,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             title="ចុចដើម្បីកំណត់ឈ្មោះហាង & Logo (Settings)"
           >
             <div className="relative group shrink-0">
-              <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-tr from-pink-600 via-rose-500 to-amber-400 p-0.5 shadow-md shadow-pink-500/20 transition-transform duration-300 group-hover:scale-105 overflow-hidden">
+              <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-tr from-[#FF6F68] via-[#E6514D] to-[#361B14] p-0.5 shadow-md shadow-[#E6514D]/25 transition-transform duration-300 group-hover:scale-105 overflow-hidden">
                 {storeInfo.logoUrl ? (
                   <img
                     src={getProductImageUrl(storeInfo.logoUrl)}
@@ -186,7 +186,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                     className="w-full h-full object-cover rounded-[10px] bg-white"
                   />
                 ) : (
-                  <div className="w-full h-full bg-white/10 backdrop-blur-xs rounded-[10px] flex items-center justify-center text-white">
+                  <div className="w-full h-full bg-white/15 backdrop-blur-xs rounded-[10px] flex items-center justify-center text-white">
                     <Cake className="w-4 h-4 sm:w-5 sm:h-5 animate-float" />
                   </div>
                 )}
@@ -198,21 +198,21 @@ export const Navbar: React.FC<NavbarProps> = ({
 
             <div>
               <div className="flex items-center gap-1.5">
-                <h1 className="text-xs sm:text-sm md:text-[15px] font-bold text-slate-800 flex items-center gap-1">
-                  <span className="max-w-[140px] sm:max-w-xs lg:max-w-none truncate">
+                <h1 className="text-xs sm:text-sm md:text-[15px] font-bold text-slate-900 flex items-center gap-1">
+                  <span className="max-w-[140px] sm:max-w-xs lg:max-w-none truncate font-battambang">
                     {lang === 'km' ? storeInfo.nameKh : storeInfo.nameEn}
                   </span>
-                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-rose-600 via-pink-600 to-amber-600 font-black text-xs sm:text-sm">
+                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#E6514D] via-[#FF6F68] to-amber-600 font-black text-xs sm:text-sm">
                     POS
                   </span>
                 </h1>
-                <span className="hidden sm:inline-block text-[9px] uppercase font-black tracking-wider bg-gradient-to-r from-rose-600 to-pink-600 text-white px-2 py-0.5 rounded-full shadow-2xs">
+                <span className="hidden sm:inline-block text-[9px] uppercase font-black tracking-wider bg-gradient-to-r from-[#E6514D] to-[#FF6F68] text-white px-2 py-0.5 rounded-full shadow-2xs">
                   PRO ★
                 </span>
               </div>
               <p className="hidden md:flex text-[11px] text-slate-500 items-center gap-1.5 mt-0.5">
                 <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                <span className="font-semibold text-rose-600">
+                <span className="font-semibold text-[#D43D39]">
                   {lang === 'km' ? greetingKh : greetingEn}
                 </span>
               </p>

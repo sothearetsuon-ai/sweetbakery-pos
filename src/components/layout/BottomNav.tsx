@@ -55,7 +55,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
   ];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-30 md:hidden bg-white/95 backdrop-blur-md border-t border-rose-200/80 shadow-[0_-4px_20px_rgba(0,0,0,0.06)] px-2 py-1.5 flex items-center justify-around">
+    <nav className="fixed bottom-0 left-0 right-0 z-30 md:hidden bg-white/95 backdrop-blur-md border-t border-[#F2DBD3] shadow-[0_-4px_20px_rgba(0,0,0,0.06)] px-2 py-1.5 flex items-center justify-around">
       {navItems.map((item) => {
         const Icon = item.icon;
         const isActive = activeTab === item.id;
@@ -70,20 +70,20 @@ export const BottomNav: React.FC<BottomNavProps> = ({
             }}
             className={`flex-1 flex flex-col items-center justify-center py-1 px-1 rounded-2xl relative transition-all duration-200 cursor-pointer active:scale-90 ${
               isActive
-                ? 'text-pink-600 font-black'
+                ? 'text-[#E6514D] font-black'
                 : 'text-slate-500 hover:text-slate-800 font-bold'
             }`}
           >
             {/* Active Indicator Pill */}
             {isActive && (
-              <span className="absolute top-0 w-8 h-1 bg-gradient-to-r from-pink-500 to-rose-500 rounded-full" />
+              <span className="absolute top-0 w-8 h-1 bg-gradient-to-r from-[#FF6F68] to-[#E6514D] rounded-full" />
             )}
 
             <div className="relative mt-0.5">
               <div
                 className={`p-1.5 rounded-xl transition-colors ${
                   isActive
-                    ? 'bg-pink-100/70 text-pink-600'
+                    ? 'bg-[#FFEBE8] text-[#E6514D]'
                     : 'bg-transparent text-slate-500'
                 }`}
               >

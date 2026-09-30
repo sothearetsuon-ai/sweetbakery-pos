@@ -162,7 +162,7 @@ export const PosTerminal: React.FC = () => {
                   soundFx.playPop();
                   setIsAddProductOpen(true);
                 }}
-                className="px-3.5 sm:px-4 py-2 sm:py-2.5 bg-gradient-to-r from-rose-600 via-pink-600 to-rose-500 hover:from-rose-700 hover:to-pink-700 text-white font-black rounded-2xl text-xs transition-all shadow-md shadow-rose-500/25 flex items-center gap-1.5 active:scale-95 cursor-pointer"
+                className="px-3.5 sm:px-4 py-2 sm:py-2.5 bg-gradient-to-r from-[#FF6F68] to-[#E6514D] hover:brightness-105 text-white font-black rounded-2xl text-xs transition-all shadow-md shadow-[#E6514D]/25 flex items-center gap-1.5 active:scale-95 cursor-pointer"
               >
                 <Plus className="w-4 h-4 stroke-[3]" />
                 <span className="hidden sm:inline">+ Upload រូបភាពនំថ្មី</span>
@@ -183,10 +183,10 @@ export const PosTerminal: React.FC = () => {
                     soundFx.playPop();
                     setSelectedCategory(cat.id);
                   }}
-                  className={`px-4 py-2 sm:py-2.5 rounded-2xl text-xs font-black whitespace-nowrap transition-all duration-200 flex items-center gap-2 shadow-2xs active:scale-95 cursor-pointer ${
+                  className={`px-4 py-2 sm:py-2.5 rounded-full text-xs font-black whitespace-nowrap transition-all duration-200 flex items-center gap-2 shadow-2xs active:scale-95 cursor-pointer relative ${
                     isActive
-                      ? 'bg-gradient-to-r from-rose-600 via-pink-600 to-rose-500 text-white shadow-md shadow-rose-500/30 scale-102 ring-2 ring-rose-400/30'
-                      : 'bg-white text-slate-700 hover:bg-rose-50 hover:text-rose-600 border border-slate-200/90 hover:border-rose-300 hover:shadow-xs'
+                      ? 'bg-gradient-to-r from-[#FF6F68] to-[#E6514D] text-white shadow-md shadow-[#E6514D]/30 scale-102 ring-2 ring-[#FFB4AE]'
+                      : 'bg-white text-slate-800 hover:bg-[#FFF5F2] hover:text-[#E6514D] border border-[#F2DBD3] hover:shadow-xs'
                   }`}
                 >
                   {getCategoryIcon(cat.icon)}

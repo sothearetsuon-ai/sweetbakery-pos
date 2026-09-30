@@ -14,9 +14,23 @@ export interface AppTheme {
 
 export const APP_THEMES: AppTheme[] = [
   {
+    id: 'renahs-cake',
+    nameKh: 'រ៉េណាហ៍ សូកូឡា & ស្ត្រប៊ែរី (Renah’s Cake)',
+    nameEn: 'Renah’s Coral & Royal Chocolate (Pinterest)',
+    emoji: '🎂',
+    bgClass: 'bg-[#FFF7F4]',
+    bgStyle: {
+      background: 'radial-gradient(circle at 10% 10%, rgba(230, 81, 77, 0.05) 0%, transparent 40%), radial-gradient(circle at 90% 90%, rgba(62, 32, 22, 0.04) 0%, transparent 40%), #FFF8F5',
+    },
+    previewBg: 'bg-gradient-to-br from-[#E6514D] via-[#FA6B67] to-[#361B14] border-[#E6514D]',
+    accentColor: '#E6514D',
+    badgeClass: 'bg-[#FFE8E6] text-[#8C1E1B] border-[#FFB3AF]',
+    descriptionKh: 'រចនាបថតាម Pinterest: ពណ៌ក្រហមផ្កាឈូកស្ត្រប៊ែរី គួបផ្សំសូកូឡាប្រណិត និងស្លាកសេវាកម្មដ៏ស្រស់ស្អាត',
+  },
+  {
     id: 'warm-cream',
     nameKh: 'ក្រែមនំបុ័ងកក់ក្តៅ (Bakery Cream)',
-    nameEn: 'Warm Bakery Cream (Default)',
+    nameEn: 'Warm Bakery Cream',
     emoji: '🧁',
     bgClass: 'bg-[#FAF8F5]',
     bgStyle: { backgroundColor: '#FAF8F5' },
@@ -129,7 +143,7 @@ export const THEME_STORAGE_KEY = 'bakery_pos_theme';
 export function getSavedTheme(): AppTheme {
   try {
     const savedId = localStorage.getItem(THEME_STORAGE_KEY);
-    if (savedId) {
+    if (savedId && savedId !== 'warm-cream') {
       const found = APP_THEMES.find((t) => t.id === savedId);
       if (found) return found;
     }

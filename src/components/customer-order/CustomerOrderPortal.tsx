@@ -517,7 +517,7 @@ export const CustomerOrderPortal: React.FC = () => {
         {step === 1 && (
           <div className="space-y-5 animate-in fade-in duration-300">
             {/* Hero Card */}
-            <div className="bg-gradient-to-r from-pink-600 via-rose-500 to-amber-500 text-white rounded-3xl p-5 sm:p-7 shadow-xl shadow-pink-500/15 relative overflow-hidden">
+            <div className="bg-gradient-to-r from-[#FF6F68] via-[#FA5E57] to-[#E64C47] text-white rounded-3xl p-5 sm:p-7 shadow-xl shadow-[#E64C47]/20 relative overflow-hidden">
               <div className="relative z-10 max-w-lg space-y-2">
                 <span className="px-3 py-1 bg-white/20 backdrop-blur-md rounded-full text-xs font-black tracking-wide inline-flex items-center gap-1">
                   <Sparkles className="w-3.5 h-3.5 text-amber-300" />
@@ -532,7 +532,7 @@ export const CustomerOrderPortal: React.FC = () => {
                 <div className="pt-2 flex flex-wrap gap-2">
                   <button
                     onClick={handleStartCustomDesign}
-                    className="px-4 py-2.5 bg-white text-pink-700 hover:bg-pink-50 rounded-2xl text-xs font-black transition-all shadow-md active:scale-95 cursor-pointer flex items-center gap-1.5"
+                    className="px-4 py-2.5 bg-white text-[#C93833] hover:bg-[#FFF5F2] rounded-2xl text-xs font-black transition-all shadow-md active:scale-95 cursor-pointer flex items-center gap-1.5"
                   >
                     <span>🎨 កុម្ម៉ង់ម៉ូដតាមរូបភាពផ្ទាល់ខ្លួន</span>
                     <ArrowRight className="w-3.5 h-3.5" />

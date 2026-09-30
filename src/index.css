@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Dancing+Script:wght@600;700&family=Playfair+Display:ital,wght@0,600;0,700;1,600&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -201,3 +203,79 @@
     color: #000;
   }
 }
+
+/* ============================================================
+   Pinterest "Renah's Cake" Signature Visual System
+   ============================================================ */
+.font-cursive-bakery {
+  font-family: 'Dancing Script', 'Playfair Display', cursive, serif !important;
+}
+
+/* Coral Strawberry to Salmon Gradients */
+.bg-renah-coral {
+  background: linear-gradient(135deg, #FF6F68 0%, #FA5E57 45%, #E64C47 100%);
+}
+
+.bg-renah-coral-soft {
+  background: linear-gradient(135deg, #FFF1EE 0%, #FFE5E1 100%);
+}
+
+/* Rich Decadent Chocolate Mocha */
+.bg-renah-chocolate {
+  background: linear-gradient(180deg, #381E16 0%, #29140E 100%);
+}
+
+.bg-chocolate-pattern {
+  background-color: #2D1610;
+  background-image: 
+    radial-gradient(ellipse at 50% 0%, rgba(230, 81, 77, 0.25) 0%, transparent 65%),
+    radial-gradient(circle at 10% 90%, rgba(245, 158, 11, 0.12) 0%, transparent 40%),
+    repeating-radial-gradient(circle at 50% 100%, rgba(255, 255, 255, 0.015) 0, rgba(255, 255, 255, 0.015) 16px, transparent 16px, transparent 32px);
+}
+
+/* Pinterest Capsule Pill with Left Arrow Pointer (just like SERVICES list) */
+.renah-service-pill {
+  position: relative;
+  background: #FFFFFF;
+  border-radius: 9999px;
+  box-shadow: 0 4px 16px rgba(48, 23, 16, 0.08);
+  transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.renah-service-pill:hover {
+  transform: translateX(4px) translateY(-1px);
+  box-shadow: 0 8px 24px rgba(230, 81, 77, 0.2);
+}
+
+/* Arrow indicator attached to pill */
+.renah-arrow-tag {
+  position: absolute;
+  left: -9px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 0;
+  height: 0;
+  border-top: 7px solid transparent;
+  border-bottom: 7px solid transparent;
+  border-right: 9px solid #E6514D;
+  filter: drop-shadow(-1px 1px 1px rgba(0, 0, 0, 0.1));
+}
+
+.renah-arrow-tag-active {
+  border-right-color: #F59E0B;
+}
+
+/* Circular Floating Showcase Frame with Soft Glow */
+.renah-circle-frame {
+  border-radius: 9999px;
+  border: 4px solid #FFFFFF;
+  box-shadow: 0 12px 32px rgba(62, 32, 22, 0.18), 0 0 0 1px rgba(230, 81, 77, 0.15);
+  overflow: hidden;
+  transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.renah-circle-frame:hover {
+  transform: scale(1.06) rotate(1deg);
+  box-shadow: 0 16px 40px rgba(230, 81, 77, 0.28);
+}
+

@@ -230,9 +230,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
     <>
       <div className="p-3.5 space-y-3.5 flex-1 overflow-y-auto">
         {/* Main Menu Hero Banner */}
-        <div className="p-3 rounded-2xl bg-gradient-to-r from-pink-500/10 via-rose-500/10 to-amber-500/10 border border-pink-200/80 shadow-2xs flex items-center justify-between">
+        <div className="p-3 rounded-2xl bg-gradient-to-r from-[#FF6F68]/10 via-[#E6514D]/10 to-amber-500/10 border border-[#FFCCC6]/80 shadow-2xs flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <span className="w-8 h-8 rounded-xl bg-gradient-to-tr from-pink-600 via-rose-500 to-amber-500 text-white flex items-center justify-center text-sm shadow-md shadow-pink-500/20 animate-pulse">
+            <span className="w-8 h-8 rounded-xl bg-gradient-to-tr from-[#FF6F68] via-[#E6514D] to-amber-500 text-white flex items-center justify-center text-sm shadow-md shadow-[#E6514D]/25 animate-pulse">
               ✨
             </span>
             <div>
@@ -240,12 +240,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 <span>មឺនុយចម្បង</span>
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" />
               </div>
-              <div className="text-[9px] font-bold text-pink-600 uppercase tracking-widest font-sans">
+              <div className="text-[9px] font-bold text-[#E6514D] uppercase tracking-widest font-sans">
                 Main Menu • Navigation
               </div>
             </div>
           </div>
-          <span className="px-2 py-0.5 rounded-full bg-white text-pink-700 text-[10px] font-black border border-pink-200/80 shadow-2xs">
+          <span className="px-2 py-0.5 rounded-full bg-white text-[#C93833] text-[10px] font-black border border-[#FFCCC6] shadow-2xs">
             POS Pro
           </span>
         </div>
@@ -271,9 +271,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     onClick={() => handleTabClick(item.id, item.permission)}
                     className={`w-full flex items-center justify-between px-3 py-2 rounded-2xl font-bold text-xs tracking-normal transition-all duration-200 relative group cursor-pointer ${
                       isActive
-                        ? 'bg-gradient-to-r from-pink-600 via-rose-600 to-amber-500 text-white shadow-md shadow-pink-500/30 scale-[1.02] ring-2 ring-pink-300'
+                        ? 'bg-gradient-to-r from-[#FF6F68] via-[#FA5E57] to-[#E64C47] text-white shadow-md shadow-[#E64C47]/30 scale-[1.02] ring-2 ring-[#FFB4AE]'
                         : isAllowed
-                        ? 'text-slate-700 hover:bg-white hover:text-pink-600 hover:shadow-xs hover:border hover:border-pink-100/80'
+                        ? 'text-slate-700 hover:bg-white hover:text-[#E6514D] hover:shadow-xs hover:border hover:border-rose-100/80'
                         : 'text-slate-400 opacity-60 hover:opacity-80'
                     }`}
                   >
@@ -452,7 +452,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   return (
     <>
       {/* 1. Desktop Permanent Sidebar (Hidden on Mobile) */}
-      <aside className="hidden md:flex w-64 glass-panel border-r border-rose-100/70 flex-col justify-between shrink-0 min-h-[calc(100vh-65px)] overflow-hidden">
+      <aside className="hidden md:flex w-64 glass-panel border-r border-[#F2DBD3] flex-col justify-between shrink-0 min-h-[calc(100vh-65px)] overflow-hidden">
         {renderNavList()}
       </aside>
 
@@ -468,20 +468,20 @@ export const Sidebar: React.FC<SidebarProps> = ({
           {/* Sliding Drawer */}
           <aside className="relative z-50 w-72 max-w-[82vw] bg-white h-full shadow-2xl flex flex-col justify-between overflow-y-auto animate-in slide-in-from-left duration-200">
             {/* Mobile Drawer Header */}
-            <div className="p-4 border-b border-rose-100 flex items-center justify-between bg-gradient-to-r from-pink-50 to-rose-50/70">
+            <div className="p-4 border-b border-[#F2DBD3] flex items-center justify-between bg-gradient-to-r from-[#FFF5F2] to-[#FFEFEA]">
               <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-2xl bg-gradient-to-tr from-pink-600 to-rose-500 text-white flex items-center justify-center font-black text-lg shadow-md shadow-pink-500/20">
+                <div className="w-9 h-9 rounded-2xl bg-gradient-to-tr from-[#FF6F68] to-[#E6514D] text-white flex items-center justify-center font-black text-lg shadow-md shadow-[#E6514D]/25">
                   🎂
                 </div>
                 <div>
                   <div className="font-muol text-xs text-slate-800 tracking-wide">{storeInfo.nameKh || 'ម៉ឺនុយហាងនំ'}</div>
-                  <div className="text-[10px] text-pink-600 font-bold">SweetBakery POS</div>
+                  <div className="text-[10px] text-[#E6514D] font-bold">SweetBakery POS</div>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={onCloseMobile}
-                className="w-8 h-8 rounded-xl bg-white border border-rose-200 text-slate-500 flex items-center justify-center hover:bg-rose-50 cursor-pointer shadow-2xs"
+                className="w-8 h-8 rounded-xl bg-white border border-[#F2DBD3] text-slate-500 flex items-center justify-center hover:bg-[#FFF5F2] cursor-pointer shadow-2xs"
                 title="បិទម៉ឺនុយ"
               >
                 <X className="w-4 h-4 text-slate-600" />
