@@ -369,6 +369,27 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, onAdvanceStatus, on
         </div>
       )}
 
+      {/* Individual Order Card Delete Footer */}
+      {onDelete && (
+        <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400">
+          <span className="font-mono text-[10px] text-slate-400">#{order.orderNumber}</span>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              e.preventDefault();
+              soundFx.playPop();
+              onDelete(order);
+            }}
+            className="flex items-center gap-1 text-rose-500 hover:text-rose-700 hover:bg-rose-50 px-2.5 py-1 rounded-xl transition-all font-bold cursor-pointer active:scale-95 border border-rose-100/70 shadow-2xs"
+            title="លុបការកុម្ម៉ង់នេះ"
+          >
+            <Trash2 className="w-3 h-3 text-rose-500" />
+            <span>លុបការកុម្ម៉ង់</span>
+          </button>
+        </div>
+      )}
+
       {/* Image Preview Modal (Mobile Optimized) */}
       {previewImage && (
         <div

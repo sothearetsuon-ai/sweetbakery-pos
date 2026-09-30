@@ -19,6 +19,7 @@ export const CustomOrderPipeline: React.FC = () => {
   const [selectedOrderForDeposit, setSelectedOrderForDeposit] = useState<CustomCakeOrder | null>(null);
   const [receiptSale, setReceiptSale] = useState<CompletedSale | null>(null);
   const [orderToDelete, setOrderToDelete] = useState<CustomCakeOrder | null>(null);
+  const [stageToDelete, setStageToDelete] = useState<{ status: OrderStatus; title: string; count: number } | null>(null);
   const [isConfirmClearAll, setIsConfirmClearAll] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [dateFilter, setDateFilter] = useState<'all' | 'today' | 'upcoming'>('all');
@@ -191,6 +192,14 @@ export const CustomOrderPipeline: React.FC = () => {
         createdAt: order.createdAt || new Date().toISOString(),
       });
     }
+  };
+
+  const handleClearStage = () => {
+    if (!stageToDelete) return;
+    soundFx.playSuccess();
+    const ordersInStage = customOrders.filter((o) => o.status === stageToDelete.status);
+    ordersInStage.forEach((o) => deleteCustomOrder(o.id));
+    setStageToDelete(null);
   };
 
   return (
@@ -406,6 +415,36 @@ export const CustomOrderPipeline: React.FC = () => {
         })}
       </div>
 
+      {/* Mobile Single Stage Action Bar (Shows when filtering by stage on mobile) */}
+      {mobileStatusTab !== 'ALL' && (
+        <div className="md:hidden flex items-center justify-between bg-rose-50/70 border border-rose-200/70 rounded-2xl px-3.5 py-2 mb-3 text-xs shrink-0 shadow-2xs">
+          <div className="flex items-center gap-1.5 text-slate-700 font-bold">
+            <span>📍 ដំណាក់កាល៖</span>
+            <span className="text-pink-600">
+              {columns.find((c) => c.status === mobileStatusTab)?.titleKh} ({statusCounts[mobileStatusTab] || 0} នំ)
+            </span>
+          </div>
+          {(statusCounts[mobileStatusTab] || 0) > 0 && (
+            <button
+              type="button"
+              onClick={() => {
+                soundFx.playPop();
+                const colInfo = columns.find((c) => c.status === mobileStatusTab);
+                setStageToDelete({
+                  status: mobileStatusTab as OrderStatus,
+                  title: lang === 'km' ? (colInfo?.titleKh || '') : (colInfo?.titleEn || ''),
+                  count: statusCounts[mobileStatusTab] || 0,
+                });
+              }}
+              className="px-2.5 py-1 bg-white hover:bg-rose-50 text-rose-600 border border-rose-200 rounded-xl text-[11px] font-black flex items-center gap-1 shadow-2xs active:scale-95 cursor-pointer"
+            >
+              <Trash2 className="w-3 h-3 text-rose-500" />
+              <span>លុបទាំងអស់ក្នុងកន្លែងនេះ</span>
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Kanban Columns: Horizontal swipe on mobile, grid on desktop */}
       <div className="flex-1 flex md:grid md:grid-cols-5 gap-3 sm:gap-4 overflow-x-auto pb-4 snap-x snap-mandatory">
         {visibleColumns.map((col) => {
@@ -431,9 +470,28 @@ export const CustomOrderPipeline: React.FC = () => {
                     {lang === 'km' ? col.titleKh : col.titleEn}
                   </span>
                 </div>
-                <span className={`w-6 h-6 rounded-full font-black text-xs flex items-center justify-center shadow-xs ${col.badgeStyle}`}>
-                  {colOrders.length}
-                </span>
+                <div className="flex items-center gap-1.5">
+                  <span className={`w-6 h-6 rounded-full font-black text-xs flex items-center justify-center shadow-xs ${col.badgeStyle}`}>
+                    {colOrders.length}
+                  </span>
+                  {colOrders.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        soundFx.playPop();
+                        setStageToDelete({
+                          status: col.status,
+                          title: lang === 'km' ? col.titleKh : col.titleEn,
+                          count: colOrders.length,
+                        });
+                      }}
+                      className="w-6 h-6 rounded-lg bg-white/80 hover:bg-rose-100 text-slate-400 hover:text-rose-600 flex items-center justify-center transition-colors border border-slate-200/50 cursor-pointer active:scale-90"
+                      title={`សម្អាត ឬលុបទាំងអស់ក្នុង «${lang === 'km' ? col.titleKh : col.titleEn}» (${colOrders.length} នំ)`}
+                    >
+                      <Trash2 className="w-3 h-3 text-rose-500" />
+                    </button>
+                  )}
+                </div>
               </div>
 
               {/* Column Card List */}
@@ -524,6 +582,45 @@ export const CustomOrderPipeline: React.FC = () => {
               >
                 <Trash2 className="w-3.5 h-3.5" />
                 <span>យល់ព្រមលុប</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* In-App Modal to Confirm Clear Specific Stage / Column */}
+      {stageToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 animate-in fade-in duration-150">
+          <div className="bg-white rounded-3xl p-5 max-w-sm w-full shadow-2xl border border-rose-100 space-y-4 animate-in zoom-in-95 duration-150">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center shrink-0 shadow-xs">
+                <Trash2 className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="font-black text-slate-800 text-base">សម្អាតដំណាក់កាលនេះ?</h3>
+                <p className="text-xs text-rose-600 font-bold">{stageToDelete.title} ({stageToDelete.count} នំ)</p>
+              </div>
+            </div>
+
+            <p className="text-xs text-slate-600 leading-relaxed">
+              តើលោកអ្នកពិតជាចង់លុបការកុម្ម៉ង់ទាំង <strong>{stageToDelete.count}</strong> នំ នៅក្នុងផ្នែក «<strong>{stageToDelete.title}</strong>» មែនទេ? ការកុម្ម៉ង់ក្នុងដំណាក់កាលផ្សេងទៀតនឹងមិនរងផលប៉ះពាល់ឡើយ។
+            </p>
+
+            <div className="grid grid-cols-2 gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => setStageToDelete(null)}
+                className="py-2.5 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-colors cursor-pointer"
+              >
+                បោះបង់
+              </button>
+              <button
+                type="button"
+                onClick={handleClearStage}
+                className="py-2.5 px-4 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs rounded-xl shadow-lg shadow-rose-600/30 transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-1.5"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>យល់ព្រមលុប ({stageToDelete.count})</span>
               </button>
             </div>
           </div>
