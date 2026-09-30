@@ -13,7 +13,7 @@ export interface TelegramConfig {
 const STORAGE_KEY = 'bakery_telegram_config';
 
 export const DEFAULT_TELEGRAM_CONFIG: TelegramConfig = {
-  botToken: '8754054600:AAF8FtAVkb5SlIl9CsSusM-UwGpuFHoAGGM',
+  botToken: '8544004471:AAFsyBJbtmKR6W46zGtqGhNVWjE2AIvzWC4',
   chatId: '8970210109',
   enabled: true,
   notifySales: true,
