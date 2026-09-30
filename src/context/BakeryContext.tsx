@@ -201,34 +201,47 @@ export const initialPartyAddons: PartyAddon[] = [
 
 export const seedDemoDataIfMissing = () => {
   if (typeof window === 'undefined') return;
-  if (!localStorage.getItem('demo_bakery_products')) {
+  
+  const checkIsEmpty = (key: string) => {
+    const raw = localStorage.getItem(key);
+    if (!raw || raw === '[]' || raw === 'null' || raw === '{}') return true;
+    try {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length === 0) return true;
+    } catch (e) {
+      return true;
+    }
+    return false;
+  };
+
+  if (checkIsEmpty('demo_bakery_products')) {
     localStorage.setItem('demo_bakery_products', JSON.stringify(initialProducts));
   }
-  if (!localStorage.getItem('demo_bakery_sales')) {
+  if (checkIsEmpty('demo_bakery_sales')) {
     localStorage.setItem('demo_bakery_sales', JSON.stringify(initialSales));
   }
-  if (!localStorage.getItem('demo_bakery_custom_orders')) {
+  if (checkIsEmpty('demo_bakery_custom_orders')) {
     localStorage.setItem('demo_bakery_custom_orders', JSON.stringify(initialOrders));
   }
-  if (!localStorage.getItem('demo_bakery_expenses')) {
+  if (checkIsEmpty('demo_bakery_expenses')) {
     localStorage.setItem('demo_bakery_expenses', JSON.stringify(demoExpenses));
   }
-  if (!localStorage.getItem('demo_bakery_ingredients')) {
+  if (checkIsEmpty('demo_bakery_ingredients')) {
     localStorage.setItem('demo_bakery_ingredients', JSON.stringify(initialIngredients));
   }
-  if (!localStorage.getItem('demo_bakery_recipes')) {
+  if (checkIsEmpty('demo_bakery_recipes')) {
     localStorage.setItem('demo_bakery_recipes', JSON.stringify(initialRecipes));
   }
-  if (!localStorage.getItem('demo_bakery_party_addons')) {
+  if (checkIsEmpty('demo_bakery_party_addons')) {
     localStorage.setItem('demo_bakery_party_addons', JSON.stringify(initialPartyAddons));
   }
-  if (!localStorage.getItem('demo_bakery_flavors')) {
+  if (checkIsEmpty('demo_bakery_flavors')) {
     localStorage.setItem('demo_bakery_flavors', JSON.stringify(initialFlavors));
   }
-  if (!localStorage.getItem('demo_bakery_shift')) {
+  if (checkIsEmpty('demo_bakery_shift')) {
     localStorage.setItem('demo_bakery_shift', JSON.stringify(initialShift));
   }
-  if (!localStorage.getItem('demo_bakery_store_info')) {
+  if (checkIsEmpty('demo_bakery_store_info')) {
     localStorage.setItem('demo_bakery_store_info', JSON.stringify(demoStoreInfo));
   }
 };
@@ -713,7 +726,10 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       const savedDemo = localStorage.getItem('demo_bakery_products');
       if (savedDemo) {
         try {
-          return sortProductsNewestFirst(JSON.parse(savedDemo));
+          const parsed = JSON.parse(savedDemo);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            return sortProductsNewestFirst(parsed);
+          }
         } catch (e) {}
       }
       return sortProductsNewestFirst(initialProducts);
@@ -723,17 +739,36 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     if (saved) {
       try {
         const parsed: Product[] = JSON.parse(saved);
-        const healed = parsed.map((p) => healProductItem(p).product);
-        const missingItems = initialProducts.filter(
-          (ip) => !healed.some((existing) => existing.id === ip.id)
-        );
-        return sortProductsNewestFirst([...healed, ...missingItems]);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const healed = parsed.map((p) => healProductItem(p).product);
+          const missingItems = initialProducts.filter(
+            (ip) => !healed.some((existing) => existing.id === ip.id)
+          );
+          return sortProductsNewestFirst([...healed, ...missingItems]);
+        }
       } catch (e) {
         return sortProductsNewestFirst(initialProducts);
       }
     }
     return sortProductsNewestFirst(initialProducts);
   });
+
+  // Emergency Auto-Recovery: Never allow products to become 0 unless store is explicitly reset
+  useEffect(() => {
+    if (products.length === 0) {
+      console.warn('⚠️ Products list is 0! Auto-restoring default bakery products catalog...');
+      const fallback = sortProductsNewestFirst(initialProducts);
+      setProducts(fallback);
+      if (globalIsDemoMode) {
+        localStorage.setItem('demo_bakery_products', JSON.stringify(fallback));
+      } else {
+        safeSetStorage('bakery_products', JSON.stringify(fallback));
+        fallback.forEach((p) => {
+          saveFirestoreDoc('products', p.id, p);
+        });
+      }
+    }
+  }, [products.length]);
 
   // Auto-heal products in localStorage on mount
   useEffect(() => {
@@ -1631,16 +1666,29 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       if (globalIsDemoMode) return;
       if (Array.isArray(cloudProducts)) {
         const filtered = sortProductsNewestFirst(cloudProducts.filter((p) => p && p.id && !deletedProductIds.current.has(p.id)));
+
+        // If Cloud collection is empty, NEVER wipe out local products!
+        // Instead, seed Firestore with existing local products or initialProducts
+        if (filtered.length === 0) {
+          setProducts((prev) => {
+            const list = prev.length > 0 ? prev : sortProductsNewestFirst(initialProducts);
+            list.forEach((p) => {
+              saveFirestoreDoc('products', p.id, p);
+            });
+            return list;
+          });
+          return;
+        }
+
         setProducts((prev) => {
           const map = new Map<string, Product>();
+          // Cloud products take precedence
           filtered.forEach((p) => map.set(p.id, p));
-          const recentCutoff = Date.now() - 20000;
+          // Keep all existing non-deleted local products and ensure they are saved to Firestore
           prev.forEach((p) => {
             if (p && p.id && !deletedProductIds.current.has(p.id) && !map.has(p.id)) {
-              const time = new Date(p.createdAt || p.updatedAt || 0).getTime();
-              if (time > recentCutoff) {
-                map.set(p.id, p);
-              }
+              map.set(p.id, p);
+              saveFirestoreDoc('products', p.id, p);
             }
           });
           const merged = sortProductsNewestFirst(Array.from(map.values()).filter((p) => !deletedProductIds.current.has(p.id)));
@@ -3392,7 +3440,14 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
     try {
       const demoProd = localStorage.getItem('demo_bakery_products');
-      setProducts(demoProd ? sortProductsNewestFirst(JSON.parse(demoProd)) : sortProductsNewestFirst(initialProducts));
+      let prodList = initialProducts;
+      if (demoProd) {
+        try {
+          const parsed = JSON.parse(demoProd);
+          if (Array.isArray(parsed) && parsed.length > 0) prodList = parsed;
+        } catch (e) {}
+      }
+      setProducts(sortProductsNewestFirst(prodList));
 
       const demoSales = localStorage.getItem('demo_bakery_sales');
       setSales(demoSales ? JSON.parse(demoSales) : initialSales);
@@ -3443,7 +3498,14 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
     try {
       const liveProd = (await idbGet('bakery_products')) || localStorage.getItem('bakery_products');
-      if (liveProd) setProducts(sortProductsNewestFirst(JSON.parse(liveProd)));
+      let prodList = initialProducts;
+      if (liveProd) {
+        try {
+          const parsed = JSON.parse(liveProd);
+          if (Array.isArray(parsed) && parsed.length > 0) prodList = parsed;
+        } catch (e) {}
+      }
+      setProducts(sortProductsNewestFirst(prodList));
 
       const liveSales = (await idbGet('bakery_sales')) || localStorage.getItem('bakery_sales');
       if (liveSales) setSales(JSON.parse(liveSales));

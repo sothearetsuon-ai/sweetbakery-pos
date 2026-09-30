@@ -392,7 +392,8 @@ export const CustomerShowcase: React.FC = () => {
                       <div
                         key={idx}
                         title={`${itemName} (ចុចមើលរូបធំ)`}
-                        className="renah-circle-frame w-13 h-13 sm:w-16 md:w-20 sm:h-16 md:h-20 shrink-0 bg-white cursor-pointer group/circle relative"
+                        style={{ width: '56px', height: '56px' }}
+                        className="renah-circle-frame sm:w-16 md:w-20 sm:h-16 md:h-20 shrink-0 bg-white cursor-pointer group/circle relative"
                         onClick={() => {
                           if (item) {
                             soundFx.playPop();
