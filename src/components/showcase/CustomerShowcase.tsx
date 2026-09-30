@@ -20,6 +20,10 @@ import {
   Phone,
   MapPin,
   MessageCircle,
+  PieChart,
+  Croissant,
+  Flame,
+  Coffee,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { useBakery } from '../../context/BakeryContext';
@@ -33,7 +37,7 @@ import { NewCustomOrderModal } from '../custom-orders/NewCustomOrderModal';
 import { sortProductsNewestFirst } from '../../utils/productUtils';
 import { getProductImageUrl } from '../../utils/imagePath';
 
-// Iconic Chef Hat SVG matching the Renah's Cake logo
+// Iconic Chef Hat SVG matching the bakery logo aesthetic
 export const ChefHatIcon: React.FC<{ className?: string }> = ({ className = 'w-6 h-6' }) => (
   <svg
     viewBox="0 0 24 24"
@@ -46,17 +50,22 @@ export const ChefHatIcon: React.FC<{ className?: string }> = ({ className = 'w-6
   </svg>
 );
 
-// Services matching the Pinterest flyer
-export const RENAH_SERVICES = [
-  { id: 'all', titleFr: 'TOUT AFFICHER', labelKh: 'បង្ហាញទាំងអស់', desc: 'All Cakes & Delights' },
-  { id: 'mariage', titleFr: 'GÂTEAUX DE MARIAGE', labelKh: 'នំមង្គលការ (Wedding Cakes)', categoryId: 'birthday', keywords: ['wedding', 'mariage', 'ការ', 'អាពាហ៍ពិពាហ៍', '2 ជាន់', 'tier'] },
-  { id: 'anniversaire', titleFr: "GÂTEAUX D'ANNIVERSAIRE", labelKh: 'នំខួបកំណើត (Birthday Cakes)', categoryId: 'birthday', keywords: ['birthday', 'ខួប', 'anniversaire', 'cake', 'សូកូឡា', 'ស្ត្រប៊ែរី'] },
-  { id: 'biscuit', titleFr: 'BISCUIT SABLÉ', labelKh: 'នំប្រៃ & ឃុកឃី (Shortbread Cookies)', categoryId: 'pastries', keywords: ['biscuit', 'cookie', 'ឃុកឃី', 'sable', 'sabla', 'cracker'] },
-  { id: 'cupcake', titleFr: 'CUPCAKE', labelKh: 'ខាប់ខេក (Cupcakes)', categoryId: 'slices', keywords: ['cupcake', 'ខាប់', 'muffin'] },
-  { id: 'pastels', titleFr: 'PASTELS', labelKh: 'នំផាស្តែល & ក្រូសង់ (Pastels & Pastries)', categoryId: 'pastries', keywords: ['pastel', 'croissant', 'ក្រូសង់', 'bread', 'នំប៉័ង'] },
-  { id: 'amuses', titleFr: 'AMUSES GUEULE', labelKh: 'អាហារសម្រន់ (Appetizers & Snacks)', categoryId: 'party', keywords: ['snack', 'drink', 'party', 'កាហ្វេ', 'ភេសជ្ជៈ', 'amuse'] },
-  { id: 'traiteur', titleFr: 'SERVICE TRAITEUR', labelKh: 'សេវាកម្មរៀបចំកម្មវិធី (Catering)', categoryId: 'party', keywords: ['traiteur', 'catering', 'service', 'ពិធី'] },
-];
+export const getCategoryIcon = (iconName?: string) => {
+  switch (iconName) {
+    case 'Cake':
+      return <Cake className="w-4 h-4 text-pink-500" />;
+    case 'PieChart':
+      return <PieChart className="w-4 h-4 text-purple-500" />;
+    case 'Croissant':
+      return <Croissant className="w-4 h-4 text-amber-500" />;
+    case 'Flame':
+      return <Flame className="w-4 h-4 text-rose-500" />;
+    case 'Coffee':
+      return <Coffee className="w-4 h-4 text-amber-700" />;
+    default:
+      return <Sparkles className="w-4 h-4 text-amber-400" />;
+  }
+};
 
 // Animated Individual Cake Card with Auto-Transitions
 interface ShowcaseCardProps {
@@ -228,7 +237,6 @@ export const CustomerShowcase: React.FC = () => {
   });
 
   const [selectedCategory, setSelectedCategory] = useState('all');
-  const [selectedService, setSelectedService] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [previewProduct, setPreviewProduct] = useState<Product | null>(null);
   const [isAddProductOpen, setIsAddProductOpen] = useState(false);
@@ -274,18 +282,6 @@ export const CustomerShowcase: React.FC = () => {
   const filteredProducts = useMemo(() => {
     const list = products.filter((p) => {
       const matchCategory = selectedCategory === 'all' || p.categoryId === selectedCategory;
-
-      let matchService = true;
-      if (selectedService !== 'all') {
-        const srv = RENAH_SERVICES.find((s) => s.id === selectedService);
-        if (srv) {
-          const textToSearch = `${p.nameKh} ${p.nameEn} ${p.description || ''} ${p.categoryId}`.toLowerCase();
-          const matchKw = srv.keywords?.some((kw) => textToSearch.includes(kw.toLowerCase()));
-          const matchCat = srv.categoryId ? p.categoryId === srv.categoryId : false;
-          matchService = Boolean(matchKw || matchCat);
-        }
-      }
-
       const q = searchQuery.toLowerCase().trim();
       const matchSearch =
         !q ||
@@ -293,27 +289,31 @@ export const CustomerShowcase: React.FC = () => {
         p.nameEn.toLowerCase().includes(q) ||
         (p.description && p.description.toLowerCase().includes(q));
 
-      return matchCategory && matchService && matchSearch;
+      return matchCategory && matchSearch;
     });
 
-    if (list.length === 0 && selectedService !== 'all') {
-      return sortProductsNewestFirst(
-        products.filter((p) => {
-          const matchCategory = selectedCategory === 'all' || p.categoryId === selectedCategory;
-          const q = searchQuery.toLowerCase().trim();
-          return (
-            matchCategory &&
-            (!q ||
-              p.nameKh.toLowerCase().includes(q) ||
-              p.nameEn.toLowerCase().includes(q) ||
-              (p.description && p.description.toLowerCase().includes(q)))
-          );
-        })
-      );
-    }
-
     return sortProductsNewestFirst(list);
-  }, [products, selectedCategory, selectedService, searchQuery]);
+  }, [products, selectedCategory, searchQuery]);
+
+  // Real products with images for circular showcase cutouts & centerpiece showpiece
+  const showcaseProducts = useMemo(() => {
+    const list = products.filter(
+      (p) => (p.imageUrl && p.imageUrl.trim() !== '') || (p.images && p.images.length > 0)
+    );
+    return list.length > 0 ? list : products;
+  }, [products]);
+
+  const featuredProduct = showcaseProducts[0] || null;
+  const circularItems = showcaseProducts.slice(1, 6);
+
+  // Backup bakery images for filling remaining slots if user has fewer than 5 products
+  const fallbackCutouts = [
+    'https://images.unsplash.com/photo-1535141192574-5d4897c13136?auto=format&fit=crop&w=300&q=80',
+    'https://images.unsplash.com/photo-1558961363-fa8fdf82db35?auto=format&fit=crop&w=300&q=80',
+    'https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=300&q=80',
+    'https://images.unsplash.com/photo-1555507036-ab1f4038808a?auto=format&fit=crop&w=300&q=80',
+    'https://images.unsplash.com/photo-1608198093002-ad4e005484ec?auto=format&fit=crop&w=300&q=80',
+  ];
 
   // Open custom price setup modal
   const handleOpenCustomPrice = (product: Product) => {
@@ -335,177 +335,153 @@ export const CustomerShowcase: React.FC = () => {
   return (
     <div className="flex-1 flex flex-col p-3 sm:p-6 overflow-y-auto space-y-5 sm:space-y-6 pb-24 md:pb-6">
       {/* ========================================================
-          Pinterest "Renah's Cake" Signature Visual Showcase Flyer
+          Pinterest Flyer Layout Form Powered by User's Real Data
           ======================================================== */}
       <div className="relative rounded-3xl overflow-hidden shadow-2xl border-2 border-rose-200/90 bg-chocolate-pattern">
         {/* Top Salmon-Coral Section */}
         <div className="relative bg-renah-coral p-5 sm:p-8 md:p-10 text-white overflow-hidden">
-          {/* Subtle Ambient Depth Lighting */}
+          {/* Ambient Lighting */}
           <div className="absolute -top-12 -left-12 w-44 h-44 rounded-full bg-white/20 blur-2xl pointer-events-none" />
           <div className="absolute top-1/3 -right-10 w-56 h-56 rounded-full bg-amber-300/25 blur-3xl pointer-events-none" />
 
-          {/* Grid Layout: Left Hero Cakes Composition | Right SERVICES Panel */}
+          {/* Grid Layout: Left Store Showcase | Right User's Services/Categories Panel */}
           <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
-            {/* Left Column: Brand & Signature Pastry Circles */}
+            {/* Left Column: Real Store Brand & Circular Product Cutouts */}
             <div className="lg:col-span-7 flex flex-col justify-between space-y-6">
-              {/* Brand Logo & Calligraphy Header (Renah's Cake motif) */}
+              {/* Store Logo & Dynamic Store Name in Flyer Typography */}
               <div className="flex items-center gap-3.5">
-                <div className="w-13 h-13 sm:w-16 sm:h-16 rounded-2xl bg-white text-slate-900 shadow-xl flex items-center justify-center p-2.5 transform -rotate-6 hover:rotate-0 transition-transform">
-                  <ChefHatIcon className="w-8 h-8 sm:w-10 sm:h-10 text-slate-900" />
+                <div className="w-13 h-13 sm:w-16 sm:h-16 rounded-2xl bg-white text-slate-900 shadow-xl flex items-center justify-center p-2 transform -rotate-6 hover:rotate-0 transition-transform overflow-hidden shrink-0">
+                  {storeInfo.logoUrl ? (
+                    <img
+                      src={getProductImageUrl(storeInfo.logoUrl)}
+                      alt={storeInfo.nameKh}
+                      className="w-full h-full object-cover rounded-xl"
+                    />
+                  ) : (
+                    <ChefHatIcon className="w-8 h-8 sm:w-10 sm:h-10 text-slate-900" />
+                  )}
                 </div>
                 <div>
-                  <div className="flex items-baseline leading-none">
-                    <span className="font-cursive-bakery text-4xl sm:text-5xl md:text-6xl text-white font-bold drop-shadow-md">
-                      Renah’s
+                  <div className="flex items-baseline leading-none flex-wrap gap-2">
+                    <span className="font-cursive-bakery text-3xl sm:text-5xl text-white font-bold drop-shadow-md">
+                      {storeInfo.nameEn || 'Sweet Bakery'}
                     </span>
-                    <span className="text-3xl sm:text-4xl md:text-5xl font-black text-slate-950 ml-2 tracking-tight drop-shadow-sm font-sans">
-                      Cake
-                    </span>
+                    {storeInfo.nameKh && (
+                      <span className="text-xl sm:text-2xl font-black text-slate-950 tracking-tight drop-shadow-sm font-muol">
+                        {storeInfo.nameKh}
+                      </span>
+                    )}
                   </div>
-                  <div className="text-xs sm:text-sm font-bold text-rose-100 flex items-center gap-2 mt-1">
+                  <div className="text-xs sm:text-sm font-bold text-rose-100 flex items-center gap-2 mt-1.5 font-battambang">
                     <span className="w-2 h-2 rounded-full bg-amber-300 animate-ping" />
-                    <span>{storeInfo.nameKh ? `${storeInfo.nameKh} • ` : ''}កាតាឡុកនំខេក & បង្អែមប្រណិត</span>
+                    <span>កាតាឡុកបង្ហាញភ្ញៀវ & សេវាកម្មកុម្ម៉ង់នំប្រចាំហាង</span>
                   </div>
                 </div>
               </div>
 
-              {/* Floating Circular Showcase Photos (Matching Pinterest flyer) */}
+              {/* Floating Circular Product Cutouts with User's Real Bakery Items */}
               <div className="space-y-4">
                 <div className="flex items-center gap-3 sm:gap-4 flex-wrap">
-                  {/* Circle 1: Pink Floral Wedding Cake */}
-                  <div
-                    title="នំមង្គលការ (Wedding Cake)"
-                    className="renah-circle-frame w-18 h-18 sm:w-22 sm:h-22 shrink-0 bg-white cursor-pointer"
-                    onClick={() => {
-                      soundFx.playPop();
-                      setSelectedService('mariage');
-                    }}
-                  >
-                    <img
-                      src="https://images.unsplash.com/photo-1535141192574-5d4897c13136?auto=format&fit=crop&w=300&q=80"
-                      alt="Wedding Cake"
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
+                  {/* Map user's real product items */}
+                  {Array.from({ length: 5 }).map((_, idx) => {
+                    const item = circularItems[idx] || products[idx];
+                    const itemImg = item?.imageUrl || item?.images?.[0] || fallbackCutouts[idx % fallbackCutouts.length];
+                    const itemName = item ? (lang === 'km' ? item.nameKh : item.nameEn) : `ម៉ូដនំពិសេស ${idx + 1}`;
 
-                  {/* Circle 2: Golden Round Cookies */}
-                  <div
-                    title="នំប្រៃ & ឃុកឃី (Biscuits)"
-                    className="renah-circle-frame w-16 h-16 sm:w-20 sm:h-20 shrink-0 bg-white cursor-pointer"
-                    onClick={() => {
-                      soundFx.playPop();
-                      setSelectedService('biscuit');
-                    }}
-                  >
-                    <img
-                      src="https://images.unsplash.com/photo-1558961363-fa8fdf82db35?auto=format&fit=crop&w=300&q=80"
-                      alt="Biscuits"
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-
-                  {/* Circle 3: Birthday Sparkle Drip Cake */}
-                  <div
-                    title="នំខួបកំណើត (Birthday Cake)"
-                    className="renah-circle-frame w-18 h-18 sm:w-22 sm:h-22 shrink-0 bg-white cursor-pointer"
-                    onClick={() => {
-                      soundFx.playPop();
-                      setSelectedService('anniversaire');
-                    }}
-                  >
-                    <img
-                      src="https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=300&q=80"
-                      alt="Birthday Sparkle Cake"
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-
-                  {/* Circle 4: Flaky Pastries / Croissant */}
-                  <div
-                    title="ក្រូសង់ & ផាស្តែល (Pastels)"
-                    className="renah-circle-frame w-16 h-16 sm:w-20 sm:h-20 shrink-0 bg-white cursor-pointer"
-                    onClick={() => {
-                      soundFx.playPop();
-                      setSelectedService('pastels');
-                    }}
-                  >
-                    <img
-                      src="https://images.unsplash.com/photo-1555507036-ab1f4038808a?auto=format&fit=crop&w=300&q=80"
-                      alt="Pastels"
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-
-                  {/* Circle 5: Savory Appetizers / Snacks */}
-                  <div
-                    title="អាហារសម្រន់ (Appetizers)"
-                    className="renah-circle-frame w-16 h-16 sm:w-20 sm:h-20 shrink-0 bg-white cursor-pointer"
-                    onClick={() => {
-                      soundFx.playPop();
-                      setSelectedService('amuses');
-                    }}
-                  >
-                    <img
-                      src="https://images.unsplash.com/photo-1608198093002-ad4e005484ec?auto=format&fit=crop&w=300&q=80"
-                      alt="Snacks"
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
+                    return (
+                      <div
+                        key={idx}
+                        title={`${itemName} (ចុចមើលរូបធំ)`}
+                        className="renah-circle-frame w-16 h-16 sm:w-20 sm:h-20 shrink-0 bg-white cursor-pointer group/circle relative"
+                        onClick={() => {
+                          if (item) {
+                            soundFx.playPop();
+                            setPreviewProduct(item);
+                          }
+                        }}
+                      >
+                        <img
+                          src={getProductImageUrl(itemImg)}
+                          alt={itemName}
+                          className="w-full h-full object-cover group-hover/circle:scale-110 transition-transform duration-300"
+                        />
+                        {item && (
+                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/circle:opacity-100 transition-opacity flex items-center justify-center text-white text-[10px] font-bold text-center px-1">
+                            <Eye className="w-3.5 h-3.5" />
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
 
-                {/* Hero Showcase Centerpiece Card */}
-                <div className="p-3.5 sm:p-4 rounded-3xl bg-white/20 backdrop-blur-md border border-white/30 flex items-center gap-4 shadow-lg">
-                  <div className="w-18 h-18 sm:w-20 sm:h-20 rounded-2xl overflow-hidden shrink-0 shadow-md border-2 border-white">
-                    <img
-                      src="https://images.unsplash.com/photo-1565958011703-44f9829ba187?auto=format&fit=crop&w=400&q=80"
-                      alt="Chocolate Drip Cake"
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-white/25 text-[10px] sm:text-xs font-black text-amber-200">
-                      <Sparkles className="w-3.5 h-3.5 text-yellow-300" />
-                      <span>SIGNATURE CAKE • នំប្រចាំហាង</span>
+                {/* Hero Showcase Centerpiece Card (User's Real Featured Item) */}
+                {featuredProduct && (
+                  <div
+                    onClick={() => {
+                      soundFx.playPop();
+                      setPreviewProduct(featuredProduct);
+                    }}
+                    className="p-3.5 sm:p-4 rounded-3xl bg-white/20 backdrop-blur-md border border-white/30 flex items-center gap-4 shadow-lg cursor-pointer hover:bg-white/25 transition-all group/hero"
+                  >
+                    <div className="w-18 h-18 sm:w-20 sm:h-20 rounded-2xl overflow-hidden shrink-0 shadow-md border-2 border-white bg-white">
+                      <img
+                        src={getProductImageUrl(featuredProduct.imageUrl || featuredProduct.images?.[0])}
+                        alt={featuredProduct.nameKh}
+                        className="w-full h-full object-cover group-hover/hero:scale-105 transition-transform"
+                      />
                     </div>
-                    <h3 className="text-sm sm:text-base font-black truncate mt-0.5 text-white">
-                      2-Tier Chocolate Drip & Fresh Berries Cake
-                    </h3>
-                    <p className="text-xs text-pink-100 font-medium line-clamp-1">
-                      ស្រទាប់សូកូឡាទឹកឃ្មុំរលោង តុបតែងដោយផ្លែបឺរីស្រស់ និងស្ត្រប៊ែរីអាវធំ
-                    </p>
+                    <div className="flex-1 min-w-0">
+                      <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-white/25 text-[10px] sm:text-xs font-black text-amber-200">
+                        <Sparkles className="w-3.5 h-3.5 text-yellow-300" />
+                        <span>FEATURED • នំលក់ដាច់ប្រចាំហាង</span>
+                      </div>
+                      <h3 className="text-sm sm:text-base font-black truncate mt-0.5 text-white font-battambang">
+                        {lang === 'km' ? featuredProduct.nameKh : featuredProduct.nameEn}
+                      </h3>
+                      <div className="flex items-center gap-2 text-xs text-rose-100 font-semibold mt-0.5">
+                        <span className="font-black text-white text-sm">
+                          {(featuredProduct.priceKhr ?? Math.round(featuredProduct.priceUsd * exchangeRate)).toLocaleString()} ៛
+                        </span>
+                        <span>(~${featuredProduct.priceUsd.toFixed(2)})</span>
+                        <span className="text-[10px] bg-white/20 px-2 py-0.2 rounded-md text-amber-200 ml-auto">
+                          ចុចមើលលម្អិត 👁️
+                        </span>
+                      </div>
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
             </div>
 
-            {/* Right Column: Iconic Pinterest "SERVICES" Capsule Panel */}
+            {/* Right Column: User's Real Web App Menu Categories in the Flyer's SERVICES Panel */}
             <div className="lg:col-span-5">
               <div className="rounded-3xl bg-[#361B14] border-2 border-[#542B20] p-4 sm:p-6 shadow-2xl relative overflow-hidden">
                 {/* Header Pill */}
                 <div className="text-center mb-3.5">
-                  <div className="inline-block px-8 py-2 rounded-full bg-[#200E08] text-white font-black text-sm sm:text-base tracking-[0.25em] uppercase shadow-inner border border-white/10">
-                    SERVICES
+                  <div className="inline-block px-8 py-2 rounded-full bg-[#200E08] text-white font-black text-xs sm:text-sm tracking-[0.2em] uppercase shadow-inner border border-white/10 font-battambang">
+                    សេវាកម្ម & ម៉ឺនុយទំនិញ (SERVICES)
                   </div>
                 </div>
 
-                {/* Service Pills with Arrow Pointers */}
-                <div className="space-y-2">
-                  {RENAH_SERVICES.map((srv) => {
-                    const isActive = selectedService === srv.id;
+                {/* Dynamic Category Capsule Pills with Left Arrow Pointers */}
+                <div className="space-y-2 max-h-[360px] overflow-y-auto pr-1 scrollbar-none">
+                  {categories.map((cat) => {
+                    const isActive = selectedCategory === cat.id;
+                    const catName = lang === 'km' ? cat.nameKh : cat.nameEn;
+                    const count = cat.id === 'all'
+                      ? products.length
+                      : products.filter((p) => p.categoryId === cat.id).length;
+
                     return (
                       <button
-                        key={srv.id}
+                        key={cat.id}
                         type="button"
                         onClick={() => {
                           soundFx.playPop();
-                          setSelectedService(srv.id);
-                          if (srv.id === 'all') {
-                            setSelectedCategory('all');
-                          } else if (srv.categoryId) {
-                            setSelectedCategory(srv.categoryId);
-                          }
+                          setSelectedCategory(cat.id);
                         }}
-                        className={`w-full relative flex items-center justify-between px-4 sm:px-5 py-2 sm:py-2.5 rounded-full text-xs font-black transition-all cursor-pointer select-none ${
+                        className={`w-full relative flex items-center justify-between px-4 sm:px-5 py-2.5 sm:py-3 rounded-full text-xs font-black transition-all cursor-pointer select-none ${
                           isActive
                             ? 'bg-gradient-to-r from-amber-400 via-amber-300 to-amber-400 text-slate-950 shadow-lg shadow-amber-500/30 scale-102 ring-2 ring-white font-black'
                             : 'bg-white text-slate-800 hover:bg-rose-50 hover:text-[#E6514D] shadow-sm'
@@ -518,15 +494,19 @@ export const CustomerShowcase: React.FC = () => {
                           }`}
                         />
 
-                        <span className="tracking-wide uppercase text-[11px] sm:text-xs">
-                          {srv.titleFr}
-                        </span>
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <span className="shrink-0">{getCategoryIcon(cat.icon)}</span>
+                          <span className="truncate font-battambang text-xs sm:text-[13px] tracking-normal">
+                            {catName}
+                          </span>
+                        </div>
+
                         <span
-                          className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${
-                            isActive ? 'bg-black/10 text-slate-900' : 'text-slate-400'
+                          className={`text-[10px] font-black px-2.5 py-0.5 rounded-full shrink-0 ml-1.5 ${
+                            isActive ? 'bg-black/10 text-slate-900' : 'bg-rose-50 text-rose-700'
                           }`}
                         >
-                          {srv.labelKh}
+                          {count} មុខ
                         </span>
                       </button>
                     );
@@ -548,19 +528,19 @@ export const CustomerShowcase: React.FC = () => {
           </svg>
         </div>
 
-        {/* Bottom Rich Chocolate Contact Banner (Matching flyer footer) */}
+        {/* Bottom Rich Chocolate Contact Banner with User's Real Store Info */}
         <div className="relative z-10 bg-chocolate-pattern px-4 sm:px-8 py-4 sm:py-5 flex flex-wrap items-center justify-between gap-4 border-t border-[#4A241A]">
-          {/* Contact Pill Box */}
+          {/* Real Store Phone & Address Pill Box */}
           <div className="flex items-center gap-3 px-5 py-2.5 rounded-full bg-[#1F0E09] border border-[#E6514D]/60 shadow-lg text-white">
             <div className="flex items-center gap-1.5 text-emerald-400 font-black text-xs sm:text-sm">
               <Phone className="w-4 h-4 text-emerald-400" />
-              <span>{storeInfo.phone || '+228 93166654 / 97542505'}</span>
+              <span>{storeInfo.phone || '012 345 678'}</span>
             </div>
             <span className="text-white/30">•</span>
             <div className="flex items-center gap-1.5 text-rose-200 font-bold text-xs sm:text-sm">
               <MapPin className="w-4 h-4 text-rose-400" />
-              <span className="truncate max-w-[180px] sm:max-w-none">
-                {storeInfo.address || 'Tokoin Casablanca'}
+              <span className="truncate max-w-[200px] sm:max-w-none">
+                {storeInfo.address || 'រាជធានីភ្នំពេញ'}
               </span>
             </div>
           </div>
@@ -625,33 +605,36 @@ export const CustomerShowcase: React.FC = () => {
         </div>
       </div>
 
-      {/* Filter Tabs & Search Bar */}
+      {/* Filter Status & Search Bar */}
       <div className="flex flex-wrap items-center justify-between gap-4">
-        {/* Category Pills */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
-          {categories.map((cat) => {
-            const isActive = selectedCategory === cat.id;
-            const catName = lang === 'km' ? cat.nameKh : cat.nameEn;
-            return (
-              <button
-                key={cat.id}
-                onClick={() => {
-                  soundFx.playPop();
-                  setSelectedCategory(cat.id);
-                }}
-                className={`px-4 py-2 rounded-2xl text-xs font-bold whitespace-nowrap transition-all duration-200 shadow-2xs cursor-pointer ${
-                  isActive
-                    ? 'bg-gradient-to-r from-pink-600 to-rose-500 text-white shadow-md shadow-pink-500/25 scale-102'
-                    : 'bg-white/90 text-slate-600 hover:bg-white hover:text-pink-600 border border-rose-100'
-                }`}
-              >
-                {catName}
-              </button>
-            );
-          })}
+        {/* Active Category Indicator Chip */}
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-black text-slate-700 bg-white px-3.5 py-2 rounded-2xl border border-[#F2DBD3] shadow-2xs flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
+            <span>
+              {selectedCategory === 'all'
+                ? 'បង្ហាញមុខទំនិញទាំងអស់'
+                : `ប្រភេទ៖ ${categories.find((c) => c.id === selectedCategory)?.nameKh || ''}`}
+            </span>
+            <span className="px-2 py-0.2 rounded-full bg-rose-50 text-[#E6514D] font-black text-[11px]">
+              {filteredProducts.length} មុខ
+            </span>
+          </span>
+
+          {selectedCategory !== 'all' && (
+            <button
+              onClick={() => {
+                soundFx.playPop();
+                setSelectedCategory('all');
+              }}
+              className="text-xs text-rose-600 hover:text-rose-800 font-bold underline cursor-pointer"
+            >
+              បង្ហាញទាំងអស់
+            </button>
+          )}
         </div>
 
-        {/* Search */}
+        {/* Search Input */}
         <div className="relative w-72">
           <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
           <input
@@ -659,7 +642,7 @@ export const CustomerShowcase: React.FC = () => {
             placeholder="ស្វែងរកម៉ូដនំ..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 bg-white border border-rose-100 rounded-2xl text-xs focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500 font-medium shadow-2xs"
+            className="w-full pl-9 pr-4 py-2 bg-white border border-[#F2DBD3] rounded-2xl text-xs focus:outline-none focus:ring-2 focus:ring-[#E6514D]/25 focus:border-[#E6514D] font-medium shadow-2xs"
           />
         </div>
       </div>
