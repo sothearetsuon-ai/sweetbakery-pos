@@ -35,6 +35,7 @@ import { soundFx } from '../../utils/audio';
 import { compressImageBase64 } from '../../utils/imageCompressor';
 import { getProductImageUrl } from '../../utils/imagePath';
 import { isTelegramWebApp, getTelegramUser, tgHapticImpact, tgHapticNotification } from '../../services/telegramWebApp';
+import { StoreLocationModal } from '../common/StoreLocationModal';
 
 const CAKE_SIZES = [
   { id: '1.5 ទឹក', label: '1.5 ទឹក (~15cm)', desc: 'សម្រាប់ 2-4 នាក់', priceUsd: 12 },
@@ -166,6 +167,9 @@ export const CustomerOrderPortal: React.FC = () => {
     }
     return '';
   });
+
+  // Store Location In-App Modal State
+  const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
 
   // Deposit Payment State
   // '50%' | '30%' | '100%' | 'custom'
@@ -479,27 +483,30 @@ export const CustomerOrderPortal: React.FC = () => {
 
         {/* Store Location Bar */}
         <div className="max-w-4xl mx-auto px-4 py-2 border-t border-rose-50 flex items-center justify-between text-[11px]">
-          <a
-            href={storeInfo.mapsUrl || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(storeInfo.address || 'រតនៈគីរី អូរយ៉ាដាវ')}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-1.5 text-slate-600 hover:text-pink-600 font-semibold transition-colors group"
+          <button
+            type="button"
+            onClick={() => {
+              soundFx.playPop();
+              setIsLocationModalOpen(true);
+            }}
+            className="flex items-center gap-1.5 text-slate-600 hover:text-pink-600 font-semibold transition-colors group cursor-pointer text-left"
           >
             <MapPin className="w-3.5 h-3.5 text-rose-500 group-hover:text-pink-600 shrink-0" />
             <span className="truncate max-w-[200px] sm:max-w-none">
               📍 {storeInfo.address || 'រតនៈគីរី អូរយ៉ាដាវ'}
             </span>
-            <ExternalLink className="w-3 h-3 text-slate-400 group-hover:text-pink-500 shrink-0" />
-          </a>
-          <a
-            href={storeInfo.mapsUrl || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(storeInfo.address || 'រតនៈគីរី អូរយ៉ាដាវ')}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-lg font-bold border border-emerald-200/80 transition-all active:scale-95 flex items-center gap-1 shrink-0"
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              soundFx.playPop();
+              setIsLocationModalOpen(true);
+            }}
+            className="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-lg font-bold border border-emerald-200/80 transition-all active:scale-95 flex items-center gap-1 shrink-0 cursor-pointer shadow-2xs"
           >
-            <MapPin className="w-3 h-3" />
-            <span>បើក Google Maps</span>
-          </a>
+            <MapPin className="w-3 h-3 text-emerald-600" />
+            <span>មើលផែនទីទីតាំង</span>
+          </button>
         </div>
 
         {/* Step Progression Bar (only steps 1 to 4) */}
@@ -1114,16 +1121,17 @@ export const CustomerOrderPortal: React.FC = () => {
                 <span className="text-amber-800 text-[11px] block mt-0.5">
                   {storeInfo.address || 'រាជធានីភ្នំពេញ'} • ទូរស័ព្ទ៖ {storeInfo.phone || '012 345 678'}
                 </span>
-                <a
-                  href={storeInfo.mapsUrl || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(storeInfo.address || 'រតនៈគីរី អូរយ៉ាដាវ')}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-100 hover:bg-emerald-200 text-emerald-700 rounded-xl text-[11px] font-bold border border-emerald-300/80 transition-all active:scale-95"
+                <button
+                  type="button"
+                  onClick={() => {
+                    soundFx.playPop();
+                    setIsLocationModalOpen(true);
+                  }}
+                  className="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 rounded-xl text-[11px] font-bold border border-emerald-300/80 transition-all active:scale-95 cursor-pointer shadow-2xs"
                 >
-                  <MapPin className="w-3 h-3" />
-                  <span>បើក Google Maps</span>
-                  <ExternalLink className="w-2.5 h-2.5 text-emerald-500" />
-                </a>
+                  <MapPin className="w-3 h-3 text-emerald-700" />
+                  <span>មើលផែនទីទីតាំងហាង</span>
+                </button>
               </div>
             </div>
 
@@ -1543,6 +1551,16 @@ export const CustomerOrderPortal: React.FC = () => {
           </div>
         )}
       </main>
+
+      {/* In-App Store Location Modal */}
+      <StoreLocationModal
+        isOpen={isLocationModalOpen}
+        onClose={() => setIsLocationModalOpen(false)}
+        storeName={storeInfo.nameKh || 'ហាងនំខេកអូរយ៉ាដាវ'}
+        address={storeInfo.address || 'រតនៈគីរី អូរយ៉ាដាវ'}
+        phone={storeInfo.phone || '0978707000'}
+        mapsUrl={storeInfo.mapsUrl}
+      />
     </div>
   );
 };

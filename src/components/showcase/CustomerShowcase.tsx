@@ -36,6 +36,7 @@ import { SelectDesignPriceModal } from './SelectDesignPriceModal';
 import { NewCustomOrderModal } from '../custom-orders/NewCustomOrderModal';
 import { sortProductsNewestFirst } from '../../utils/productUtils';
 import { getProductImageUrl } from '../../utils/imagePath';
+import { StoreLocationModal } from '../common/StoreLocationModal';
 
 // Iconic Chef Hat SVG matching the bakery logo aesthetic
 export const ChefHatIcon: React.FC<{ className?: string }> = ({ className = 'w-6 h-6' }) => (
@@ -250,6 +251,9 @@ export const CustomerShowcase: React.FC = () => {
   // Custom order modal state (if customer wants pre-order with deposit)
   const [isCustomOrderModalOpen, setIsCustomOrderModalOpen] = useState(false);
   const [customOrderInitialData, setCustomOrderInitialData] = useState<any>(null);
+
+  // In-App Store Location Modal State
+  const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
 
   // Lightbox slideshow state
   const [lightboxImgIdx, setLightboxImgIdx] = useState(0);
@@ -538,17 +542,19 @@ export const CustomerShowcase: React.FC = () => {
               <span>{storeInfo.phone || '012 345 678'}</span>
             </div>
             <span className="text-white/30">•</span>
-            <a
-              href={storeInfo.mapsUrl || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(storeInfo.address || 'រតនៈគីរី អូរយ៉ាដាវ')}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-1.5 text-rose-200 hover:text-white font-bold text-xs sm:text-sm min-w-0 transition-colors group/map"
+            <button
+              type="button"
+              onClick={() => {
+                soundFx.playPop();
+                setIsLocationModalOpen(true);
+              }}
+              className="flex items-center gap-1.5 text-rose-200 hover:text-white font-bold text-xs sm:text-sm min-w-0 transition-colors group/map cursor-pointer text-left"
             >
               <MapPin className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-rose-400 group-hover/map:text-emerald-400 shrink-0" />
               <span className="truncate max-w-[170px] sm:max-w-none underline decoration-rose-400/40 underline-offset-2 group-hover/map:decoration-emerald-400">
                 {storeInfo.address || 'រាជធានីភ្នំពេញ'}
               </span>
-            </a>
+            </button>
           </div>
 
           {/* Action Toolbar */}
@@ -949,6 +955,16 @@ export const CustomerShowcase: React.FC = () => {
           setCustomOrderInitialData(null);
         }}
         initialData={customOrderInitialData}
+      />
+
+      {/* In-App Store Location Modal */}
+      <StoreLocationModal
+        isOpen={isLocationModalOpen}
+        onClose={() => setIsLocationModalOpen(false)}
+        storeName={storeInfo.nameKh || 'ហាងនំខេកអូរយ៉ាដាវ'}
+        address={storeInfo.address || 'រតនៈគីរី អូរយ៉ាដាវ'}
+        phone={storeInfo.phone || '0978707000'}
+        mapsUrl={storeInfo.mapsUrl}
       />
     </div>
   );
