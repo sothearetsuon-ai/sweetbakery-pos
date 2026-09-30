@@ -112,6 +112,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [phone, setPhone] = useState(storeInfo?.phone || '');
   const [address, setAddress] = useState(storeInfo?.address || (storeInfo as any)?.addressKh || '');
   const [tagline, setTagline] = useState(storeInfo?.tagline || '');
+  const [mapsUrl, setMapsUrl] = useState(storeInfo?.mapsUrl || '');
 
   // KHQR state
   const [khqrQrImage, setKhqrQrImage] = useState(storeInfo?.khqrQrImage || '');
@@ -144,6 +145,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       setPhone(storeInfo.phone || '');
       setAddress(storeInfo.address || (storeInfo as any)?.addressKh || '');
       setTagline(storeInfo.tagline || '');
+      setMapsUrl(storeInfo.mapsUrl || '');
       setRateInput(exchangeRate.toString());
       setStoreIdInput(storeInfo.storeId || getStoreId());
       setKhqrQrImage(storeInfo.khqrQrImage || '');
@@ -341,6 +343,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       address: address.trim(),
       addressKh: address.trim(),
       tagline: tagline.trim(),
+      mapsUrl: mapsUrl.trim(),
       storeId: finalStoreId,
       khqrQrImage: finalKhqr.trim(),
       khqrMerchantName: khqrMerchantName.trim() || 'SWEET BAKERY & CAFE',
@@ -948,6 +951,23 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                         placeholder="ឧ. ផ្ទះលេខ 128E, ផ្លូវ 271, ភ្នំពេញ"
                         className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500 font-semibold"
                       />
+                    </div>
+
+                    {/* Google Maps URL */}
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1 flex items-center gap-1">
+                        <MapPin className="w-3.5 h-3.5 text-emerald-500" />
+                        <span>Google Maps Link</span>
+                        <span className="text-[10px] text-slate-400 font-normal">(ស្រេចចិត្ត)</span>
+                      </label>
+                      <input
+                        type="url"
+                        value={mapsUrl}
+                        onChange={(e) => setMapsUrl(e.target.value)}
+                        placeholder="https://maps.app.goo.gl/..."
+                        className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 font-semibold text-emerald-700"
+                      />
+                      <p className="text-[10px] text-slate-400 mt-1">បើក Google Maps → ចុច Share → Copy Link → Paste ទីនេះ</p>
                     </div>
                   </div>
 

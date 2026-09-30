@@ -26,6 +26,7 @@ import {
   ShieldCheck,
   AlertCircle,
   X,
+  MapPin,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { useBakery } from '../../context/BakeryContext';
@@ -474,6 +475,31 @@ export const CustomerOrderPortal: React.FC = () => {
               <span>💼 ចូល POS</span>
             </a>
           </div>
+        </div>
+
+        {/* Store Location Bar */}
+        <div className="max-w-4xl mx-auto px-4 py-2 border-t border-rose-50 flex items-center justify-between text-[11px]">
+          <a
+            href={storeInfo.mapsUrl || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(storeInfo.address || 'រតនៈគីរី អូរយ៉ាដាវ')}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1.5 text-slate-600 hover:text-pink-600 font-semibold transition-colors group"
+          >
+            <MapPin className="w-3.5 h-3.5 text-rose-500 group-hover:text-pink-600 shrink-0" />
+            <span className="truncate max-w-[200px] sm:max-w-none">
+              📍 {storeInfo.address || 'រតនៈគីរី អូរយ៉ាដាវ'}
+            </span>
+            <ExternalLink className="w-3 h-3 text-slate-400 group-hover:text-pink-500 shrink-0" />
+          </a>
+          <a
+            href={storeInfo.mapsUrl || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(storeInfo.address || 'រតនៈគីរី អូរយ៉ាដាវ')}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-lg font-bold border border-emerald-200/80 transition-all active:scale-95 flex items-center gap-1 shrink-0"
+          >
+            <MapPin className="w-3 h-3" />
+            <span>បើក Google Maps</span>
+          </a>
         </div>
 
         {/* Step Progression Bar (only steps 1 to 4) */}
@@ -1082,12 +1108,22 @@ export const CustomerOrderPortal: React.FC = () => {
 
             {/* Store Location Info Reminder */}
             <div className="bg-amber-50/80 border border-amber-200 rounded-2xl p-3.5 flex items-start gap-2.5 text-amber-900 text-xs">
-              <Info className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-              <div>
-                <span className="font-bold block">ទីតាំងទទួលនំ៖ {storeInfo.nameKh}</span>
+              <MapPin className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <span className="font-bold block">📍 ទីតាំងទទួលនំ៖ {storeInfo.nameKh}</span>
                 <span className="text-amber-800 text-[11px] block mt-0.5">
                   {storeInfo.address || 'រាជធានីភ្នំពេញ'} • ទូរស័ព្ទ៖ {storeInfo.phone || '012 345 678'}
                 </span>
+                <a
+                  href={storeInfo.mapsUrl || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(storeInfo.address || 'រតនៈគីរី អូរយ៉ាដាវ')}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-100 hover:bg-emerald-200 text-emerald-700 rounded-xl text-[11px] font-bold border border-emerald-300/80 transition-all active:scale-95"
+                >
+                  <MapPin className="w-3 h-3" />
+                  <span>បើក Google Maps</span>
+                  <ExternalLink className="w-2.5 h-2.5 text-emerald-500" />
+                </a>
               </div>
             </div>
 

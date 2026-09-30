@@ -6,6 +6,7 @@ export interface StoreInfo {
   logoUrl?: string;
   phone: string;
   address: string;
+  mapsUrl?: string;
   tagline?: string;
   storeId?: string;
   khqrQrImage?: string;

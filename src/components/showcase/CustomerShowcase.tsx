@@ -538,12 +538,17 @@ export const CustomerShowcase: React.FC = () => {
               <span>{storeInfo.phone || '012 345 678'}</span>
             </div>
             <span className="text-white/30">•</span>
-            <div className="flex items-center gap-1.5 text-rose-200 font-bold text-xs sm:text-sm min-w-0">
-              <MapPin className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-rose-400 shrink-0" />
-              <span className="truncate max-w-[170px] sm:max-w-none">
+            <a
+              href={storeInfo.mapsUrl || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(storeInfo.address || 'រតនៈគីរី អូរយ៉ាដាវ')}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1.5 text-rose-200 hover:text-white font-bold text-xs sm:text-sm min-w-0 transition-colors group/map"
+            >
+              <MapPin className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-rose-400 group-hover/map:text-emerald-400 shrink-0" />
+              <span className="truncate max-w-[170px] sm:max-w-none underline decoration-rose-400/40 underline-offset-2 group-hover/map:decoration-emerald-400">
                 {storeInfo.address || 'រាជធានីភ្នំពេញ'}
               </span>
-            </div>
+            </a>
           </div>
 
           {/* Action Toolbar */}
