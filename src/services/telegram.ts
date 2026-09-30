@@ -586,3 +586,37 @@ export const notifyTelegramShiftClose = async (
 
   await sendTelegramMessage(text, config);
 };
+
+/**
+ * Configure Telegram Bot Chat Menu Button to open Mini App directly
+ */
+export const setTelegramMenuButton = async (
+  botToken: string,
+  webAppUrl: string = 'https://sothearetsuon-ai.github.io/sweetbakery-pos/?order=true',
+  buttonText: string = '🎂 កុម្ម៉ង់នំខេក'
+): Promise<{ success: boolean; message: string }> => {
+  if (!botToken) return { success: false, message: 'សូមបញ្ចូល Bot Token!' };
+
+  try {
+    const res = await fetch(`https://api.telegram.org/bot${botToken}/setChatMenuButton`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        menu_button: {
+          type: 'web_app',
+          text: buttonText,
+          web_app: {
+            url: webAppUrl,
+          },
+        },
+      }),
+    });
+    const data = await res.json();
+    if (data.ok) {
+      return { success: true, message: 'បានភ្ជាប់ Telegram Mini App Menu Button ជោគជ័យ!' };
+    }
+    return { success: false, message: data.description || 'បរាជ័យក្នុងការកំណត់ Menu Button' };
+  } catch (err: any) {
+    return { success: false, message: err?.message || 'Error connecting to Telegram API' };
+  }
+};

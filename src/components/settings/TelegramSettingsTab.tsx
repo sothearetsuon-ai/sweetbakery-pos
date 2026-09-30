@@ -22,6 +22,7 @@ import {
   getStoredTelegramConfig,
   saveStoredTelegramConfig,
   testTelegramConnection,
+  setTelegramMenuButton,
 } from '../../services/telegram';
 import { useBakery } from '../../context/BakeryContext';
 import { soundFx } from '../../utils/audio';
@@ -50,6 +51,32 @@ export const TelegramSettingsTab: React.FC = () => {
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
   const [savedSuccess, setSavedSuccess] = useState(false);
+  const [isConnectingMenu, setIsConnectingMenu] = useState(false);
+  const [menuConnectResult, setMenuConnectResult] = useState<{ success: boolean; message: string } | null>(null);
+
+  const handleAutoConnectMenu = async () => {
+    if (!config.botToken) {
+      alert('សូមបញ្ចូល Bot Token ជាមុនសិន!');
+      return;
+    }
+    setIsConnectingMenu(true);
+    setMenuConnectResult(null);
+    soundFx.playPop();
+
+    const res = await setTelegramMenuButton(
+      config.botToken,
+      'https://sothearetsuon-ai.github.io/sweetbakery-pos/?order=true',
+      '🎂 កុម្ម៉ង់នំខេក'
+    );
+    setIsConnectingMenu(false);
+    setMenuConnectResult(res);
+    if (res.success) {
+      soundFx.playSuccess();
+      try {
+        confetti({ particleCount: 50, spread: 60, origin: { y: 0.6 } });
+      } catch (e) {}
+    }
+  };
 
   useEffect(() => {
     setConfig(getStoredTelegramConfig());
@@ -461,6 +488,44 @@ export const TelegramSettingsTab: React.FC = () => {
             </div>
           </div>
         </div>
+
+        {/* 1-Click Auto Connect Button */}
+        <div className="p-3.5 bg-white rounded-2xl border border-sky-100 flex flex-wrap items-center justify-between gap-3 shadow-2xs">
+          <div>
+            <p className="text-xs font-black text-slate-800 flex items-center gap-1.5">
+              <span>⚡ ភ្ជាប់ប៊ូតុង Menu ទៅ Telegram Bot ដោយស្វ័យប្រវត្តិ</span>
+            </p>
+            <p className="text-[11px] text-slate-500 mt-0.5">
+              ចុចប៊ូតុងនេះដើម្បីកំណត់ប៊ូតុង Menu ក្នុង Bot របស់លោកអ្នកភ្លាមៗ មិនបាច់ចូល BotFather ឡើយ
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={handleAutoConnectMenu}
+            disabled={isConnectingMenu}
+            className="px-4 py-2 bg-gradient-to-r from-sky-600 to-blue-600 hover:from-sky-700 hover:to-blue-700 text-white rounded-xl text-xs font-black flex items-center gap-2 shadow-sm transition-all active:scale-95 disabled:opacity-50 cursor-pointer"
+          >
+            <RotateCw className={`w-3.5 h-3.5 ${isConnectingMenu ? 'animate-spin' : ''}`} />
+            <span>{isConnectingMenu ? 'កំពុងភ្ជាប់...' : '⚡ ភ្ជាប់ប៊ូតុង Menu ឥឡូវនេះ'}</span>
+          </button>
+        </div>
+
+        {menuConnectResult && (
+          <div
+            className={`p-3 rounded-xl border text-xs font-medium flex items-center gap-2 ${
+              menuConnectResult.success
+                ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+                : 'bg-rose-50 border-rose-200 text-rose-800'
+            }`}
+          >
+            {menuConnectResult.success ? (
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+            ) : (
+              <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+            )}
+            <span>{menuConnectResult.message}</span>
+          </div>
+        )}
 
         {/* 3 Steps to setup on Telegram with BotFather */}
         <div className="p-4 bg-white/90 rounded-2xl border border-sky-100/80 space-y-2">
