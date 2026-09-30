@@ -16,6 +16,8 @@ import {
   setStoreId,
   isDefaultStore,
   isPrimaryStoreDevice,
+  isDemoModeActive,
+  DEFAULT_STORE_ID,
 } from '../services/firebase';
 
 export interface LicenseInfo {
@@ -256,12 +258,10 @@ export const syncRemoteLicense = (
   const localInfo = getLicenseInfo();
   let storeId = getStoreId();
 
-  // If this device is not the primary store owner, and storeId is default, assign a dedicated tenant ID
-  if (!isPrimaryStoreDevice() && isDefaultStore(storeId)) {
-    const cleanDev = deviceId.replace(/[^A-Z0-9]/g, '');
-    const autoTenant = `STORE-${cleanDev}`;
-    storeId = autoTenant;
-    setStoreId(autoTenant);
+  // Ensure storeId is clean and not stuck in a legacy auto-assigned STORE- tenant
+  if (storeId.startsWith('STORE-')) {
+    storeId = DEFAULT_STORE_ID;
+    setStoreId(DEFAULT_STORE_ID);
   }
 
   // 1. Report heartbeat to Firebase so owner sees this client device

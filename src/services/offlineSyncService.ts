@@ -251,6 +251,10 @@ class OfflineSyncEngine {
     expenses?: any[];
     products?: any[];
     storeInfo?: any;
+    ingredients?: any[];
+    recipes?: any[];
+    staffMembers?: any[];
+    reserveFund?: any;
   }): Promise<{ success: boolean; totalUploaded: number }> {
     if (!navigator.onLine) return { success: false, totalUploaded: 0 };
     const db = getFirestoreDb();
@@ -330,6 +334,42 @@ class OfflineSyncEngine {
       // 5. Store Info
       if (localData.storeInfo) {
         await saveFirestoreDoc('settings', 'storeInfo', localData.storeInfo);
+        uploaded++;
+      }
+
+      // 6. Ingredients (Stock)
+      if (Array.isArray(localData.ingredients)) {
+        for (const ing of localData.ingredients) {
+          if (ing && ing.id) {
+            await saveFirestoreDoc('ingredients', ing.id, ing);
+            uploaded++;
+          }
+        }
+      }
+
+      // 7. Recipes
+      if (Array.isArray(localData.recipes)) {
+        for (const r of localData.recipes) {
+          if (r && r.id) {
+            await saveFirestoreDoc('recipes', r.id, r);
+            uploaded++;
+          }
+        }
+      }
+
+      // 8. Staff Members
+      if (Array.isArray(localData.staffMembers)) {
+        for (const s of localData.staffMembers) {
+          if (s && s.id) {
+            await saveFirestoreDoc('staffMembers', s.id, s);
+            uploaded++;
+          }
+        }
+      }
+
+      // 9. Reserve Fund
+      if (localData.reserveFund) {
+        await saveFirestoreDoc('settings', 'reserveFund', localData.reserveFund);
         uploaded++;
       }
 

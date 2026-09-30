@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import {
   X,
@@ -27,12 +27,32 @@ interface MobileConnectModalProps {
 export const MobileConnectModal: React.FC<MobileConnectModalProps> = ({ isOpen, onClose }) => {
   const { staffMembers } = useBakery();
 
-  // Local IP (Wi-Fi IP found via ipconfig)
-  const [localIp, setLocalIp] = useState('192.168.1.4');
-  const [port, setPort] = useState('3000');
+  // Local IP (Wi-Fi IP found automatically from server or window)
+  const [localIp, setLocalIp] = useState(() => {
+    if (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+      return window.location.hostname;
+    }
+    return '192.168.1.2';
+  });
+  const [port, setPort] = useState(() => {
+    if (typeof window !== 'undefined' && window.location.port) {
+      return window.location.port;
+    }
+    return '3000';
+  });
   const [isEditingIp, setIsEditingIp] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [activeTab, setActiveTab] = useState<'cloud' | 'wifi' | 'demo'>('cloud');
+  const [activeTab, setActiveTab] = useState<'wifi' | 'cloud' | 'demo'>('wifi');
+
+  useEffect(() => {
+    fetch('/api/server-info')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data?.ip) setLocalIp(data.ip);
+        if (data?.port) setPort(String(data.port));
+      })
+      .catch(() => {});
+  }, [isOpen]);
 
   if (!isOpen) return null;
 

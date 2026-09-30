@@ -6,3 +6,4 @@ local_bakery_db.json
 local_bakery_songs.json
 .env
 .DS_Store
+recovered_*.json

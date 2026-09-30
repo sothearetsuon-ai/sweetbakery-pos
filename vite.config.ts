@@ -2,6 +2,7 @@ import { defineConfig, Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
 import fs from 'fs';
 import path from 'path';
+import os from 'os';
 
 function lanSyncPlugin(): Plugin {
   const dbPath = path.resolve(__dirname, 'local_bakery_db.json');
@@ -111,6 +112,23 @@ function lanSyncPlugin(): Plugin {
           res.write('data: {"type":"CONNECTED"}\n\n');
           clients.add(res);
           req.on('close', () => clients.delete(res));
+          return;
+        }
+
+        // Server Info (Host Wi-Fi IPv4 address for phone connections)
+        if (req.url === '/api/server-info' && req.method === 'GET') {
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          const interfaces = os.networkInterfaces();
+          let localIp = '127.0.0.1';
+          for (const name of Object.keys(interfaces)) {
+            for (const iface of interfaces[name] || []) {
+              if (iface.family === 'IPv4' && !iface.internal) {
+                localIp = iface.address;
+                break;
+              }
+            }
+          }
+          res.end(JSON.stringify({ ip: localIp, port: 3000, url: `http://${localIp}:3000` }));
           return;
         }
 
@@ -228,6 +246,11 @@ function lanSyncPlugin(): Plugin {
                     }
                   : currentDb.storeInfo,
                 flavors: Array.isArray(incoming.flavors) && incoming.flavors.length > 0 ? incoming.flavors : currentDb.flavors,
+                ingredients: Array.isArray(incoming.ingredients) && incoming.ingredients.length > 0 ? incoming.ingredients : currentDb.ingredients || [],
+                recipes: Array.isArray(incoming.recipes) && incoming.recipes.length > 0 ? incoming.recipes : currentDb.recipes || [],
+                staffMembers: Array.isArray(incoming.staffMembers) && incoming.staffMembers.length > 0 ? incoming.staffMembers : currentDb.staffMembers || [],
+                partyAddons: Array.isArray(incoming.partyAddons) && incoming.partyAddons.length > 0 ? incoming.partyAddons : currentDb.partyAddons || [],
+                reserveFund: incoming.reserveFund || currentDb.reserveFund,
               };
 
               safeWrite(dbPath, JSON.stringify(mergedDb, null, 2));

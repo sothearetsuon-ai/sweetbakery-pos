@@ -862,11 +862,11 @@ export const initialExpenses: Expense[] = [];
 export const initialStaffMembers: StaffMember[] = [
   {
     id: 'staff-1',
-    name: 'ម្ចាស់ហាង (Admin)',
+    name: 'Suon Sothearet',
     nameEn: 'Store Owner (Admin)',
     role: 'ADMIN',
-    pinCode: '1111',
-    phone: '',
+    pinCode: '660168',
+    phone: '012629160',
     avatar: '👑',
     isActive: true,
     permissions: {
@@ -882,12 +882,12 @@ export const initialStaffMembers: StaffMember[] = [
     },
   },
   {
-    id: 'staff-2',
+    id: 'staff-1789379117825',
     name: 'វិជ្ជតា (Vicheta)',
     nameEn: 'Vicheta (Cashier)',
     role: 'CASHIER',
-    pinCode: '2222',
-    phone: '098 765 432',
+    pinCode: '0202',
+    phone: '060 254 229',
     avatar: '👩‍💼',
     isActive: true,
     permissions: {
@@ -896,7 +896,7 @@ export const initialStaffMembers: StaffMember[] = [
       canAccessCustomOrders: true,
       canAccessSalesHistory: true,
       canEditSales: true,
-      canAccessExpenses: false,
+      canAccessExpenses: true,
       canAccessInventory: false,
       canAccessReports: false,
       canAccessSettings: false,
@@ -942,7 +942,7 @@ export const initialStaffMembers: StaffMember[] = [
       canAccessInventory: true,
       canAccessReports: false,
       canAccessSettings: false,
-      },
+    },
   },
 ];
 

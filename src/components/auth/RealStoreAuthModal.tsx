@@ -4,6 +4,7 @@ import { Lock, ShieldCheck, KeyRound, Eye, EyeOff, X, FlaskConical, ArrowRight, 
 import confetti from 'canvas-confetti';
 import { useBakery } from '../../context/BakeryContext';
 import { soundFx } from '../../utils/audio';
+import { setStoreId, DEFAULT_STORE_ID } from '../../services/firebase';
 
 interface RealStoreAuthModalProps {
   isOpen: boolean;
@@ -110,6 +111,7 @@ export const RealStoreAuthModal: React.FC<RealStoreAuthModalProps> = ({
     if (rememberDevice) {
       localStorage.setItem('bakery_real_store_authorized_device', 'true');
     }
+    setStoreId(DEFAULT_STORE_ID);
 
     if (onSuccess) {
       onSuccess();

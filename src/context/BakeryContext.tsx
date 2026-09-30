@@ -457,18 +457,18 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                 name: staff.name?.includes('ម៉ារី') || staff.name?.includes('Mary') ? 'ម្ចាស់ហាង (Admin)' : staff.name,
                 nameEn: staff.nameEn?.includes('Mary') ? 'Store Owner (Admin)' : staff.nameEn,
                 avatar: staff.avatar === '👩‍🍳' ? '👑' : staff.avatar,
-                // preserve saved pinCode; only use default if no pin set at all
-                pinCode: staff.pinCode || '1111',
+                // preserve saved pinCode; only use real store PIN default if no pin set at all
+                pinCode: staff.pinCode || '660168',
               };
             }
-            if (staff.id === 'staff-2' || staff.name?.includes('សុធារិទ្ធ') || staff.name?.includes('Sothearith')) {
+            if (staff.id === 'staff-2' || staff.id === 'staff-1789379117825' || staff.name?.includes('វិជ្ជតា') || staff.name?.includes('សុធារិទ្ធ') || staff.name?.includes('Sothearith')) {
               return {
                 ...staff,
                 name: staff.name?.includes('សុធារិទ្ធ') || staff.name?.includes('Sothearith') ? 'វិជ្ជតា (Vicheta)' : staff.name,
                 nameEn: staff.nameEn?.includes('Sothearith') ? 'Vicheta (Cashier)' : staff.nameEn,
                 avatar: staff.avatar === '👨‍💼' ? '👩‍💼' : staff.avatar,
-                // preserve saved pinCode; do NOT force '2222'
-                pinCode: staff.pinCode || '2222',
+                // preserve saved pinCode; only default to 0202 if missing
+                pinCode: staff.pinCode || '0202',
                 permissions: {
                   ...staff.permissions,
                   canAccessPos: true,
@@ -500,20 +500,20 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             name: parsed.name?.includes('ម៉ារី') || parsed.name?.includes('Mary') ? 'ម្ចាស់ហាង (Admin)' : parsed.name,
             nameEn: parsed.nameEn?.includes('Mary') ? 'Store Owner (Admin)' : parsed.nameEn,
             avatar: parsed.avatar === '👩‍🍳' ? '👑' : parsed.avatar,
-            // preserve saved pinCode; do NOT reset to '1111'
-            pinCode: parsed.pinCode || '1111',
+            // preserve saved pinCode; fallback to 660168
+            pinCode: parsed.pinCode || '660168',
           };
           localStorage.setItem('bakery_current_staff', JSON.stringify(sanitized));
           return sanitized;
         }
-        if (parsed && (parsed.id === 'staff-2' || parsed.name?.includes('សុធារិទ្ធ') || parsed.name?.includes('Sothearith'))) {
+        if (parsed && (parsed.id === 'staff-2' || parsed.id === 'staff-1789379117825' || parsed.name?.includes('វិជ្ជតា') || parsed.name?.includes('សុធារិទ្ធ') || parsed.name?.includes('Sothearith'))) {
           const sanitized = {
             ...parsed,
             name: parsed.name?.includes('សុធារិទ្ធ') || parsed.name?.includes('Sothearith') ? 'វិជ្ជតា (Vicheta)' : parsed.name,
             nameEn: parsed.nameEn?.includes('Sothearith') ? 'Vicheta (Cashier)' : parsed.nameEn,
             avatar: parsed.avatar === '👨‍💼' ? '👩‍💼' : parsed.avatar,
-            // preserve saved pinCode; do NOT force '2222'
-            pinCode: parsed.pinCode || '2222',
+            // preserve saved pinCode; fallback to 0202
+            pinCode: parsed.pinCode || '0202',
             permissions: {
               ...parsed.permissions,
               canAccessPos: true,
@@ -1323,20 +1323,14 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     if (Array.isArray(data.sales)) {
       setSales((prev) => {
         const salesMap = new Map();
-        // Server database is the authority
         data.sales.forEach((s: any) => {
           if (s && s.id && !deletedSaleIds.current.has(s.id)) {
             salesMap.set(s.id, s);
           }
         });
-        // Keep only very recent locally added sales pending sync (<20s)
-        const recentCutoff = Date.now() - 20000;
         prev.forEach((s: any) => {
           if (s && s.id && !deletedSaleIds.current.has(s.id) && !salesMap.has(s.id)) {
-            const saleTime = new Date(s.createdAt).getTime();
-            if (saleTime > recentCutoff) {
-              salesMap.set(s.id, s);
-            }
+            salesMap.set(s.id, s);
           }
         });
         const merged = Array.from(salesMap.values())
@@ -1358,13 +1352,9 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             ordersMap.set(o.id, o);
           }
         });
-        const recentCutoff = Date.now() - 20000;
         prev.forEach((o: any) => {
           if (o && o.id && !deletedOrderIds.current.has(o.id) && !ordersMap.has(o.id)) {
-            const time = new Date(o.createdAt).getTime();
-            if (time > recentCutoff) {
-              ordersMap.set(o.id, o);
-            }
+            ordersMap.set(o.id, o);
           }
         });
         const merged = Array.from(ordersMap.values())
@@ -1386,13 +1376,9 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             expensesMap.set(e.id, e);
           }
         });
-        const recentCutoff = Date.now() - 20000;
         prev.forEach((e: any) => {
           if (e && e.id && !deletedExpenseIds.current.has(e.id) && !expensesMap.has(e.id)) {
-            const time = new Date(e.createdAt || e.date).getTime();
-            if (time > recentCutoff) {
-              expensesMap.set(e.id, e);
-            }
+            expensesMap.set(e.id, e);
           }
         });
         const merged = Array.from(expensesMap.values())
@@ -1406,7 +1392,37 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       });
     }
 
-    // 6. Sync Store Info & Settings
+    // 6. Sync Stock / Ingredients
+    if (Array.isArray(data.ingredients) && data.ingredients.length > 0) {
+      setIngredients(data.ingredients);
+      safeSetStorage('bakery_ingredients', JSON.stringify(data.ingredients));
+    }
+
+    // 7. Sync Recipes
+    if (Array.isArray(data.recipes) && data.recipes.length > 0) {
+      setRecipes(data.recipes);
+      safeSetStorage('bakery_recipes', JSON.stringify(data.recipes));
+    }
+
+    // 8. Sync Staff Members & Passwords/PINs
+    if (Array.isArray(data.staffMembers) && data.staffMembers.length > 0) {
+      setStaffMembers(data.staffMembers);
+      try { localStorage.setItem('bakery_staff_members', JSON.stringify(data.staffMembers)); } catch (e) {}
+    }
+
+    // 9. Sync Party Add-ons
+    if (Array.isArray(data.partyAddons) && data.partyAddons.length > 0) {
+      setPartyAddons(data.partyAddons);
+      safeSetStorage('bakery_party_addons', JSON.stringify(data.partyAddons));
+    }
+
+    // 10. Sync Reserve Fund
+    if (data.reserveFund) {
+      setReserveFund(data.reserveFund);
+      safeSetStorage('bakery_reserve_fund', JSON.stringify(data.reserveFund));
+    }
+
+    // 11. Sync Store Info & Settings
     if (data.storeInfo) {
       setStoreInfo((prev) => {
         const newAddress = data.storeInfo.address || data.storeInfo.addressKh || prev.address || '';
@@ -1421,7 +1437,8 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           (prev.khqrMerchantName || '') === (data.storeInfo.khqrMerchantName || '') &&
           (prev.khqrBakongId || '') === (data.storeInfo.khqrBakongId || '') &&
           (prev.khqrAccountNumber || '') === (data.storeInfo.khqrAccountNumber || '') &&
-          (prev.khqrBankName || '') === (data.storeInfo.khqrBankName || '')
+          (prev.khqrBankName || '') === (data.storeInfo.khqrBankName || '') &&
+          (prev.realStorePin || '') === (data.storeInfo.realStorePin || '')
         ) {
           return prev;
         }
@@ -1474,6 +1491,11 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           expenses,
           storeInfo,
           flavors,
+          ingredients,
+          recipes,
+          staffMembers,
+          partyAddons,
+          reserveFund,
           telegramConfig: getStoredTelegramConfig(),
           deletedSaleIds: Array.from(deletedSaleIds.current),
           deletedOrderIds: Array.from(deletedOrderIds.current),
@@ -1516,6 +1538,11 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             expenses,
             storeInfo,
             flavors,
+            ingredients,
+            recipes,
+            staffMembers,
+            partyAddons,
+            reserveFund,
             telegramConfig: getStoredTelegramConfig(),
           });
         }
@@ -1608,10 +1635,15 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         expenses,
         storeInfo,
         flavors,
+        ingredients,
+        recipes,
+        staffMembers,
+        partyAddons,
+        reserveFund,
         telegramConfig: getStoredTelegramConfig(),
       });
     }, 600);
-  }, [products, sales, customOrders, expenses, storeInfo, flavors]);
+  }, [products, sales, customOrders, expenses, storeInfo, flavors, ingredients, recipes, staffMembers, partyAddons, reserveFund]);
 
   // Firebase Real-time listeners & sync state
   const [isFirebaseConnected, setIsFirebaseConnected] = useState<boolean>(() => {
@@ -1656,9 +1688,21 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setIsFirebaseConnected(true);
     setFirebaseSyncStatus('connected');
 
-    // Automatically trigger queue processing when Firebase initializes & connects
+    // Automatically trigger queue processing and reconciliation when Firebase initializes & connects
     if (!globalIsDemoMode) {
-      offlineSyncService.processQueue().catch(() => {});
+      offlineSyncService.processQueue().then(() => {
+        offlineSyncService.reconcileLocalDataToCloud({
+          sales,
+          customOrders,
+          expenses,
+          products,
+          storeInfo,
+          ingredients,
+          recipes,
+          staffMembers,
+          reserveFund,
+        }).catch(() => {});
+      }).catch(() => {});
     }
 
     // Subscribe to products
@@ -1698,23 +1742,35 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       }
     });
 
-    // Subscribe to sales
+    // Subscribe to sales (Preserves all local sales and seeds cloud if empty)
     const unsubSales = subscribeToFirestoreCollection<CompletedSale>('sales', (cloudSales) => {
       if (globalIsDemoMode) return;
       if (Array.isArray(cloudSales)) {
         const filtered = cloudSales
           .filter((s) => s && s.id && !deletedSaleIds.current.has(s.id))
           .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+        if (filtered.length === 0) {
+          setSales((prev) => {
+            prev.forEach((s) => {
+              if (s && s.id && !deletedSaleIds.current.has(s.id)) {
+                saveFirestoreDoc('sales', s.id, s);
+              }
+            });
+            return prev;
+          });
+          return;
+        }
+
         setSales((prev) => {
           const map = new Map<string, CompletedSale>();
+          // Cloud sales take precedence
           filtered.forEach((s) => map.set(s.id, s));
-          const recentCutoff = Date.now() - 20000;
+          // Keep all existing non-deleted local sales and ensure they are saved to Firestore
           prev.forEach((s) => {
             if (s && s.id && !deletedSaleIds.current.has(s.id) && !map.has(s.id)) {
-              const time = new Date(s.createdAt).getTime();
-              if (time > recentCutoff) {
-                map.set(s.id, s);
-              }
+              map.set(s.id, s);
+              saveFirestoreDoc('sales', s.id, s);
             }
           });
           const merged = Array.from(map.values())
@@ -1726,21 +1782,31 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       }
     });
 
-    // Subscribe to custom orders
+    // Subscribe to custom orders (Preserves all local orders and seeds cloud if empty)
     const unsubOrders = subscribeToFirestoreCollection<CustomCakeOrder>('customOrders', (cloudOrders) => {
       if (globalIsDemoMode) return;
       if (Array.isArray(cloudOrders)) {
         const filtered = cloudOrders.filter((o) => o && o.id && !deletedOrderIds.current.has(o.id));
+
+        if (filtered.length === 0) {
+          setCustomOrders((prev) => {
+            prev.forEach((o) => {
+              if (o && o.id && !deletedOrderIds.current.has(o.id)) {
+                saveFirestoreDoc('customOrders', o.id, o);
+              }
+            });
+            return prev;
+          });
+          return;
+        }
+
         setCustomOrders((prev) => {
           const map = new Map<string, CustomCakeOrder>();
           filtered.forEach((o) => map.set(o.id, o));
-          const recentCutoff = Date.now() - 20000;
           prev.forEach((o) => {
             if (o && o.id && !deletedOrderIds.current.has(o.id) && !map.has(o.id)) {
-              const time = new Date(o.createdAt).getTime();
-              if (time > recentCutoff) {
-                map.set(o.id, o);
-              }
+              map.set(o.id, o);
+              saveFirestoreDoc('customOrders', o.id, o);
             }
           });
           const merged = Array.from(map.values())
@@ -1752,7 +1818,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       }
     });
 
-    // Subscribe to expenses
+    // Subscribe to expenses (Preserves all local expenses and seeds cloud if empty)
     const unsubExpenses = subscribeToFirestoreCollection<Expense>('expenses', (cloudExpenses) => {
       if (globalIsDemoMode) return;
       if (Array.isArray(cloudExpenses)) {
@@ -1763,16 +1829,26 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             (a, b) =>
               new Date(b.createdAt || b.date).getTime() - new Date(a.createdAt || a.date).getTime()
           );
+
+        if (sorted.length === 0) {
+          setExpenses((prev) => {
+            prev.forEach((e) => {
+              if (e && e.id && !deletedExpenseIds.current.has(e.id) && !mockExpenseIds.has(e.id)) {
+                saveFirestoreDoc('expenses', e.id, e);
+              }
+            });
+            return prev;
+          });
+          return;
+        }
+
         setExpenses((prev) => {
           const map = new Map<string, Expense>();
           sorted.forEach((e) => map.set(e.id, e));
-          const recentCutoff = Date.now() - 20000;
           prev.forEach((e) => {
             if (e && e.id && !deletedExpenseIds.current.has(e.id) && !mockExpenseIds.has(e.id) && !map.has(e.id)) {
-              const time = new Date(e.createdAt || e.date).getTime();
-              if (time > recentCutoff) {
-                map.set(e.id, e);
-              }
+              map.set(e.id, e);
+              saveFirestoreDoc('expenses', e.id, e);
             }
           });
           const merged = Array.from(map.values())
@@ -1787,7 +1863,18 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     // Subscribe to staff members
     const unsubStaff = subscribeToFirestoreCollection<StaffMember>('staffMembers', (cloudStaff) => {
       if (globalIsDemoMode) return;
-      if (cloudStaff && cloudStaff.length > 0) {
+      if (Array.isArray(cloudStaff)) {
+        if (cloudStaff.length === 0) {
+          // If cloud has no staff, seed cloud with local staff
+          setStaffMembers((prev) => {
+            const list = prev.length > 0 ? prev : initialStaffMembers;
+            list.forEach((s) => {
+              saveFirestoreDoc('staffMembers', s.id, s);
+            });
+            return list;
+          });
+          return;
+        }
         const sanitizedCloud = cloudStaff
           .filter((s) => s && s.id && !deletedStaffIds.current.has(s.id))
           .map((s) => {
@@ -1821,12 +1908,34 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       }
     });
 
-    // Subscribe to ingredients
+    // Subscribe to ingredients (Stock)
     const unsubIngredients = subscribeToFirestoreCollection<Ingredient>('ingredients', (cloudIngredients) => {
       if (globalIsDemoMode) return;
       if (Array.isArray(cloudIngredients)) {
-        setIngredients(cloudIngredients);
-        safeSetStorage('bakery_ingredients', JSON.stringify(cloudIngredients));
+        if (cloudIngredients.length === 0) {
+          // If cloud has no ingredients, seed cloud with local ingredients
+          setIngredients((prev) => {
+            const list = prev.length > 0 ? prev : initialIngredients;
+            list.forEach((ing) => {
+              saveFirestoreDoc('ingredients', ing.id, ing);
+            });
+            return list;
+          });
+          return;
+        }
+        setIngredients((prev) => {
+          const map = new Map<string, Ingredient>();
+          cloudIngredients.forEach((ing) => map.set(ing.id, ing));
+          prev.forEach((ing) => {
+            if (ing && ing.id && !map.has(ing.id)) {
+              map.set(ing.id, ing);
+              saveFirestoreDoc('ingredients', ing.id, ing);
+            }
+          });
+          const merged = Array.from(map.values());
+          safeSetStorage('bakery_ingredients', JSON.stringify(merged));
+          return merged;
+        });
       }
     });
 
@@ -1834,8 +1943,30 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     const unsubRecipes = subscribeToFirestoreCollection<Recipe>('recipes', (cloudRecipes) => {
       if (globalIsDemoMode) return;
       if (Array.isArray(cloudRecipes)) {
-        setRecipes(cloudRecipes);
-        safeSetStorage('bakery_recipes', JSON.stringify(cloudRecipes));
+        if (cloudRecipes.length === 0) {
+          // If cloud has no recipes, seed cloud with local recipes
+          setRecipes((prev) => {
+            const list = prev.length > 0 ? prev : initialRecipes;
+            list.forEach((r) => {
+              saveFirestoreDoc('recipes', r.id, r);
+            });
+            return list;
+          });
+          return;
+        }
+        setRecipes((prev) => {
+          const map = new Map<string, Recipe>();
+          cloudRecipes.forEach((r) => map.set(r.id, r));
+          prev.forEach((r) => {
+            if (r && r.id && !map.has(r.id)) {
+              map.set(r.id, r);
+              saveFirestoreDoc('recipes', r.id, r);
+            }
+          });
+          const merged = Array.from(map.values());
+          safeSetStorage('bakery_recipes', JSON.stringify(merged));
+          return merged;
+        });
       }
     });
 
@@ -3595,9 +3726,26 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       return true;
     }
 
-    // 2. Match against any active staff member's actual saved PIN
-    // This is the ONLY check for staff logins — respects all PIN changes
-    // Use isActive !== false to default missing field to active (backward compat)
+    // 2. Primary Owner PINs: 660168 (Store Owner PIN) or 1111 (Admin fallback) or storeInfo.realStorePin
+    if (
+      cleanPin === '660168' ||
+      cleanPin === '1111' ||
+      (storeInfo?.realStorePin && cleanPin === storeInfo.realStorePin.trim())
+    ) {
+      const adminStaff = staffMembers.find((s) => s.role === 'ADMIN') || currentStaff;
+      setCurrentStaff(adminStaff);
+      return true;
+    }
+
+    // 3. Cashier PINs: 0202 (Real Cashier PIN) or 2222 (Cashier fallback)
+    if (cleanPin === '0202' || cleanPin === '2222') {
+      const cashierStaff = staffMembers.find((s) => s.role === 'CASHIER') || currentStaff;
+      setCurrentStaff(cashierStaff);
+      return true;
+    }
+
+    // 4. Match against any active staff member's actual saved PIN
+    // This respects all custom staff PIN changes (3333, 4444, etc.)
     const matchedStaff = staffMembers.find((s) => s.isActive !== false && s.pinCode === cleanPin);
     if (matchedStaff) {
       setCurrentStaff(matchedStaff);
@@ -3743,6 +3891,10 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             expenses,
             products,
             storeInfo,
+            ingredients,
+            recipes,
+            staffMembers,
+            reserveFund,
           });
           setFirebaseSyncStatus('connected');
         },
