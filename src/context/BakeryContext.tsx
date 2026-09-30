@@ -33,6 +33,7 @@ import {
   initialExpenses,
   demoExpenses,
   initialStaffMembers,
+  demoStaffMembers,
   initialRecipes,
 } from '../data/mockData';
 import { sortProductsNewestFirst } from '../utils/productUtils';
@@ -243,6 +244,9 @@ export const seedDemoDataIfMissing = () => {
   }
   if (checkIsEmpty('demo_bakery_store_info')) {
     localStorage.setItem('demo_bakery_store_info', JSON.stringify(demoStoreInfo));
+  }
+  if (checkIsEmpty('demo_bakery_staff_members')) {
+    localStorage.setItem('demo_bakery_staff_members', JSON.stringify(demoStaffMembers));
   }
 };
 
@@ -3607,6 +3611,13 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       const demoStore = localStorage.getItem('demo_bakery_store_info');
       setStoreInfo(demoStore ? JSON.parse(demoStore) : demoStoreInfo);
 
+      const demoStaff = localStorage.getItem('demo_bakery_staff_members');
+      const staffList = demoStaff ? JSON.parse(demoStaff) : demoStaffMembers;
+      setStaffMembers(staffList);
+      if (staffList.length > 0) {
+        setCurrentStaff(staffList[0]);
+      }
+
       setCart([]);
       setActiveReceipt(null);
     } catch (e) {
@@ -3665,6 +3676,20 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       const liveStore = localStorage.getItem('bakery_store_info');
       if (liveStore) setStoreInfo(JSON.parse(liveStore));
 
+      const liveStaff = localStorage.getItem('bakery_staff_members');
+      if (liveStaff) {
+        try {
+          const parsed = JSON.parse(liveStaff);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setStaffMembers(parsed);
+            setCurrentStaff(parsed[0]);
+          }
+        } catch (e) {}
+      } else {
+        setStaffMembers(initialStaffMembers);
+        setCurrentStaff(initialStaffMembers[0]);
+      }
+
       setCart([]);
       setActiveReceipt(null);
     } catch (e) {
@@ -3683,6 +3708,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     localStorage.setItem('demo_bakery_flavors', JSON.stringify(initialFlavors));
     localStorage.setItem('demo_bakery_shift', JSON.stringify(initialShift));
     localStorage.setItem('demo_bakery_store_info', JSON.stringify(demoStoreInfo));
+    localStorage.setItem('demo_bakery_staff_members', JSON.stringify(demoStaffMembers));
 
     setProducts(sortProductsNewestFirst(initialProducts));
     setSales(initialSales);
@@ -3726,27 +3752,33 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       return true;
     }
 
-    // 2. Primary Owner PINs: 660168 (Store Owner PIN) or 1111 (Admin fallback) or storeInfo.realStorePin
+    // 2. Explicitly reject 1111 and 2222 for Real Store access (reserved strictly for Demo & new tenant sandboxes)
+    if (cleanPin === '1111' || cleanPin === '2222') {
+      return false;
+    }
+
+    // 3. Primary Owner PINs: 660168 (Store Owner PIN) or storeInfo.realStorePin (if changed and not 1111)
     if (
       cleanPin === '660168' ||
-      cleanPin === '1111' ||
-      (storeInfo?.realStorePin && cleanPin === storeInfo.realStorePin.trim())
+      (storeInfo?.realStorePin && cleanPin === storeInfo.realStorePin.trim() && cleanPin !== '1111')
     ) {
       const adminStaff = staffMembers.find((s) => s.role === 'ADMIN') || currentStaff;
       setCurrentStaff(adminStaff);
       return true;
     }
 
-    // 3. Cashier PINs: 0202 (Real Cashier PIN) or 2222 (Cashier fallback)
-    if (cleanPin === '0202' || cleanPin === '2222') {
+    // 4. Cashier PIN: 0202 (Real Cashier PIN)
+    if (cleanPin === '0202') {
       const cashierStaff = staffMembers.find((s) => s.role === 'CASHIER') || currentStaff;
       setCurrentStaff(cashierStaff);
       return true;
     }
 
-    // 4. Match against any active staff member's actual saved PIN
+    // 5. Match against any active staff member's actual saved/changed PIN (excluding 1111 & 2222)
     // This respects all custom staff PIN changes (3333, 4444, etc.)
-    const matchedStaff = staffMembers.find((s) => s.isActive !== false && s.pinCode === cleanPin);
+    const matchedStaff = staffMembers.find(
+      (s) => s.isActive !== false && s.pinCode === cleanPin && s.pinCode !== '1111' && s.pinCode !== '2222'
+    );
     if (matchedStaff) {
       setCurrentStaff(matchedStaff);
       return true;

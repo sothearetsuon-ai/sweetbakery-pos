@@ -87,16 +87,21 @@ export const RealStoreAuthModal: React.FC<RealStoreAuthModalProps> = ({
   };
 
   const checkAndAuthenticate = (pin: string): boolean => {
+    const clean = pin.trim();
+    if (clean === '1111' || clean === '2222') {
+      setErrorMessage('លេខកូដ 1111 និង 2222 សម្រាប់តែរបៀប Demo និងហាងសាកល្បងប៉ុណ្ណោះ! សូមប្រើលេខកូដហាងពិត (660168 / 0202)។');
+      return false;
+    }
     // If a specific staff was clicked, check their PIN directly
     if (selectedStaffId) {
       const targetStaff = staffMembers.find((s) => s.id === selectedStaffId && s.isActive !== false);
-      if (targetStaff && targetStaff.pinCode === pin.trim()) {
+      if (targetStaff && targetStaff.pinCode === clean && clean !== '1111' && clean !== '2222') {
         setCurrentStaff(targetStaff);
         return true;
       }
     }
     // Otherwise verify against store master PIN, any active staff PIN, or Super Admin master keys
-    return verifyRealStorePin(pin);
+    return verifyRealStorePin(clean);
   };
 
   const triggerSuccess = () => {
@@ -123,8 +128,17 @@ export const RealStoreAuthModal: React.FC<RealStoreAuthModalProps> = ({
 
   const handleSubmit = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    if (!pinInput.trim()) {
+    const clean = pinInput.trim();
+    if (!clean) {
       setErrorMessage('សូមវាយបញ្ចូលលេខកូដ PIN ឬពាក្យសម្ងាត់!');
+      return;
+    }
+
+    if (clean === '1111' || clean === '2222') {
+      soundFx.playPop();
+      setIsShaking(true);
+      setErrorMessage('លេខកូដ 1111 និង 2222 សម្រាប់តែរបៀប Demo និងហាងសាកល្បងប៉ុណ្ណោះ! សូមប្រើលេខកូដហាងពិត (660168 / 0202)។');
+      setTimeout(() => setIsShaking(false), 500);
       return;
     }
 

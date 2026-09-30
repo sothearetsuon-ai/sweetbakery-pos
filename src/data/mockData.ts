@@ -946,6 +946,52 @@ export const initialStaffMembers: StaffMember[] = [
   },
 ];
 
+// Dedicated staff members for Demo Sandbox & new empty tenants (PIN 1111 & 2222)
+export const demoStaffMembers: StaffMember[] = [
+  {
+    id: 'staff-demo-1',
+    name: 'ម្ចាស់ហាង (Demo Admin)',
+    nameEn: 'Store Owner (Demo)',
+    role: 'ADMIN',
+    pinCode: '1111',
+    phone: '012 000 111',
+    avatar: '👑',
+    isActive: true,
+    permissions: {
+      canAccessPos: true,
+      canAccessShowcase: true,
+      canAccessCustomOrders: true,
+      canAccessSalesHistory: true,
+      canEditSales: true,
+      canAccessExpenses: true,
+      canAccessInventory: true,
+      canAccessReports: true,
+      canAccessSettings: true,
+    },
+  },
+  {
+    id: 'staff-demo-2',
+    name: 'វិជ្ជតា (Demo Cashier)',
+    nameEn: 'Vicheta (Demo Cashier)',
+    role: 'CASHIER',
+    pinCode: '2222',
+    phone: '098 000 222',
+    avatar: '👩‍💼',
+    isActive: true,
+    permissions: {
+      canAccessPos: true,
+      canAccessShowcase: true,
+      canAccessCustomOrders: true,
+      canAccessSalesHistory: true,
+      canEditSales: true,
+      canAccessExpenses: false,
+      canAccessInventory: false,
+      canAccessReports: false,
+      canAccessSettings: false,
+    },
+  },
+];
+
 export const initialRecipes: Recipe[] = [
   {
     id: 'recipe-1',
