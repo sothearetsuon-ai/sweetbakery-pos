@@ -74,16 +74,22 @@ export const isDefaultStore = (id?: string | null): boolean => {
 export const getStoreId = (): string => {
   let id = localStorage.getItem(STORAGE_STORE_ID);
 
-  // If id is empty, default, or starts with auto-assigned STORE- prefix, reset to DEFAULT_STORE_ID
-  // This guarantees phones and tablets immediately connect to the real bakery store data.
-  if (!id || isDefaultStore(id) || id.startsWith('STORE-')) {
-    id = DEFAULT_STORE_ID;
-    localStorage.setItem(STORAGE_STORE_ID, id);
-    idbSet(STORAGE_STORE_ID, id).catch(() => {});
-    return DEFAULT_STORE_ID;
+  // If this device is the authorized primary store device (ហាងវិជ្ជតា), it stays on DEFAULT
+  if (isPrimaryStoreDevice()) {
+    if (!id || isDefaultStore(id)) {
+      id = DEFAULT_STORE_ID;
+      localStorage.setItem(STORAGE_STORE_ID, id);
+      idbSet(STORAGE_STORE_ID, id).catch(() => {});
+    }
+    return id;
   }
 
-  return id;
+  // Non-owner / client device: if custom tenant ID exists, keep it
+  if (id && !isDefaultStore(id)) {
+    return id;
+  }
+
+  return DEFAULT_STORE_ID;
 };
 
 /**
@@ -353,6 +359,12 @@ export const getScopedCollectionRef = (db: Firestore, collectionName: string) =>
   }
   const storeId = getStoreId();
   if (isDefaultStore(storeId)) {
+    // If default store, but device is NOT the primary store owner, isolate to device tenant!
+    if (!isPrimaryStoreDevice()) {
+      const devId = (typeof window !== 'undefined' ? localStorage.getItem('bakery_license_device_id') : '') || 'GUEST';
+      const cleanDev = devId.replace(/[^A-Z0-9]/g, '');
+      return collection(db, 'tenants', `STORE-${cleanDev}`, collectionName);
+    }
     return collection(db, collectionName);
   }
   return collection(db, 'tenants', storeId, collectionName);
@@ -368,6 +380,12 @@ export const getScopedDocRef = (db: Firestore, collectionName: string, docId: st
   }
   const storeId = getStoreId();
   if (isDefaultStore(storeId)) {
+    // If default store, but device is NOT the primary store owner, isolate to device tenant!
+    if (!isPrimaryStoreDevice()) {
+      const devId = (typeof window !== 'undefined' ? localStorage.getItem('bakery_license_device_id') : '') || 'GUEST';
+      const cleanDev = devId.replace(/[^A-Z0-9]/g, '');
+      return doc(db, 'tenants', `STORE-${cleanDev}`, collectionName, docId);
+    }
     return doc(db, collectionName, docId);
   }
   return doc(db, 'tenants', storeId, collectionName, docId);
