@@ -345,12 +345,12 @@ export const CustomerShowcase: React.FC = () => {
           <div className="absolute top-1/3 -right-10 w-56 h-56 rounded-full bg-amber-300/25 blur-3xl pointer-events-none" />
 
           {/* Grid Layout: Left Store Showcase | Right User's Services/Categories Panel */}
-          <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+          <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-8 items-center">
             {/* Left Column: Real Store Brand & Circular Product Cutouts */}
-            <div className="lg:col-span-7 flex flex-col justify-between space-y-6">
+            <div className="lg:col-span-7 flex flex-col justify-between space-y-4 sm:space-y-6">
               {/* Store Logo & Dynamic Store Name in Flyer Typography */}
-              <div className="flex items-center gap-3.5">
-                <div className="w-13 h-13 sm:w-16 sm:h-16 rounded-2xl bg-white text-slate-900 shadow-xl flex items-center justify-center p-2 transform -rotate-6 hover:rotate-0 transition-transform overflow-hidden shrink-0">
+              <div className="flex items-center gap-3 sm:gap-3.5">
+                <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-2xl bg-white text-slate-900 shadow-xl flex items-center justify-center p-1.5 sm:p-2 transform -rotate-6 hover:rotate-0 transition-transform overflow-hidden shrink-0">
                   {storeInfo.logoUrl ? (
                     <img
                       src={getProductImageUrl(storeInfo.logoUrl)}
@@ -358,30 +358,30 @@ export const CustomerShowcase: React.FC = () => {
                       className="w-full h-full object-cover rounded-xl"
                     />
                   ) : (
-                    <ChefHatIcon className="w-8 h-8 sm:w-10 sm:h-10 text-slate-900" />
+                    <ChefHatIcon className="w-7 h-7 sm:w-10 sm:h-10 text-slate-900" />
                   )}
                 </div>
-                <div>
-                  <div className="flex items-baseline leading-none flex-wrap gap-2">
-                    <span className="font-cursive-bakery text-3xl sm:text-5xl text-white font-bold drop-shadow-md">
+                <div className="min-w-0">
+                  <div className="flex items-baseline leading-none flex-wrap gap-1.5 sm:gap-2">
+                    <span className="font-cursive-bakery text-2xl sm:text-4xl md:text-5xl text-white font-bold drop-shadow-md truncate">
                       {storeInfo.nameEn || 'Sweet Bakery'}
                     </span>
                     {storeInfo.nameKh && (
-                      <span className="text-xl sm:text-2xl font-black text-slate-950 tracking-tight drop-shadow-sm font-muol">
+                      <span className="text-base sm:text-xl md:text-2xl font-black text-slate-950 tracking-tight drop-shadow-sm font-muol truncate">
                         {storeInfo.nameKh}
                       </span>
                     )}
                   </div>
-                  <div className="text-xs sm:text-sm font-bold text-rose-100 flex items-center gap-2 mt-1.5 font-battambang">
-                    <span className="w-2 h-2 rounded-full bg-amber-300 animate-ping" />
-                    <span>កាតាឡុកបង្ហាញភ្ញៀវ & សេវាកម្មកុម្ម៉ង់នំប្រចាំហាង</span>
+                  <div className="text-[11px] sm:text-sm font-bold text-rose-100 flex items-center gap-1.5 sm:gap-2 mt-1 font-battambang">
+                    <span className="w-2 h-2 rounded-full bg-amber-300 animate-ping shrink-0" />
+                    <span className="truncate">កាតាឡុកបង្ហាញភ្ញៀវ & សេវាកម្មកុម្ម៉ង់នំ</span>
                   </div>
                 </div>
               </div>
 
               {/* Floating Circular Product Cutouts with User's Real Bakery Items */}
-              <div className="space-y-4">
-                <div className="flex items-center gap-3 sm:gap-4 flex-wrap">
+              <div className="space-y-3 sm:space-y-4">
+                <div className="flex items-center gap-2 sm:gap-3.5 overflow-x-auto pb-1 scrollbar-none">
                   {/* Map user's real product items */}
                   {Array.from({ length: 5 }).map((_, idx) => {
                     const item = circularItems[idx] || products[idx];
@@ -392,7 +392,7 @@ export const CustomerShowcase: React.FC = () => {
                       <div
                         key={idx}
                         title={`${itemName} (ចុចមើលរូបធំ)`}
-                        className="renah-circle-frame w-16 h-16 sm:w-20 sm:h-20 shrink-0 bg-white cursor-pointer group/circle relative"
+                        className="renah-circle-frame w-13 h-13 sm:w-16 md:w-20 sm:h-16 md:h-20 shrink-0 bg-white cursor-pointer group/circle relative"
                         onClick={() => {
                           if (item) {
                             soundFx.playPop();
@@ -422,9 +422,9 @@ export const CustomerShowcase: React.FC = () => {
                       soundFx.playPop();
                       setPreviewProduct(featuredProduct);
                     }}
-                    className="p-3.5 sm:p-4 rounded-3xl bg-white/20 backdrop-blur-md border border-white/30 flex items-center gap-4 shadow-lg cursor-pointer hover:bg-white/25 transition-all group/hero"
+                    className="p-3 sm:p-4 rounded-3xl bg-white/20 backdrop-blur-md border border-white/30 flex items-center gap-3 sm:gap-4 shadow-lg cursor-pointer hover:bg-white/25 transition-all group/hero"
                   >
-                    <div className="w-18 h-18 sm:w-20 sm:h-20 rounded-2xl overflow-hidden shrink-0 shadow-md border-2 border-white bg-white">
+                    <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl overflow-hidden shrink-0 shadow-md border-2 border-white bg-white">
                       <img
                         src={getProductImageUrl(featuredProduct.imageUrl || featuredProduct.images?.[0])}
                         alt={featuredProduct.nameKh}
@@ -432,19 +432,19 @@ export const CustomerShowcase: React.FC = () => {
                       />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-white/25 text-[10px] sm:text-xs font-black text-amber-200">
-                        <Sparkles className="w-3.5 h-3.5 text-yellow-300" />
-                        <span>FEATURED • នំលក់ដាច់ប្រចាំហាង</span>
+                      <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white/25 text-[10px] sm:text-xs font-black text-amber-200">
+                        <Sparkles className="w-3 h-3 text-yellow-300 shrink-0" />
+                        <span className="truncate">FEATURED • នំលក់ដាច់ប្រចាំហាង</span>
                       </div>
-                      <h3 className="text-sm sm:text-base font-black truncate mt-0.5 text-white font-battambang">
+                      <h3 className="text-xs sm:text-base font-black truncate mt-0.5 text-white font-battambang">
                         {lang === 'km' ? featuredProduct.nameKh : featuredProduct.nameEn}
                       </h3>
-                      <div className="flex items-center gap-2 text-xs text-rose-100 font-semibold mt-0.5">
-                        <span className="font-black text-white text-sm">
+                      <div className="flex items-center gap-2 text-xs text-rose-100 font-semibold mt-0.5 flex-wrap">
+                        <span className="font-black text-white text-xs sm:text-sm">
                           {(featuredProduct.priceKhr ?? Math.round(featuredProduct.priceUsd * exchangeRate)).toLocaleString()} ៛
                         </span>
-                        <span>(~${featuredProduct.priceUsd.toFixed(2)})</span>
-                        <span className="text-[10px] bg-white/20 px-2 py-0.2 rounded-md text-amber-200 ml-auto">
+                        <span className="text-[11px] sm:text-xs">(~${featuredProduct.priceUsd.toFixed(2)})</span>
+                        <span className="text-[10px] bg-white/20 px-2 py-0.2 rounded-md text-amber-200 ml-auto hidden sm:inline-block">
                           ចុចមើលលម្អិត 👁️
                         </span>
                       </div>
@@ -529,24 +529,24 @@ export const CustomerShowcase: React.FC = () => {
         </div>
 
         {/* Bottom Rich Chocolate Contact Banner with User's Real Store Info */}
-        <div className="relative z-10 bg-chocolate-pattern px-4 sm:px-8 py-4 sm:py-5 flex flex-wrap items-center justify-between gap-4 border-t border-[#4A241A]">
+        <div className="relative z-10 bg-chocolate-pattern px-3 sm:px-8 py-3.5 sm:py-5 flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4 border-t border-[#4A241A]">
           {/* Real Store Phone & Address Pill Box */}
-          <div className="flex items-center gap-3 px-5 py-2.5 rounded-full bg-[#1F0E09] border border-[#E6514D]/60 shadow-lg text-white">
-            <div className="flex items-center gap-1.5 text-emerald-400 font-black text-xs sm:text-sm">
-              <Phone className="w-4 h-4 text-emerald-400" />
+          <div className="flex items-center justify-center gap-2 sm:gap-3 px-3.5 sm:px-5 py-2 sm:py-2.5 rounded-full bg-[#1F0E09] border border-[#E6514D]/60 shadow-lg text-white w-full sm:w-auto">
+            <div className="flex items-center gap-1.5 text-emerald-400 font-black text-xs sm:text-sm shrink-0">
+              <Phone className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-400" />
               <span>{storeInfo.phone || '012 345 678'}</span>
             </div>
             <span className="text-white/30">•</span>
-            <div className="flex items-center gap-1.5 text-rose-200 font-bold text-xs sm:text-sm">
-              <MapPin className="w-4 h-4 text-rose-400" />
-              <span className="truncate max-w-[200px] sm:max-w-none">
+            <div className="flex items-center gap-1.5 text-rose-200 font-bold text-xs sm:text-sm min-w-0">
+              <MapPin className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-rose-400 shrink-0" />
+              <span className="truncate max-w-[170px] sm:max-w-none">
                 {storeInfo.address || 'រាជធានីភ្នំពេញ'}
               </span>
             </div>
           </div>
 
           {/* Action Toolbar */}
-          <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+          <div className="flex items-center justify-center gap-2 sm:gap-3 flex-wrap w-full sm:w-auto">
             {/* Toggle Hide/Show Prices */}
             <button
               type="button"
@@ -558,7 +558,7 @@ export const CustomerShowcase: React.FC = () => {
                   return next;
                 });
               }}
-              className={`px-3.5 sm:px-4 py-2.5 rounded-2xl font-black text-xs transition-all flex items-center gap-2 border shadow-lg cursor-pointer ${
+              className={`px-3 sm:px-4 py-2 sm:py-2.5 rounded-2xl font-black text-xs transition-all flex items-center gap-1.5 sm:gap-2 border shadow-lg cursor-pointer ${
                 hidePrices
                   ? 'bg-amber-500/25 hover:bg-amber-500/35 text-amber-200 border-amber-400/40 ring-2 ring-amber-300/30'
                   : 'bg-white/10 hover:bg-white/20 text-white border-white/20'
@@ -567,12 +567,13 @@ export const CustomerShowcase: React.FC = () => {
             >
               {hidePrices ? (
                 <>
-                  <EyeOff className="w-4 h-4 text-yellow-300" />
-                  <span>លាក់តម្លៃ (Customer Mode) 🙈</span>
+                  <EyeOff className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-yellow-300 shrink-0" />
+                  <span className="hidden sm:inline">លាក់តម្លៃ (Customer Mode) 🙈</span>
+                  <span className="sm:hidden">លាក់តម្លៃ 🙈</span>
                 </>
               ) : (
                 <>
-                  <Eye className="w-4 h-4 text-emerald-300" />
+                  <Eye className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-300 shrink-0" />
                   <span>បង្ហាញតម្លៃ 👁️</span>
                 </>
               )}
@@ -584,10 +585,10 @@ export const CustomerShowcase: React.FC = () => {
                 soundFx.playPop();
                 setIsKioskOpen(true);
               }}
-              className="px-3.5 sm:px-4 py-2.5 bg-white/10 hover:bg-white/20 backdrop-blur-md text-white font-black rounded-2xl border border-white/20 shadow-lg transition-all active:scale-95 flex items-center gap-1.5 text-xs cursor-pointer"
+              className="px-3 sm:px-4 py-2 sm:py-2.5 bg-white/10 hover:bg-white/20 backdrop-blur-md text-white font-black rounded-2xl border border-white/20 shadow-lg transition-all active:scale-95 flex items-center gap-1.5 text-xs cursor-pointer"
             >
-              <Tv className="w-4 h-4 text-yellow-300 animate-pulse" />
-              <span>ស្លាយ Kiosk (TV)</span>
+              <Tv className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-yellow-300 animate-pulse" />
+              <span>ស្លាយ TV</span>
             </button>
 
             {/* Add Product Modal */}
@@ -596,9 +597,9 @@ export const CustomerShowcase: React.FC = () => {
                 soundFx.playPop();
                 setIsAddProductOpen(true);
               }}
-              className="px-4 py-2.5 bg-gradient-to-r from-[#FF6F68] to-[#E6514D] hover:brightness-110 text-white font-black rounded-2xl shadow-lg transition-all active:scale-95 flex items-center gap-1.5 text-xs cursor-pointer"
+              className="px-3.5 sm:px-4 py-2 sm:py-2.5 bg-gradient-to-r from-[#FF6F68] to-[#E6514D] hover:brightness-110 text-white font-black rounded-2xl shadow-lg transition-all active:scale-95 flex items-center gap-1.5 text-xs cursor-pointer"
             >
-              <Plus className="w-4 h-4 stroke-[3]" />
+              <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4 stroke-[3]" />
               <span>+ នំថ្មី</span>
             </button>
           </div>
