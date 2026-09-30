@@ -668,8 +668,14 @@ export const CustomerShowcase: React.FC = () => {
 
       {/* Lightbox Preview Modal with Auto-Slideshow Carousel */}
       {previewProduct && (
-        <div className="fixed inset-0 z-50 bg-slate-900/75 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-3xl w-full shadow-2xl border border-rose-100 overflow-hidden flex flex-col md:flex-row max-h-[90vh] animate-in fade-in zoom-in-95 duration-200">
+        <div
+          onClick={() => setPreviewProduct(null)}
+          className="fixed inset-0 z-50 bg-slate-900/75 backdrop-blur-md flex items-center justify-center p-3 sm:p-4"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white rounded-3xl max-w-3xl w-full shadow-2xl border border-rose-100 overflow-hidden flex flex-col md:flex-row max-h-[90vh] animate-in fade-in zoom-in-95 duration-200"
+          >
             {/* Left side: Photo with Auto-Slideshow, Arrows & Filmstrip */}
             <div className="md:w-1/2 bg-slate-950 relative flex flex-col justify-between overflow-hidden min-h-[320px] md:min-h-[460px]">
               {/* Auto countdown progress bar */}

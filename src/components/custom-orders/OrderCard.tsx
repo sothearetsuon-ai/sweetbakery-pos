@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Clock, Phone, ChevronRight, CheckCircle2, Flame, Palette, Sparkles, CheckSquare, Wallet, Trash2, Printer, X, Globe, Eye } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { CustomCakeOrder, OrderStatus } from '../../types';
@@ -17,6 +17,15 @@ interface OrderCardProps {
 export const OrderCard: React.FC<OrderCardProps> = ({ order, onAdvanceStatus, onAddDeposit, onDelete, onViewReceipt }) => {
   const { exchangeRate } = useBakery();
   const [previewImage, setPreviewImage] = useState<{ url: string; title: string } | null>(null);
+
+  useEffect(() => {
+    if (!previewImage) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setPreviewImage(null);
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [previewImage]);
 
   const getNextStatus = (current: OrderStatus): OrderStatus | null => {
     switch (current) {
@@ -360,26 +369,88 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, onAdvanceStatus, on
         </div>
       )}
 
-      {/* Image Preview Modal */}
+      {/* Image Preview Modal (Mobile Optimized) */}
       {previewImage && (
-        <div className="fixed inset-0 z-[150] bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <div className="bg-white rounded-3xl max-w-lg w-full overflow-hidden shadow-2xl border border-rose-100 flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200">
-            <div className="px-5 py-3 border-b border-slate-100 flex items-center justify-between bg-slate-50 shrink-0">
-              <span className="font-black text-xs text-slate-800">{previewImage.title}</span>
+        <div
+          onClick={() => {
+            soundFx.playPop();
+            setPreviewImage(null);
+          }}
+          className="fixed inset-0 z-[150] bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-200"
+        >
+          {/* Floating Top-Right Close Button - Always visible on any phone screen */}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              soundFx.playPop();
+              setPreviewImage(null);
+            }}
+            className="fixed top-3 right-3 sm:top-5 sm:right-5 z-[160] w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-slate-900/90 hover:bg-slate-900 text-white flex items-center justify-center shadow-2xl backdrop-blur-md border border-white/20 active:scale-90 transition-all cursor-pointer"
+            title="បិទ (Close)"
+            aria-label="បិទផ្ទាំងរូបភាព"
+          >
+            <X className="w-6 h-6 text-white" />
+          </button>
+
+          {/* Modal Container */}
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white rounded-3xl max-w-md w-full overflow-hidden shadow-2xl border border-rose-100 flex flex-col max-h-[88dvh] animate-in zoom-in-95 duration-200"
+          >
+            {/* Header */}
+            <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between bg-slate-50 shrink-0">
+              <span className="font-black text-xs sm:text-sm text-slate-800 truncate pr-2">
+                {previewImage.title}
+              </span>
               <button
                 type="button"
-                onClick={() => setPreviewImage(null)}
-                className="w-7 h-7 rounded-full hover:bg-slate-200 text-slate-400 hover:text-slate-700 flex items-center justify-center transition-colors cursor-pointer"
+                onClick={() => {
+                  soundFx.playPop();
+                  setPreviewImage(null);
+                }}
+                className="w-8 h-8 rounded-full bg-rose-50 hover:bg-rose-100 text-rose-600 flex items-center justify-center transition-colors cursor-pointer shrink-0 active:scale-95"
+                title="បិទ"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
-            <div className="p-4 flex-1 overflow-auto flex items-center justify-center bg-slate-100">
+
+            {/* Image Area - Tapping image also closes it */}
+            <div
+              onClick={() => {
+                soundFx.playPop();
+                setPreviewImage(null);
+              }}
+              className="p-3 sm:p-4 flex-1 overflow-auto flex flex-col items-center justify-center bg-slate-900/5 cursor-pointer relative group"
+              title="ចុចលើរូបដើម្បីបិទ"
+            >
               <img
                 src={getProductImageUrl(previewImage.url)}
                 alt={previewImage.title}
-                className="max-w-full max-h-[72vh] object-contain rounded-2xl shadow-md"
+                className="max-w-full max-h-[52dvh] sm:max-h-[62dvh] object-contain rounded-2xl shadow-md border border-slate-200/60"
               />
+              <p className="text-[11px] text-slate-500 mt-2 font-medium flex items-center gap-1">
+                <span>💡 ចុចលើរូប ឬចុចប៊ូតុងបិទដើម្បីត្រឡប់ក្រោយ</span>
+              </p>
+            </div>
+
+            {/* Bottom Action Footer with Easy Close Button */}
+            <div className="p-3 bg-white border-t border-slate-100 flex items-center justify-between gap-3 shrink-0">
+              <span className="text-[11px] text-slate-400 font-medium truncate">
+                ចុចទីណាលើផ្ទៃងងឹតក៏បិទដែរ
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  soundFx.playPop();
+                  setPreviewImage(null);
+                }}
+                className="px-5 py-2.5 bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-600 hover:to-pink-700 active:scale-95 text-white font-black text-xs rounded-xl flex items-center gap-1.5 shadow-md shadow-pink-500/20 transition-all cursor-pointer shrink-0"
+              >
+                <X className="w-4 h-4" />
+                <span>បិទផ្ទាំងនេះ (Close)</span>
+              </button>
             </div>
           </div>
         </div>
