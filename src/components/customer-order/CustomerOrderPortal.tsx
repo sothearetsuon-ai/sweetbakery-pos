@@ -33,6 +33,7 @@ import { Product, CustomCakeOrder, OrderStatus } from '../../types';
 import { soundFx } from '../../utils/audio';
 import { compressImageBase64 } from '../../utils/imageCompressor';
 import { getProductImageUrl } from '../../utils/imagePath';
+import { isTelegramWebApp, getTelegramUser, tgHapticImpact, tgHapticNotification } from '../../services/telegramWebApp';
 
 const CAKE_SIZES = [
   { id: '1.5 ទឹក', label: '1.5 ទឹក (~15cm)', desc: 'សម្រាប់ 2-4 នាក់', priceUsd: 12 },
@@ -150,9 +151,20 @@ export const CustomerOrderPortal: React.FC = () => {
     return d.toISOString().slice(0, 10);
   });
   const [pickupTime, setPickupTime] = useState('14:00');
-  const [customerName, setCustomerName] = useState('');
+  const tgUser = useMemo(() => getTelegramUser(), []);
+  const [customerName, setCustomerName] = useState(() => {
+    if (tgUser) {
+      return [tgUser.first_name, tgUser.last_name].filter(Boolean).join(' ');
+    }
+    return '';
+  });
   const [customerPhone, setCustomerPhone] = useState('');
-  const [customerTelegram, setCustomerTelegram] = useState('');
+  const [customerTelegram, setCustomerTelegram] = useState(() => {
+    if (tgUser?.username) {
+      return `@${tgUser.username}`;
+    }
+    return '';
+  });
 
   // Deposit Payment State
   // '50%' | '30%' | '100%' | 'custom'
@@ -401,6 +413,22 @@ export const CustomerOrderPortal: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-rose-50/50 via-white to-pink-50/30 text-slate-800 pb-20 font-sans selection:bg-pink-100 selection:text-pink-700">
+      {/* Telegram Mini App Native Banner */}
+      {isTelegramWebApp() && (
+        <div className="bg-gradient-to-r from-sky-500 via-blue-600 to-indigo-600 text-white text-[11px] font-bold px-4 py-2 flex items-center justify-between shadow-xs">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            <span>📱 កំពុងដំណើរការលើ Telegram Mini App</span>
+          </div>
+          {tgUser && (
+            <div className="flex items-center gap-1.5 bg-white/20 px-2 py-0.5 rounded-full text-[10px]">
+              <span>👋 {tgUser.first_name}</span>
+              {tgUser.username && <span className="text-sky-200">(@{tgUser.username})</span>}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Top Store Header */}
       <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-rose-100 shadow-2xs">
         <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">

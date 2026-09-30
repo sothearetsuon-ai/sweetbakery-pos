@@ -31,6 +31,7 @@ import { RealStoreAuthModal } from './components/auth/RealStoreAuthModal';
 import { useBakery } from './context/BakeryContext';
 import { soundFx } from './utils/audio';
 import confetti from 'canvas-confetti';
+import { initTelegramMiniApp, isTelegramWebApp, getTelegramStartParam } from './services/telegramWebApp';
 
 export const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabType>('pos');
@@ -75,18 +76,29 @@ export const App: React.FC = () => {
   // Customer Self-Order Link & Portal Mode
   const [isCustomerPortalOpen, setIsCustomerPortalOpen] = useState(() => {
     if (typeof window === 'undefined') return false;
+    const tgParam = getTelegramStartParam();
     return (
       new URLSearchParams(window.location.search).get('order') === 'true' ||
-      window.location.hash === '#order'
+      window.location.hash === '#order' ||
+      tgParam === 'order' ||
+      tgParam === 'catalog'
     );
   });
   const [isCustomerOrderLinkModalOpen, setIsCustomerOrderLinkModalOpen] = useState(false);
 
+  // Initialize Telegram Mini App Native SDK
+  React.useEffect(() => {
+    initTelegramMiniApp();
+  }, []);
+
   React.useEffect(() => {
     const handleUrlChange = () => {
+      const tgParam = getTelegramStartParam();
       const isOrder =
         new URLSearchParams(window.location.search).get('order') === 'true' ||
-        window.location.hash === '#order';
+        window.location.hash === '#order' ||
+        tgParam === 'order' ||
+        tgParam === 'catalog';
       setIsCustomerPortalOpen(isOrder);
     };
     window.addEventListener('popstate', handleUrlChange);

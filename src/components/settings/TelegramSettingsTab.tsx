@@ -370,6 +370,114 @@ export const TelegramSettingsTab: React.FC = () => {
         </div>
       </form>
 
+      {/* Telegram Mini App (Web App) Setup & Links Card */}
+      <div className="p-4 sm:p-5 bg-gradient-to-br from-sky-50 via-blue-50/50 to-indigo-50 border border-sky-200/80 rounded-3xl space-y-4 shadow-xs">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5">
+            <div className="w-10 h-10 rounded-2xl bg-sky-500 text-white flex items-center justify-center shadow-sm shadow-sky-500/30 font-bold">
+              📱
+            </div>
+            <div>
+              <h4 className="font-black text-slate-800 text-sm sm:text-base flex items-center gap-1.5">
+                <span>Telegram Mini App (Web App)</span>
+                <span className="text-[10px] px-2 py-0.5 bg-sky-500 text-white font-black rounded-full uppercase tracking-wider">
+                  ថ្មី New
+                </span>
+              </h4>
+              <p className="text-xs text-slate-500 mt-0.5">
+                ដំណើរការកម្មវិធីហាងនំខេក SweetBakery ផ្ទាល់នៅលើ Telegram ដោយមិនបាច់ដំឡើង App!
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Links Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
+          {/* Link 1: Customer Self-Ordering Mini App */}
+          <div className="p-3.5 bg-white rounded-2xl border border-sky-100 shadow-2xs space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-black text-slate-800 flex items-center gap-1.5">
+                <span>🎂 តំណភ្ជាប់សម្រាប់អតិថិជន (Customer Order)</span>
+              </span>
+              <span className="text-[10px] px-2 py-0.5 bg-rose-50 text-rose-600 font-bold rounded-full">
+                អតិថិជនកុម្ម៉ង់
+              </span>
+            </div>
+            <p className="text-[11px] text-slate-500 leading-relaxed">
+              អតិថិជនបើកកុម្ម៉ង់នំខេក មើលម៉ូដនំ ជ្រើសរើសរសជាតិ និងបង់ប្រាក់ KHQR ក្នុង Telegram
+            </p>
+            <div className="flex items-center gap-2 pt-1">
+              <input
+                type="text"
+                readOnly
+                value="https://sothearetsuon-ai.github.io/sweetbakery-pos/?order=true"
+                className="w-full text-[11px] font-mono bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 text-slate-600 select-all"
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  navigator.clipboard.writeText('https://sothearetsuon-ai.github.io/sweetbakery-pos/?order=true');
+                  soundFx.playPop();
+                  alert('បានចម្លងតំណភ្ជាប់អតិថិជនរួចរាល់!');
+                }}
+                className="px-3 py-1.5 bg-sky-600 hover:bg-sky-700 text-white rounded-xl text-xs font-bold shrink-0 transition-all cursor-pointer shadow-2xs active:scale-95"
+              >
+                ចម្លង
+              </button>
+            </div>
+          </div>
+
+          {/* Link 2: Staff / POS Mini App */}
+          <div className="p-3.5 bg-white rounded-2xl border border-sky-100 shadow-2xs space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-black text-slate-800 flex items-center gap-1.5">
+                <span>💼 តំណភ្ជាប់សម្រាប់បុគ្គលិក (Staff POS)</span>
+              </span>
+              <span className="text-[10px] px-2 py-0.5 bg-emerald-50 text-emerald-600 font-bold rounded-full">
+                POS ហាង
+              </span>
+            </div>
+            <p className="text-[11px] text-slate-500 leading-relaxed">
+              បុគ្គលិក ឬម្ចាស់ហាងអាចលក់ គិតលុយ និងគ្រប់គ្រងស្តុកផ្ទាល់ក្នុង Telegram
+            </p>
+            <div className="flex items-center gap-2 pt-1">
+              <input
+                type="text"
+                readOnly
+                value="https://sothearetsuon-ai.github.io/sweetbakery-pos/"
+                className="w-full text-[11px] font-mono bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 text-slate-600 select-all"
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  navigator.clipboard.writeText('https://sothearetsuon-ai.github.io/sweetbakery-pos/');
+                  soundFx.playPop();
+                  alert('បានចម្លងតំណភ្ជាប់ POS ហាងរួចរាល់!');
+                }}
+                className="px-3 py-1.5 bg-sky-600 hover:bg-sky-700 text-white rounded-xl text-xs font-bold shrink-0 transition-all cursor-pointer shadow-2xs active:scale-95"
+              >
+                ចម្លង
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* 3 Steps to setup on Telegram with BotFather */}
+        <div className="p-4 bg-white/90 rounded-2xl border border-sky-100/80 space-y-2">
+          <h5 className="font-bold text-xs text-sky-900 flex items-center gap-1.5">
+            <Sparkles className="w-3.5 h-3.5 text-sky-600" />
+            <span>របៀបដាក់ប៊ូតុង Menu «🎂 កុម្ម៉ង់នំខេក» ក្នុង Telegram Bot របស់លោកអ្នក៖</span>
+          </h5>
+          <ol className="text-[11px] text-slate-600 space-y-1.5 list-decimal list-inside leading-relaxed pl-1">
+            <li>បើក Telegram រួចស្វែងរកគណនី <b>@BotFather</b></li>
+            <li>វាយពាក្យបញ្ជា <code>/setmenubutton</code> រួចជ្រើសរើស Bot របស់លោកអ្នក</li>
+            <li>បិទភ្ជាប់ (Paste) តំណភ្ជាប់ខាងលើ៖ <code>https://sothearetsuon-ai.github.io/sweetbakery-pos/?order=true</code></li>
+            <li>វាយចំណងជើងប៊ូតុង ឧ. <b>🎂 កុម្ម៉ង់នំខេក (Order Cake)</b></li>
+            <li><b>រួចរាល់!</b> នៅពេលអតិថិជនបើក Chat ជាមួយ Bot ពួកគេនឹងឃើញប៊ូតុង <b>Menu</b> នៅជ្រុងខាងឆ្វេងខាងក្រោម ដែលចុចទៅបើក Mini App កុម្ម៉ង់នំខេកភ្លាមៗ!</li>
+          </ol>
+        </div>
+      </div>
+
       {/* Quick Guide Card */}
       <div className="p-4 sm:p-5 bg-slate-50 border border-slate-200/80 rounded-3xl space-y-3">
         <h4 className="font-black text-slate-800 text-xs sm:text-sm flex items-center gap-2 text-sky-800">
