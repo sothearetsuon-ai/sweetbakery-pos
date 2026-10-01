@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { X, Upload, Image as ImageIcon, Plus, DollarSign, Sparkles, Trash2, Star, Check, Loader2, Camera } from 'lucide-react';
+import { X, Upload, Image as ImageIcon, Plus, DollarSign, Sparkles, Trash2, Star, Check, Loader2, Camera, Barcode } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { useBakery } from '../../context/BakeryContext';
 import { t } from '../../utils/translations';
@@ -22,6 +22,7 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, onClos
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [nameKh, setNameKh] = useState('');
   const [nameEn, setNameEn] = useState('');
+  const [barcode, setBarcode] = useState('');
   const [categoryId, setCategoryId] = useState('birthday');
   const [priceKhr, setPriceKhr] = useState('');
   const [costPriceKhr, setCostPriceKhr] = useState('');
@@ -37,10 +38,17 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, onClos
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const handleGenerateBarcode = () => {
+    soundFx.playPop();
+    const randomBarcode = '884' + Math.floor(1000000 + Math.random() * 9000000);
+    setBarcode(randomBarcode);
+  };
+
   React.useEffect(() => {
     if (productToEdit) {
       setNameKh(productToEdit.nameKh || '');
       setNameEn(productToEdit.nameEn || '');
+      setBarcode(productToEdit.barcode || '');
       setCategoryId(productToEdit.categoryId || 'birthday');
       const khr = productToEdit.priceKhr ?? Math.round(productToEdit.priceUsd * exchangeRate);
       setPriceKhr(khr > 0 ? String(khr) : '');
@@ -59,6 +67,7 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, onClos
     } else {
       setNameKh('');
       setNameEn('');
+      setBarcode('');
       setCategoryId('birthday');
       setPriceKhr('');
       setCostPriceKhr('');
@@ -164,6 +173,7 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, onClos
           ...productToEdit,
           nameKh: nameKh.trim(),
           nameEn: (nameEn || nameKh).trim(),
+          barcode: barcode.trim() || undefined,
           categoryId,
           priceUsd: numPriceUsd,
           priceKhr: numPriceKhr,
@@ -179,6 +189,7 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, onClos
         await addProduct({
           nameKh: nameKh.trim(),
           nameEn: (nameEn || nameKh).trim(),
+          barcode: barcode.trim() || undefined,
           categoryId,
           priceUsd: numPriceUsd,
           priceKhr: numPriceKhr,
@@ -441,6 +452,38 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, onClos
                 <option value="ឈុត">ឈុត (Set)</option>
               </select>
             </div>
+          </div>
+
+          {/* Barcode & SKU Field */}
+          <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200/80">
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="flex items-center gap-1.5 text-xs font-bold text-slate-800">
+                <Barcode className="w-4 h-4 text-pink-600" />
+                <span>លេខកូដបាកូដ / Barcode (SKU)</span>
+              </label>
+              <button
+                type="button"
+                onClick={handleGenerateBarcode}
+                className="text-[11px] text-pink-600 hover:text-pink-700 font-bold hover:underline flex items-center gap-1 cursor-pointer"
+                title="បង្កើតលេខកូដបាកូដចៃដន្យថ្មី"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                <span>បង្កើតកូដអូតូ (Auto Gen)</span>
+              </button>
+            </div>
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="ស្កេនបាកូដ ឬវាយលេខកូដ (ឧ. 884123456789)"
+                value={barcode}
+                onChange={(e) => setBarcode(e.target.value)}
+                className="w-full pl-9 pr-3 py-2 text-sm font-mono font-bold text-slate-800 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500 placeholder:font-normal placeholder:text-slate-400"
+              />
+              <Barcode className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            </div>
+            <p className="text-[10px] text-slate-500 mt-1">
+              * អាចយកម៉ាស៊ីនស្កេនបាញ់បញ្ចូលត្រង់នេះ ឬពេលលក់លើ POS អាចស្កេនបាកូដបញ្ចូលកន្ត្រកភ្លាមៗ
+            </p>
           </div>
 
           {/* Prices & Stock (KHR ៛ FIRST) */}

@@ -10,6 +10,10 @@ import {
   Plus,
   ShoppingBag,
   ArrowRight,
+  Barcode,
+  CheckCircle2,
+  AlertCircle,
+  X,
 } from 'lucide-react';
 import { useBakery } from '../../context/BakeryContext';
 import { t } from '../../utils/translations';
@@ -44,22 +48,139 @@ export const PosTerminal: React.FC = () => {
   const [isMobileCartOpen, setIsMobileCartOpen] = useState(false);
   const [activeReceiptSale, setActiveReceiptSale] = useState<CompletedSale | null>(null);
 
+  // Barcode Scanner State & Buffer
+  const [scanNotification, setScanNotification] = useState<{
+    message: string;
+    type: 'success' | 'error';
+    barcode: string;
+    productName?: string;
+  } | null>(null);
+  const barcodeBufferRef = useRef<string>('');
+  const lastKeyTimeRef = useRef<number>(0);
+  const scanToastTimeoutRef = useRef<any>(null);
+
   const totalCartItems = cart.reduce((acc, item) => acc + item.quantity, 0);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  // Keyboard shortcut: Pressing "/" or "Ctrl+K" focuses search input
+  // Handle scanned barcode execution
+  const processScannedBarcode = (code: string) => {
+    const cleanCode = code.trim();
+    if (!cleanCode) return;
+
+    // Find product by barcode or id
+    const matched = products.find(
+      (p) =>
+        (p.barcode && p.barcode.toLowerCase() === cleanCode.toLowerCase()) ||
+        p.id.toLowerCase() === cleanCode.toLowerCase()
+    );
+
+    if (scanToastTimeoutRef.current) clearTimeout(scanToastTimeoutRef.current);
+
+    if (matched) {
+      addToCart(matched);
+      soundFx.playSuccess();
+      setScanNotification({
+        message: `ស្កេនបានជោគជ័យ! បញ្ចូល «${matched.nameKh}» ក្នុងកន្ត្រក`,
+        type: 'success',
+        barcode: cleanCode,
+        productName: matched.nameKh,
+      });
+      scanToastTimeoutRef.current = setTimeout(() => {
+        setScanNotification(null);
+      }, 3500);
+    } else {
+      soundFx.playPop();
+      setScanNotification({
+        message: `រកមិនឃើញទំនិញដែលមានបាកូដ [${cleanCode}] ទេ!`,
+        type: 'error',
+        barcode: cleanCode,
+      });
+      scanToastTimeoutRef.current = setTimeout(() => {
+        setScanNotification(null);
+      }, 4000);
+    }
+  };
+
+  // Keyboard shortcut & Global Barcode Scanner Listener
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.key === '/' && document.activeElement !== searchInputRef.current) || (e.ctrlKey && e.key === 'k')) {
+      const targetTag = (e.target as HTMLElement)?.tagName;
+      const isInputActive =
+        targetTag === 'INPUT' || targetTag === 'TEXTAREA' || (e.target as HTMLElement)?.isContentEditable;
+
+      // Shortcut "/" or "Ctrl+K" to focus search input
+      if (((e.key === '/' && !isInputActive) || (e.ctrlKey && e.key === 'k')) && !e.altKey) {
         e.preventDefault();
         searchInputRef.current?.focus();
+        return;
+      }
+
+      // Barcode Scanner Listener:
+      // Barcode scanners enter characters rapidly (< 80ms per key) followed by 'Enter'
+      const now = Date.now();
+      const timeDiff = now - lastKeyTimeRef.current;
+      lastKeyTimeRef.current = now;
+
+      // If time between keys is too long, reset buffer
+      if (timeDiff > 120) {
+        barcodeBufferRef.current = '';
+      }
+
+      if (e.key === 'Enter') {
+        const candidateCode = barcodeBufferRef.current.trim();
+        // If a barcode sequence of 3 or more chars was buffered
+        if (candidateCode.length >= 3) {
+          e.preventDefault();
+          processScannedBarcode(candidateCode);
+          barcodeBufferRef.current = '';
+          return;
+        }
+      } else if (e.key.length === 1 && !e.ctrlKey && !e.altKey && !e.metaKey) {
+        // Collect scanner characters
+        barcodeBufferRef.current += e.key;
       }
     };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
 
-  // Filter products (newest first)
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      if (scanToastTimeoutRef.current) clearTimeout(scanToastTimeoutRef.current);
+    };
+  }, [products, addToCart]);
+
+  // Handle Search Input KeyDown (if cashier scans or hits enter inside search input)
+  const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      const q = searchQuery.trim();
+      if (!q) return;
+
+      const matched = products.find(
+        (p) =>
+          (p.barcode && p.barcode.toLowerCase() === q.toLowerCase()) ||
+          p.nameKh.toLowerCase() === q.toLowerCase() ||
+          p.id.toLowerCase() === q.toLowerCase()
+      );
+
+      if (matched) {
+        e.preventDefault();
+        addToCart(matched);
+        soundFx.playSuccess();
+        setSearchQuery('');
+        if (scanToastTimeoutRef.current) clearTimeout(scanToastTimeoutRef.current);
+        setScanNotification({
+          message: `ស្កេនបានជោគជ័យ! បញ្ចូល «${matched.nameKh}» ក្នុងកន្ត្រក`,
+          type: 'success',
+          barcode: matched.barcode || matched.id,
+          productName: matched.nameKh,
+        });
+        scanToastTimeoutRef.current = setTimeout(() => {
+          setScanNotification(null);
+        }, 3500);
+      }
+    }
+  };
+
+  // Filter products (newest first, matches category, name, or barcode)
   const filteredProducts = useMemo(() => {
     const list = products.filter((p) => {
       const matchesCategory =
@@ -70,6 +191,7 @@ export const PosTerminal: React.FC = () => {
         !q ||
         p.nameKh.toLowerCase().includes(q) ||
         p.nameEn.toLowerCase().includes(q) ||
+        (p.barcode && p.barcode.toLowerCase().includes(q)) ||
         (p.description && p.description.toLowerCase().includes(q));
 
       return matchesCategory && matchesSearch;
@@ -96,6 +218,43 @@ export const PosTerminal: React.FC = () => {
 
   return (
     <div className="flex-1 flex overflow-hidden relative">
+      {/* Barcode Scan Floating Toast Notification */}
+      {scanNotification && (
+        <div className="absolute top-3 left-1/2 -translate-x-1/2 z-50 animate-in fade-in slide-in-from-top-3 duration-200">
+          <div
+            className={`px-4 py-2.5 rounded-2xl shadow-xl border flex items-center gap-3 backdrop-blur-md ${
+              scanNotification.type === 'success'
+                ? 'bg-emerald-900/95 text-white border-emerald-500/50 shadow-emerald-900/30'
+                : 'bg-rose-950/95 text-white border-rose-500/50 shadow-rose-950/30'
+            }`}
+          >
+            <div
+              className={`w-7 h-7 rounded-xl flex items-center justify-center shrink-0 ${
+                scanNotification.type === 'success' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'
+              }`}
+            >
+              {scanNotification.type === 'success' ? (
+                <CheckCircle2 className="w-4 h-4" />
+              ) : (
+                <AlertCircle className="w-4 h-4" />
+              )}
+            </div>
+            <div>
+              <div className="text-xs font-black tracking-tight">{scanNotification.message}</div>
+              <div className="text-[10px] text-slate-300 font-mono">
+                កូដបាកូដ: {scanNotification.barcode}
+              </div>
+            </div>
+            <button
+              onClick={() => setScanNotification(null)}
+              className="text-slate-400 hover:text-white ml-1 p-1 hover:bg-white/10 rounded-lg transition-colors cursor-pointer"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Products catalog area */}
       <div className="flex-1 flex flex-col min-w-0 p-3 sm:p-6 overflow-y-auto pb-28 lg:pb-6">
         {/* Search & Category Tabs */}
@@ -109,7 +268,8 @@ export const PosTerminal: React.FC = () => {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder={text.searchPlaceholder}
+                onKeyDown={handleSearchKeyDown}
+                placeholder="ស្វែងរកនំ ឬស្កេនបាកូដ..."
                 className="w-full pl-10 sm:pl-11 pr-10 sm:pr-12 py-2.5 sm:py-3 bg-white border border-slate-200 rounded-2xl text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-rose-500/25 focus:border-rose-500 shadow-2xs transition-all font-semibold"
               />
               <span className="hidden sm:inline-block absolute right-3 top-1/2 -translate-y-1/2 px-2 py-0.5 bg-slate-100 border border-slate-200 text-slate-500 text-[10px] font-mono rounded-lg">
@@ -119,6 +279,14 @@ export const PosTerminal: React.FC = () => {
 
             {/* Actions: Add New Product & Mobile Cart Trigger */}
             <div className="flex items-center gap-2">
+              {/* Barcode Scanner Ready Badge */}
+              <div
+                title="ម៉ាស៊ីនស្កេនបាកូដដំណើរការ៖ អាចស្កេនបាកូដទំនិញគ្រប់ពេលដើម្បីបញ្ចូលកន្ត្រកភ្លាមៗ"
+                className="hidden xl:flex items-center gap-1.5 text-xs font-black text-pink-700 bg-pink-50 border border-pink-200/80 px-3 py-2 rounded-2xl shadow-2xs"
+              >
+                <Barcode className="w-4 h-4 text-pink-600 animate-pulse" />
+                <span>ស្កេនបាកូដ (Auto)</span>
+              </div>
               {/* Quick Cart Button on Mobile */}
               <button
                 type="button"

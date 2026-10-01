@@ -35,6 +35,7 @@ export const initialProducts: Product[] = [
     "stockQty": 10,
     "unit": "នំ",
     "description": "",
+    "barcode": "8840001001",
     "imageUrl": "/uploads/products/p-1789808907862.jpg",
     "images": [
       "/uploads/products/p-1789808907862.jpg"

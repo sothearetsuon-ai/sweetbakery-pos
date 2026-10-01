@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Check, Sparkles, Flame, Heart, Cake, RefreshCw, X } from 'lucide-react';
+import { Plus, Check, Sparkles, Flame, Heart, Cake, RefreshCw, X, Barcode } from 'lucide-react';
 import { Product } from '../../types';
 import { useBakery } from '../../context/BakeryContext';
 import { t } from '../../utils/translations';
@@ -149,6 +149,12 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart }
             <p className="text-[11px] text-slate-500 font-medium line-clamp-1">
               {product.description}
             </p>
+          )}
+          {product.barcode && (
+            <div className="flex items-center gap-1 text-[10px] text-slate-500 font-mono bg-slate-100/90 w-fit px-1.5 py-0.5 rounded-md border border-slate-200/60">
+              <Barcode className="w-3 h-3 text-slate-500 shrink-0" />
+              <span className="truncate max-w-[120px]">{product.barcode}</span>
+            </div>
           )}
         </div>
       </div>

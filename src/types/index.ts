@@ -40,6 +40,7 @@ export interface Product {
   unit: string;
   isCustom?: boolean;
   description?: string;
+  barcode?: string;
   recipeId?: string;
   createdAt?: string;
   updatedAt?: string;
