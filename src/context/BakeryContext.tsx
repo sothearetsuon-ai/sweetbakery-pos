@@ -264,6 +264,13 @@ const syncDeleteDoc = (collectionName: string, docId: string) => {
   offlineSyncService.queueMutation(collectionName, docId, 'delete');
 };
 
+// Helper to determine if an expense is drawn from petty cash / reserve fund
+export const isExpensePaidFromReserve = (exp?: Partial<Expense> | null) => {
+  if (!exp) return false;
+  const isPaid = !exp.paymentStatus || exp.paymentStatus === 'PAID';
+  return isPaid && (exp.paymentMethod === 'RESERVE_FUND' || exp.paymentMethod === 'CASH_KHR' || exp.paymentMethod === 'CASH_USD');
+};
+
 interface BakeryContextType {
   lang: Language;
   setLang: (lang: Language) => void;
@@ -374,6 +381,7 @@ interface BakeryContextType {
   replenishReserveFund: (amountKhr: number, amountUsd?: number, source?: string, notes?: string) => void;
   withdrawReserveFund: (amountKhr: number, amountUsd: number, reason: string, expenseId?: string) => void;
   batchDeductExpensesToReserveFund: (expenseIds: string[]) => void;
+  reconcileReserveFundWithExpenses: (customBaseTargetKhr?: number) => ReserveFund;
 
   sales: CompletedSale[];
   completeSale: (sale: Omit<CompletedSale, 'id' | 'orderNumber' | 'createdAt'>) => CompletedSale;
@@ -2161,8 +2169,18 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     const validKhr = Math.max(0, targetKhr);
     const validUsd = targetUsd !== undefined ? targetUsd : Number((validKhr / exchangeRate).toFixed(2));
     const current = reserveFundRef.current;
-    const newBalanceKhr = updateCurrentBalance ? validKhr : current.currentBalanceKhr;
-    const newBalanceUsd = updateCurrentBalance ? validUsd : current.currentBalanceUsd;
+    
+    // If updateCurrentBalance is true, deduct existing paid cash expenses
+    let newBalanceKhr = current.currentBalanceKhr;
+    let newBalanceUsd = current.currentBalanceUsd;
+    if (updateCurrentBalance) {
+      const totalCashExpensesKhr = expenses
+        .filter((e) => isExpensePaidFromReserve(e))
+        .reduce((sum, e) => sum + e.amountKhr, 0);
+      newBalanceKhr = Math.max(0, validKhr - totalCashExpensesKhr);
+      newBalanceUsd = Number((newBalanceKhr / exchangeRate).toFixed(2));
+    }
+
     const tx: ReserveFundTransaction = {
       id: `rf-adj-${Date.now()}`,
       type: 'ADJUST_TARGET',
@@ -2184,6 +2202,62 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     };
     persistReserveFund(nextRf);
   };
+
+  const reconcileReserveFundWithExpenses = (customBaseTargetKhr?: number): ReserveFund => {
+    isUpdatingFromLan.current = false;
+    const current = reserveFundRef.current;
+    const baseTarget = customBaseTargetKhr || current.targetAmountKhr || 4000000;
+    const totalDeductibleKhr = expenses
+      .filter((e) => isExpensePaidFromReserve(e))
+      .reduce((sum, e) => sum + e.amountKhr, 0);
+
+    const newBalanceKhr = Math.max(0, baseTarget - totalDeductibleKhr);
+    const newBalanceUsd = Number((newBalanceKhr / exchangeRate).toFixed(2));
+    const baseTargetUsd = Number((baseTarget / exchangeRate).toFixed(2));
+
+    const nextRf: ReserveFund = {
+      ...current,
+      targetAmountKhr: baseTarget,
+      targetAmountUsd: baseTargetUsd,
+      currentBalanceKhr: newBalanceKhr,
+      currentBalanceUsd: newBalanceUsd,
+      history: [
+        {
+          id: `rf-rec-${Date.now()}`,
+          type: 'ADJUST_BALANCE' as const,
+          amountKhr: newBalanceKhr,
+          amountUsd: newBalanceUsd,
+          reason: `គណនាសមតុល្យស្វ័យប្រវត្តិតាមការចំណាយ (ទុនគោល ${baseTarget.toLocaleString()} ៛ - ចំណាយ ${totalDeductibleKhr.toLocaleString()} ៛)`,
+          performedBy: currentStaff?.name || 'ម្ចាស់ហាង (Admin)',
+          date: new Date().toISOString().slice(0, 10),
+          createdAt: new Date().toISOString(),
+        },
+        ...(current.history || []),
+      ].slice(0, 100),
+      updatedAt: new Date().toISOString(),
+    };
+
+    persistReserveFund(nextRf);
+    return nextRf;
+  };
+
+  // Auto-reconcile reserve fund on startup if current balance equals target (meaning expenses were never deducted from it)
+  useEffect(() => {
+    if (expenses.length === 0) return;
+    const current = reserveFundRef.current;
+    if (!current || !current.targetAmountKhr) return;
+
+    const totalCashPaidKhr = expenses
+      .filter((e) => isExpensePaidFromReserve(e))
+      .reduce((sum, e) => sum + e.amountKhr, 0);
+
+    if (totalCashPaidKhr <= 0) return;
+
+    const hasEverDeducted = (current.history || []).some((tx) => tx.type === 'WITHDRAW');
+    if (!hasEverDeducted && current.currentBalanceKhr === current.targetAmountKhr) {
+      reconcileReserveFundWithExpenses(current.targetAmountKhr);
+    }
+  }, [expenses]);
 
   const adjustCurrentBalance = (balanceKhr: number, balanceUsd?: number, reason?: string) => {
     const validKhr = Math.max(0, balanceKhr);
@@ -2276,10 +2350,10 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       createdAt: new Date().toISOString(),
     };
 
-    // If paid via Reserve Fund, automatically withdraw from reserve fund
+    // If paid via Reserve Fund or Cash, automatically withdraw from reserve fund
     let nextRf: ReserveFund | undefined = undefined;
     const isPaid = !newExpense.paymentStatus || newExpense.paymentStatus === 'PAID';
-    if (newExpense.paymentMethod === 'RESERVE_FUND' && isPaid) {
+    if (isExpensePaidFromReserve(newExpense) && isPaid) {
       nextRf = withdrawReserveFund(
         newExpense.amountKhr,
         newExpense.amountUsd,
@@ -2325,8 +2399,8 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       const target = updated.find((e) => e.id === id);
 
       if (target && oldExpense) {
-        const oldWasRfPaid = oldExpense.paymentMethod === 'RESERVE_FUND' && (!oldExpense.paymentStatus || oldExpense.paymentStatus === 'PAID');
-        const newIsRfPaid = target.paymentMethod === 'RESERVE_FUND' && (!target.paymentStatus || target.paymentStatus === 'PAID');
+        const oldWasRfPaid = isExpensePaidFromReserve(oldExpense);
+        const newIsRfPaid = isExpensePaidFromReserve(target);
 
         let rfDeltaKhr = 0; // Positive means deduct more, negative means refund
         let reason = '';
@@ -2432,8 +2506,8 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     const targetExp = expenses.find((e) => e.id === id);
     let nextRf: ReserveFund | undefined = undefined;
 
-    // If the deleted expense was from Reserve Fund and paid, automatically refund it back
-    const wasRfPaid = targetExp && targetExp.paymentMethod === 'RESERVE_FUND' && (!targetExp.paymentStatus || targetExp.paymentStatus === 'PAID');
+    // If the deleted expense was from Reserve Fund or cash and paid, automatically refund it back
+    const wasRfPaid = targetExp && isExpensePaidFromReserve(targetExp);
     if (wasRfPaid && targetExp) {
       nextRf = replenishReserveFund(
         targetExp.amountKhr,
@@ -4070,6 +4144,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         replenishReserveFund,
         withdrawReserveFund,
         batchDeductExpensesToReserveFund,
+        reconcileReserveFundWithExpenses,
         sales,
         completeSale,
         addPastSale,

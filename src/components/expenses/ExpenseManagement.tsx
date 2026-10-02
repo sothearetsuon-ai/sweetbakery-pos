@@ -45,6 +45,7 @@ export const ExpenseManagement: React.FC = () => {
     exchangeRate,
     reserveFund,
     batchDeductExpensesToReserveFund,
+    reconcileReserveFundWithExpenses,
   } = useBakery();
 
   const [isAddExpenseOpen, setIsAddExpenseOpen] = useState(false);
@@ -449,6 +450,20 @@ export const ExpenseManagement: React.FC = () => {
               <span>⚡ កាត់ចំណាយសាច់ប្រាក់ ({undeductedCashExpenses.length}) ពីទុន</span>
             </button>
           )}
+
+          <button
+            type="button"
+            onClick={() => {
+              soundFx.playSuccess();
+              const rf = reconcileReserveFundWithExpenses();
+              alert(`បានគណនាកាត់រាល់ចំណាយចេញពីទុនបម្រុងរួចរាល់!\nសមតុល្យជាក់ស្តែងនៅសល់៖ ${rf.currentBalanceKhr.toLocaleString()} ៛ ($${rf.currentBalanceUsd.toFixed(2)})`);
+            }}
+            className="px-3 sm:px-3.5 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-800 dark:text-slate-100 rounded-2xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 border border-slate-300 dark:border-slate-600"
+            title="គណនាកាត់រាល់ចំណាយសាច់ប្រាក់ទាំងអស់ចេញពីទុនបម្រុងឡើងវិញ"
+          >
+            <RotateCcw className="w-3.5 h-3.5 text-slate-600 dark:text-slate-300" />
+            <span>🔄 គណនាកាត់ពីទុន</span>
+          </button>
 
           <button
             onClick={() => {

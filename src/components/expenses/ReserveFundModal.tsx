@@ -13,6 +13,7 @@ import {
   CheckCircle2,
   Wallet,
   SlidersHorizontal,
+  RotateCcw,
 } from 'lucide-react';
 import { useBakery } from '../../context/BakeryContext';
 import { soundFx } from '../../utils/audio';
@@ -23,7 +24,7 @@ interface ReserveFundModalProps {
 }
 
 export const ReserveFundModal: React.FC<ReserveFundModalProps> = ({ isOpen, onClose }) => {
-  const { reserveFund, updateReserveTarget, adjustCurrentBalance, replenishReserveFund, exchangeRate } = useBakery();
+  const { reserveFund, updateReserveTarget, adjustCurrentBalance, replenishReserveFund, exchangeRate, reconcileReserveFundWithExpenses } = useBakery();
 
   const [activeTab, setActiveTab] = useState<'overview' | 'replenish' | 'target' | 'history'>('overview');
   
@@ -378,6 +379,35 @@ export const ReserveFundModal: React.FC<ReserveFundModalProps> = ({ isOpen, onCl
                     </p>
                   </div>
                   <ArrowRight className="w-5 h-5 text-gray-400 group-hover:translate-x-1 group-hover:text-blue-600 transition" />
+                </button>
+              </div>
+
+              {/* Quick Reconcile with Expenses Banner */}
+              <div className="p-4 bg-amber-50/80 dark:bg-amber-950/40 rounded-2xl border border-amber-300 dark:border-amber-700 flex items-center justify-between gap-3 flex-wrap">
+                <div className="flex items-center gap-2.5">
+                  <div className="p-2 bg-amber-100 dark:bg-amber-900/60 text-amber-800 dark:text-amber-200 rounded-xl">
+                    <RotateCcw className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-black text-amber-950 dark:text-amber-100">
+                      គណនាកាត់ចេញពីទុនបម្រុងស្វ័យប្រវត្តិតាមចំណាយ (Auto-Reconcile)
+                    </h4>
+                    <p className="text-[11px] text-slate-600 dark:text-slate-300">
+                      កាត់រាល់ចំណាយសាច់ប្រាក់ទាំងអស់ចេញពីទុនគោលដៅ ({reserveFund.targetAmountKhr.toLocaleString()} ៛) ដើម្បីឱ្យសមតុល្យជាក់ស្តែងត្រូវគ្នានឹងការចំណាយ
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    soundFx.playSuccess();
+                    const updated = reconcileReserveFundWithExpenses();
+                    setSuccessMessage(`បានគណនាកាត់ចំណាយចេញពីទុនបម្រុងរួចរាល់! សមតុល្យជាក់ស្តែងនៅសល់៖ ${updated.currentBalanceKhr.toLocaleString()} ៛`);
+                    setTimeout(() => setSuccessMessage(null), 4000);
+                  }}
+                  className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-black transition shadow-sm cursor-pointer active:scale-95"
+                >
+                  🔄 គណនាកាត់ចេញពីទុនឥឡូវ
                 </button>
               </div>
 
