@@ -228,6 +228,10 @@ export interface Expense {
   amountKhr: number;       // សរុប (៛ KHR)
   paidBy: string;
   paymentMethod: 'CASH_USD' | 'CASH_KHR' | 'BANK_TRANSFER' | 'RESERVE_FUND';
+  paymentStatus?: 'PAID' | 'UNPAID'; // 'PAID' (បង់រួច) ឬ 'UNPAID' (មិនទាន់បង់/ជំពាក់)
+  dueDate?: string;                 // កាលបរិច្ឆេទផុតកំណត់បង់ប្រាក់ (YYYY-MM-DD)
+  remindBeforeDays?: number;        // រំលឹកមុនប៉ុន្មានថ្ងៃ (0 = ចំថ្ងៃ, 1 = មុន ១ ថ្ងៃ, 2, 3...)
+  paidAt?: string;                  // កាលបរិច្ឆេទដែលបានទូទាត់រួច
   receiptImage?: string;
   notes?: string;
   date: string;
@@ -306,6 +310,7 @@ export interface NotificationConfig {
   remindCakePickup: boolean;
   cakePickupAdvanceMins: number; // 60
   remindLowStock: boolean;
+  remindExpenseDueDate?: boolean; // ដាស់តឿនកាលបរិច្ឆេទផុតកំណត់បង់ប្រាក់ចំណាយទូទៅ
   soundEnabled: boolean;
 }
 

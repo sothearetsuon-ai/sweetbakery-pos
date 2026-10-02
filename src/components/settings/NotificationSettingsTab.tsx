@@ -281,6 +281,32 @@ export const NotificationSettingsTab: React.FC = () => {
           )}
         </div>
 
+        {/* 3. Expense Due Date Reminders (ដាស់តឿនថ្ងៃផុតកំណត់បង់ប្រាក់ចំណាយទូទៅ) */}
+        <div className="p-4 bg-slate-50 border border-slate-200/80 rounded-2xl space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Calendar className="w-4 h-4 text-rose-600" />
+              <div>
+                <p className="text-xs font-black text-slate-800">
+                  ⚠️ ដាស់តឿនថ្ងៃផុតកំណត់បង់ប្រាក់ចំណាយទូទៅ (Expense Due Date Alert)
+                </p>
+                <p className="text-[11px] text-slate-500">
+                  រំលឹកជាមុននៅពេលមានវិក្កយបត្រជំពាក់/មិនទាន់បង់ (ថ្លៃជួលផ្ទះ, ភ្លើង EDC, ទឹក, ថ្លៃសម្ភារៈ...) ជិតដល់ថ្ងៃ ឬហួសថ្ងៃកំណត់
+                </p>
+              </div>
+            </div>
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                checked={config.remindExpenseDueDate ?? true}
+                onChange={(e) => handleSave({ ...config, remindExpenseDueDate: e.target.checked })}
+                className="sr-only peer"
+              />
+              <div className="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-rose-600"></div>
+            </label>
+          </div>
+        </div>
+
         {/* 3. Sound Effect Setting */}
         <div className="p-4 bg-slate-50 border border-slate-200/80 rounded-2xl flex items-center justify-between">
           <div className="flex items-center gap-2">

@@ -1,5 +1,6 @@
-import { NotificationConfig, CustomCakeOrder, Expense, Ingredient } from '../types';
+import { NotificationConfig, CustomCakeOrder, Expense, Ingredient, StoreInfo } from '../types';
 import { soundFx } from '../utils/audio';
+import { notifyTelegramExpenseDueAlert } from './telegram';
 
 const STORAGE_KEY = 'bakery_notification_config';
 
@@ -12,6 +13,7 @@ export const DEFAULT_NOTIFICATION_CONFIG: NotificationConfig = {
   remindCakePickup: true,
   cakePickupAdvanceMins: 60, // 1 hour before pickup
   remindLowStock: true,
+  remindExpenseDueDate: true, // ដាស់តឿនកាលបរិច្ឆេទផុតកំណត់បង់ប្រាក់ចំណាយទូទៅ
   soundEnabled: true,
 };
 
@@ -150,6 +152,8 @@ export const runPeriodicNotificationChecks = (params: {
   customOrders: CustomCakeOrder[];
   expenses: Expense[];
   ingredients: Ingredient[];
+  storeInfo?: StoreInfo;
+  exchangeRate?: number;
 }) => {
   const config = getStoredNotificationConfig();
   if (!config.enabled) return;
@@ -230,5 +234,55 @@ export const runPeriodicNotificationChecks = (params: {
         });
       }
     }
+  }
+
+  // 4. General Expense Due Date Reminders (ដាស់តឿនថ្ងៃផុតកំណត់បង់ប្រាក់ចំណាយទូទៅ)
+  if (config.remindExpenseDueDate !== false && Array.isArray(params.expenses)) {
+    params.expenses.forEach((expense) => {
+      // ពិនិត្យតែចំណាយដែលមិនទាន់បង់ (UNPAID) និងមានថ្ងៃផុតកំណត់
+      const isUnpaid = expense.paymentStatus === 'UNPAID';
+      if (!isUnpaid || !expense.dueDate) return;
+
+      const [dYear, dMonth, dDay] = expense.dueDate.split('-').map(Number);
+      if (!dYear || !dMonth || !dDay) return;
+
+      const dueDateObj = new Date(dYear, dMonth - 1, dDay);
+      const todayDateObj = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+      // គណនាគម្លាតថ្ងៃ (diff in days)
+      const diffMs = dueDateObj.getTime() - todayDateObj.getTime();
+      const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
+
+      const remindBeforeDays = expense.remindBeforeDays ?? 1;
+
+      // បើដល់កាលកំណត់ ឬសល់ថ្ងៃក្នុងរង្វង់ដាស់តឿន ឬហួសកាលកំណត់
+      if (diffDays <= remindBeforeDays) {
+        const tag = `expense-due-${expense.id}-${todayStr}`;
+        if (!firedReminders.has(tag)) {
+          firedReminders.add(tag);
+
+          let dueStatusText = '';
+          if (diffDays < 0) {
+            dueStatusText = `🚨 ហួសកំណត់បង់ប្រាក់ ${Math.abs(diffDays)} ថ្ងៃហើយ!`;
+          } else if (diffDays === 0) {
+            dueStatusText = `⏰ ដល់ថ្ងៃត្រូវបង់ប្រាក់ថ្ងៃនេះ!`;
+          } else {
+            dueStatusText = `⏳ សល់ ${diffDays} ថ្ងៃទៀតដល់ថ្ងៃកំណត់បង់!`;
+          }
+
+          const exRate = params.exchangeRate || 4100;
+          const amountKhr = expense.amountKhr ?? Math.round(expense.amountUsd * exRate);
+
+          sendDeviceNotification(`💸 រំលឹកបង់ប្រាក់ចំណាយ៖ ${expense.title}`, {
+            body: `${dueStatusText} ចំនួនទឹកប្រាក់៖ $${expense.amountUsd.toFixed(2)} (${amountKhr.toLocaleString()} ៛) ផុតកំណត់ថ្ងៃ ${expense.dueDate}។`,
+            tag,
+            requireInteraction: true,
+          });
+
+          // ផ្ញើសារដាស់តឿនទៅ Telegram Bot
+          notifyTelegramExpenseDueAlert(expense, diffDays, params.storeInfo, exRate).catch(() => {});
+        }
+      }
+    });
   }
 };

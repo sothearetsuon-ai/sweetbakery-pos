@@ -342,6 +342,25 @@ export const TelegramSettingsTab: React.FC = () => {
                 </p>
               </div>
             </label>
+
+            {/* Expense Due Date Alert */}
+            <label className="flex items-start gap-3 p-3 rounded-2xl border border-slate-100 hover:border-sky-200 hover:bg-sky-50/30 transition-colors cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={config.notifyExpenseDue ?? true}
+                onChange={(e) => updateConfig({ ...config, notifyExpenseDue: e.target.checked })}
+                className="mt-0.5 w-4 h-4 rounded text-sky-600 focus:ring-0 cursor-pointer"
+              />
+              <div>
+                <div className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                  <Bell className="w-3.5 h-3.5 text-amber-500" />
+                  <span>រំលឹកថ្ងៃផុតកំណត់បង់ប្រាក់ (Expense Due Date Alert)</span>
+                </div>
+                <p className="text-[11px] text-slate-500 mt-0.5">
+                  ផ្ញើសារដាស់តឿនពេលមានវិក្កយបត្រជំពាក់ ដល់ថ្ងៃត្រូវបង់ ឬហួសកាលកំណត់
+                </p>
+              </div>
+            </label>
           </div>
         </div>
 

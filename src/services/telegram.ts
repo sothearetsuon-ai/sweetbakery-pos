@@ -7,6 +7,7 @@ export interface TelegramConfig {
   notifySales: boolean;
   notifyCustomOrders: boolean;
   notifyExpenses: boolean;
+  notifyExpenseDue?: boolean;
   notifyShiftClose: boolean;
 }
 
@@ -19,6 +20,7 @@ export const DEFAULT_TELEGRAM_CONFIG: TelegramConfig = {
   notifySales: true,
   notifyCustomOrders: true,
   notifyExpenses: true,
+  notifyExpenseDue: true,
   notifyShiftClose: true,
 };
 
@@ -535,6 +537,8 @@ export const notifyTelegramExpense = async (
 
   const isIng = expense.expenseType === 'INGREDIENT' || expense.category === 'INGREDIENTS';
   const typeBadge = isIng ? '🥚 ចំណាយគ្រឿងផ្សំ (Ingredients)' : '🏢 ចំណាយទូទៅ (General Expense)';
+  const isUnpaid = expense.paymentStatus === 'UNPAID';
+  const paymentStatusText = isUnpaid ? '⏳ មិនទាន់បង់ / ជំពាក់' : '✅ បង់រួចរាល់';
 
   const text =
     `💸 <b>[${storeTitle}] — កត់ត្រាការចំណាយថ្មី</b>\n` +
@@ -543,9 +547,55 @@ export const notifyTelegramExpense = async (
     `📦 <b>មុខទំនិញ/ការចំណាយ៖</b> <b>${expense.title}</b>\n` +
     (expense.quantity ? `🔢 <b>ចំនួន៖</b> ${expense.quantity} ${expense.unit || ''}\n` : '') +
     `💰 <b>ទឹកប្រាក់ចំណាយ៖</b> <b>${amountKhr.toLocaleString()} ៛</b> <i>($${expense.amountUsd.toFixed(2)})</i>\n` +
-    `👤 <b>អ្នកចំណាយ៖</b> ${expense.paidBy}\n` +
+    `💳 <b>ស្ថានភាព៖</b> <b>${paymentStatusText}</b>\n` +
+    (isUnpaid && expense.dueDate ? `📅 <b>ថ្ងៃផុតកំណត់បង់៖</b> <b>${expense.dueDate}</b>\n` : '') +
+    `👤 <b>អ្នកចំណាយ/ទទួលបន្ទុក៖</b> ${expense.paidBy}\n` +
     (expense.notes ? `📝 <b>កំណត់សម្គាល់៖</b> ${expense.notes}\n` : '') +
-    `⏰ <b>កាលបរិច្ឆេទ៖</b> ${expense.date}`;
+    `⏰ <b>កាលបរិច្ឆេទកត់ត្រា៖</b> ${expense.date}`;
+
+  if (expense.receiptImage) {
+    await sendTelegramPhoto(expense.receiptImage, text, config);
+  } else {
+    await sendTelegramMessage(text, config);
+  }
+};
+
+/**
+ * Format & send notification when an expense due date is approaching or overdue
+ */
+export const notifyTelegramExpenseDueAlert = async (
+  expense: Expense,
+  diffDays: number,
+  storeInfo?: StoreInfo,
+  exchangeRate = 4100
+): Promise<void> => {
+  const config = await getStoredTelegramConfigAsync();
+  if (!config.enabled || config.notifyExpenseDue === false || !config.botToken || !config.chatId) return;
+
+  const storeTitle = storeInfo?.nameKh || 'ហាងនំ SweetBakery';
+  const amountKhr = expense.amountKhr ?? Math.round(expense.amountUsd * exchangeRate);
+
+  let statusHeader = '';
+  if (diffDays < 0) {
+    statusHeader = `🚨 <b>[ប្រញាប់] ហួសកាលកំណត់បង់ប្រាក់ ${Math.abs(diffDays)} ថ្ងៃ!</b>`;
+  } else if (diffDays === 0) {
+    statusHeader = `⏰ <b>[ដាស់តឿន] ដល់ថ្ងៃត្រូវបង់ប្រាក់ថ្ងៃនេះ!</b>`;
+  } else {
+    statusHeader = `⏳ <b>[រំលឹកជាមុន] សល់ ${diffDays} ថ្ងៃទៀតដល់ថ្ងៃកំណត់បង់!</b>`;
+  }
+
+  const text =
+    `🔔 <b>[${storeTitle}] — រំលឹកបង់ប្រាក់ចំណាយទូទៅ!</b>\n` +
+    `━━━━━━━━━━━━━━━━━━\n` +
+    `${statusHeader}\n\n` +
+    `🏢 <b>ការចំណាយ៖</b> <b>${expense.title}</b>\n` +
+    (expense.supplier ? `🏪 <b>អ្នកផ្គត់ផ្គង់/ម្ចាស់ទីតាំង៖</b> ${expense.supplier}\n` : '') +
+    `💰 <b>ទឹកប្រាក់ត្រូវបង់៖</b> <b>${amountKhr.toLocaleString()} ៛</b> <i>($${expense.amountUsd.toFixed(2)})</i>\n` +
+    `📅 <b>ថ្ងៃផុតកំណត់៖</b> <b>${expense.dueDate}</b>\n` +
+    `👤 <b>អ្នកទទួលបន្ទុក៖</b> ${expense.paidBy}\n` +
+    (expense.notes ? `📝 <b>សម្គាល់៖</b> ${expense.notes}\n` : '') +
+    `━━━━━━━━━━━━━━━━━━\n` +
+    `💡 <i>សូមកុំភ្លេចទូទាត់ និងចូលទៅផ្ទាំងចំណាយដើម្បីចុច «បង់ប្រាក់រួច»</i>`;
 
   if (expense.receiptImage) {
     await sendTelegramPhoto(expense.receiptImage, text, config);

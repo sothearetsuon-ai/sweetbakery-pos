@@ -20,6 +20,9 @@ import {
   ArrowDown,
   ArrowUp,
   Camera,
+  Bell,
+  AlertCircle,
+  Clock,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { useBakery } from '../../context/BakeryContext';
@@ -153,6 +156,9 @@ export const NewExpenseModal: React.FC<NewExpenseModalProps> = ({
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [paidBy, setPaidBy] = useState(currentStaff?.name || 'មេការហាង (Manager)');
   const [paymentMethod, setPaymentMethod] = useState<'CASH_USD' | 'CASH_KHR' | 'BANK_TRANSFER' | 'RESERVE_FUND'>('CASH_KHR');
+  const [paymentStatus, setPaymentStatus] = useState<'PAID' | 'UNPAID'>('PAID');
+  const [dueDate, setDueDate] = useState<string>('');
+  const [remindBeforeDays, setRemindBeforeDays] = useState<number>(1);
   const [receiptImage, setReceiptImage] = useState('');
   const [notes, setNotes] = useState('');
   const [isCameraOpen, setIsCameraOpen] = useState(false);
@@ -180,6 +186,9 @@ export const NewExpenseModal: React.FC<NewExpenseModalProps> = ({
       setDate(expenseToEdit.date);
       setPaidBy(expenseToEdit.paidBy);
       setPaymentMethod(expenseToEdit.paymentMethod);
+      setPaymentStatus(expenseToEdit.paymentStatus || 'PAID');
+      setDueDate(expenseToEdit.dueDate || '');
+      setRemindBeforeDays(expenseToEdit.remindBeforeDays ?? 1);
       setReceiptImage(expenseToEdit.receiptImage || '');
       setNotes(expenseToEdit.notes || '');
     } else {
@@ -196,6 +205,9 @@ export const NewExpenseModal: React.FC<NewExpenseModalProps> = ({
       setDate(new Date().toISOString().slice(0, 10));
       setPaidBy(currentStaff?.name || 'មេការហាង (Manager)');
       setPaymentMethod('CASH_KHR');
+      setPaymentStatus('PAID');
+      setDueDate('');
+      setRemindBeforeDays(1);
       setReceiptImage('');
       setNotes('');
     }
@@ -312,6 +324,10 @@ export const NewExpenseModal: React.FC<NewExpenseModalProps> = ({
       amountKhr: numAmountKhr,
       paidBy,
       paymentMethod,
+      paymentStatus,
+      dueDate: paymentStatus === 'UNPAID' ? (dueDate || date) : undefined,
+      remindBeforeDays: paymentStatus === 'UNPAID' ? remindBeforeDays : undefined,
+      paidAt: paymentStatus === 'PAID' ? (expenseToEdit?.paidAt || new Date().toISOString().slice(0, 10)) : undefined,
       receiptImage: receiptImage.trim() ? receiptImage : '',
       notes: notes.trim(),
       date,
@@ -881,6 +897,124 @@ export const NewExpenseModal: React.FC<NewExpenseModalProps> = ({
                   <div className="text-[11px] text-emerald-700 dark:text-emerald-400 mt-0.5">
                     ប្រព័ន្ធនឹងកាត់ចេញពីទុនបម្រុងដោយស្វ័យប្រវត្ត។ នៅពេលដកចំណាយរួច អ្នកអាចបូកបង្គ្រប់ត្រឡប់ទៅទុនបម្រុងវិញគ្រប់ចំនួនគោលដៅ ({reserveFund.targetAmountKhr.toLocaleString()} ៛)។
                   </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Payment Status & Due Date (ស្ថានភាពបង់ប្រាក់ & ថ្ងៃផុតកំណត់) */}
+          <div className="p-3.5 bg-slate-50 border border-slate-200/80 rounded-2xl space-y-3">
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <div>
+                <label className="text-xs font-black text-slate-800 flex items-center gap-1.5">
+                  <Clock className="w-3.5 h-3.5 text-rose-600" />
+                  <span>ស្ថានភាពទូទាត់ប្រាក់ (Payment Status)</span>
+                </label>
+                <p className="text-[11px] text-slate-500">
+                  ជ្រើសរើស «មិនទាន់បង់» ប្រសិនជាត្រូវបង់នៅថ្ងៃក្រោយ ដើម្បីឱ្យប្រព័ន្ធដាស់តឿន
+                </p>
+              </div>
+
+              <div className="inline-flex p-0.5 bg-white border border-slate-200 rounded-xl shadow-2xs">
+                <button
+                  type="button"
+                  onClick={() => {
+                    soundFx.playPop();
+                    setPaymentStatus('PAID');
+                  }}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    paymentStatus === 'PAID'
+                      ? 'bg-emerald-600 text-white shadow-xs font-black'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  ✅ បង់រួចរាល់ (Paid)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    soundFx.playPop();
+                    setPaymentStatus('UNPAID');
+                    if (!dueDate) {
+                      const d = new Date();
+                      d.setDate(d.getDate() + 3);
+                      setDueDate(d.toISOString().slice(0, 10));
+                    }
+                  }}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    paymentStatus === 'UNPAID'
+                      ? 'bg-amber-500 text-white shadow-xs font-black'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  ⏳ មិនទាន់បង់ / ជំពាក់ (Pay Later)
+                </button>
+              </div>
+            </div>
+
+            {paymentStatus === 'UNPAID' && (
+              <div className="pt-2.5 border-t border-slate-200/80 grid grid-cols-1 sm:grid-cols-2 gap-3 animate-in fade-in duration-200">
+                <div>
+                  <label className="block text-xs font-bold text-amber-900 mb-1 flex items-center gap-1">
+                    <Calendar className="w-3.5 h-3.5 text-amber-600" />
+                    <span>កាលបរិច្ឆេទផុតកំណត់បង់ប្រាក់ (Due Date) *</span>
+                  </label>
+                  <input
+                    type="date"
+                    required={paymentStatus === 'UNPAID'}
+                    value={dueDate}
+                    onChange={(e) => setDueDate(e.target.value)}
+                    className="w-full px-3 py-2 text-xs font-bold border border-amber-300 rounded-xl bg-amber-50/50 text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500"
+                  />
+                  <div className="flex gap-1 mt-1 flex-wrap">
+                    {[
+                      { label: 'ថ្ងៃនេះ', days: 0 },
+                      { label: 'ស្អែក', days: 1 },
+                      { label: '៣ ថ្ងៃទៀត', days: 3 },
+                      { label: '៧ ថ្ងៃទៀត', days: 7 },
+                      { label: 'ចុងខែនេះ', endOfMonth: true },
+                    ].map((opt, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => {
+                          soundFx.playPop();
+                          const d = new Date();
+                          if (opt.endOfMonth) {
+                            const lastDay = new Date(d.getFullYear(), d.getMonth() + 1, 0);
+                            setDueDate(lastDay.toISOString().slice(0, 10));
+                          } else {
+                            d.setDate(d.getDate() + (opt.days || 0));
+                            setDueDate(d.toISOString().slice(0, 10));
+                          }
+                        }}
+                        className="px-1.5 py-0.5 text-[9px] font-bold bg-white hover:bg-amber-100 text-amber-800 rounded border border-amber-200 cursor-pointer shadow-2xs"
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1 flex items-center gap-1">
+                    <Bell className="w-3.5 h-3.5 text-amber-600" />
+                    <span>រំលឹកសារដាស់តឿនជាមុន (Notification Alert)</span>
+                  </label>
+                  <select
+                    value={remindBeforeDays}
+                    onChange={(e) => setRemindBeforeDays(Number(e.target.value))}
+                    className="w-full px-3 py-2 text-xs font-bold border border-slate-200 rounded-xl bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-rose-500/20"
+                  >
+                    <option value={0}>📢 រំលឹកចំថ្ងៃផុតកំណត់ (On Due Date)</option>
+                    <option value={1}>🔔 រំលឹកមុន ១ ថ្ងៃ (1 Day Before - ណែនាំ)</option>
+                    <option value={2}>🔔 រំលឹកមុន ២ ថ្ងៃ (2 Days Before)</option>
+                    <option value={3}>🔔 រំលឹកមុន ៣ ថ្ងៃ (3 Days Before)</option>
+                    <option value={7}>🔔 រំលឹកមុន ១ សប្តាហ៍ (1 Week Before)</option>
+                  </select>
+                  <p className="text-[10px] text-amber-700 mt-1">
+                    ⚡ ប្រព័ន្ធនឹងផ្ញើសារដាស់តឿនលើអេក្រង់ទូរសព្ទ និង Telegram ស្វ័យប្រវត្តិ
+                  </p>
                 </div>
               </div>
             )}

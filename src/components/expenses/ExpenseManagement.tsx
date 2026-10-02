@@ -20,7 +20,11 @@ import {
   RotateCcw,
   Filter,
   ShieldCheck,
+  CheckCircle2,
+  Bell,
+  Clock,
 } from 'lucide-react';
+import confetti from 'canvas-confetti';
 import { useBakery } from '../../context/BakeryContext';
 import { Expense, ExpenseCategory } from '../../types';
 import { NewExpenseModal } from './NewExpenseModal';
@@ -30,13 +34,23 @@ import { soundFx } from '../../utils/audio';
 type DateFilterPreset = 'ALL' | 'TODAY' | 'YESTERDAY' | 'THIS_MONTH' | 'CUSTOM';
 
 export const ExpenseManagement: React.FC = () => {
-  const { lang, expenses, deleteExpense, clearAllExpenses, sales, exchangeRate, reserveFund } = useBakery();
+  const {
+    lang,
+    expenses,
+    updateExpense,
+    deleteExpense,
+    clearAllExpenses,
+    sales,
+    exchangeRate,
+    reserveFund,
+  } = useBakery();
 
   const [isAddExpenseOpen, setIsAddExpenseOpen] = useState(false);
   const [isReserveFundOpen, setIsReserveFundOpen] = useState(false);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [mainTypeFilter, setMainTypeFilter] = useState<'ALL' | 'INGREDIENTS' | 'GENERAL'>('ALL');
+  const [statusFilter, setStatusFilter] = useState<'ALL' | 'UNPAID' | 'PAID'>('ALL');
   const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
   const [receiptFilter, setReceiptFilter] = useState<'ALL' | 'WITH_RECEIPT' | 'WITHOUT_RECEIPT'>('ALL');
   const [previewReceiptImage, setPreviewReceiptImage] = useState<string | null>(null);
@@ -103,6 +117,60 @@ export const ExpenseManagement: React.FC = () => {
   const ingredientExpensePct = totalExpensesUsd > 0 ? ((totalIngredientsUsd / totalExpensesUsd) * 100).toFixed(0) : '0';
   const generalExpensePct = totalExpensesUsd > 0 ? ((totalGeneralUsd / totalExpensesUsd) * 100).toFixed(0) : '0';
 
+  // Unpaid / Due expenses tracking
+  const unpaidExpenses = useMemo(() => {
+    return expenses.filter((e) => e.paymentStatus === 'UNPAID');
+  }, [expenses]);
+
+  const totalUnpaidKhr = useMemo(() => {
+    return unpaidExpenses.reduce((sum, e) => sum + (e.amountKhr || Math.round(e.amountUsd * exchangeRate)), 0);
+  }, [unpaidExpenses, exchangeRate]);
+
+  const totalUnpaidUsd = useMemo(() => {
+    return unpaidExpenses.reduce((sum, e) => sum + e.amountUsd, 0);
+  }, [unpaidExpenses]);
+
+  // Helper to compute due days
+  const getDueStatus = (dueDate?: string) => {
+    if (!dueDate) return null;
+    const [dYear, dMonth, dDay] = dueDate.split('-').map(Number);
+    if (!dYear || !dMonth || !dDay) return null;
+    const dObj = new Date(dYear, dMonth - 1, dDay);
+    const now = new Date();
+    const todayObj = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const diffMs = dObj.getTime() - todayObj.getTime();
+    const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
+    return {
+      diffDays,
+      isOverdue: diffDays < 0,
+      isDueToday: diffDays === 0,
+      isDueSoon: diffDays > 0 && diffDays <= 3,
+    };
+  };
+
+  const overdueExpenses = useMemo(() => {
+    return unpaidExpenses.filter((e) => {
+      const st = getDueStatus(e.dueDate);
+      return st && st.isOverdue;
+    });
+  }, [unpaidExpenses]);
+
+  const dueTodayExpenses = useMemo(() => {
+    return unpaidExpenses.filter((e) => {
+      const st = getDueStatus(e.dueDate);
+      return st && st.isDueToday;
+    });
+  }, [unpaidExpenses]);
+
+  const handleMarkAsPaid = (expense: Expense) => {
+    soundFx.playSuccess();
+    confetti({ particleCount: 50, spread: 60, origin: { y: 0.6 } });
+    updateExpense(expense.id, {
+      paymentStatus: 'PAID',
+      paidAt: new Date().toISOString().slice(0, 10),
+    });
+  };
+
   // Category map
   const categoryLabels: Record<ExpenseCategory, { labelKh: string; color: string }> = {
     INGREDIENTS: { labelKh: '🥚 គ្រឿងផ្សំធ្វើនំ', color: 'bg-amber-50 text-amber-800 border-amber-200' },
@@ -120,6 +188,10 @@ export const ExpenseManagement: React.FC = () => {
       // Main Type filter
       if (mainTypeFilter === 'INGREDIENTS' && !isIngredientExpense(e)) return false;
       if (mainTypeFilter === 'GENERAL' && isIngredientExpense(e)) return false;
+
+      // Status filter (All vs Unpaid vs Paid)
+      if (statusFilter === 'UNPAID' && e.paymentStatus !== 'UNPAID') return false;
+      if (statusFilter === 'PAID' && e.paymentStatus === 'UNPAID') return false;
 
       const matchCat = selectedCategory === 'ALL' || e.category === selectedCategory;
       const matchReceipt =
@@ -149,7 +221,7 @@ export const ExpenseManagement: React.FC = () => {
 
       return matchCat && matchReceipt && matchDate && matchSearch;
     });
-  }, [expenses, mainTypeFilter, selectedCategory, receiptFilter, datePreset, customDate, todayStr, yesterdayStr, thisMonthStr, searchQuery]);
+  }, [expenses, mainTypeFilter, statusFilter, selectedCategory, receiptFilter, datePreset, customDate, todayStr, yesterdayStr, thisMonthStr, searchQuery]);
 
   // Filtered sums
   const filteredExpensesKhr = useMemo(() => {
@@ -522,6 +594,64 @@ export const ExpenseManagement: React.FC = () => {
         </div>
       </div>
 
+      {/* Due / Unpaid Expenses Alert Banner */}
+      {unpaidExpenses.length > 0 && (
+        <div className="bg-gradient-to-r from-amber-500/15 via-rose-500/15 to-orange-500/15 border-2 border-amber-300 rounded-3xl p-4 sm:p-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-sm animate-in fade-in duration-300">
+          <div className="flex items-start sm:items-center gap-3.5">
+            <div
+              className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 shadow-md ${
+                overdueExpenses.length > 0
+                  ? 'bg-rose-600 text-white animate-pulse shadow-rose-500/30'
+                  : 'bg-amber-500 text-white shadow-amber-500/30'
+              }`}
+            >
+              <Bell className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <h4 className="text-sm font-black text-slate-900">
+                  {overdueExpenses.length > 0
+                    ? `🚨 មានវិក្កយបត្រចំនួន ${overdueExpenses.length} ហួសកាលកំណត់បង់ប្រាក់!`
+                    : dueTodayExpenses.length > 0
+                    ? `⏰ មានវិក្កយបត្រចំនួន ${dueTodayExpenses.length} ដល់ថ្ងៃត្រូវបង់ប្រាក់ថ្ងៃនេះ!`
+                    : `⚠️ មានវិក្កយបត្រជំពាក់/មិនទាន់បង់ចំនួន ${unpaidExpenses.length} លើក`}
+                </h4>
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-rose-100 text-rose-800 border border-rose-200">
+                  សរុប {totalUnpaidKhr.toLocaleString()} ៛ (${totalUnpaidUsd.toFixed(2)})
+                </span>
+              </div>
+              <p className="text-xs text-slate-600 mt-0.5">
+                {overdueExpenses.length > 0
+                  ? `សូមពិនិត្យទូទាត់ចំណាយជាបន្ទាន់ (${overdueExpenses.map((e) => e.title).slice(0, 2).join(', ')}${overdueExpenses.length > 2 ? '...' : ''}) ដើម្បីចៀសវាងការយឺតយ៉ាវ។`
+                  : `ប្រព័ន្ធបានកំណត់រំលឹកកាលបរិច្ឆេទផុតកំណត់បង់ប្រាក់លើទូរសព្ទ & Telegram រួចជាស្រេច។`}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0 w-full md:w-auto">
+            <button
+              type="button"
+              onClick={() => {
+                soundFx.playPop();
+                setStatusFilter(statusFilter === 'UNPAID' ? 'ALL' : 'UNPAID');
+              }}
+              className={`flex-1 md:flex-initial px-4 py-2.5 rounded-2xl text-xs font-black shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                statusFilter === 'UNPAID'
+                  ? 'bg-slate-900 text-white'
+                  : 'bg-white hover:bg-amber-50 text-amber-900 border border-amber-300'
+              }`}
+            >
+              <Filter className="w-3.5 h-3.5" />
+              <span>
+                {statusFilter === 'UNPAID'
+                  ? 'បង្ហាញចំណាយទាំងអស់'
+                  : `មើលវិក្កយបត្រត្រូវបង់ (${unpaidExpenses.length})`}
+              </span>
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Main Expense Type Tabs (បែងចែកដាច់ស្រឡះរវាង គ្រឿងផ្សំ និង ទូទៅ) */}
       <div className="grid grid-cols-1 sm:grid-cols-3 p-1.5 bg-white rounded-3xl border border-rose-100/90 shadow-2xs gap-1.5">
         <button
@@ -705,6 +835,72 @@ export const ExpenseManagement: React.FC = () => {
         {/* Category & Receipt Pills & Search Bar */}
         <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 pt-2 border-t border-slate-100">
           <div className="flex flex-wrap items-center gap-2">
+            {/* Status Filter Bar */}
+            <div className="flex items-center bg-slate-100/80 p-1 rounded-2xl border border-slate-200/80 text-xs shadow-2xs">
+              <button
+                type="button"
+                onClick={() => {
+                  soundFx.playPop();
+                  setStatusFilter('ALL');
+                }}
+                className={`px-3 py-1.5 rounded-xl font-bold transition-all cursor-pointer ${
+                  statusFilter === 'ALL'
+                    ? 'bg-white text-slate-800 shadow-xs'
+                    : 'text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                ស្ថានភាពទាំងអស់
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  soundFx.playPop();
+                  setStatusFilter('PAID');
+                }}
+                className={`px-3 py-1.5 rounded-xl font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                  statusFilter === 'PAID'
+                    ? 'bg-emerald-600 text-white shadow-xs font-black'
+                    : 'text-slate-500 hover:text-emerald-700'
+                }`}
+              >
+                <span>✅ បង់រួច</span>
+                <span
+                  className={`text-[10px] px-1.5 py-0.2 rounded-full font-black ${
+                    statusFilter === 'PAID'
+                      ? 'bg-white/25 text-white'
+                      : 'bg-emerald-50 text-emerald-700'
+                  }`}
+                >
+                  {expenses.filter((e) => e.paymentStatus !== 'UNPAID').length}
+                </span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  soundFx.playPop();
+                  setStatusFilter('UNPAID');
+                }}
+                className={`px-3 py-1.5 rounded-xl font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                  statusFilter === 'UNPAID'
+                    ? 'bg-rose-600 text-white shadow-xs font-black'
+                    : 'text-slate-500 hover:text-rose-600'
+                }`}
+              >
+                <span>⏳ ជំពាក់/ត្រូវបង់</span>
+                {unpaidExpenses.length > 0 && (
+                  <span
+                    className={`text-[10px] px-1.5 py-0.2 rounded-full font-black ${
+                      statusFilter === 'UNPAID'
+                        ? 'bg-white/25 text-white'
+                        : 'bg-rose-100 text-rose-700'
+                    }`}
+                  >
+                    {unpaidExpenses.length}
+                  </span>
+                )}
+              </button>
+            </div>
+
             {/* Receipt Filter Bar */}
             <div className="flex items-center bg-slate-100/80 p-1 rounded-2xl border border-slate-200/80 text-xs shadow-2xs">
               <button
@@ -718,7 +914,7 @@ export const ExpenseManagement: React.FC = () => {
                     : 'text-slate-500 hover:text-slate-800'
                 }`}
               >
-                ទាំងអស់ ({expenses.length})
+                វិក្កយបត្រទាំងអស់ ({expenses.length})
               </button>
               <button
                 onClick={() => {
@@ -972,6 +1168,67 @@ export const ExpenseManagement: React.FC = () => {
                   </p>
                 )}
 
+                {/* Due Date & Payment Status Alert for Mobile */}
+                {expense.paymentStatus === 'UNPAID' ? (
+                  <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-200/90 flex items-center justify-between gap-2 text-xs">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <Clock className="w-4 h-4 text-amber-600 shrink-0" />
+                      <div className="min-w-0">
+                        {(() => {
+                          const st = getDueStatus(expense.dueDate);
+                          if (!st) {
+                            return <span className="font-bold text-amber-900">⏳ មិនទាន់បង់ប្រាក់</span>;
+                          }
+                          if (st.isOverdue) {
+                            return (
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <span className="font-black text-rose-700 bg-rose-100 px-1.5 py-0.5 rounded text-[10px]">
+                                  🚨 ហួសកំណត់ {Math.abs(st.diffDays)} ថ្ងៃ
+                                </span>
+                                <span className="text-[10px] text-rose-600 font-mono">({expense.dueDate})</span>
+                              </div>
+                            );
+                          }
+                          if (st.isDueToday) {
+                            return (
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <span className="font-black text-white bg-amber-500 px-1.5 py-0.5 rounded text-[10px] animate-pulse">
+                                  ⏰ ដល់ថ្ងៃបង់ថ្ងៃនេះ!
+                                </span>
+                              </div>
+                            );
+                          }
+                          return (
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className="font-bold text-amber-800 bg-amber-100/80 px-1.5 py-0.5 rounded text-[10px]">
+                                ⏳ សល់ {st.diffDays} ថ្ងៃ
+                              </span>
+                              <span className="text-[10px] text-amber-700 font-mono">({expense.dueDate})</span>
+                            </div>
+                          );
+                        })()}
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => handleMarkAsPaid(expense)}
+                      className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-[11px] font-black shadow-2xs transition-all active:scale-95 cursor-pointer flex items-center gap-1 shrink-0"
+                    >
+                      <CheckCircle2 className="w-3 h-3" />
+                      <span>បង់រួច</span>
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-1.5 text-[10px] text-emerald-700 font-bold px-1">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>បានបង់ប្រាក់រួចរាល់</span>
+                    {expense.paidAt && (
+                      <span className="text-slate-400 font-normal">({expense.paidAt})</span>
+                    )}
+                  </div>
+                )}
+
                 {/* Footer: Receipt & Actions */}
                 <div className="flex items-center justify-between pt-1 border-t border-slate-100">
                   {expense.receiptImage ? (
@@ -1030,6 +1287,7 @@ export const ExpenseManagement: React.FC = () => {
                 <th className="py-3 px-4">តម្លៃរាយ (Unit Price)</th>
                 <th className="py-3 px-4">សរុប (៛ KHR & $)</th>
                 <th className="py-3 px-4">កាលបរិច្ឆេទ & អ្នកចំណាយ</th>
+                <th className="py-3 px-4">ស្ថានភាព & ផុតកំណត់</th>
                 <th className="py-3 px-4 text-center">វិក្កយបត្រ</th>
                 <th className="py-3 px-4 text-center">សកម្មភាព</th>
               </tr>
@@ -1037,7 +1295,7 @@ export const ExpenseManagement: React.FC = () => {
             <tbody className="divide-y divide-slate-100 font-medium">
               {filteredExpenses.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="p-10 text-center text-slate-400">
+                  <td colSpan={8} className="p-10 text-center text-slate-400">
                     <Receipt className="w-8 h-8 text-rose-300 mx-auto mb-2" />
                     <p className="font-bold text-slate-700 text-sm">
                       {selectedCategory !== 'ALL' && receiptFilter !== 'ALL'
@@ -1186,6 +1444,71 @@ export const ExpenseManagement: React.FC = () => {
                         </div>
                       </td>
 
+                      <td className="py-2.5 px-4">
+                        {expense.paymentStatus === 'UNPAID' ? (
+                          <div className="space-y-1">
+                            {(() => {
+                              const st = getDueStatus(expense.dueDate);
+                              if (!st) {
+                                return (
+                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-black bg-amber-100 text-amber-900 border border-amber-300">
+                                    <Clock className="w-3 h-3 text-amber-700" />
+                                    <span>⏳ មិនទាន់បង់</span>
+                                  </span>
+                                );
+                              }
+                              if (st.isOverdue) {
+                                return (
+                                  <div className="space-y-0.5">
+                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-black bg-rose-100 text-rose-800 border border-rose-300">
+                                      <span>🚨 ហួស {Math.abs(st.diffDays)} ថ្ងៃ</span>
+                                    </span>
+                                    <div className="text-[10px] text-rose-600 font-bold font-mono">
+                                      ផុតកំណត់៖ {expense.dueDate}
+                                    </div>
+                                  </div>
+                                );
+                              }
+                              if (st.isDueToday) {
+                                return (
+                                  <div className="space-y-0.5">
+                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-black bg-amber-500 text-white animate-pulse shadow-2xs">
+                                      <span>⏰ ត្រូវបង់ថ្ងៃនេះ!</span>
+                                    </span>
+                                    <div className="text-[10px] text-amber-700 font-bold font-mono">
+                                      {expense.dueDate}
+                                    </div>
+                                  </div>
+                                );
+                              }
+                              return (
+                                <div className="space-y-0.5">
+                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-bold bg-amber-50 text-amber-900 border border-amber-200">
+                                    <Clock className="w-3 h-3 text-amber-600" />
+                                    <span>សល់ {st.diffDays} ថ្ងៃ</span>
+                                  </span>
+                                  <div className="text-[10px] text-slate-500 font-mono">
+                                    ផុតកំណត់៖ {expense.dueDate}
+                                  </div>
+                                </div>
+                              );
+                            })()}
+                          </div>
+                        ) : (
+                          <div className="space-y-0.5">
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                              <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                              <span>បានបង់រួច</span>
+                            </span>
+                            {expense.paidAt && (
+                              <div className="text-[10px] text-slate-400 font-mono">
+                                {expense.paidAt}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </td>
+
                       <td className="py-2.5 px-4 text-center">
                         {expense.receiptImage ? (
                           <button
@@ -1203,6 +1526,17 @@ export const ExpenseManagement: React.FC = () => {
 
                       <td className="py-2.5 px-4 text-center">
                         <div className="flex items-center justify-center gap-1">
+                          {expense.paymentStatus === 'UNPAID' && (
+                            <button
+                              type="button"
+                              onClick={() => handleMarkAsPaid(expense)}
+                              className="px-2 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 hover:text-emerald-800 rounded-xl transition-all inline-flex items-center gap-1 text-[10px] font-black cursor-pointer shadow-2xs border border-emerald-200"
+                              title="ចុចដើម្បីសម្គាល់ថាបានបង់ប្រាក់រួច (Mark as Paid)"
+                            >
+                              <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                              <span>បង់រួច</span>
+                            </button>
+                          )}
                           <button
                             type="button"
                             onClick={() => {

@@ -13,7 +13,7 @@ import {
 import { soundFx } from '../../utils/audio';
 
 export const NotificationReminderScheduler: React.FC = () => {
-  const { customOrders, expenses, ingredients } = useBakery();
+  const { customOrders, expenses, ingredients, storeInfo, exchangeRate } = useBakery();
   const [permission, setPermission] = useState<NotificationPermission | 'unsupported'>(
     getNotificationPermission
   );
@@ -29,6 +29,8 @@ export const NotificationReminderScheduler: React.FC = () => {
         customOrders,
         expenses,
         ingredients,
+        storeInfo,
+        exchangeRate,
       });
     }, 30000);
 
@@ -37,10 +39,12 @@ export const NotificationReminderScheduler: React.FC = () => {
       customOrders,
       expenses,
       ingredients,
+      storeInfo,
+      exchangeRate,
     });
 
     return () => clearInterval(timer);
-  }, [customOrders, expenses, ingredients]);
+  }, [customOrders, expenses, ingredients, storeInfo, exchangeRate]);
 
   // 2. Refresh permission status when window gains focus
   useEffect(() => {
