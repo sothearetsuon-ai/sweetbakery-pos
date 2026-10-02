@@ -240,7 +240,7 @@ export interface Expense {
 
 export interface ReserveFundTransaction {
   id: string;
-  type: 'WITHDRAW' | 'REPLENISH' | 'ADJUST_TARGET';
+  type: 'WITHDRAW' | 'REPLENISH' | 'ADJUST_TARGET' | 'ADJUST_BALANCE' | 'INITIAL_SET';
   amountKhr: number;
   amountUsd: number;
   reason: string;

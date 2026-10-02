@@ -250,7 +250,13 @@ function lanSyncPlugin(): Plugin {
                 recipes: Array.isArray(incoming.recipes) && incoming.recipes.length > 0 ? incoming.recipes : currentDb.recipes || [],
                 staffMembers: Array.isArray(incoming.staffMembers) && incoming.staffMembers.length > 0 ? incoming.staffMembers : currentDb.staffMembers || [],
                 partyAddons: Array.isArray(incoming.partyAddons) && incoming.partyAddons.length > 0 ? incoming.partyAddons : currentDb.partyAddons || [],
-                reserveFund: incoming.reserveFund || currentDb.reserveFund,
+                reserveFund: (() => {
+                  if (!incoming.reserveFund) return currentDb.reserveFund;
+                  if (!currentDb.reserveFund) return incoming.reserveFund;
+                  const incTime = incoming.reserveFund.updatedAt ? new Date(incoming.reserveFund.updatedAt).getTime() : 0;
+                  const curTime = currentDb.reserveFund.updatedAt ? new Date(currentDb.reserveFund.updatedAt).getTime() : 0;
+                  return incTime >= curTime ? incoming.reserveFund : currentDb.reserveFund;
+                })(),
               };
 
               safeWrite(dbPath, JSON.stringify(mergedDb, null, 2));
@@ -274,13 +280,16 @@ function lanSyncPlugin(): Plugin {
           req.on('data', (chunk) => { body += chunk; });
           req.on('end', () => {
             try {
-              const { id } = JSON.parse(body);
+              const { id, reserveFund } = JSON.parse(body);
               const dbData = getDbData() || {};
               if (Array.isArray(dbData.expenses)) {
                 dbData.expenses = dbData.expenses.filter((e: any) => e.id !== id);
               }
               if (!Array.isArray(dbData.deletedExpenseIds)) dbData.deletedExpenseIds = [];
               if (!dbData.deletedExpenseIds.includes(id)) dbData.deletedExpenseIds.push(id);
+              if (reserveFund) {
+                dbData.reserveFund = reserveFund;
+              }
               safeWrite(dbPath, JSON.stringify(dbData, null, 2));
               res.writeHead(200, { 'Content-Type': 'application/json' });
               res.end(JSON.stringify({ success: true, deletedId: id }));
@@ -463,7 +472,7 @@ function lanSyncPlugin(): Plugin {
           req.on('data', (chunk) => { body += chunk; });
           req.on('end', () => {
             try {
-              const { expense } = JSON.parse(body);
+              const { expense, reserveFund } = JSON.parse(body);
               if (!expense) {
                 res.writeHead(400, { 'Content-Type': 'application/json' });
                 res.end(JSON.stringify({ error: 'Missing expense object' }));
@@ -476,9 +485,38 @@ function lanSyncPlugin(): Plugin {
                 dbData.deletedExpenseIds = dbData.deletedExpenseIds.filter((id: string) => id !== expense.id);
               }
               dbData.expenses = [expense, ...dbData.expenses.filter((e: any) => e.id !== expense.id)];
+              if (reserveFund) {
+                dbData.reserveFund = reserveFund;
+              }
               safeWrite(dbPath, JSON.stringify(dbData, null, 2));
               res.writeHead(200, { 'Content-Type': 'application/json' });
               res.end(JSON.stringify({ success: true, expenseId: expense.id }));
+              broadcastEvent('SYNC_UPDATE');
+            } catch (err: any) {
+              res.writeHead(500, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({ error: err.message }));
+            }
+          });
+          return;
+        }
+
+        // POST Save Reserve Fund (Atomic & Instant)
+        if (req.url === '/api/save-reserve-fund' && req.method === 'POST') {
+          let body = '';
+          req.on('data', (chunk) => { body += chunk; });
+          req.on('end', () => {
+            try {
+              const { reserveFund } = JSON.parse(body);
+              if (!reserveFund) {
+                res.writeHead(400, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ error: 'Missing reserveFund object' }));
+                return;
+              }
+              const dbData = getDbData() || {};
+              dbData.reserveFund = reserveFund;
+              safeWrite(dbPath, JSON.stringify(dbData, null, 2));
+              res.writeHead(200, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({ success: true }));
               broadcastEvent('SYNC_UPDATE');
             } catch (err: any) {
               res.writeHead(500, { 'Content-Type': 'application/json' });

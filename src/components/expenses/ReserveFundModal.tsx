@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   X,
   ShieldCheck,
@@ -12,6 +12,7 @@ import {
   AlertCircle,
   CheckCircle2,
   Wallet,
+  SlidersHorizontal,
 } from 'lucide-react';
 import { useBakery } from '../../context/BakeryContext';
 import { soundFx } from '../../utils/audio';
@@ -22,7 +23,7 @@ interface ReserveFundModalProps {
 }
 
 export const ReserveFundModal: React.FC<ReserveFundModalProps> = ({ isOpen, onClose }) => {
-  const { reserveFund, updateReserveTarget, replenishReserveFund, exchangeRate } = useBakery();
+  const { reserveFund, updateReserveTarget, adjustCurrentBalance, replenishReserveFund, exchangeRate } = useBakery();
 
   const [activeTab, setActiveTab] = useState<'overview' | 'replenish' | 'target' | 'history'>('overview');
   
@@ -39,6 +40,27 @@ export const ReserveFundModal: React.FC<ReserveFundModalProps> = ({ isOpen, onCl
   // Target edit state
   const [editTargetKhr, setEditTargetKhr] = useState<number>(reserveFund.targetAmountKhr);
   const [editTargetUsd, setEditTargetUsd] = useState<string>(reserveFund.targetAmountUsd.toString());
+  const [syncBalanceWithTarget, setSyncBalanceWithTarget] = useState<boolean>(false);
+
+  // Direct balance adjustment state
+  const [isAdjustingBalance, setIsAdjustingBalance] = useState<boolean>(false);
+  const [editBalanceKhr, setEditBalanceKhr] = useState<number>(reserveFund.currentBalanceKhr);
+  const [editBalanceUsd, setEditBalanceUsd] = useState<string>(reserveFund.currentBalanceUsd.toString());
+  const [adjustReason, setAdjustReason] = useState<string>('');
+
+  // Keep form fields synced whenever reserveFund or modal opens
+  useEffect(() => {
+    if (isOpen) {
+      setEditTargetKhr(reserveFund.targetAmountKhr);
+      setEditTargetUsd(reserveFund.targetAmountUsd.toString());
+      setEditBalanceKhr(reserveFund.currentBalanceKhr);
+      setEditBalanceUsd(reserveFund.currentBalanceUsd.toString());
+      const curDeficit = Math.max(0, reserveFund.targetAmountKhr - reserveFund.currentBalanceKhr);
+      setReplenishAmountKhr(curDeficit);
+      const curDeficitUsd = Number((curDeficit / exchangeRate).toFixed(2));
+      setCustomUsdAmount(curDeficitUsd > 0 ? curDeficitUsd.toString() : '');
+    }
+  }, [isOpen, reserveFund.targetAmountKhr, reserveFund.targetAmountUsd, reserveFund.currentBalanceKhr, reserveFund.currentBalanceUsd, exchangeRate]);
 
   // Feedback banner
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -94,10 +116,30 @@ export const ReserveFundModal: React.FC<ReserveFundModalProps> = ({ isOpen, onCl
       return;
     }
 
-    updateReserveTarget(targetKhr, targetUsd);
+    updateReserveTarget(targetKhr, targetUsd, syncBalanceWithTarget);
     soundFx.playSuccess();
     setSuccessMessage(`បានកែប្រែទុនបម្រុងគោលដៅទៅ ${targetKhr.toLocaleString()} ៛ ($${targetUsd.toFixed(2)}) រួចរាល់!`);
     setTimeout(() => setSuccessMessage(null), 4000);
+    setActiveTab('overview');
+  };
+
+  const handleAdjustBalanceSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    soundFx.playPop();
+
+    const balKhr = Number(editBalanceKhr);
+    const balUsd = parseFloat(editBalanceUsd) || Number((balKhr / exchangeRate).toFixed(2));
+
+    if (balKhr < 0) {
+      alert('សូមបញ្ចូលចំនួនទឹកប្រាក់ទុនជាក់ស្តែងត្រឹមត្រូវ!');
+      return;
+    }
+
+    adjustCurrentBalance(balKhr, balUsd, adjustReason.trim() || undefined);
+    soundFx.playSuccess();
+    setSuccessMessage(`បានកែសម្រួលទុនជាក់ស្តែងក្នុងថតទៅ ${balKhr.toLocaleString()} ៛ ($${balUsd.toFixed(2)}) រួចរាល់!`);
+    setTimeout(() => setSuccessMessage(null), 4000);
+    setIsAdjustingBalance(false);
     setActiveTab('overview');
   };
 
@@ -626,6 +668,24 @@ export const ReserveFundModal: React.FC<ReserveFundModalProps> = ({ isOpen, onCl
                 </div>
               </div>
 
+              {/* Sync Balance Checkbox */}
+              <label className="flex items-center gap-2.5 p-3.5 bg-blue-50/60 dark:bg-blue-950/40 rounded-2xl border border-blue-200 dark:border-blue-800 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={syncBalanceWithTarget}
+                  onChange={(e) => setSyncBalanceWithTarget(e.target.checked)}
+                  className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500 cursor-pointer"
+                />
+                <div>
+                  <span className="text-xs font-bold text-slate-900 dark:text-gray-100 block">
+                    កំណត់ទុនជាក់ស្តែងក្នុងថតឱ្យស្មើទុនគោលដៅនេះដែរ
+                  </span>
+                  <span className="text-[11px] text-slate-500 dark:text-gray-400 block">
+                    គូសធីកប្រសិនបើអ្នកបានរាប់សាច់ប្រាក់ក្នុងថតគ្រប់ចំនួនគោលដៅនេះរួចរាល់
+                  </span>
+                </div>
+              </label>
+
               <div className="flex gap-3 pt-2">
                 <button
                   type="button"
@@ -641,6 +701,85 @@ export const ReserveFundModal: React.FC<ReserveFundModalProps> = ({ isOpen, onCl
                   <Settings className="w-4 h-4" />
                   រក្សាទុកការកំណត់ទុនគោលដៅ
                 </button>
+              </div>
+
+              {/* Section to Direct Adjust Current Balance */}
+              <div className="pt-4 border-t border-slate-200 dark:border-gray-700">
+                <button
+                  type="button"
+                  onClick={() => {
+                    soundFx.playPop();
+                    setIsAdjustingBalance(!isAdjustingBalance);
+                  }}
+                  className="w-full flex items-center justify-between p-3.5 bg-slate-100 dark:bg-gray-700/60 rounded-2xl hover:bg-slate-200 dark:hover:bg-gray-700 transition cursor-pointer text-xs font-black text-slate-800 dark:text-gray-200"
+                >
+                  <span className="flex items-center gap-2">
+                    <SlidersHorizontal className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                    កែប្រែទុនជាក់ស្តែងក្នុងថតផ្ទាល់ (Direct Adjust Current Cash Balance)
+                  </span>
+                  <span className="text-slate-500 text-sm">{isAdjustingBalance ? '▲ បិទ' : '▼ បើក'}</span>
+                </button>
+
+                {isAdjustingBalance && (
+                  <div className="mt-3 p-4 bg-emerald-50/50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 rounded-2xl space-y-3">
+                    <p className="text-[11px] text-slate-600 dark:text-slate-300">
+                      ប្រសិនបើចំនួនសាច់ប្រាក់ជាក់ស្តែងក្នុងថតខុសពីប្រព័ន្ធ អ្នកអាចបញ្ចូលចំនួនជាក់ស្តែងនៅទីនេះដើម្បីធ្វើបច្ចុប្បន្នភាពភ្លាមៗ៖
+                    </p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                          សាច់ប្រាក់ជាក់ស្តែង (៛ KHR)
+                        </label>
+                        <input
+                          type="number"
+                          value={editBalanceKhr || ''}
+                          onChange={(e) => {
+                            const val = Math.max(0, parseInt(e.target.value) || 0);
+                            setEditBalanceKhr(val);
+                            setEditBalanceUsd((val / exchangeRate).toFixed(2));
+                          }}
+                          className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-slate-300 dark:border-gray-600 rounded-xl text-base font-bold font-sans text-slate-900 dark:text-white"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                          សមមូលជាដុល្លារ ($ USD)
+                        </label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          value={editBalanceUsd}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setEditBalanceUsd(val);
+                            const num = parseFloat(val) || 0;
+                            setEditBalanceKhr(Math.round(num * exchangeRate));
+                          }}
+                          className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-slate-300 dark:border-gray-600 rounded-xl text-base font-bold font-sans text-slate-900 dark:text-white"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                        មូលហេតុ / ចំណាំ (Reason)
+                      </label>
+                      <input
+                        type="text"
+                        value={adjustReason}
+                        onChange={(e) => setAdjustReason(e.target.value)}
+                        placeholder="ឧ. រាប់ប្រាក់ក្នុងថតជាក់ស្តែងពេលបិទវេន..."
+                        className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-slate-300 dark:border-gray-600 rounded-xl text-xs font-medium text-slate-900 dark:text-white"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleAdjustBalanceSubmit}
+                      className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs shadow transition cursor-pointer"
+                    >
+                      ✓ រក្សាទុកចំនួនទុនជាក់ស្តែង
+                    </button>
+                  </div>
+                )}
               </div>
             </form>
           )}

@@ -369,7 +369,8 @@ interface BakeryContextType {
 
   // Reserve Fund (ទុនបម្រុងហាង & Petty Cash)
   reserveFund: ReserveFund;
-  updateReserveTarget: (targetKhr: number, targetUsd?: number) => void;
+  updateReserveTarget: (targetKhr: number, targetUsd?: number, updateCurrentBalance?: boolean) => void;
+  adjustCurrentBalance: (balanceKhr: number, balanceUsd?: number, reason?: string) => void;
   replenishReserveFund: (amountKhr: number, amountUsd?: number, source?: string, notes?: string) => void;
   withdrawReserveFund: (amountKhr: number, amountUsd: number, reason: string, expenseId?: string) => void;
 
@@ -993,6 +994,18 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [reserveFund, setReserveFund] = useState<ReserveFund>(() => {
     const defaultTargetKhr = 1000000;
     const defaultTargetUsd = 250;
+    if (globalIsDemoMode) {
+      seedDemoDataIfMissing();
+      const savedDemo = localStorage.getItem('demo_bakery_reserve_fund');
+      if (savedDemo) {
+        try {
+          const parsed = JSON.parse(savedDemo);
+          if (parsed && typeof parsed.targetAmountKhr === 'number') {
+            return parsed;
+          }
+        } catch (e) {}
+      }
+    }
     const saved = localStorage.getItem('bakery_reserve_fund');
     if (saved) {
       try {
@@ -1024,9 +1037,16 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     };
   });
 
+  const reserveFundRef = useRef<ReserveFund>(reserveFund);
+  reserveFundRef.current = reserveFund;
+
   useEffect(() => {
-    safeSetStorage('bakery_reserve_fund', JSON.stringify(reserveFund));
-    syncSaveDoc('settings', 'reserveFund', reserveFund);
+    if (globalIsDemoMode) {
+      localStorage.setItem('demo_bakery_reserve_fund', JSON.stringify(reserveFund));
+    } else {
+      safeSetStorage('bakery_reserve_fund', JSON.stringify(reserveFund));
+      syncSaveDoc('settings', 'reserveFund', reserveFund);
+    }
   }, [reserveFund]);
 
   // Sales management (including past sales)
@@ -1421,10 +1441,18 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       safeSetStorage('bakery_party_addons', JSON.stringify(data.partyAddons));
     }
 
-    // 10. Sync Reserve Fund
+    // 10. Sync Reserve Fund (timestamp protected to avoid race condition rollbacks)
     if (data.reserveFund) {
-      setReserveFund(data.reserveFund);
-      safeSetStorage('bakery_reserve_fund', JSON.stringify(data.reserveFund));
+      setReserveFund((currentLocal) => {
+        const incomingTime = data.reserveFund.updatedAt ? new Date(data.reserveFund.updatedAt).getTime() : 0;
+        const localTime = currentLocal?.updatedAt ? new Date(currentLocal.updatedAt).getTime() : 0;
+        if (incomingTime >= localTime) {
+          safeSetStorage('bakery_reserve_fund', JSON.stringify(data.reserveFund));
+          reserveFundRef.current = data.reserveFund;
+          return data.reserveFund;
+        }
+        return currentLocal;
+      });
     }
 
     // 11. Sync Store Info & Settings
@@ -2072,12 +2100,20 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       }
     });
 
-    // Subscribe to reserve fund
+    // Subscribe to reserve fund (timestamp protected)
     const unsubReserveFund = subscribeToFirestoreDoc<ReserveFund>('settings', 'reserveFund', (cloudRf) => {
       if (globalIsDemoMode || !cloudRf) return;
       if (typeof cloudRf.targetAmountKhr === 'number') {
-        setReserveFund(cloudRf);
-        safeSetStorage('bakery_reserve_fund', JSON.stringify(cloudRf));
+        setReserveFund((currentLocal) => {
+          const cloudTime = cloudRf.updatedAt ? new Date(cloudRf.updatedAt).getTime() : 0;
+          const localTime = currentLocal?.updatedAt ? new Date(currentLocal.updatedAt).getTime() : 0;
+          if (cloudTime >= localTime) {
+            safeSetStorage('bakery_reserve_fund', JSON.stringify(cloudRf));
+            reserveFundRef.current = cloudRf;
+            return cloudRf;
+          }
+          return currentLocal;
+        });
       }
     });
 
@@ -2095,88 +2131,137 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     };
   }, [currentStoreTenantId]);
 
+  // Synchronous persist helper for Reserve Fund across storage, server disk & LAN
+  const persistReserveFund = (nextRf: ReserveFund) => {
+    isUpdatingFromLan.current = false;
+    reserveFundRef.current = nextRf;
+    setReserveFund(nextRf);
+
+    if (globalIsDemoMode) {
+      localStorage.setItem('demo_bakery_reserve_fund', JSON.stringify(nextRf));
+    } else {
+      safeSetStorage('bakery_reserve_fund', JSON.stringify(nextRf));
+      syncSaveDoc('settings', 'reserveFund', nextRf);
+
+      // Fast atomic write to backend disk JSON
+      fetch('/api/save-reserve-fund', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reserveFund: nextRf }),
+      }).catch(() => {});
+
+      // Instant broadcast
+      saveToLanSync({ reserveFund: nextRf }, true);
+    }
+  };
+
   // Reserve Fund actions
-  const updateReserveTarget = (targetKhr: number, targetUsd?: number) => {
+  const updateReserveTarget = (targetKhr: number, targetUsd?: number, updateCurrentBalance?: boolean) => {
     const validKhr = Math.max(0, targetKhr);
     const validUsd = targetUsd !== undefined ? targetUsd : Number((validKhr / exchangeRate).toFixed(2));
-    setReserveFund((prev) => {
-      const diffKhr = validKhr - prev.targetAmountKhr;
-      const newBalanceKhr = Math.max(0, prev.currentBalanceKhr + diffKhr);
-      const newBalanceUsd = Number((newBalanceKhr / exchangeRate).toFixed(2));
-      const tx: ReserveFundTransaction = {
-        id: `rf-adj-${Date.now()}`,
-        type: 'ADJUST_TARGET',
-        amountKhr: validKhr,
-        amountUsd: validUsd,
-        reason: `កែប្រែទុនបម្រុងគោលដៅទៅ ${validKhr.toLocaleString()} ៛`,
-        performedBy: currentStaff?.name || 'ម្ចាស់ហាង (Admin)',
-        date: new Date().toISOString().slice(0, 10),
-        createdAt: new Date().toISOString(),
-      };
-      return {
-        ...prev,
-        targetAmountKhr: validKhr,
-        targetAmountUsd: validUsd,
-        currentBalanceKhr: newBalanceKhr,
-        currentBalanceUsd: newBalanceUsd,
-        history: [tx, ...prev.history].slice(0, 100),
-        updatedAt: new Date().toISOString(),
-      };
-    });
+    const current = reserveFundRef.current;
+    const newBalanceKhr = updateCurrentBalance ? validKhr : current.currentBalanceKhr;
+    const newBalanceUsd = updateCurrentBalance ? validUsd : current.currentBalanceUsd;
+    const tx: ReserveFundTransaction = {
+      id: `rf-adj-${Date.now()}`,
+      type: 'ADJUST_TARGET',
+      amountKhr: validKhr,
+      amountUsd: validUsd,
+      reason: `កែប្រែទុនបម្រុងគោលដៅទៅ ${validKhr.toLocaleString()} ៛`,
+      performedBy: currentStaff?.name || 'ម្ចាស់ហាង (Admin)',
+      date: new Date().toISOString().slice(0, 10),
+      createdAt: new Date().toISOString(),
+    };
+    const nextRf: ReserveFund = {
+      ...current,
+      targetAmountKhr: validKhr,
+      targetAmountUsd: validUsd,
+      currentBalanceKhr: newBalanceKhr,
+      currentBalanceUsd: newBalanceUsd,
+      history: [tx, ...(current.history || [])].slice(0, 100),
+      updatedAt: new Date().toISOString(),
+    };
+    persistReserveFund(nextRf);
   };
 
-  const withdrawReserveFund = (amountKhr: number, amountUsd: number, reason: string, expenseId?: string) => {
+  const adjustCurrentBalance = (balanceKhr: number, balanceUsd?: number, reason?: string) => {
+    const validKhr = Math.max(0, balanceKhr);
+    const validUsd = balanceUsd !== undefined ? balanceUsd : Number((validKhr / exchangeRate).toFixed(2));
+    const current = reserveFundRef.current;
+    const tx: ReserveFundTransaction = {
+      id: `rf-bal-${Date.now()}`,
+      type: 'ADJUST_BALANCE',
+      amountKhr: validKhr,
+      amountUsd: validUsd,
+      reason: reason || `កែសម្រួលទុនជាក់ស្តែងក្នុងថតទៅ ${validKhr.toLocaleString()} ៛`,
+      performedBy: currentStaff?.name || 'ម្ចាស់ហាង (Admin)',
+      date: new Date().toISOString().slice(0, 10),
+      createdAt: new Date().toISOString(),
+    };
+    const nextRf: ReserveFund = {
+      ...current,
+      currentBalanceKhr: validKhr,
+      currentBalanceUsd: validUsd,
+      history: [tx, ...(current.history || [])].slice(0, 100),
+      updatedAt: new Date().toISOString(),
+    };
+    persistReserveFund(nextRf);
+  };
+
+  const withdrawReserveFund = (amountKhr: number, amountUsd: number, reason: string, expenseId?: string): ReserveFund => {
     const validKhr = Math.max(0, amountKhr);
     const validUsd = Math.max(0, amountUsd);
-    setReserveFund((prev) => {
-      const newBalKhr = Math.max(0, prev.currentBalanceKhr - validKhr);
-      const newBalUsd = Math.max(0, Number((newBalKhr / exchangeRate).toFixed(2)));
-      const tx: ReserveFundTransaction = {
-        id: `rf-wd-${Date.now()}`,
-        type: 'WITHDRAW',
-        amountKhr: validKhr,
-        amountUsd: validUsd,
-        reason,
-        expenseId,
-        performedBy: currentStaff?.name || 'ម្ចាស់ហាង (Admin)',
-        date: new Date().toISOString().slice(0, 10),
-        createdAt: new Date().toISOString(),
-      };
-      return {
-        ...prev,
-        currentBalanceKhr: newBalKhr,
-        currentBalanceUsd: newBalUsd,
-        history: [tx, ...prev.history].slice(0, 100),
-        updatedAt: new Date().toISOString(),
-      };
-    });
+    const current = reserveFundRef.current;
+    const newBalKhr = Math.max(0, current.currentBalanceKhr - validKhr);
+    const newBalUsd = Math.max(0, Number((newBalKhr / exchangeRate).toFixed(2)));
+    const tx: ReserveFundTransaction = {
+      id: `rf-wd-${Date.now()}`,
+      type: 'WITHDRAW',
+      amountKhr: validKhr,
+      amountUsd: validUsd,
+      reason,
+      expenseId,
+      performedBy: currentStaff?.name || 'ម្ចាស់ហាង (Admin)',
+      date: new Date().toISOString().slice(0, 10),
+      createdAt: new Date().toISOString(),
+    };
+    const nextRf: ReserveFund = {
+      ...current,
+      currentBalanceKhr: newBalKhr,
+      currentBalanceUsd: newBalUsd,
+      history: [tx, ...(current.history || [])].slice(0, 100),
+      updatedAt: new Date().toISOString(),
+    };
+    persistReserveFund(nextRf);
+    return nextRf;
   };
 
-  const replenishReserveFund = (amountKhr: number, amountUsd?: number, source?: string, notes?: string) => {
+  const replenishReserveFund = (amountKhr: number, amountUsd?: number, source?: string, notes?: string): ReserveFund => {
     const validKhr = Math.max(0, amountKhr);
     const validUsd = amountUsd !== undefined ? amountUsd : Number((validKhr / exchangeRate).toFixed(2));
-    setReserveFund((prev) => {
-      const newBalKhr = prev.currentBalanceKhr + validKhr;
-      const newBalUsd = Number((newBalKhr / exchangeRate).toFixed(2));
-      const tx: ReserveFundTransaction = {
-        id: `rf-rep-${Date.now()}`,
-        type: 'REPLENISH',
-        amountKhr: validKhr,
-        amountUsd: validUsd,
-        reason: notes || 'បូកបង្គ្រប់ទុនបម្រុងហាង',
-        source: source || 'ពីប្រាក់ចំណូលលក់ប្រចាំថ្ងៃ',
-        performedBy: currentStaff?.name || 'ម្ចាស់ហាង (Admin)',
-        date: new Date().toISOString().slice(0, 10),
-        createdAt: new Date().toISOString(),
-      };
-      return {
-        ...prev,
-        currentBalanceKhr: newBalKhr,
-        currentBalanceUsd: newBalUsd,
-        history: [tx, ...prev.history].slice(0, 100),
-        updatedAt: new Date().toISOString(),
-      };
-    });
+    const current = reserveFundRef.current;
+    const newBalKhr = current.currentBalanceKhr + validKhr;
+    const newBalUsd = Number((newBalKhr / exchangeRate).toFixed(2));
+    const tx: ReserveFundTransaction = {
+      id: `rf-rep-${Date.now()}`,
+      type: 'REPLENISH',
+      amountKhr: validKhr,
+      amountUsd: validUsd,
+      reason: notes || 'បូកបង្គ្រប់ទុនបម្រុងហាង',
+      source: source || 'ពីប្រាក់ចំណូលលក់ប្រចាំថ្ងៃ',
+      performedBy: currentStaff?.name || 'ម្ចាស់ហាង (Admin)',
+      date: new Date().toISOString().slice(0, 10),
+      createdAt: new Date().toISOString(),
+    };
+    const nextRf: ReserveFund = {
+      ...current,
+      currentBalanceKhr: newBalKhr,
+      currentBalanceUsd: newBalUsd,
+      history: [tx, ...(current.history || [])].slice(0, 100),
+      updatedAt: new Date().toISOString(),
+    };
+    persistReserveFund(nextRf);
+    return nextRf;
   };
 
   // Expenses actions
@@ -2190,21 +2275,23 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       createdAt: new Date().toISOString(),
     };
 
-    fetch('/api/save-expense', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ expense: newExpense }),
-    }).catch(() => {});
-
     // If paid via Reserve Fund, automatically withdraw from reserve fund
-    if (newExpense.paymentMethod === 'RESERVE_FUND') {
-      withdrawReserveFund(
+    let nextRf: ReserveFund | undefined = undefined;
+    const isPaid = !newExpense.paymentStatus || newExpense.paymentStatus === 'PAID';
+    if (newExpense.paymentMethod === 'RESERVE_FUND' && isPaid) {
+      nextRf = withdrawReserveFund(
         newExpense.amountKhr,
         newExpense.amountUsd,
         `ដកចំណាយ៖ ${newExpense.title}`,
         newExpense.id
       );
     }
+
+    fetch('/api/save-expense', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ expense: newExpense, reserveFund: nextRf }),
+    }).catch(() => {});
 
     setExpenses((prev) => {
       const updated = [newExpense, ...prev];
@@ -2216,6 +2303,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         expenses: updated,
         storeInfo,
         flavors,
+        reserveFund: nextRf || reserveFundRef.current,
         telegramConfig: getStoredTelegramConfig(),
       }, true);
       return updated;
@@ -2228,16 +2316,48 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     isUpdatingFromLan.current = false;
     if (lanSyncTimer.current) clearTimeout(lanSyncTimer.current);
 
+    let nextRf: ReserveFund | undefined = undefined;
+
     setExpenses((prev) => {
+      const oldExpense = prev.find((e) => e.id === id);
       const updated = prev.map((exp) => (exp.id === id ? { ...exp, ...updatedData } : exp));
       const target = updated.find((e) => e.id === id);
-      if (target) {
+
+      if (target && oldExpense) {
+        const oldWasRfPaid = oldExpense.paymentMethod === 'RESERVE_FUND' && (!oldExpense.paymentStatus || oldExpense.paymentStatus === 'PAID');
+        const newIsRfPaid = target.paymentMethod === 'RESERVE_FUND' && (!target.paymentStatus || target.paymentStatus === 'PAID');
+
+        let rfDeltaKhr = 0; // Positive means deduct more, negative means refund
+        let reason = '';
+
+        if (!oldWasRfPaid && newIsRfPaid) {
+          rfDeltaKhr = target.amountKhr;
+          reason = `ដកចំណាយ (កែប្រែវិធីបង់)៖ ${target.title}`;
+        } else if (oldWasRfPaid && !newIsRfPaid) {
+          rfDeltaKhr = -oldExpense.amountKhr;
+          reason = `បង្វិលសងវិញ (កែប្រែវិធីបង់)៖ ${target.title}`;
+        } else if (oldWasRfPaid && newIsRfPaid) {
+          rfDeltaKhr = target.amountKhr - oldExpense.amountKhr;
+          if (rfDeltaKhr > 0) {
+            reason = `ដកបន្ថែម (កែប្រែចំនួនទឹកប្រាក់)៖ ${target.title}`;
+          } else if (rfDeltaKhr < 0) {
+            reason = `បង្វិលសងវិញ (កែប្រែបន្ថយចំនួន)៖ ${target.title}`;
+          }
+        }
+
+        if (rfDeltaKhr > 0) {
+          nextRf = withdrawReserveFund(rfDeltaKhr, Number((rfDeltaKhr / exchangeRate).toFixed(2)), reason, target.id);
+        } else if (rfDeltaKhr < 0) {
+          nextRf = replenishReserveFund(Math.abs(rfDeltaKhr), Number((Math.abs(rfDeltaKhr) / exchangeRate).toFixed(2)), 'កែប្រែចំណាយ', reason);
+        }
+
         fetch('/api/save-expense', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ expense: target }),
+          body: JSON.stringify({ expense: target, reserveFund: nextRf }),
         }).catch(() => {});
       }
+
       safeSetStorage('bakery_expenses', JSON.stringify(updated));
       saveToLanSync({
         products,
@@ -2246,10 +2366,12 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         expenses: updated,
         storeInfo,
         flavors,
+        reserveFund: nextRf || reserveFundRef.current,
         telegramConfig: getStoredTelegramConfig(),
       }, true);
       return updated;
     });
+
     syncSaveDoc('expenses', id, updatedData);
   };
 
@@ -2259,9 +2381,12 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     recordDeletedId('expenses', id, deletedExpenseIds);
 
     const targetExp = expenses.find((e) => e.id === id);
-    // If the deleted expense was from Reserve Fund, automatically refund it back
-    if (targetExp && targetExp.paymentMethod === 'RESERVE_FUND') {
-      replenishReserveFund(
+    let nextRf: ReserveFund | undefined = undefined;
+
+    // If the deleted expense was from Reserve Fund and paid, automatically refund it back
+    const wasRfPaid = targetExp && targetExp.paymentMethod === 'RESERVE_FUND' && (!targetExp.paymentStatus || targetExp.paymentStatus === 'PAID');
+    if (wasRfPaid && targetExp) {
+      nextRf = replenishReserveFund(
         targetExp.amountKhr,
         targetExp.amountUsd,
         'បង្វិលសងវិញពីការលុបចំណាយ',
@@ -2273,7 +2398,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     fetch('/api/delete-expense', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id }),
+      body: JSON.stringify({ id, reserveFund: nextRf }),
     }).catch(() => {});
 
     // 2. Optimistically update local React state & LocalStorage
@@ -2287,6 +2412,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         expenses: updated,
         storeInfo,
         flavors,
+        reserveFund: nextRf || reserveFundRef.current,
         telegramConfig: getStoredTelegramConfig(),
       }, true);
       return updated;
@@ -3891,6 +4017,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         totalExpensesKhr,
         reserveFund,
         updateReserveTarget,
+        adjustCurrentBalance,
         replenishReserveFund,
         withdrawReserveFund,
         sales,
