@@ -1301,11 +1301,16 @@ export const ExpenseManagement: React.FC = () => {
                     </button>
                   </div>
                 ) : (
-                  <div className="flex items-center gap-1.5 text-[10px] text-emerald-700 font-bold px-1">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                  <div className="flex items-center gap-1.5 text-[10px] text-emerald-700 font-bold px-1 flex-wrap">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
                     <span>បានបង់ប្រាក់រួចរាល់</span>
                     {expense.paidAt && (
                       <span className="text-slate-400 font-normal">({expense.paidAt})</span>
+                    )}
+                    {expense.dueDate && expense.paidAt && expense.paidAt <= expense.dueDate && (
+                      <span className="text-[9px] bg-emerald-100 text-emerald-800 px-1.5 py-0.2 rounded font-bold">
+                        ✓ បង់មុនថ្ងៃផុតកំណត់
+                      </span>
                     )}
                   </div>
                 )}
@@ -1607,6 +1612,11 @@ export const ExpenseManagement: React.FC = () => {
                             {expense.paidAt && (
                               <div className="text-[10px] text-slate-400 font-mono">
                                 {expense.paidAt}
+                              </div>
+                            )}
+                            {expense.dueDate && expense.paidAt && expense.paidAt <= expense.dueDate && (
+                              <div className="text-[9px] text-emerald-600 font-bold">
+                                ✓ បង់មុនថ្ងៃផុតកំណត់
                               </div>
                             )}
                           </div>

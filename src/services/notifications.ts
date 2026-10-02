@@ -240,8 +240,10 @@ export const runPeriodicNotificationChecks = (params: {
   if (config.remindExpenseDueDate !== false && Array.isArray(params.expenses)) {
     params.expenses.forEach((expense) => {
       // ពិនិត្យតែចំណាយដែលមិនទាន់បង់ (UNPAID) និងមានថ្ងៃផុតកំណត់
-      const isUnpaid = expense.paymentStatus === 'UNPAID';
-      if (!isUnpaid || !expense.dueDate) return;
+      // ប្រសិនបើបានបង់រួចហើយ ឬបង់មុនកាលកំណត់ (PAID / paidAt) មិនបាច់ផ្តល់ដំណឹងទៀតឡើយ!
+      const isPaid = expense.paymentStatus === 'PAID' || !!expense.paidAt;
+      if (isPaid) return;
+      if (expense.paymentStatus !== 'UNPAID' || !expense.dueDate) return;
 
       const [dYear, dMonth, dDay] = expense.dueDate.split('-').map(Number);
       if (!dYear || !dMonth || !dDay) return;

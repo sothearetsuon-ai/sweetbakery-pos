@@ -572,6 +572,9 @@ export const notifyTelegramExpenseDueAlert = async (
   const config = await getStoredTelegramConfigAsync();
   if (!config.enabled || config.notifyExpenseDue === false || !config.botToken || !config.chatId) return;
 
+  // ប្រសិនបើបានបង់រួចហើយ ឬបង់មុនកាលកំណត់ (PAID / paidAt) មិនបាច់ផ្ញើសារដាស់តឿនជាដាច់ខាត
+  if (expense.paymentStatus === 'PAID' || !!expense.paidAt) return;
+
   const storeTitle = storeInfo?.nameKh || 'ហាងនំ SweetBakery';
   const amountKhr = expense.amountKhr ?? Math.round(expense.amountUsd * exchangeRate);
 
