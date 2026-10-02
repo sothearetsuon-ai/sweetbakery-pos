@@ -23,6 +23,7 @@ import { useMusic } from '../../context/MusicContext';
 import { t } from '../../utils/translations';
 import { soundFx } from '../../utils/audio';
 import { StaffPermissions } from '../../types';
+import { AppTheme } from '../../utils/themeManager';
 
 export type TabType =
   | 'pos'
@@ -40,6 +41,7 @@ interface SidebarProps {
   setActiveTab: (tab: TabType) => void;
   onOpenSettings: (tab?: 'store' | 'khqr' | 'staff' | 'currency') => void;
   onOpenThemePicker?: () => void;
+  currentTheme?: AppTheme;
   isMobileOpen?: boolean;
   onCloseMobile?: () => void;
 }
@@ -49,6 +51,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   setActiveTab,
   onOpenSettings,
   onOpenThemePicker,
+  currentTheme,
   isMobileOpen = false,
   onCloseMobile,
 }) => {
@@ -399,11 +402,20 @@ export const Sidebar: React.FC<SidebarProps> = ({
             className="w-full flex items-center justify-between px-3.5 py-2 rounded-2xl font-bold text-xs text-slate-600 hover:bg-white hover:text-pink-600 transition-all border border-transparent hover:border-pink-200/60 shadow-2xs cursor-pointer group"
           >
             <div className="flex items-center gap-3">
-              <Palette className="w-4 h-4 text-pink-500 transition-transform group-hover:rotate-45" />
-              <span>ប្តូរពណ៌ផ្ទៃ 🎨</span>
+              <span className="text-base group-hover:scale-125 transition-transform">
+                {currentTheme?.emoji || '🎨'}
+              </span>
+              <span className="font-battambang">ប្តូរពណ៌ផ្ទៃ & Theme</span>
             </div>
-            <span className="text-[10px] text-pink-600 font-bold bg-pink-50 px-2 py-0.5 rounded-full border border-pink-100">
-              Themes
+            <span
+              className={`text-[10px] font-bold px-2 py-0.5 rounded-full border font-battambang ${
+                currentTheme?.category === 'festival'
+                  ? currentTheme.badgeClass
+                  : 'text-pink-600 bg-pink-50 border-pink-100'
+              }`}
+            >
+              {currentTheme?.category === 'festival' ? '🎉 ' : ''}
+              {currentTheme?.nameKh?.split(' ')[0] || 'Themes'}
             </span>
           </button>
         )}

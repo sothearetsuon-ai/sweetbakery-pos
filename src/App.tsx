@@ -41,6 +41,7 @@ export const App: React.FC = () => {
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
   const [currentTheme, setCurrentTheme] = useState<AppTheme>(() => getSavedTheme());
   const [isThemePickerOpen, setIsThemePickerOpen] = useState(false);
+  const [dismissedBannerThemeId, setDismissedBannerThemeId] = useState<string | null>(null);
 
   // App Super Admin Portal State
   const [isSuperAdmin, setIsSuperAdmin] = useState(() => isSuperAdminAuthenticated());
@@ -146,6 +147,7 @@ export const App: React.FC = () => {
   const handleSelectTheme = (theme: AppTheme) => {
     setCurrentTheme(theme);
     saveTheme(theme.id);
+    setDismissedBannerThemeId(null);
   };
 
   const handleOpenSettings = (tab: SettingsTab = 'store') => {
@@ -198,6 +200,27 @@ export const App: React.FC = () => {
         />
       )}
 
+      {/* Festive Holiday Celebration Top Banner */}
+      {currentTheme.category === 'festival' && currentTheme.festiveBannerKh && dismissedBannerThemeId !== currentTheme.id && (
+        <div
+          className={`px-3 sm:px-4 py-1.5 text-xs font-bold flex items-center justify-between border-b shadow-2xs animate-in slide-in-from-top duration-300 font-battambang shrink-0 ${currentTheme.badgeClass}`}
+        >
+          <div className="flex-1 flex items-center justify-center gap-2 text-center truncate">
+            <span className="text-sm animate-bounce shrink-0">{currentTheme.ambientMotif || currentTheme.emoji}</span>
+            <span className="truncate">{currentTheme.festiveBannerKh}</span>
+            <span className="text-sm animate-bounce shrink-0">{currentTheme.ambientMotif || currentTheme.emoji}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setDismissedBannerThemeId(currentTheme.id)}
+            className="text-slate-500 hover:text-slate-800 text-xs px-2 py-0.5 rounded-lg hover:bg-black/5 cursor-pointer shrink-0 transition-colors ml-2"
+            title="បិទបដានេះ"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
       {/* Top Navigation */}
       <Navbar
         onOpenShiftModal={() => setIsShiftModalOpen(true)}
@@ -209,6 +232,7 @@ export const App: React.FC = () => {
         }}
         onToggleMobileDrawer={() => setIsMobileDrawerOpen((prev) => !prev)}
         onOpenThemePicker={() => setIsThemePickerOpen(true)}
+        currentTheme={currentTheme}
         isSuperAdmin={isSuperAdmin}
         onOpenSuperAdminPortal={() => setIsSuperAdminModalOpen(true)}
         onOpenCustomerOrderLinkModal={() => setIsCustomerOrderLinkModalOpen(true)}
@@ -221,6 +245,7 @@ export const App: React.FC = () => {
           setActiveTab={handleSelectTab}
           onOpenSettings={handleOpenSettings}
           onOpenThemePicker={() => setIsThemePickerOpen(true)}
+          currentTheme={currentTheme}
           isMobileOpen={isMobileDrawerOpen}
           onCloseMobile={() => setIsMobileDrawerOpen(false)}
         />

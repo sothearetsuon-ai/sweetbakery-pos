@@ -35,6 +35,7 @@ import { SwitchStaffModal } from '../staff/SwitchStaffModal';
 import { StaffDropdown } from '../staff/StaffDropdown';
 import { MobileConnectModal } from './MobileConnectModal';
 import { SettingsTab } from '../settings/SettingsModal';
+import { AppTheme } from '../../utils/themeManager';
 
 interface NavbarProps {
   onOpenShiftModal: () => void;
@@ -42,6 +43,7 @@ interface NavbarProps {
   onOpenStaffTab?: () => void;
   onToggleMobileDrawer?: () => void;
   onOpenThemePicker?: () => void;
+  currentTheme?: AppTheme;
   isSuperAdmin?: boolean;
   onOpenSuperAdminPortal?: () => void;
   onOpenCustomerOrderLinkModal?: () => void;
@@ -53,6 +55,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenStaffTab,
   onToggleMobileDrawer,
   onOpenThemePicker,
+  currentTheme,
   isSuperAdmin = false,
   onOpenSuperAdminPortal,
   onOpenCustomerOrderLinkModal,
@@ -219,6 +222,18 @@ export const Navbar: React.FC<NavbarProps> = ({
             </div>
           </div>
 
+          {/* Festival Season Pill */}
+          {currentTheme?.category === 'festival' && currentTheme.seasonTagKh && (
+            <div
+              onClick={onOpenThemePicker}
+              className={`hidden lg:flex items-center gap-1.5 px-3 py-1 rounded-2xl text-xs font-bold border shadow-2xs cursor-pointer transition-all hover:scale-105 font-battambang ${currentTheme.badgeClass}`}
+              title="ចុចដើម្បីប្តូរ Theme រដូវកាលពិធីបុណ្យ"
+            >
+              <span className="text-sm animate-bounce">{currentTheme.ambientMotif || currentTheme.emoji}</span>
+              <span>{currentTheme.seasonTagKh}</span>
+            </div>
+          )}
+
           {/* Low Stock Badge (Compact) */}
           {lowStockCount > 0 && (
             <div className="hidden lg:flex items-center gap-1 bg-rose-50 border border-rose-200 text-rose-700 px-2.5 py-1 rounded-2xl text-[11px] font-bold shadow-2xs animate-bounce">
@@ -382,10 +397,15 @@ export const Navbar: React.FC<NavbarProps> = ({
                   soundFx.playPop();
                   onOpenThemePicker();
                 }}
-                title="ផ្លាស់ប្តូរពណ៌ផ្ទៃខាងក្រោយ (Theme Color)"
-                className="w-8 h-8 rounded-xl flex items-center justify-center text-slate-600 hover:text-pink-600 hover:bg-white transition-all cursor-pointer"
+                title={`ផ្លាស់ប្តូរ Theme រដូវកាល & ពណ៌ផ្ទៃ (បច្ចុប្បន្ន: ${currentTheme?.nameKh || 'ធម្មតា'})`}
+                className="h-8 px-2 sm:px-2.5 rounded-xl flex items-center gap-1 text-slate-700 hover:text-pink-600 hover:bg-white transition-all cursor-pointer border border-transparent hover:border-pink-200 shadow-2xs group"
               >
-                <Palette className="w-4 h-4 text-pink-500" />
+                <span className="text-base group-hover:scale-125 transition-transform">
+                  {currentTheme?.emoji || '🎨'}
+                </span>
+                <span className="hidden xl:inline text-[11px] font-bold text-slate-600 group-hover:text-pink-600 font-battambang max-w-[100px] truncate">
+                  {currentTheme?.nameKh?.split(' ')[0] || 'Theme'}
+                </span>
               </button>
             )}
 
@@ -533,10 +553,15 @@ export const Navbar: React.FC<NavbarProps> = ({
                       setIsQuickToolsOpen(false);
                       onOpenThemePicker();
                     }}
-                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-slate-700 hover:bg-pink-50 hover:text-pink-600 transition-colors text-left cursor-pointer"
+                    className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold text-slate-700 hover:bg-pink-50 hover:text-pink-600 transition-colors text-left cursor-pointer font-battambang"
                   >
-                    <Palette className="w-4 h-4 text-pink-500" />
-                    <span>ពណ៌ផ្ទៃខាងក្រោយ 🎨</span>
+                    <div className="flex items-center gap-2.5">
+                      <span className="text-base">{currentTheme?.emoji || '🎨'}</span>
+                      <span>ពណ៌ផ្ទៃ & Theme</span>
+                    </div>
+                    <span className="text-[10px] text-pink-600 font-bold bg-pink-50 px-2 py-0.5 rounded-full border border-pink-100">
+                      {currentTheme?.nameKh?.split(' ')[0] || 'Theme'}
+                    </span>
                   </button>
                 )}
 
