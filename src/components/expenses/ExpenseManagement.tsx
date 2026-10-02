@@ -23,6 +23,7 @@ import {
   CheckCircle2,
   Bell,
   Clock,
+  Zap,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { useBakery } from '../../context/BakeryContext';
@@ -43,6 +44,7 @@ export const ExpenseManagement: React.FC = () => {
     sales,
     exchangeRate,
     reserveFund,
+    batchDeductExpensesToReserveFund,
   } = useBakery();
 
   const [isAddExpenseOpen, setIsAddExpenseOpen] = useState(false);
@@ -60,6 +62,16 @@ export const ExpenseManagement: React.FC = () => {
   // Date filtering state
   const [datePreset, setDatePreset] = useState<DateFilterPreset>('ALL');
   const [customDate, setCustomDate] = useState<string>(() => new Date().toISOString().slice(0, 10));
+
+  // Cash expenses that have not been deducted from Reserve Fund
+  const undeductedCashExpenses = useMemo(() => {
+    return expenses.filter(
+      (e) => e.paymentMethod !== 'RESERVE_FUND' && (!e.paymentStatus || e.paymentStatus === 'PAID')
+    );
+  }, [expenses]);
+  const undeductedCashTotalKhr = useMemo(() => {
+    return undeductedCashExpenses.reduce((sum, e) => sum + e.amountKhr, 0);
+  }, [undeductedCashExpenses]);
 
   // Date helpers
   const todayStr = useMemo(() => new Date().toISOString().slice(0, 10), []);
@@ -402,7 +414,7 @@ export const ExpenseManagement: React.FC = () => {
           </div>
         </div>
 
-        <div className="flex items-center gap-3 w-full md:w-auto justify-between md:justify-end border-t md:border-t-0 pt-3 md:pt-0 border-slate-100 dark:border-slate-700">
+        <div className="flex items-center gap-2 sm:gap-3 w-full md:w-auto justify-between md:justify-end border-t md:border-t-0 pt-3 md:pt-0 border-slate-100 dark:border-slate-700 flex-wrap">
           {deficitKhr > 0 ? (
             <div className="text-left md:text-right bg-amber-50 dark:bg-amber-950/50 px-3.5 py-2 rounded-2xl border border-amber-300 dark:border-amber-700">
               <div className="text-xs font-black text-amber-950 dark:text-amber-200">ចំនួនត្រូវបូកបង្គ្រប់៖</div>
@@ -415,6 +427,29 @@ export const ExpenseManagement: React.FC = () => {
               ✓ ទុនបម្រុងពេញលេញ ១០០%
             </div>
           )}
+
+          {undeductedCashExpenses.length > 0 && (
+            <button
+              type="button"
+              onClick={() => {
+                soundFx.playPop();
+                if (
+                  confirm(
+                    `តើអ្នកចង់កាត់ចំណាយសាច់ប្រាក់ចំនួន ${undeductedCashExpenses.length} ប្រតិបត្តិការ (សរុប ${undeductedCashTotalKhr.toLocaleString()} ៛) ចេញពីទុនបម្រុងទាំងអស់មែនទេ?`
+                  )
+                ) {
+                  soundFx.playSuccess();
+                  batchDeductExpensesToReserveFund(undeductedCashExpenses.map((e) => e.id));
+                }
+              }}
+              className="px-3 sm:px-4 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white rounded-2xl text-xs font-black transition-all shadow-md shadow-amber-500/20 flex items-center gap-1.5 cursor-pointer active:scale-95"
+              title="កាត់ចំណាយសាច់ប្រាក់ដែលបានកត់ត្រាពីមុនចេញពីទុនបម្រុង"
+            >
+              <Zap className="w-3.5 h-3.5 fill-current" />
+              <span>⚡ កាត់ចំណាយសាច់ប្រាក់ ({undeductedCashExpenses.length}) ពីទុន</span>
+            </button>
+          )}
+
           <button
             onClick={() => {
               soundFx.playPop();
@@ -1146,19 +1181,42 @@ export const ExpenseManagement: React.FC = () => {
 
                   <div className="flex items-center gap-1.5">
                     <span className="font-bold text-slate-700 text-[11px]">{expense.paidBy}</span>
-                    <span className={`text-[9px] px-1.5 py-0.5 rounded font-mono ${
-                      expense.paymentMethod === 'RESERVE_FUND'
-                        ? 'bg-emerald-100 text-emerald-800 border border-emerald-300 font-bold'
-                        : 'bg-white text-slate-600 border border-slate-200'
-                    }`}>
-                      {expense.paymentMethod === 'RESERVE_FUND'
-                        ? '🏦 ទុនបម្រុង'
-                        : expense.paymentMethod === 'CASH_KHR'
-                        ? 'សាច់ប្រាក់ ៛'
-                        : expense.paymentMethod === 'BANK_TRANSFER'
-                        ? 'ABA'
-                        : 'សាច់ប្រាក់ $'}
-                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (expense.paymentMethod === 'RESERVE_FUND') {
+                          soundFx.playPop();
+                          updateExpense(expense.id, { paymentMethod: 'CASH_KHR' });
+                        } else {
+                          soundFx.playSuccess();
+                          updateExpense(expense.id, { paymentMethod: 'RESERVE_FUND' });
+                        }
+                      }}
+                      className={`text-[10px] px-2 py-0.5 rounded-lg font-mono font-bold transition-all cursor-pointer border flex items-center gap-1 ${
+                        expense.paymentMethod === 'RESERVE_FUND'
+                          ? 'bg-emerald-100 text-emerald-900 border-emerald-300'
+                          : 'bg-amber-50 text-amber-900 border-amber-300 hover:bg-emerald-50'
+                      }`}
+                      title={
+                        expense.paymentMethod === 'RESERVE_FUND'
+                          ? 'បានកាត់ពីទុនបម្រុងរួច (ចុចដើម្បីបង្វិលសងទុនវិញ)'
+                          : 'ចុចដើម្បីកាត់ចំណាយនេះចេញពីទុនបម្រុងភ្លាមៗ'
+                      }
+                    >
+                      {expense.paymentMethod === 'RESERVE_FUND' ? (
+                        <>
+                          <span className="text-emerald-700 font-black">✓</span>
+                          <span>🏦 ដកពីទុនរួច</span>
+                        </>
+                      ) : (
+                        <>
+                          <span>+ 🏦 កាត់ពីទុន</span>
+                          <span className="text-[9px] text-amber-700">
+                            ({expense.paymentMethod === 'CASH_KHR' ? '៛' : expense.paymentMethod === 'BANK_TRANSFER' ? 'ABA' : '$'})
+                          </span>
+                        </>
+                      )}
+                    </button>
                   </div>
                 </div>
 
@@ -1428,19 +1486,42 @@ export const ExpenseManagement: React.FC = () => {
                         </button>
                         <div className="flex items-center gap-1.5 mt-0.5">
                           <span className="font-bold text-slate-800 text-[11px]">{expense.paidBy}</span>
-                          <span className={`text-[9px] px-1.5 py-0.2 rounded font-mono ${
-                            expense.paymentMethod === 'RESERVE_FUND'
-                              ? 'bg-emerald-100 text-emerald-800 border border-emerald-300 font-bold'
-                              : 'bg-slate-100 text-slate-600'
-                          }`}>
-                            {expense.paymentMethod === 'RESERVE_FUND'
-                              ? '🏦 ទុនបម្រុង'
-                              : expense.paymentMethod === 'CASH_KHR'
-                              ? 'សាច់ប្រាក់ ៛'
-                              : expense.paymentMethod === 'BANK_TRANSFER'
-                              ? 'ផ្ទេរ/ABA'
-                              : 'សាច់ប្រាក់ $'}
-                          </span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (expense.paymentMethod === 'RESERVE_FUND') {
+                                soundFx.playPop();
+                                updateExpense(expense.id, { paymentMethod: 'CASH_KHR' });
+                              } else {
+                                soundFx.playSuccess();
+                                updateExpense(expense.id, { paymentMethod: 'RESERVE_FUND' });
+                              }
+                            }}
+                            className={`text-[10px] px-2 py-0.5 rounded-lg font-mono font-bold transition-all cursor-pointer border flex items-center gap-1 ${
+                              expense.paymentMethod === 'RESERVE_FUND'
+                                ? 'bg-emerald-100 text-emerald-900 border-emerald-300 hover:bg-emerald-200'
+                                : 'bg-slate-100 text-slate-700 border-slate-200 hover:bg-emerald-50 hover:text-emerald-800 hover:border-emerald-300'
+                            }`}
+                            title={
+                              expense.paymentMethod === 'RESERVE_FUND'
+                                ? 'បានកាត់ពីទុនបម្រុងរួច (ចុចដើម្បីបង្វិលសងទុនវិញ)'
+                                : 'ចុចដើម្បីកាត់ចំណាយនេះចេញពីទុនបម្រុងភ្លាមៗ'
+                            }
+                          >
+                            {expense.paymentMethod === 'RESERVE_FUND' ? (
+                              <>
+                                <span className="text-emerald-600 font-black">✓</span>
+                                <span>🏦 ដកពីទុនរួច</span>
+                              </>
+                            ) : (
+                              <>
+                                <span>+ 🏦 កាត់ពីទុន</span>
+                                <span className="text-[9px] text-slate-400">
+                                  ({expense.paymentMethod === 'CASH_KHR' ? '៛' : expense.paymentMethod === 'BANK_TRANSFER' ? 'ABA' : '$'})
+                                </span>
+                              </>
+                            )}
+                          </button>
                         </div>
                       </td>
 

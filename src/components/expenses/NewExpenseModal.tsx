@@ -155,7 +155,7 @@ export const NewExpenseModal: React.FC<NewExpenseModalProps> = ({
 
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [paidBy, setPaidBy] = useState(currentStaff?.name || 'មេការហាង (Manager)');
-  const [paymentMethod, setPaymentMethod] = useState<'CASH_USD' | 'CASH_KHR' | 'BANK_TRANSFER' | 'RESERVE_FUND'>('CASH_KHR');
+  const [paymentMethod, setPaymentMethod] = useState<'CASH_USD' | 'CASH_KHR' | 'BANK_TRANSFER' | 'RESERVE_FUND'>('RESERVE_FUND');
   const [paymentStatus, setPaymentStatus] = useState<'PAID' | 'UNPAID'>('PAID');
   const [dueDate, setDueDate] = useState<string>('');
   const [remindBeforeDays, setRemindBeforeDays] = useState<number>(1);
@@ -204,7 +204,7 @@ export const NewExpenseModal: React.FC<NewExpenseModalProps> = ({
       setAmountKhr('');
       setDate(new Date().toISOString().slice(0, 10));
       setPaidBy(currentStaff?.name || 'មេការហាង (Manager)');
-      setPaymentMethod('CASH_KHR');
+      setPaymentMethod('RESERVE_FUND');
       setPaymentStatus('PAID');
       setDueDate('');
       setRemindBeforeDays(1);
@@ -862,40 +862,75 @@ export const NewExpenseModal: React.FC<NewExpenseModalProps> = ({
 
           {/* Payment Method */}
           <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1">វិធីសាស្ត្រទូទាត់ប្រាក់</label>
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-xs font-bold text-slate-700">វិធីសាស្ត្រទូទាត់ប្រាក់ (Payment Method)</label>
+              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                paymentMethod === 'RESERVE_FUND'
+                  ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
+                  : 'bg-slate-100 text-slate-600 border-slate-200'
+              }`}>
+                {paymentMethod === 'RESERVE_FUND' ? '⚡ នឹងកាត់ចេញពីទុនបម្រុងហាង' : 'មិនកាត់ពីទុនបម្រុង'}
+              </span>
+            </div>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               {[
-                { id: 'CASH_KHR', label: 'សាច់ប្រាក់ (៛ KHR)' },
-                { id: 'BANK_TRANSFER', label: 'ផ្ទេរធនាគារ / ABA' },
-                { id: 'CASH_USD', label: 'សាច់ប្រាក់ ($ USD)' },
-                { id: 'RESERVE_FUND', label: '🏦 ដកពីទុនបម្រុង' },
+                { id: 'RESERVE_FUND', label: '🏦 ដកពីទុនបម្រុង', sub: 'Petty Cash' },
+                { id: 'CASH_KHR', label: '💵 សាច់ប្រាក់ (៛)', sub: 'Cash KHR' },
+                { id: 'BANK_TRANSFER', label: '📱 ផ្ទេរធនាគារ', sub: 'ABA / Bakong' },
+                { id: 'CASH_USD', label: '💵 សាច់ប្រាក់ ($)', sub: 'Cash USD' },
               ].map((m) => (
                 <button
                   key={m.id}
                   type="button"
-                  onClick={() => setPaymentMethod(m.id as any)}
-                  className={`py-2 px-2 text-xs rounded-xl font-bold border transition-all cursor-pointer ${
+                  onClick={() => {
+                    soundFx.playPop();
+                    setPaymentMethod(m.id as any);
+                  }}
+                  className={`py-2 px-2 text-xs rounded-xl font-bold border transition-all cursor-pointer flex flex-col items-center justify-center gap-0.5 ${
                     paymentMethod === m.id
                       ? m.id === 'RESERVE_FUND'
-                        ? 'bg-emerald-50 border-emerald-500 text-emerald-800 shadow-2xs ring-1 ring-emerald-400/30'
+                        ? 'bg-emerald-600 border-emerald-600 text-white shadow-md ring-2 ring-emerald-400/40'
                         : 'bg-rose-50 border-rose-500 text-rose-700 shadow-2xs ring-1 ring-rose-400/30'
                       : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
                   }`}
                 >
-                  {m.label}
+                  <span className="font-black">{m.label}</span>
+                  <span className={`text-[9px] ${paymentMethod === m.id && m.id === 'RESERVE_FUND' ? 'text-emerald-100' : 'text-slate-400'}`}>
+                    {m.sub}
+                  </span>
                 </button>
               ))}
             </div>
 
             {paymentMethod === 'RESERVE_FUND' && (
-              <div className="mt-2.5 p-3 bg-emerald-50/90 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 rounded-xl text-xs flex items-start gap-2.5 text-emerald-900 dark:text-emerald-200">
-                <span className="text-base">🏦</span>
-                <div>
-                  <div className="font-bold">
-                    ទុនបម្រុងបច្ចុប្បន្ន៖ {reserveFund.currentBalanceKhr.toLocaleString()} ៛ (${reserveFund.currentBalanceUsd.toFixed(2)})
+              <div className="mt-2.5 p-3.5 bg-gradient-to-r from-emerald-50/90 via-teal-50/70 to-emerald-50/90 border-2 border-emerald-300 rounded-2xl text-xs space-y-2 text-emerald-950 shadow-sm animate-in fade-in">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xl">🏦</span>
+                    <span className="font-black text-emerald-900 text-sm">ដកចេញពីទុនបម្រុងហាង (Petty Cash)</span>
                   </div>
-                  <div className="text-[11px] text-emerald-700 dark:text-emerald-400 mt-0.5">
-                    ប្រព័ន្ធនឹងកាត់ចេញពីទុនបម្រុងដោយស្វ័យប្រវត្ត។ នៅពេលដកចំណាយរួច អ្នកអាចបូកបង្គ្រប់ត្រឡប់ទៅទុនបម្រុងវិញគ្រប់ចំនួនគោលដៅ ({reserveFund.targetAmountKhr.toLocaleString()} ៛)។
+                  <span className="bg-emerald-600 text-white font-black text-[10px] px-2.5 py-0.5 rounded-full uppercase tracking-wide">
+                    ✓ កាត់ស្វ័យប្រវត្តិ
+                  </span>
+                </div>
+                <div className="grid grid-cols-3 gap-2 pt-1 border-t border-emerald-200/80 text-center">
+                  <div className="bg-white/90 p-2 rounded-xl border border-emerald-200 shadow-2xs">
+                    <div className="text-[10px] text-slate-500 font-bold">ទុនបច្ចុប្បន្ន</div>
+                    <div className="font-black text-slate-800 text-xs sm:text-sm font-sans">
+                      {reserveFund.currentBalanceKhr.toLocaleString()} ៛
+                    </div>
+                  </div>
+                  <div className="bg-rose-50/95 p-2 rounded-xl border border-rose-200 shadow-2xs">
+                    <div className="text-[10px] text-rose-600 font-bold">កាត់ចំណាយនេះ</div>
+                    <div className="font-black text-rose-600 text-xs sm:text-sm font-sans">
+                      -{numAmountKhr.toLocaleString()} ៛
+                    </div>
+                  </div>
+                  <div className="bg-emerald-100/90 p-2 rounded-xl border border-emerald-300 shadow-2xs">
+                    <div className="text-[10px] text-emerald-800 font-bold">ទុននៅសល់ជាក់ស្តែង</div>
+                    <div className="font-black text-emerald-800 text-xs sm:text-sm font-sans">
+                      {Math.max(0, reserveFund.currentBalanceKhr - numAmountKhr).toLocaleString()} ៛
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1162,12 +1197,18 @@ export const NewExpenseModal: React.FC<NewExpenseModalProps> = ({
               </button>
               <button
                 type="submit"
-                className="px-6 py-2.5 bg-gradient-to-r from-rose-600 to-pink-600 hover:from-rose-700 hover:to-pink-700 text-white text-xs font-black rounded-2xl shadow-lg shadow-rose-600/25 flex items-center gap-2 transition-all active:scale-95 cursor-pointer"
+                className={`px-6 py-2.5 text-white text-xs font-black rounded-2xl shadow-lg flex items-center gap-2 transition-all active:scale-95 cursor-pointer ${
+                  paymentMethod === 'RESERVE_FUND'
+                    ? 'bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 hover:from-emerald-700 hover:to-teal-700 shadow-emerald-600/30 ring-2 ring-emerald-400/30'
+                    : 'bg-gradient-to-r from-rose-600 to-pink-600 hover:from-rose-700 hover:to-pink-700 shadow-rose-600/25'
+                }`}
               >
                 <CheckCircle className="w-4 h-4" />
                 <span>
                   {expenseToEdit
                     ? 'រក្សាទុកការកែប្រែ'
+                    : paymentMethod === 'RESERVE_FUND'
+                    ? `✓ កត់ត្រា និងកាត់ពីទុនបម្រុង (${numAmountKhr.toLocaleString()} ៛)`
                     : `កត់ត្រាការចំណាយ (${numAmountKhr.toLocaleString()} ៛)`}
                 </span>
               </button>

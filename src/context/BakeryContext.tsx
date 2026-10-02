@@ -373,6 +373,7 @@ interface BakeryContextType {
   adjustCurrentBalance: (balanceKhr: number, balanceUsd?: number, reason?: string) => void;
   replenishReserveFund: (amountKhr: number, amountUsd?: number, source?: string, notes?: string) => void;
   withdrawReserveFund: (amountKhr: number, amountUsd: number, reason: string, expenseId?: string) => void;
+  batchDeductExpensesToReserveFund: (expenseIds: string[]) => void;
 
   sales: CompletedSale[];
   completeSale: (sale: Omit<CompletedSale, 'id' | 'orderNumber' | 'createdAt'>) => CompletedSale;
@@ -2375,6 +2376,54 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     syncSaveDoc('expenses', id, updatedData);
   };
 
+  const batchDeductExpensesToReserveFund = (expenseIds: string[]) => {
+    isUpdatingFromLan.current = false;
+    if (lanSyncTimer.current) clearTimeout(lanSyncTimer.current);
+
+    setExpenses((prev) => {
+      const targets = prev.filter((e) => expenseIds.includes(e.id) && e.paymentMethod !== 'RESERVE_FUND');
+      if (targets.length === 0) return prev;
+
+      const totalDeductKhr = targets.reduce((sum, e) => sum + e.amountKhr, 0);
+      const totalDeductUsd = Number((totalDeductKhr / exchangeRate).toFixed(2));
+
+      const updated = prev.map((exp) =>
+        expenseIds.includes(exp.id) ? { ...exp, paymentMethod: 'RESERVE_FUND' as const } : exp
+      );
+
+      const nextRf = withdrawReserveFund(
+        totalDeductKhr,
+        totalDeductUsd,
+        `កាត់ចំណាយសាច់ប្រាក់សរុប ${targets.length} ប្រតិបត្តិការ ចូលទុនបម្រុង`
+      );
+
+      safeSetStorage('bakery_expenses', JSON.stringify(updated));
+      saveToLanSync({
+        products,
+        sales,
+        customOrders,
+        expenses: updated,
+        storeInfo,
+        flavors,
+        reserveFund: nextRf,
+        telegramConfig: getStoredTelegramConfig(),
+      }, true);
+
+      // Save each updated expense to disk
+      targets.forEach((t) => {
+        const updatedTarget = { ...t, paymentMethod: 'RESERVE_FUND' as const };
+        fetch('/api/save-expense', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ expense: updatedTarget, reserveFund: nextRf }),
+        }).catch(() => {});
+        syncSaveDoc('expenses', t.id, { paymentMethod: 'RESERVE_FUND' });
+      });
+
+      return updated;
+    });
+  };
+
   const deleteExpense = (id: string) => {
     isUpdatingFromLan.current = false;
     if (lanSyncTimer.current) clearTimeout(lanSyncTimer.current);
@@ -4020,6 +4069,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         adjustCurrentBalance,
         replenishReserveFund,
         withdrawReserveFund,
+        batchDeductExpensesToReserveFund,
         sales,
         completeSale,
         addPastSale,
