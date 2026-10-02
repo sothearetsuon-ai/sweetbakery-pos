@@ -8,7 +8,21 @@ import './index.css';
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     const serviceWorkerUrl = new URL('sw.js', document.baseURI).toString();
-    navigator.serviceWorker.register(serviceWorkerUrl).catch((error) => {
+    navigator.serviceWorker.register(serviceWorkerUrl).then((registration) => {
+      // Check for updates periodically and on focus
+      registration.update();
+      registration.onupdatefound = () => {
+        const installingWorker = registration.installing;
+        if (installingWorker) {
+          installingWorker.onstatechange = () => {
+            if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
+              console.log('[SW] New version detected. Reloading for instant update...');
+              window.location.reload();
+            }
+          };
+        }
+      };
+    }).catch((error) => {
       console.warn('Offline cache registration failed:', error);
     });
   });
