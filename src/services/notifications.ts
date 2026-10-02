@@ -145,8 +145,43 @@ export const sendTestNotification = (): boolean => {
 /**
  * Check and trigger reminders in the background
  */
-// Keep track of fired tags today so we don't spam
+// Persistent LocalStorage + in-memory cache to strictly guarantee reminders only fire ONCE per day
+const FIRED_REMINDERS_KEY = 'bakery_fired_notification_tags';
 const firedReminders = new Set<string>();
+
+const getStoredFiredTags = (): Record<string, string> => {
+  try {
+    const raw = localStorage.getItem(FIRED_REMINDERS_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch (e) {}
+  return {};
+};
+
+const hasFiredToday = (tag: string, todayStr: string): boolean => {
+  if (firedReminders.has(tag)) return true;
+  const stored = getStoredFiredTags();
+  if (stored[tag] === todayStr) {
+    firedReminders.add(tag);
+    return true;
+  }
+  return false;
+};
+
+const markFiredToday = (tag: string, todayStr: string) => {
+  firedReminders.add(tag);
+  try {
+    const stored = getStoredFiredTags();
+    const cleaned: Record<string, string> = {};
+    const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    for (const [k, d] of Object.entries(stored)) {
+      if (d >= threeDaysAgo) {
+        cleaned[k] = d;
+      }
+    }
+    cleaned[tag] = todayStr;
+    localStorage.setItem(FIRED_REMINDERS_KEY, JSON.stringify(cleaned));
+  } catch (e) {}
+};
 
 export const runPeriodicNotificationChecks = (params: {
   customOrders: CustomCakeOrder[];
@@ -164,7 +199,7 @@ export const runPeriodicNotificationChecks = (params: {
   const currentMins = String(now.getMinutes()).padStart(2, '0');
   const currentTimeStr = `${currentHours}:${currentMins}`;
 
-  // 1. Expense & Shift Reminders at scheduled times
+  // 1. Expense & Shift Reminders at scheduled times (Max 1 time per slot per day)
   if (config.remindExpenses) {
     const times = [
       config.expenseReminderTime1,
@@ -175,8 +210,8 @@ export const runPeriodicNotificationChecks = (params: {
     for (const targetTime of times) {
       if (currentTimeStr === targetTime) {
         const tag = `expense-reminder-${todayStr}-${targetTime}`;
-        if (!firedReminders.has(tag)) {
-          firedReminders.add(tag);
+        if (!hasFiredToday(tag, todayStr)) {
+          markFiredToday(tag, todayStr);
 
           const expensesToday = params.expenses.filter((e) => e.date === todayStr);
           sendDeviceNotification('💸 រំលឹកកត់ត្រាចំណាយ (SweetBakery POS)', {
@@ -189,7 +224,7 @@ export const runPeriodicNotificationChecks = (params: {
     }
   }
 
-  // 2. Cake Pickup Reminders
+  // 2. Cake Pickup Reminders (Max 1 time per order pickup)
   if (config.remindCakePickup && Array.isArray(params.customOrders)) {
     const advanceMs = (config.cakePickupAdvanceMins || 60) * 60 * 1000;
     
@@ -207,8 +242,8 @@ export const runPeriodicNotificationChecks = (params: {
           if (diffMs > 0 && diffMs <= advanceMs) {
             const minsLeft = Math.round(diffMs / 60000);
             const tag = `pickup-alert-${order.id}-${todayStr}`;
-            if (!firedReminders.has(tag)) {
-              firedReminders.add(tag);
+            if (!hasFiredToday(tag, todayStr)) {
+              markFiredToday(tag, todayStr);
               sendDeviceNotification(`🎂 រំលឹកមកយកនំ: ${order.customerName} (${order.pickupTime})`, {
                 body: `នំខេក "${order.cakeName || order.flavor}" នឹងត្រូវមកយកក្នុងរយៈពេល ${minsLeft} នាទីទៀត! សូមរៀបចំនំឱ្យរួចរាល់។`,
                 tag,
@@ -221,13 +256,13 @@ export const runPeriodicNotificationChecks = (params: {
     });
   }
 
-  // 3. Low stock warning (once per day)
+  // 3. Low stock warning (Max 1 time per day)
   if (config.remindLowStock && Array.isArray(params.ingredients)) {
     const lowStockItems = params.ingredients.filter((i) => i.currentStock <= i.minAlertStock);
     if (lowStockItems.length > 0 && currentTimeStr === '09:00') {
       const tag = `low-stock-${todayStr}`;
-      if (!firedReminders.has(tag)) {
-        firedReminders.add(tag);
+      if (!hasFiredToday(tag, todayStr)) {
+        markFiredToday(tag, todayStr);
         sendDeviceNotification('⚠️ ការដាស់តឿន៖ គ្រឿងផ្សំជិតអស់ស្តុក!', {
           body: `មានគ្រឿងផ្សំចំនួន ${lowStockItems.length} មុខជិតអស់ពីស្តុក (${lowStockItems.map((i) => i.nameKh).slice(0, 3).join(', ')}...)។ សូមពិនិត្យទិញបន្ថែម។`,
           tag,
@@ -236,7 +271,7 @@ export const runPeriodicNotificationChecks = (params: {
     }
   }
 
-  // 4. General Expense Due Date Reminders (ដាស់តឿនថ្ងៃផុតកំណត់បង់ប្រាក់ចំណាយទូទៅ)
+  // 4. General Expense Due Date Reminders (ដាស់តឿនថ្ងៃផុតកំណត់បង់ប្រាក់ចំណាយទូទៅ - តែ ១ ដងក្នុង ១ ថ្ងៃគត់)
   if (config.remindExpenseDueDate !== false && Array.isArray(params.expenses)) {
     params.expenses.forEach((expense) => {
       // ពិនិត្យតែចំណាយដែលមិនទាន់បង់ (UNPAID) និងមានថ្ងៃផុតកំណត់
@@ -259,31 +294,35 @@ export const runPeriodicNotificationChecks = (params: {
 
       // បើដល់កាលកំណត់ ឬសល់ថ្ងៃក្នុងរង្វង់ដាស់តឿន ឬហួសកាលកំណត់
       if (diffDays <= remindBeforeDays) {
+        // កម្រិតឱ្យផ្ញើសារដាស់តឿនតែ ១ ដងគត់ក្នុង ១ ថ្ងៃ (Only 1 notification per day per expense)
         const tag = `expense-due-${expense.id}-${todayStr}`;
-        if (!firedReminders.has(tag)) {
-          firedReminders.add(tag);
-
-          let dueStatusText = '';
-          if (diffDays < 0) {
-            dueStatusText = `🚨 ហួសកំណត់បង់ប្រាក់ ${Math.abs(diffDays)} ថ្ងៃហើយ!`;
-          } else if (diffDays === 0) {
-            dueStatusText = `⏰ ដល់ថ្ងៃត្រូវបង់ប្រាក់ថ្ងៃនេះ!`;
-          } else {
-            dueStatusText = `⏳ សល់ ${diffDays} ថ្ងៃទៀតដល់ថ្ងៃកំណត់បង់!`;
-          }
-
-          const exRate = params.exchangeRate || 4100;
-          const amountKhr = expense.amountKhr ?? Math.round(expense.amountUsd * exRate);
-
-          sendDeviceNotification(`💸 រំលឹកបង់ប្រាក់ចំណាយ៖ ${expense.title}`, {
-            body: `${dueStatusText} ចំនួនទឹកប្រាក់៖ $${expense.amountUsd.toFixed(2)} (${amountKhr.toLocaleString()} ៛) ផុតកំណត់ថ្ងៃ ${expense.dueDate}។`,
-            tag,
-            requireInteraction: true,
-          });
-
-          // ផ្ញើសារដាស់តឿនទៅ Telegram Bot
-          notifyTelegramExpenseDueAlert(expense, diffDays, params.storeInfo, exRate).catch(() => {});
+        if (hasFiredToday(tag, todayStr) || expense.lastDueAlertDate === todayStr) {
+          return;
         }
+
+        markFiredToday(tag, todayStr);
+        expense.lastDueAlertDate = todayStr;
+
+        let dueStatusText = '';
+        if (diffDays < 0) {
+          dueStatusText = `🚨 ហួសកំណត់បង់ប្រាក់ ${Math.abs(diffDays)} ថ្ងៃហើយ!`;
+        } else if (diffDays === 0) {
+          dueStatusText = `⏰ ដល់ថ្ងៃត្រូវបង់ប្រាក់ថ្ងៃនេះ!`;
+        } else {
+          dueStatusText = `⏳ សល់ ${diffDays} ថ្ងៃទៀតដល់ថ្ងៃកំណត់បង់!`;
+        }
+
+        const exRate = params.exchangeRate || 4100;
+        const amountKhr = expense.amountKhr ?? Math.round(expense.amountUsd * exRate);
+
+        sendDeviceNotification(`💸 រំលឹកបង់ប្រាក់ចំណាយ៖ ${expense.title}`, {
+          body: `${dueStatusText} ចំនួនទឹកប្រាក់៖ $${expense.amountUsd.toFixed(2)} (${amountKhr.toLocaleString()} ៛) ផុតកំណត់ថ្ងៃ ${expense.dueDate}។`,
+          tag,
+          requireInteraction: true,
+        });
+
+        // ផ្ញើសារដាស់តឿនទៅ Telegram Bot (កំណត់ត្រឹមតែ ១ ដងគត់ក្នុង ១ ថ្ងៃ)
+        notifyTelegramExpenseDueAlert(expense, diffDays, params.storeInfo, exRate).catch(() => {});
       }
     });
   }

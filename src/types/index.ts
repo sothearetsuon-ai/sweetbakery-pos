@@ -232,6 +232,7 @@ export interface Expense {
   dueDate?: string;                 // កាលបរិច្ឆេទផុតកំណត់បង់ប្រាក់ (YYYY-MM-DD)
   remindBeforeDays?: number;        // រំលឹកមុនប៉ុន្មានថ្ងៃ (0 = ចំថ្ងៃ, 1 = មុន ១ ថ្ងៃ, 2, 3...)
   paidAt?: string;                  // កាលបរិច្ឆេទដែលបានទូទាត់រួច
+  lastDueAlertDate?: string;        // កាលបរិច្ឆេទចុងក្រោយដែលបានជូនដំណឹង (YYYY-MM-DD) ដើម្បីកុំឱ្យផ្ញើលើសពី ១ ដងក្នុងមួយថ្ងៃ
   receiptImage?: string;
   notes?: string;
   date: string;
