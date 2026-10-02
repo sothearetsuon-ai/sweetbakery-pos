@@ -268,7 +268,7 @@ const syncDeleteDoc = (collectionName: string, docId: string) => {
 export const isExpensePaidFromReserve = (exp?: Partial<Expense> | null) => {
   if (!exp) return false;
   const isPaid = !exp.paymentStatus || exp.paymentStatus === 'PAID';
-  return isPaid && (exp.paymentMethod === 'RESERVE_FUND' || exp.paymentMethod === 'CASH_KHR' || exp.paymentMethod === 'CASH_USD');
+  return isPaid && exp.paymentMethod === 'RESERVE_FUND';
 };
 
 interface BakeryContextType {
@@ -1053,13 +1053,9 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     const targetKhr = Number(reserveFund.targetAmountKhr) || 1000000;
     const targetUsd = Number(reserveFund.targetAmountUsd) || Number((targetKhr / exchangeRate).toFixed(2));
 
-    // Sum all cash expenses that are paid (exclude only explicit bank transfers)
-    const totalCashExpensesKhr = expenses
-      .filter((e) => {
-        const isPaid = !e.paymentStatus || e.paymentStatus === 'PAID';
-        const isBank = e.paymentMethod === 'BANK_TRANSFER';
-        return isPaid && !isBank;
-      })
+    // Sum all expenses explicitly paid from Reserve Fund
+    const totalReserveExpensesKhr = expenses
+      .filter((e) => isExpensePaidFromReserve(e))
       .reduce((sum, e) => {
         const amt = Number(e.amountKhr) || Math.round((Number(e.amountUsd) || 0) * exchangeRate);
         return sum + amt;
@@ -1070,8 +1066,8 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       .filter((tx) => tx.type === 'REPLENISH')
       .reduce((sum, tx) => sum + (Number(tx.amountKhr) || 0), 0);
 
-    // Calculated balance: Target Float - Cash Expenses + Replenishments
-    const calculatedBalKhr = Math.max(0, targetKhr - totalCashExpensesKhr + totalReplenishedKhr);
+    // Calculated balance: Target Float - Reserve Expenses + Replenishments
+    const calculatedBalKhr = Math.max(0, targetKhr - totalReserveExpensesKhr + totalReplenishedKhr);
     const calculatedBalUsd = Number((calculatedBalKhr / exchangeRate).toFixed(2));
 
     return {
