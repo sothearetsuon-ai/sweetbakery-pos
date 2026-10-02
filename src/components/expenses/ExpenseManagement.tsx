@@ -411,6 +411,14 @@ export const ExpenseManagement: React.FC = () => {
               <span className="text-slate-700 dark:text-slate-300 font-medium">
                 គោលដៅកំណត់៖ <strong className="text-slate-900 dark:text-white font-sans font-bold">{reserveFund.targetAmountKhr.toLocaleString()} ៛</strong>
               </span>
+              {deficitKhr > 0 && (
+                <>
+                  <span className="text-slate-400 mx-1">•</span>
+                  <span className="text-rose-600 dark:text-rose-400 font-bold">
+                    កាត់ចំណាយសរុប៖ -{deficitKhr.toLocaleString()} ៛
+                  </span>
+                </>
+              )}
             </div>
           </div>
         </div>

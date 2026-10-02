@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef, useMemo } from 'react';
 import {
   Language,
   Product,
@@ -1046,17 +1046,52 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     };
   });
 
-  const reserveFundRef = useRef<ReserveFund>(reserveFund);
-  reserveFundRef.current = reserveFund;
+  // Live dynamic reserve fund calculation: Target Float - Paid Cash Expenses + Replenishments
+  const dynamicReserveFund: ReserveFund = useMemo(() => {
+    const targetKhr = Number(reserveFund.targetAmountKhr) || 1000000;
+    const targetUsd = Number(reserveFund.targetAmountUsd) || Number((targetKhr / exchangeRate).toFixed(2));
+
+    // Sum all cash expenses that are paid (exclude only explicit bank transfers)
+    const totalCashExpensesKhr = expenses
+      .filter((e) => {
+        const isPaid = !e.paymentStatus || e.paymentStatus === 'PAID';
+        const isBank = e.paymentMethod === 'BANK_TRANSFER';
+        return isPaid && !isBank;
+      })
+      .reduce((sum, e) => {
+        const amt = Number(e.amountKhr) || Math.round((Number(e.amountUsd) || 0) * exchangeRate);
+        return sum + amt;
+      }, 0);
+
+    // Sum all top-ups (replenishments)
+    const totalReplenishedKhr = (reserveFund.history || [])
+      .filter((tx) => tx.type === 'REPLENISH')
+      .reduce((sum, tx) => sum + (Number(tx.amountKhr) || 0), 0);
+
+    // Calculated balance: Target Float - Cash Expenses + Replenishments
+    const calculatedBalKhr = Math.max(0, targetKhr - totalCashExpensesKhr + totalReplenishedKhr);
+    const calculatedBalUsd = Number((calculatedBalKhr / exchangeRate).toFixed(2));
+
+    return {
+      ...reserveFund,
+      targetAmountKhr: targetKhr,
+      targetAmountUsd: targetUsd,
+      currentBalanceKhr: calculatedBalKhr,
+      currentBalanceUsd: calculatedBalUsd,
+    };
+  }, [reserveFund, expenses, exchangeRate]);
+
+  const reserveFundRef = useRef<ReserveFund>(dynamicReserveFund);
+  reserveFundRef.current = dynamicReserveFund;
 
   useEffect(() => {
     if (globalIsDemoMode) {
-      localStorage.setItem('demo_bakery_reserve_fund', JSON.stringify(reserveFund));
+      localStorage.setItem('demo_bakery_reserve_fund', JSON.stringify(dynamicReserveFund));
     } else {
-      safeSetStorage('bakery_reserve_fund', JSON.stringify(reserveFund));
-      syncSaveDoc('settings', 'reserveFund', reserveFund);
+      safeSetStorage('bakery_reserve_fund', JSON.stringify(dynamicReserveFund));
+      syncSaveDoc('settings', 'reserveFund', dynamicReserveFund);
     }
-  }, [reserveFund]);
+  }, [dynamicReserveFund]);
 
   // Sales management (including past sales)
   const [sales, setSales] = useState<CompletedSale[]>(() => {
@@ -4138,7 +4173,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         clearAllExpenses,
         totalExpensesUsd,
         totalExpensesKhr,
-        reserveFund,
+        reserveFund: dynamicReserveFund,
         updateReserveTarget,
         adjustCurrentBalance,
         replenishReserveFund,
