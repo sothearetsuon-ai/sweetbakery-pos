@@ -382,6 +382,8 @@ interface BakeryContextType {
   withdrawReserveFund: (amountKhr: number, amountUsd: number, reason: string, expenseId?: string) => void;
   batchDeductExpensesToReserveFund: (expenseIds: string[]) => void;
   reconcileReserveFundWithExpenses: (customBaseTargetKhr?: number) => ReserveFund;
+  deleteReserveFundTransaction: (txId: string) => void;
+  clearReserveFundHistory: () => void;
 
   sales: CompletedSale[];
   completeSale: (sale: Omit<CompletedSale, 'id' | 'orderNumber' | 'createdAt'>) => CompletedSale;
@@ -2374,6 +2376,27 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     return nextRf;
   };
 
+  const deleteReserveFundTransaction = (txId: string) => {
+    const current = reserveFundRef.current;
+    const updatedHistory = (current.history || []).filter((tx) => tx.id !== txId);
+    const nextRf: ReserveFund = {
+      ...current,
+      history: updatedHistory,
+      updatedAt: new Date().toISOString(),
+    };
+    persistReserveFund(nextRf);
+  };
+
+  const clearReserveFundHistory = () => {
+    const current = reserveFundRef.current;
+    const nextRf: ReserveFund = {
+      ...current,
+      history: [],
+      updatedAt: new Date().toISOString(),
+    };
+    persistReserveFund(nextRf);
+  };
+
   // Expenses actions
   const addExpense = (expenseData: Omit<Expense, 'id' | 'createdAt'>) => {
     isUpdatingFromLan.current = false;
@@ -4180,6 +4203,8 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         withdrawReserveFund,
         batchDeductExpensesToReserveFund,
         reconcileReserveFundWithExpenses,
+        deleteReserveFundTransaction,
+        clearReserveFundHistory,
         sales,
         completeSale,
         addPastSale,

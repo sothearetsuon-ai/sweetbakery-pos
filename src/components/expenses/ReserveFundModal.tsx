@@ -14,6 +14,7 @@ import {
   Wallet,
   SlidersHorizontal,
   RotateCcw,
+  Trash2,
 } from 'lucide-react';
 import { useBakery } from '../../context/BakeryContext';
 import { soundFx } from '../../utils/audio';
@@ -24,7 +25,16 @@ interface ReserveFundModalProps {
 }
 
 export const ReserveFundModal: React.FC<ReserveFundModalProps> = ({ isOpen, onClose }) => {
-  const { reserveFund, updateReserveTarget, adjustCurrentBalance, replenishReserveFund, exchangeRate, reconcileReserveFundWithExpenses } = useBakery();
+  const {
+    reserveFund,
+    updateReserveTarget,
+    adjustCurrentBalance,
+    replenishReserveFund,
+    exchangeRate,
+    reconcileReserveFundWithExpenses,
+    deleteReserveFundTransaction,
+    clearReserveFundHistory,
+  } = useBakery();
 
   const [activeTab, setActiveTab] = useState<'overview' | 'replenish' | 'target' | 'history'>('overview');
   
@@ -71,6 +81,24 @@ export const ReserveFundModal: React.FC<ReserveFundModalProps> = ({ isOpen, onCl
   const currentPercent = reserveFund.targetAmountKhr > 0
     ? Math.min(100, Math.max(0, Math.round((reserveFund.currentBalanceKhr / reserveFund.targetAmountKhr) * 100)))
     : 100;
+
+  const handleDeleteTransaction = (txId: string, reason: string) => {
+    soundFx.playPop();
+    if (window.confirm(`តើអ្នកពិតជាចង់លុបកំណត់ត្រាចរន្តនេះមែនទេ?\n"${reason}"`)) {
+      deleteReserveFundTransaction(txId);
+      setSuccessMessage('បានលុបកំណត់ត្រាដោយជោគជ័យ!');
+      setTimeout(() => setSuccessMessage(null), 3000);
+    }
+  };
+
+  const handleClearAllHistory = () => {
+    soundFx.playPop();
+    if (window.confirm('តើអ្នកពិតជាចង់សម្អាតប្រវត្តិប្រតិបត្តិការទាំងអស់មែនទេ? សកម្មភាពនេះមិនអាចត្រឡប់ក្រោយវិញបានទេ។')) {
+      clearReserveFundHistory();
+      setSuccessMessage('បានសម្អាតប្រវត្តិប្រតិបត្តិការទាំងអស់រួចរាល់!');
+      setTimeout(() => setSuccessMessage(null), 3000);
+    }
+  };
 
   const handleReplenishSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -415,22 +443,36 @@ export const ReserveFundModal: React.FC<ReserveFundModalProps> = ({ isOpen, onCl
               <div>
                 <div className="flex items-center justify-between mb-3">
                   <h4 className="font-black text-slate-900 dark:text-gray-100 text-sm">ចរន្តដក-បង្គ្រប់ចុងក្រោយ</h4>
-                  <button
-                    onClick={() => { soundFx.playPop(); setActiveTab('history'); }}
-                    className="text-xs text-emerald-700 hover:underline font-bold"
-                  >
-                    មើលទាំងអស់ →
-                  </button>
+                  <div className="flex items-center gap-2">
+                    {(reserveFund.history || []).length > 0 && (
+                      <button
+                        type="button"
+                        onClick={handleClearAllHistory}
+                        title="សម្អាតប្រវត្តិទាំងអស់"
+                        className="text-xs text-rose-500 hover:text-rose-700 font-bold flex items-center gap-1 hover:bg-rose-50 dark:hover:bg-rose-950/40 px-2 py-1 rounded-lg transition"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        សម្អាត
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => { soundFx.playPop(); setActiveTab('history'); }}
+                      className="text-xs text-emerald-700 hover:underline font-bold"
+                    >
+                      មើលទាំងអស់ →
+                    </button>
+                  </div>
                 </div>
                 <div className="space-y-2">
                   {(reserveFund.history || []).slice(0, 4).map((tx) => (
                     <div
                       key={tx.id}
-                      className="p-3 bg-gray-50 dark:bg-gray-800/80 rounded-xl border border-gray-200 dark:border-gray-700 flex items-center justify-between text-xs"
+                      className="p-3 bg-gray-50 dark:bg-gray-800/80 rounded-xl border border-gray-200 dark:border-gray-700 flex items-center justify-between text-xs hover:border-slate-300 dark:hover:border-gray-600 transition"
                     >
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-3 min-w-0 pr-2">
                         <div
-                          className={`p-2 rounded-lg ${
+                          className={`p-2 rounded-lg flex-shrink-0 ${
                             tx.type === 'REPLENISH'
                               ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-700'
                               : tx.type === 'WITHDRAW'
@@ -446,24 +488,34 @@ export const ReserveFundModal: React.FC<ReserveFundModalProps> = ({ isOpen, onCl
                             <Settings className="w-4 h-4" />
                           )}
                         </div>
-                        <div>
-                          <div className="font-bold text-slate-900 dark:text-gray-100">{tx.reason}</div>
+                        <div className="min-w-0">
+                          <div className="font-bold text-slate-900 dark:text-gray-100 truncate">{tx.reason}</div>
                           <div className="text-slate-600 dark:text-gray-400 text-[11px] font-medium">
                             {tx.date} • {tx.performedBy} {tx.source ? `(${tx.source})` : ''}
                           </div>
                         </div>
                       </div>
-                      <div
-                        className={`font-sans font-black text-right ${
-                          tx.type === 'REPLENISH'
-                            ? 'text-emerald-700 dark:text-emerald-400'
-                            : tx.type === 'WITHDRAW'
-                            ? 'text-rose-600'
-                            : 'text-blue-600'
-                        }`}
-                      >
-                        {tx.type === 'REPLENISH' ? '+' : tx.type === 'WITHDRAW' ? '-' : ''}
-                        {tx.amountKhr.toLocaleString()} ៛
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <div
+                          className={`font-sans font-black text-right ${
+                            tx.type === 'REPLENISH'
+                              ? 'text-emerald-700 dark:text-emerald-400'
+                              : tx.type === 'WITHDRAW'
+                              ? 'text-rose-600'
+                              : 'text-blue-600'
+                          }`}
+                        >
+                          {tx.type === 'REPLENISH' ? '+' : tx.type === 'WITHDRAW' ? '-' : ''}
+                          {tx.amountKhr.toLocaleString()} ៛
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteTransaction(tx.id, tx.reason)}
+                          title="លុបកំណត់ត្រានេះ"
+                          className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
                       </div>
                     </div>
                   ))}
@@ -819,18 +871,30 @@ export const ReserveFundModal: React.FC<ReserveFundModalProps> = ({ isOpen, onCl
             <div className="space-y-3">
               <div className="flex justify-between items-center">
                 <h4 className="font-bold text-gray-800 dark:text-gray-200 text-sm">ប្រវត្តិប្រតិបត្តិការទុនបម្រុងទាំងអស់</h4>
-                <span className="text-xs text-gray-500">{reserveFund.history?.length || 0} កំណត់ត្រា</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-gray-500">{reserveFund.history?.length || 0} កំណត់ត្រា</span>
+                  {(reserveFund.history || []).length > 0 && (
+                    <button
+                      type="button"
+                      onClick={handleClearAllHistory}
+                      className="px-2.5 py-1 bg-rose-50 hover:bg-rose-100 text-rose-600 dark:bg-rose-950/40 dark:hover:bg-rose-900/50 rounded-lg text-xs font-bold flex items-center gap-1 transition shadow-sm"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      សម្អាតទាំងអស់
+                    </button>
+                  )}
+                </div>
               </div>
 
               <div className="max-h-[50vh] overflow-y-auto space-y-2 pr-1">
                 {(reserveFund.history || []).map((tx) => (
                   <div
                     key={tx.id}
-                    className="p-3.5 bg-gray-50 dark:bg-gray-800/80 rounded-2xl border border-gray-100 dark:border-gray-700 flex items-start justify-between gap-3 text-xs"
+                    className="p-3.5 bg-gray-50 dark:bg-gray-800/80 rounded-2xl border border-gray-100 dark:border-gray-700 flex items-start justify-between gap-3 text-xs hover:border-slate-300 dark:hover:border-gray-600 transition"
                   >
-                    <div className="flex items-start gap-3">
+                    <div className="flex items-start gap-3 min-w-0 pr-2">
                       <div
-                        className={`p-2 rounded-xl mt-0.5 ${
+                        className={`p-2 rounded-xl mt-0.5 flex-shrink-0 ${
                           tx.type === 'REPLENISH'
                             ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-600'
                             : tx.type === 'WITHDRAW'
@@ -846,8 +910,8 @@ export const ReserveFundModal: React.FC<ReserveFundModalProps> = ({ isOpen, onCl
                           <Settings className="w-4 h-4" />
                         )}
                       </div>
-                      <div>
-                        <div className="font-bold text-gray-900 dark:text-gray-100 text-sm">{tx.reason}</div>
+                      <div className="min-w-0">
+                        <div className="font-bold text-gray-900 dark:text-gray-100 text-sm truncate">{tx.reason}</div>
                         <div className="text-gray-500 dark:text-gray-400 text-xs mt-0.5 flex flex-wrap gap-x-2">
                           <span>កាលបរិច្ឆេទ៖ {tx.date}</span>
                           <span>•</span>
@@ -862,22 +926,32 @@ export const ReserveFundModal: React.FC<ReserveFundModalProps> = ({ isOpen, onCl
                       </div>
                     </div>
 
-                    <div className="text-right flex-shrink-0">
-                      <div
-                        className={`font-sans font-black text-sm ${
-                          tx.type === 'REPLENISH'
-                            ? 'text-emerald-600'
-                            : tx.type === 'WITHDRAW'
-                            ? 'text-rose-600'
-                            : 'text-blue-600'
-                        }`}
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <div className="text-right">
+                        <div
+                          className={`font-sans font-black text-sm ${
+                            tx.type === 'REPLENISH'
+                              ? 'text-emerald-600'
+                              : tx.type === 'WITHDRAW'
+                              ? 'text-rose-600'
+                              : 'text-blue-600'
+                          }`}
+                        >
+                          {tx.type === 'REPLENISH' ? '+' : tx.type === 'WITHDRAW' ? '-' : ''}
+                          {tx.amountKhr.toLocaleString()} ៛
+                        </div>
+                        <div className="text-[11px] text-gray-400 font-sans">
+                          ${tx.amountUsd.toFixed(2)}
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteTransaction(tx.id, tx.reason)}
+                        title="លុបកំណត់ត្រានេះ"
+                        className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-xl transition"
                       >
-                        {tx.type === 'REPLENISH' ? '+' : tx.type === 'WITHDRAW' ? '-' : ''}
-                        {tx.amountKhr.toLocaleString()} ៛
-                      </div>
-                      <div className="text-[11px] text-gray-400 font-sans">
-                        ${tx.amountUsd.toFixed(2)}
-                      </div>
+                        <Trash2 className="w-4 h-4" />
+                      </button>
                     </div>
                   </div>
                 ))}
