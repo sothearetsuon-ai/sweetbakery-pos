@@ -38,6 +38,21 @@ type SyncListener = (state: {
   lastSyncTime: string | null;
 }) => void;
 
+async function runConcurrent<T>(items: T[], fn: (item: T) => Promise<void>, concurrency = 6): Promise<void> {
+  const queue = [...items];
+  const workers = Array.from({ length: Math.min(concurrency, queue.length) }, async () => {
+    while (queue.length > 0) {
+      const item = queue.shift();
+      if (item) {
+        try {
+          await fn(item);
+        } catch (e) {}
+      }
+    }
+  });
+  await Promise.all(workers);
+}
+
 class OfflineSyncEngine {
   private queue: OfflineMutation[] = [];
   private isProcessing: boolean = false;
@@ -274,12 +289,11 @@ class OfflineSyncEngine {
           if (raw) deletedSales = new Set(JSON.parse(raw));
         } catch (e) {}
 
-        for (const s of localData.sales) {
-          if (s && s.id && !deletedSales.has(s.id)) {
-            await saveFirestoreDoc('sales', s.id, s);
-            uploaded++;
-          }
-        }
+        const salesToSync = localData.sales.filter((s) => s && s.id && !deletedSales.has(s.id));
+        await runConcurrent(salesToSync, async (s) => {
+          await saveFirestoreDoc('sales', s.id, s);
+          uploaded++;
+        });
       }
 
       // 2. Custom Orders
@@ -290,12 +304,11 @@ class OfflineSyncEngine {
           if (raw) deletedOrders = new Set(JSON.parse(raw));
         } catch (e) {}
 
-        for (const o of localData.customOrders) {
-          if (o && o.id && !deletedOrders.has(o.id)) {
-            await saveFirestoreDoc('customOrders', o.id, o);
-            uploaded++;
-          }
-        }
+        const ordersToSync = localData.customOrders.filter((o) => o && o.id && !deletedOrders.has(o.id));
+        await runConcurrent(ordersToSync, async (o) => {
+          await saveFirestoreDoc('customOrders', o.id, o);
+          uploaded++;
+        });
       }
 
       // 3. Expenses
@@ -307,12 +320,11 @@ class OfflineSyncEngine {
         } catch (e) {}
 
         const mockExpenseIds = new Set(['exp-1', 'exp-2', 'exp-3', 'exp-4', 'exp-5', 'exp-6', 'exp-7']);
-        for (const e of localData.expenses) {
-          if (e && e.id && !deletedExpenses.has(e.id) && !mockExpenseIds.has(e.id)) {
-            await saveFirestoreDoc('expenses', e.id, e);
-            uploaded++;
-          }
-        }
+        const expensesToSync = localData.expenses.filter((e) => e && e.id && !deletedExpenses.has(e.id) && !mockExpenseIds.has(e.id));
+        await runConcurrent(expensesToSync, async (e) => {
+          await saveFirestoreDoc('expenses', e.id, e);
+          uploaded++;
+        });
       }
 
       // 4. Products
@@ -323,12 +335,11 @@ class OfflineSyncEngine {
           if (raw) deletedProducts = new Set(JSON.parse(raw));
         } catch (e) {}
 
-        for (const p of localData.products) {
-          if (p && p.id && !deletedProducts.has(p.id)) {
-            await saveFirestoreDoc('products', p.id, p);
-            uploaded++;
-          }
-        }
+        const productsToSync = localData.products.filter((p) => p && p.id && !deletedProducts.has(p.id));
+        await runConcurrent(productsToSync, async (p) => {
+          await saveFirestoreDoc('products', p.id, p);
+          uploaded++;
+        });
       }
 
       // 5. Store Info
@@ -339,32 +350,29 @@ class OfflineSyncEngine {
 
       // 6. Ingredients (Stock)
       if (Array.isArray(localData.ingredients)) {
-        for (const ing of localData.ingredients) {
-          if (ing && ing.id) {
-            await saveFirestoreDoc('ingredients', ing.id, ing);
-            uploaded++;
-          }
-        }
+        const ingredientsToSync = localData.ingredients.filter((ing) => ing && ing.id);
+        await runConcurrent(ingredientsToSync, async (ing) => {
+          await saveFirestoreDoc('ingredients', ing.id, ing);
+          uploaded++;
+        });
       }
 
       // 7. Recipes
       if (Array.isArray(localData.recipes)) {
-        for (const r of localData.recipes) {
-          if (r && r.id) {
-            await saveFirestoreDoc('recipes', r.id, r);
-            uploaded++;
-          }
-        }
+        const recipesToSync = localData.recipes.filter((r) => r && r.id);
+        await runConcurrent(recipesToSync, async (r) => {
+          await saveFirestoreDoc('recipes', r.id, r);
+          uploaded++;
+        });
       }
 
       // 8. Staff Members
       if (Array.isArray(localData.staffMembers)) {
-        for (const s of localData.staffMembers) {
-          if (s && s.id) {
-            await saveFirestoreDoc('staffMembers', s.id, s);
-            uploaded++;
-          }
-        }
+        const staffToSync = localData.staffMembers.filter((s) => s && s.id);
+        await runConcurrent(staffToSync, async (s) => {
+          await saveFirestoreDoc('staffMembers', s.id, s);
+          uploaded++;
+        });
       }
 
       // 9. Reserve Fund

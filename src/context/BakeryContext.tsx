@@ -1311,7 +1311,8 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   // Local Area Network (LAN) Sync - Synchronizes PC and phones in real-time over local Wi-Fi even without internet
   const [lanSyncStatus, setLanSyncStatus] = useState<'connected' | 'syncing' | 'idle'>('idle');
-  const isUpdatingFromLan = useRef<boolean>(true);
+  const isUpdatingFromLan = useRef<boolean>(false);
+  const lastLanVersion = useRef<number>(0);
   const lanSyncTimer = useRef<any>(null);
   const deletedSaleIds = useRef<Set<string>>(loadDeletedIds('sales'));
   const deletedExpenseIds = useRef<Set<string>>(loadDeletedIds('expenses'));
@@ -1323,7 +1324,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const salesRef = useRef<CompletedSale[]>(sales);
   salesRef.current = sales;
 
-  const saveToLanSync = (payload: any, force: boolean = false) => {
+  const saveToLanSync = (payload: any, force: boolean = true) => {
     if (globalIsDemoMode) return;
     if (!force && isUpdatingFromLan.current) return;
     try {
@@ -1337,13 +1338,31 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           deletedExpenseIds: Array.from(deletedExpenseIds.current),
           deletedProductIds: Array.from(deletedProductIds.current),
         }),
-      }).catch(() => {});
+      })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data?.version) {
+          lastLanVersion.current = data.version;
+        }
+      })
+      .catch(() => {});
     } catch (e) {}
   };
 
   const applyLanData = (data: any) => {
     if (globalIsDemoMode) return;
     if (!data || data.exists === false) return;
+    if (data.upToDate === true) {
+      setLanSyncStatus('connected');
+      return;
+    }
+    if (data.version && data.version === lastLanVersion.current) {
+      setLanSyncStatus('connected');
+      return;
+    }
+    if (data.version) {
+      lastLanVersion.current = data.version;
+    }
     isUpdatingFromLan.current = true;
     setLanSyncStatus('syncing');
     if (lanSyncTimer.current) clearTimeout(lanSyncTimer.current);
@@ -1362,7 +1381,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       data.deletedProductIds.forEach((id: string) => recordDeletedId('products', id, deletedProductIds));
     }
 
-    // 2. Sync Products
+    // 2. Sync Products (Smart diff to avoid redundant re-renders and I/O on mobile)
     if (Array.isArray(data.products) && data.products.length > 0) {
       setProducts((prev) => {
         const prodMap = new Map();
@@ -1381,12 +1400,24 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           }
         });
         const merged = sortProductsNewestFirst(Array.from(prodMap.values()));
+        if (
+          merged.length === prev.length &&
+          merged.every(
+            (p, idx) =>
+              p.id === prev[idx]?.id &&
+              p.updatedAt === prev[idx]?.updatedAt &&
+              p.stockQty === prev[idx]?.stockQty &&
+              p.priceUsd === prev[idx]?.priceUsd
+          )
+        ) {
+          return prev;
+        }
         safeSetStorage('bakery_products', JSON.stringify(merged));
         return merged;
       });
     }
 
-    // 3. Sync Sales (eliminates discrepancy between PC and phone)
+    // 3. Sync Sales (Smart diff to eliminate mobile UI stutter)
     if (Array.isArray(data.sales)) {
       setSales((prev) => {
         const salesMap = new Map();
@@ -1405,12 +1436,18 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           .sort(
             (a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
           );
+        if (
+          merged.length === prev.length &&
+          merged.every((s, idx) => s.id === prev[idx]?.id && s.totalUsd === prev[idx]?.totalUsd)
+        ) {
+          return prev;
+        }
         safeSetStorage('bakery_sales', JSON.stringify(merged));
         return merged;
       });
     }
 
-    // 4. Sync Custom Orders
+    // 4. Sync Custom Orders (Smart diff)
     if (Array.isArray(data.customOrders)) {
       setCustomOrders((prev) => {
         const ordersMap = new Map();
@@ -1429,12 +1466,18 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           .sort(
             (a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
           );
+        if (
+          merged.length === prev.length &&
+          merged.every((o, idx) => o.id === prev[idx]?.id && o.status === prev[idx]?.status && o.totalUsd === prev[idx]?.totalUsd)
+        ) {
+          return prev;
+        }
         safeSetStorage('bakery_custom_orders', JSON.stringify(merged));
         return merged;
       });
     }
 
-    // 5. Sync Expenses (eliminates discrepancy between PC and phone)
+    // 5. Sync Expenses (Smart diff)
     if (Array.isArray(data.expenses)) {
       setExpenses((prev) => {
         const expensesMap = new Map();
@@ -1454,6 +1497,12 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             (a: any, b: any) =>
               new Date(b.createdAt || b.date).getTime() - new Date(a.createdAt || a.date).getTime()
           );
+        if (
+          merged.length === prev.length &&
+          merged.every((e, idx) => e.id === prev[idx]?.id && e.amountUsd === prev[idx]?.amountUsd)
+        ) {
+          return prev;
+        }
         safeSetStorage('bakery_expenses', JSON.stringify(merged));
         return merged;
       });
@@ -1461,26 +1510,58 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
     // 6. Sync Stock / Ingredients
     if (Array.isArray(data.ingredients) && data.ingredients.length > 0) {
-      setIngredients(data.ingredients);
-      safeSetStorage('bakery_ingredients', JSON.stringify(data.ingredients));
+      setIngredients((prev) => {
+        if (
+          data.ingredients.length === prev.length &&
+          data.ingredients.every((ing: any, idx: number) => ing.id === prev[idx]?.id && ing.currentStock === prev[idx]?.currentStock)
+        ) {
+          return prev;
+        }
+        safeSetStorage('bakery_ingredients', JSON.stringify(data.ingredients));
+        return data.ingredients;
+      });
     }
 
     // 7. Sync Recipes
     if (Array.isArray(data.recipes) && data.recipes.length > 0) {
-      setRecipes(data.recipes);
-      safeSetStorage('bakery_recipes', JSON.stringify(data.recipes));
+      setRecipes((prev) => {
+        if (
+          data.recipes.length === prev.length &&
+          data.recipes.every((r: any, idx: number) => r.id === prev[idx]?.id)
+        ) {
+          return prev;
+        }
+        safeSetStorage('bakery_recipes', JSON.stringify(data.recipes));
+        return data.recipes;
+      });
     }
 
     // 8. Sync Staff Members & Passwords/PINs
     if (Array.isArray(data.staffMembers) && data.staffMembers.length > 0) {
-      setStaffMembers(data.staffMembers);
-      try { localStorage.setItem('bakery_staff_members', JSON.stringify(data.staffMembers)); } catch (e) {}
+      setStaffMembers((prev) => {
+        if (
+          data.staffMembers.length === prev.length &&
+          data.staffMembers.every((s: any, idx: number) => s.id === prev[idx]?.id && s.pinCode === prev[idx]?.pinCode && s.role === prev[idx]?.role)
+        ) {
+          return prev;
+        }
+        try { localStorage.setItem('bakery_staff_members', JSON.stringify(data.staffMembers)); } catch (e) {}
+        return data.staffMembers;
+      });
     }
 
     // 9. Sync Party Add-ons
     if (Array.isArray(data.partyAddons) && data.partyAddons.length > 0) {
-      setPartyAddons(data.partyAddons);
-      safeSetStorage('bakery_party_addons', JSON.stringify(data.partyAddons));
+      setPartyAddons((prev) => {
+        if (
+          data.partyAddons.length === prev.length &&
+          data.partyAddons.every((a: any, idx: number) => a.id === prev[idx]?.id && a.priceUsd === prev[idx]?.priceUsd)
+        ) {
+          return prev;
+        }
+        safeSetStorage('bakery_party_addons', JSON.stringify(data.partyAddons));
+        return data.partyAddons;
+      });
     }
 
     // 10. Sync Reserve Fund (timestamp protected to avoid race condition rollbacks)
@@ -1489,6 +1570,14 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         const incomingTime = data.reserveFund.updatedAt ? new Date(data.reserveFund.updatedAt).getTime() : 0;
         const localTime = currentLocal?.updatedAt ? new Date(currentLocal.updatedAt).getTime() : 0;
         if (incomingTime >= localTime) {
+          if (
+            currentLocal &&
+            currentLocal.currentBalanceKhr === data.reserveFund.currentBalanceKhr &&
+            currentLocal.currentBalanceUsd === data.reserveFund.currentBalanceUsd &&
+            currentLocal.updatedAt === data.reserveFund.updatedAt
+          ) {
+            return currentLocal;
+          }
           safeSetStorage('bakery_reserve_fund', JSON.stringify(data.reserveFund));
           reserveFundRef.current = data.reserveFund;
           return data.reserveFund;
@@ -1533,22 +1622,30 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       });
     }
     if (Array.isArray(data.flavors)) {
-      setFlavors(data.flavors);
-      try { localStorage.setItem('bakery_flavors', JSON.stringify(data.flavors)); } catch (e) {}
+      setFlavors((prev) => {
+        if (data.flavors.length === prev.length && data.flavors.every((f: any, idx: number) => f === prev[idx])) {
+          return prev;
+        }
+        try { localStorage.setItem('bakery_flavors', JSON.stringify(data.flavors)); } catch (e) {}
+        return data.flavors;
+      });
     }
     if (data.telegramConfig && data.telegramConfig.botToken) {
       saveStoredTelegramConfig(data.telegramConfig);
     }
     if (data.exchangeRate && Number(data.exchangeRate) > 0) {
       const rate = Number(data.exchangeRate);
-      setExchangeRate(rate);
-      try { localStorage.setItem('bakery_exchange_rate', String(rate)); } catch (e) {}
+      setExchangeRate((prev) => {
+        if (prev === rate) return prev;
+        try { localStorage.setItem('bakery_exchange_rate', String(rate)); } catch (e) {}
+        return rate;
+      });
     }
 
     setLanSyncStatus('connected');
     setTimeout(() => {
       isUpdatingFromLan.current = false;
-    }, 800);
+    }, 150);
   };
 
   const forceSyncLan = async (): Promise<{ salesCount: number; expensesCount: number }> => {
@@ -1556,7 +1653,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setLanSyncStatus('syncing');
     try {
       // 1. Push local deletions & current state to LAN server first
-      await fetch('/api/lan-sync', {
+      const postRes = await fetch('/api/lan-sync', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1577,7 +1674,14 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           deletedExpenseIds: Array.from(deletedExpenseIds.current),
           deletedProductIds: Array.from(deletedProductIds.current),
         }),
-      }).catch(() => {});
+      }).catch(() => null);
+
+      if (postRes && postRes.ok) {
+        const postData = await postRes.json();
+        if (postData?.version) {
+          lastLanVersion.current = postData.version;
+        }
+      }
 
       // 2. Fetch the authoritative merged state
       const res = await fetch('/api/lan-sync');
@@ -1619,33 +1723,35 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             partyAddons,
             reserveFund,
             telegramConfig: getStoredTelegramConfig(),
-          });
+          }, true);
         }
       })
       .catch((err) => console.log('LAN sync endpoint inactive', err));
 
-    // 2. High-speed window focus & visibility sync
-    const handleSyncOnFocus = () => {
+    // 2. High-speed window focus & visibility sync (with version check)
+    const handleSyncOnFocus = (targetVersion?: number) => {
       if (globalIsDemoMode) return;
-      fetch('/api/lan-sync')
+      const verParam = lastLanVersion.current ? `?v=${lastLanVersion.current}` : '';
+      fetch(`/api/lan-sync${verParam}`)
         .then((res) => res.json())
         .then((data) => applyLanData(data))
         .catch(() => {});
     };
-    window.addEventListener('focus', handleSyncOnFocus);
+    const onFocus = () => handleSyncOnFocus();
+    window.addEventListener('focus', onFocus);
     const handleVisibility = () => {
       if (document.visibilityState === 'visible') handleSyncOnFocus();
     };
     document.addEventListener('visibilitychange', handleVisibility);
 
-    // 3. Fast fallback interval sync: 1.5 seconds when active, 5 seconds when backgrounded
+    // 3. Ultra lightweight fallback interval: 3.5 seconds with version caching (38 bytes if unchanged)
     const intervalTimer = setInterval(() => {
       if (document.visibilityState === 'visible') {
         handleSyncOnFocus();
       }
-    }, 1500);
+    }, 3500);
 
-    // 4. Robust auto-reconnecting SSE stream for instantaneous (<100ms) sync
+    // 4. Robust auto-reconnecting SSE stream for instantaneous (<50ms) sync with mobile keep-alive
     let sse: EventSource | null = null;
     let isSseActive = true;
     let sseRetryTimer: any = null;
@@ -1662,7 +1768,10 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           try {
             const parsed = JSON.parse(event.data);
             if (parsed.type === 'SYNC_UPDATE') {
-              handleSyncOnFocus();
+              if (parsed.version && parsed.version === lastLanVersion.current) {
+                return; // Already up-to-date
+              }
+              handleSyncOnFocus(parsed.version);
             }
           } catch (e) {}
         };
@@ -1684,7 +1793,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
     return () => {
       isSseActive = false;
-      window.removeEventListener('focus', handleSyncOnFocus);
+      window.removeEventListener('focus', onFocus);
       document.removeEventListener('visibilitychange', handleVisibility);
       clearInterval(intervalTimer);
       if (sseRetryTimer) clearTimeout(sseRetryTimer);
@@ -1692,7 +1801,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     };
   }, []);
 
-  // Broadcast any state updates to LAN server (debounced)
+  // Broadcast any state updates to LAN server (debounced background sync only)
   const isInitialMount = useRef<boolean>(true);
   useEffect(() => {
     if (globalIsDemoMode) return;
@@ -1716,7 +1825,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         partyAddons,
         reserveFund,
         telegramConfig: getStoredTelegramConfig(),
-      });
+      }, false);
     }, 600);
   }, [products, sales, customOrders, expenses, storeInfo, flavors, ingredients, recipes, staffMembers, partyAddons, reserveFund]);
 
@@ -1766,17 +1875,21 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     // Automatically trigger queue processing and reconciliation when Firebase initializes & connects
     if (!globalIsDemoMode) {
       offlineSyncService.processQueue().then(() => {
-        offlineSyncService.reconcileLocalDataToCloud({
-          sales,
-          customOrders,
-          expenses,
-          products,
-          storeInfo,
-          ingredients,
-          recipes,
-          staffMembers,
-          reserveFund,
-        }).catch(() => {});
+        const lastSync = offlineSyncService.getLastSyncTime();
+        const shouldFullReconcile = !lastSync || (Date.now() - new Date(lastSync).getTime() > 4 * 3600 * 1000);
+        if (shouldFullReconcile) {
+          offlineSyncService.reconcileLocalDataToCloud({
+            sales,
+            customOrders,
+            expenses,
+            products,
+            storeInfo,
+            ingredients,
+            recipes,
+            staffMembers,
+            reserveFund,
+          }).catch(() => {});
+        }
       }).catch(() => {});
     }
 

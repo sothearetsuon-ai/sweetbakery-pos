@@ -22,6 +22,22 @@ function lanSyncPlugin(): Plugin {
   }
 
   const clients = new Set<any>();
+  let dbVersion = Date.now();
+  let heartbeatTimer: any = null;
+
+  const ensureHeartbeat = () => {
+    if (!heartbeatTimer) {
+      heartbeatTimer = setInterval(() => {
+        for (const client of clients) {
+          try {
+            client.write(': ping\n\n');
+          } catch (e) {
+            clients.delete(client);
+          }
+        }
+      }, 10000);
+    }
+  };
 
   // Safe JSON write to avoid Windows renameSync file lock errors
   const safeWrite = (filePath: string, jsonString: string) => {
@@ -80,7 +96,8 @@ function lanSyncPlugin(): Plugin {
   };
 
   const broadcastEvent = (eventType: string, extraData: any = {}) => {
-    const message = `data: ${JSON.stringify({ type: eventType, ...extraData })}\n\n`;
+    dbVersion = Date.now();
+    const message = `data: ${JSON.stringify({ type: eventType, version: dbVersion, ...extraData })}\n\n`;
     for (const client of clients) {
       try {
         client.write(message);
@@ -102,14 +119,19 @@ function lanSyncPlugin(): Plugin {
           return;
         }
 
-        // SSE Events stream for instant LAN updates
+        // SSE Events stream for instant LAN updates with mobile keep-alive
         if (req.url === '/api/lan-events') {
+          ensureHeartbeat();
           res.writeHead(200, {
             'Content-Type': 'text/event-stream',
-            'Cache-Control': 'no-cache',
+            'Cache-Control': 'no-cache, no-transform',
             'Connection': 'keep-alive',
+            'X-Accel-Buffering': 'no',
           });
-          res.write('data: {"type":"CONNECTED"}\n\n');
+          if (typeof res.flushHeaders === 'function') {
+            res.flushHeaders();
+          }
+          res.write(`data: ${JSON.stringify({ type: 'CONNECTED', version: dbVersion })}\n\n`);
           clients.add(res);
           req.on('close', () => clients.delete(res));
           return;
@@ -132,15 +154,26 @@ function lanSyncPlugin(): Plugin {
           return;
         }
 
-        // GET local DB
-        if (req.url === '/api/lan-sync' && req.method === 'GET') {
+        // GET local DB (high-speed delta: checks version param ?v=...)
+        if (req.url && req.url.startsWith('/api/lan-sync') && req.method === 'GET') {
+          try {
+            const urlObj = new URL(req.url, 'http://localhost');
+            const clientVer = urlObj.searchParams.get('v');
+            if (clientVer && Number(clientVer) === dbVersion) {
+              res.writeHead(200, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({ upToDate: true, version: dbVersion }));
+              return;
+            }
+          } catch (e) {}
+
           res.writeHead(200, { 'Content-Type': 'application/json' });
           const dbData = getDbData();
           if (dbData) {
+            dbData.version = dbVersion;
             dbData.customSongs = getSongsData();
             res.end(JSON.stringify(dbData));
           } else {
-            res.end(JSON.stringify({ exists: false, customSongs: getSongsData() }));
+            res.end(JSON.stringify({ exists: false, version: dbVersion, customSongs: getSongsData() }));
           }
           return;
         }
@@ -259,13 +292,15 @@ function lanSyncPlugin(): Plugin {
                 })(),
               };
 
+              dbVersion = Date.now();
+              mergedDb.version = dbVersion;
               safeWrite(dbPath, JSON.stringify(mergedDb, null, 2));
 
               res.writeHead(200, { 'Content-Type': 'application/json' });
-              res.end(JSON.stringify({ success: true, salesCount: mergedSales.length, expensesCount: mergedExpenses.length }));
+              res.end(JSON.stringify({ success: true, version: dbVersion, salesCount: mergedSales.length, expensesCount: mergedExpenses.length }));
 
               // Broadcast update to all connected phones/PCs immediately
-              broadcastEvent('SYNC_UPDATE', { salesCount: mergedSales.length, expensesCount: mergedExpenses.length });
+              broadcastEvent('SYNC_UPDATE', { version: dbVersion, salesCount: mergedSales.length, expensesCount: mergedExpenses.length });
             } catch (err: any) {
               res.writeHead(500, { 'Content-Type': 'application/json' });
               res.end(JSON.stringify({ error: err.message }));
