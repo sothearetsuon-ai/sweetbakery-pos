@@ -13,6 +13,7 @@ import {
   Check,
   Trash2,
   Eye,
+  EyeOff,
   Boxes,
   Percent,
   Plus,
@@ -52,6 +53,7 @@ export const InvoiceScannerModal: React.FC<InvoiceScannerModalProps> = ({
   const [apiKey, setApiKeyState] = useState<string>(getGeminiApiKey());
   const [isKeyConfigOpen, setIsKeyConfigOpen] = useState(false);
   const [keyInput, setKeyInput] = useState('');
+  const [showKey, setShowKey] = useState(false);
   const [keyTestStatus, setKeyTestStatus] = useState<'IDLE' | 'TESTING' | 'VALID' | 'INVALID'>('IDLE');
 
   // Scanning State
@@ -387,16 +389,26 @@ export const InvoiceScannerModal: React.FC<InvoiceScannerModalProps> = ({
             </p>
 
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-              <input
-                type="password"
-                value={keyInput}
-                onChange={(e) => {
-                  setKeyInput(e.target.value);
-                  setKeyTestStatus('IDLE');
-                }}
-                placeholder="AIzaSy..."
-                className="flex-1 px-3.5 py-2.5 rounded-xl border border-amber-300 bg-white text-slate-800 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-amber-500"
-              />
+              <div className="relative flex-1">
+                <input
+                  type={showKey ? 'text' : 'password'}
+                  value={keyInput}
+                  onChange={(e) => {
+                    setKeyInput(e.target.value);
+                    setKeyTestStatus('IDLE');
+                  }}
+                  placeholder="បិទភ្ជាប់ (Paste) API Key របស់អ្នកនៅទីនេះ..."
+                  className="w-full pl-3.5 pr-10 py-2.5 rounded-xl border border-amber-300 bg-white text-slate-800 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-amber-500"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowKey(!showKey)}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer p-1"
+                  title={showKey ? 'លាក់ Key' : 'បង្ហាញ Key'}
+                >
+                  {showKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
 
               <div className="flex items-center gap-2">
                 <button
