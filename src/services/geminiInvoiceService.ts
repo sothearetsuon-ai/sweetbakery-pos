@@ -129,14 +129,12 @@ export const testGeminiApiKey = async (apiKey: string): Promise<ApiKeyTestResult
         .filter((m: any) => m.supportedGenerationMethods?.includes('generateContent'))
         .map((m: any) => m.name?.replace('models/', ''));
 
-      // Find the best flash model available for this account
+      // Find the best flash model available for this account (prioritize gemini-2.5-flash)
       const bestModel =
-        usableModels.find((m: string) => m === 'gemini-2.0-flash') ||
-        usableModels.find((m: string) => m.includes('2.0-flash')) ||
         usableModels.find((m: string) => m === 'gemini-2.5-flash') ||
-        usableModels.find((m: string) => m.includes('flash')) ||
-        usableModels[0] ||
-        'gemini-2.0-flash';
+        usableModels.find((m: string) => m.includes('2.5-flash')) ||
+        usableModels.find((m: string) => m.includes('flash') && !m.includes('2.0-flash') && !m.includes('1.5-flash')) ||
+        'gemini-2.5-flash';
 
       localStorage.setItem('sweetbakery_gemini_active_model', bestModel);
 
@@ -228,38 +226,19 @@ Return ONLY a valid JSON object matching this schema without any markdown format
   "rawNotes": "ចំណាំបន្ថែម"
 }`;
 
-  // 1. Discover active models if not cached
+  // 1. Purge obsolete models and prioritize gemini-2.5-flash
   let activeModel = typeof localStorage !== 'undefined' ? localStorage.getItem('sweetbakery_gemini_active_model') : null;
-  if (!activeModel) {
-    try {
-      const listRes = await fetch('https://generativelanguage.googleapis.com/v1beta/models', {
-        method: 'GET',
-        headers: { 'x-goog-api-key': apiKey },
-      });
-      if (listRes.ok) {
-        const data = await listRes.json();
-        const usable: string[] = (data.models || [])
-          .filter((m: any) => m.supportedGenerationMethods?.includes('generateContent'))
-          .map((m: any) => m.name?.replace('models/', ''));
-        activeModel =
-          usable.find((m) => m === 'gemini-2.0-flash') ||
-          usable.find((m) => m.includes('2.0-flash')) ||
-          usable.find((m) => m === 'gemini-2.5-flash') ||
-          usable.find((m) => m.includes('flash')) ||
-          usable[0] ||
-          null;
-        if (activeModel && typeof localStorage !== 'undefined') {
-          localStorage.setItem('sweetbakery_gemini_active_model', activeModel);
-        }
-      }
-    } catch {}
+  if (!activeModel || activeModel.includes('2.0-flash') || activeModel.includes('1.5-flash')) {
+    activeModel = 'gemini-2.5-flash';
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem('sweetbakery_gemini_active_model', 'gemini-2.5-flash');
+    }
   }
 
-  // Candidates list (strictly valid flash models, prioritizing activeModel discovered)
+  // Strictly use active valid model (gemini-2.5-flash)
   const candidateModels = [
     activeModel,
     'gemini-2.5-flash',
-    'gemini-2.0-flash',
   ].filter(Boolean) as string[];
 
   const models = Array.from(new Set(candidateModels));
