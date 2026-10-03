@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { FlaskConical, RotateCcw, Share2, Check, Lock, Sparkles, Users, Eye } from 'lucide-react';
+import { FlaskConical, RotateCcw, Share2, Check, Lock, Sparkles, Users, Eye, Phone } from 'lucide-react';
 import { useBakery } from '../../context/BakeryContext';
 import { soundFx } from '../../utils/audio';
 import { recordDemoVisitor, subscribeToDemoVisitorStats, DemoVisitorStats } from '../../services/firebase';
+import { ContactModal } from './ContactModal';
 
 export const DemoModeBanner: React.FC = () => {
   const { isDemoMode, requestExitDemoMode, resetDemoData } = useBakery();
@@ -11,6 +12,7 @@ export const DemoModeBanner: React.FC = () => {
     totalVisits: 25,
     uniqueVisitors: 18,
   });
+  const [isContactModalOpen, setIsContactModalOpen] = useState(false);
 
   useEffect(() => {
     if (!isDemoMode) return;
@@ -102,7 +104,26 @@ export const DemoModeBanner: React.FC = () => {
           <Lock className="w-3.5 h-3.5 text-rose-600" />
           <span>ចូលហាងពិត 🔐</span>
         </button>
+
+        {/* Contact System Button */}
+        <button
+          type="button"
+          onClick={() => {
+            soundFx.playPop();
+            setIsContactModalOpen(true);
+          }}
+          className="px-2.5 py-1 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg flex items-center gap-1 transition-all active:scale-95 cursor-pointer text-[11px] font-black shadow-xs border border-emerald-300/40"
+          title="ប្រសិនបើអ្នកមានចំណាប់អារម្មណ៍ចង់ប្រើប្រាស់កម្មវិធីនេះសូមទាក់ទង លេខទូរសព្ទ័៖ 012 629 160"
+        >
+          <Phone className="w-3.5 h-3.5 text-white" />
+          <span>📞 Contact</span>
+        </button>
       </div>
+
+      <ContactModal
+        isOpen={isContactModalOpen}
+        onClose={() => setIsContactModalOpen(false)}
+      />
     </div>
   );
 };

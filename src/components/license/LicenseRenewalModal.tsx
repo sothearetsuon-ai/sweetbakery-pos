@@ -505,16 +505,27 @@ export const LicenseRenewalModal: React.FC<LicenseRenewalModalProps> = ({
                   </button>
                 </div>
 
-                <div className="text-[11px] text-slate-500 font-medium flex items-center justify-between pt-0.5">
-                  <span>ផ្ញើលេខសម្គាល់នេះទៅ Admin៖</span>
-                  <button
-                    type="button"
-                    onClick={handleTelegramShare}
-                    className="text-pink-600 hover:text-pink-700 font-bold flex items-center gap-1 hover:underline cursor-pointer"
-                  >
-                    <Send className="w-3 h-3" />
-                    <span>ផ្ញើតាម Telegram</span>
-                  </button>
+                <div className="pt-2 border-t border-slate-200/80 space-y-1.5">
+                  <p className="text-[11px] text-slate-600 font-semibold font-battambang">
+                    ប្រសិនបើអ្នកមានចំណាប់អារម្មណ៍ចង់ប្រើប្រាស់កម្មវិធីនេះសូមទាក់ទង
+                  </p>
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <a
+                      href="tel:012629160"
+                      className="inline-flex items-center gap-1.5 text-xs font-black text-emerald-700 bg-emerald-50 hover:bg-emerald-100 px-2.5 py-1 rounded-xl border border-emerald-200 transition-colors"
+                    >
+                      <Phone className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>លេខទូរសព្ទ័៖ 012 629 160</span>
+                    </a>
+                    <button
+                      type="button"
+                      onClick={handleTelegramShare}
+                      className="text-pink-600 hover:text-pink-700 text-xs font-bold flex items-center gap-1 hover:underline cursor-pointer"
+                    >
+                      <Send className="w-3 h-3" />
+                      <span>ផ្ញើតាម Telegram</span>
+                    </button>
+                  </div>
                 </div>
               </div>
 

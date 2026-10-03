@@ -28,6 +28,7 @@ import { CustomerOrderLinkModal } from './components/customer-order/CustomerOrde
 import { OfflineAutoSyncToast } from './components/common/OfflineAutoSyncToast';
 import { DemoModeBanner } from './components/common/DemoModeBanner';
 import { RealStoreAuthModal } from './components/auth/RealStoreAuthModal';
+import { ContactModal } from './components/common/ContactModal';
 import { useBakery } from './context/BakeryContext';
 import { soundFx } from './utils/audio';
 import confetti from 'canvas-confetti';
@@ -46,6 +47,9 @@ export const App: React.FC = () => {
   // App Super Admin Portal State
   const [isSuperAdmin, setIsSuperAdmin] = useState(() => isSuperAdminAuthenticated());
   const [isSuperAdminModalOpen, setIsSuperAdminModalOpen] = useState(false);
+
+  // System Contact Modal State
+  const [isContactModalOpen, setIsContactModalOpen] = useState(false);
 
   // Bakery Context for Demo & Real Store Security
   const {
@@ -236,6 +240,7 @@ export const App: React.FC = () => {
         isSuperAdmin={isSuperAdmin}
         onOpenSuperAdminPortal={() => setIsSuperAdminModalOpen(true)}
         onOpenCustomerOrderLinkModal={() => setIsCustomerOrderLinkModalOpen(true)}
+        onOpenContact={() => setIsContactModalOpen(true)}
       />
 
       {/* Main Workspace with Sidebar & Content */}
@@ -245,6 +250,7 @@ export const App: React.FC = () => {
           setActiveTab={handleSelectTab}
           onOpenSettings={handleOpenSettings}
           onOpenThemePicker={() => setIsThemePickerOpen(true)}
+          onOpenContact={() => setIsContactModalOpen(true)}
           currentTheme={currentTheme}
           isMobileOpen={isMobileDrawerOpen}
           onCloseMobile={() => setIsMobileDrawerOpen(false)}
@@ -340,6 +346,12 @@ export const App: React.FC = () => {
       <RealStoreAuthModal
         isOpen={isRealStoreAuthModalOpen}
         onClose={closeRealStoreAuthModal}
+      />
+
+      {/* System Contact & Software Inquiries Modal */}
+      <ContactModal
+        isOpen={isContactModalOpen}
+        onClose={() => setIsContactModalOpen(false)}
       />
     </div>
   );

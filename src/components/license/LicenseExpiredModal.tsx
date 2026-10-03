@@ -215,24 +215,29 @@ export const LicenseExpiredModal: React.FC<LicenseExpiredModalProps> = ({
             </form>
           )}
 
-          {/* Contact Admin Quick Links */}
-          <div className="pt-2 border-t border-slate-100 flex items-center justify-center gap-4 text-xs font-bold text-slate-500">
-            <button
-              type="button"
-              onClick={handleTelegramShare}
-              className="flex items-center gap-1 text-sky-600 hover:text-sky-700 transition-colors"
-            >
-              <Send className="w-3.5 h-3.5" />
-              <span>Telegram</span>
-            </button>
-            <span>•</span>
-            <a
-              href="tel:012345678"
-              className="flex items-center gap-1 text-emerald-600 hover:text-emerald-700 transition-colors"
-            >
-              <Phone className="w-3.5 h-3.5" />
-              <span>ទូរស័ព្ទ Admin</span>
-            </a>
+          {/* Contact Admin / System Inquiries Quick Links */}
+          <div className="pt-2.5 border-t border-slate-100 space-y-2 text-center">
+            <p className="text-[11px] text-slate-600 font-semibold font-battambang">
+              ប្រសិនបើអ្នកមានចំណាប់អារម្មណ៍ចង់ប្រើប្រាស់កម្មវិធីនេះសូមទាក់ទង
+            </p>
+            <div className="flex items-center justify-center gap-3 text-xs font-bold text-slate-500 flex-wrap">
+              <a
+                href="tel:012629160"
+                className="flex items-center gap-1.5 px-3 py-1 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 rounded-xl border border-emerald-200 transition-colors font-black"
+              >
+                <Phone className="w-3.5 h-3.5 text-emerald-600" />
+                <span>លេខទូរសព្ទ័៖ 012 629 160</span>
+              </a>
+              <span>•</span>
+              <button
+                type="button"
+                onClick={handleTelegramShare}
+                className="flex items-center gap-1 text-sky-600 hover:text-sky-700 transition-colors font-bold cursor-pointer"
+              >
+                <Send className="w-3.5 h-3.5" />
+                <span>Telegram</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>

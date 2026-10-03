@@ -24,6 +24,7 @@ import {
   RefreshCw,
   FlaskConical,
   LogOut,
+  Phone,
 } from 'lucide-react';
 import { useBakery } from '../../context/BakeryContext';
 import { useMusic } from '../../context/MusicContext';
@@ -47,6 +48,7 @@ interface NavbarProps {
   isSuperAdmin?: boolean;
   onOpenSuperAdminPortal?: () => void;
   onOpenCustomerOrderLinkModal?: () => void;
+  onOpenContact?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -59,6 +61,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   isSuperAdmin = false,
   onOpenSuperAdminPortal,
   onOpenCustomerOrderLinkModal,
+  onOpenContact,
 }) => {
   const {
     lang,
@@ -370,6 +373,22 @@ export const Navbar: React.FC<NavbarProps> = ({
             </button>
           )}
 
+          {/* Contact System Button */}
+          {onOpenContact && (
+            <button
+              type="button"
+              onClick={() => {
+                soundFx.playPop();
+                onOpenContact();
+              }}
+              title="ទំនាក់ទំនងទិញ ឬប្រើប្រាស់ប្រព័ន្ធ (012 629 160)"
+              className="hidden lg:flex items-center gap-1.5 px-2.5 py-1.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white text-xs font-black shadow-xs transition-all active:scale-95 cursor-pointer border border-emerald-400/40"
+            >
+              <Phone className="w-3.5 h-3.5" />
+              <span>Contact</span>
+            </button>
+          )}
+
           {/* Quick Secondary Tools: Expanded on Large screens (xl+) */}
           <div className="hidden xl:flex items-center gap-1 bg-slate-50/80 p-0.5 rounded-2xl border border-slate-200/80">
             {/* Music Player Button */}
@@ -633,6 +652,26 @@ export const Navbar: React.FC<NavbarProps> = ({
                   >
                     <Key className="w-4 h-4 text-amber-600" />
                     <span>Super Admin 👑</span>
+                  </button>
+                )}
+
+                {/* System Contact Button */}
+                {onOpenContact && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsQuickToolsOpen(false);
+                      onOpenContact();
+                    }}
+                    className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 transition-colors text-left cursor-pointer border border-emerald-200/80"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <Phone className="w-4 h-4 text-emerald-600" />
+                      <span>ទំនាក់ទំនងប្រព័ន្ធ</span>
+                    </div>
+                    <span className="text-[10px] font-mono font-bold text-emerald-700 bg-white px-1.5 py-0.5 rounded-md border border-emerald-200">
+                      012 629 160
+                    </span>
                   </button>
                 )}
 
