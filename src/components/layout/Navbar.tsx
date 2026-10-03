@@ -229,7 +229,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           {currentTheme?.category === 'festival' && currentTheme.seasonTagKh && (
             <div
               onClick={onOpenThemePicker}
-              className={`hidden lg:flex items-center gap-1.5 px-3 py-1 rounded-2xl text-xs font-bold border shadow-2xs cursor-pointer transition-all hover:scale-105 font-battambang ${currentTheme.badgeClass}`}
+              className={`hidden 2xl:flex items-center gap-1.5 px-3 py-1 rounded-2xl text-xs font-bold border shadow-2xs cursor-pointer transition-all hover:scale-105 font-battambang ${currentTheme.badgeClass}`}
               title="ចុចដើម្បីប្តូរ Theme រដូវកាលពិធីបុណ្យ"
             >
               <span className="text-sm animate-bounce">{currentTheme.ambientMotif || currentTheme.emoji}</span>
@@ -247,18 +247,18 @@ export const Navbar: React.FC<NavbarProps> = ({
         </div>
 
         {/* Right Side: Live Clock & Actions */}
-        <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+        <div className="flex items-center gap-1 sm:gap-1.5 shrink min-w-0 justify-end">
           {/* Live Digital Clock (Large screens only) */}
           <div className="hidden 2xl:flex items-center gap-1.5 bg-slate-50 border border-slate-200/90 px-2.5 py-1 rounded-2xl text-xs shadow-2xs font-mono font-bold text-slate-700">
             <Clock className="w-3.5 h-3.5 text-rose-500 animate-spin-slow" />
             <span>{timeString}</span>
           </div>
 
-          {/* Exchange Rate Badge (Compact) */}
+          {/* Exchange Rate Badge (Compact - Large screens only) */}
           <div
             onClick={() => onOpenSettingsModal('store')}
             title="អត្រាប្តូរប្រាក់ (ចុចដើម្បីកែប្រែ)"
-            className="hidden md:flex items-center gap-1 bg-amber-50/80 border border-amber-200 px-2 py-1 rounded-2xl text-xs shadow-2xs text-amber-900 font-black cursor-pointer hover:bg-amber-100 transition-all active:scale-95"
+            className="hidden xl:flex items-center gap-1 bg-amber-50/80 border border-amber-200 px-2 py-1 rounded-2xl text-xs shadow-2xs text-amber-900 font-black cursor-pointer hover:bg-amber-100 transition-all active:scale-95"
           >
             <span className="text-amber-700 text-[11px]">$1 =</span>
             <span>{exchangeRate.toLocaleString()}៛</span>
@@ -303,7 +303,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             ) : (
               <>
                 <Cloud className="w-3.5 h-3.5 text-emerald-600" />
-                <span className="hidden lg:inline text-[11px]">Cloud Live</span>
+                <span className="hidden xl:inline text-[11px]">Cloud Live</span>
                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
               </>
             )}
@@ -366,14 +366,14 @@ export const Navbar: React.FC<NavbarProps> = ({
                 onOpenCustomerOrderLinkModal();
               }}
               title="លីងកុម្ម៉ង់សម្រាប់ភ្ញៀវ (Customer Self-Ordering Link & QR)"
-              className="flex items-center gap-1 px-2.5 py-1.5 rounded-2xl bg-gradient-to-r from-pink-600 to-rose-500 hover:from-pink-700 hover:to-rose-600 text-white text-xs font-black shadow-xs transition-all active:scale-95 cursor-pointer"
+              className="hidden 2xl:flex items-center gap-1 px-2.5 py-1.5 rounded-2xl bg-gradient-to-r from-pink-600 to-rose-500 hover:from-pink-700 hover:to-rose-600 text-white text-xs font-black shadow-xs transition-all active:scale-95 cursor-pointer"
             >
               <LinkIcon className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">លីងភ្ញៀវ</span>
             </button>
           )}
 
-          {/* Contact System Button */}
+          {/* Contact System Button (Ultra-wide screens) */}
           {onOpenContact && (
             <button
               type="button"
@@ -382,155 +382,28 @@ export const Navbar: React.FC<NavbarProps> = ({
                 onOpenContact();
               }}
               title="ទំនាក់ទំនងទិញ ឬប្រើប្រាស់ប្រព័ន្ធ (012 629 160)"
-              className="hidden lg:flex items-center gap-1.5 px-2.5 py-1.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white text-xs font-black shadow-xs transition-all active:scale-95 cursor-pointer border border-emerald-400/40"
+              className="hidden 2xl:flex items-center gap-1.5 px-2.5 py-1.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white text-xs font-black shadow-xs transition-all active:scale-95 cursor-pointer border border-emerald-400/40"
             >
               <Phone className="w-3.5 h-3.5" />
               <span>Contact</span>
             </button>
           )}
 
-          {/* Quick Secondary Tools: Expanded on Large screens (xl+) */}
-          <div className="hidden xl:flex items-center gap-1 bg-slate-50/80 p-0.5 rounded-2xl border border-slate-200/80">
-            {/* Music Player Button */}
-            <button
-              type="button"
-              onClick={() => {
-                soundFx.playPop();
-                setIsMusicPlayerOpen(true);
-              }}
-              title="ម៉ាស៊ីនចាក់ភ្លេងហាងនំ (Bakery Music Player)"
-              className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all cursor-pointer ${
-                isMusicPlaying
-                  ? 'bg-pink-500 text-white shadow-xs animate-pulse'
-                  : 'text-slate-600 hover:text-pink-600 hover:bg-white'
-              }`}
-            >
-              <Music className="w-4 h-4" />
-            </button>
+          {/* Direct Settings Shortcut (Laptop/Desktop) */}
+          <button
+            type="button"
+            onClick={() => {
+              soundFx.playPop();
+              onOpenSettingsModal();
+            }}
+            title="ការកំណត់ហាង (Store Settings)"
+            className="hidden xl:flex w-8 h-8 rounded-xl items-center justify-center text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-all cursor-pointer border border-slate-200/80 shadow-2xs"
+          >
+            <Settings className="w-4 h-4" />
+          </button>
 
-            {/* Theme Picker */}
-            {onOpenThemePicker && (
-              <button
-                type="button"
-                onClick={() => {
-                  soundFx.playPop();
-                  onOpenThemePicker();
-                }}
-                title={`ផ្លាស់ប្តូរ Theme រដូវកាល & ពណ៌ផ្ទៃ (បច្ចុប្បន្ន: ${currentTheme?.nameKh || 'ធម្មតា'})`}
-                className="h-8 px-2 sm:px-2.5 rounded-xl flex items-center gap-1 text-slate-700 hover:text-pink-600 hover:bg-white transition-all cursor-pointer border border-transparent hover:border-pink-200 shadow-2xs group"
-              >
-                <span className="text-base group-hover:scale-125 transition-transform">
-                  {currentTheme?.emoji || '🎨'}
-                </span>
-                <span className="hidden xl:inline text-[11px] font-bold text-slate-600 group-hover:text-pink-600 font-battambang max-w-[100px] truncate">
-                  {currentTheme?.nameKh?.split(' ')[0] || 'Theme'}
-                </span>
-              </button>
-            )}
-
-            {/* Instant LAN Sync Button */}
-            <button
-              type="button"
-              onClick={async () => {
-                soundFx.playPop();
-                setIsManualSyncing(true);
-                const res = await forceSyncLan();
-                setIsManualSyncing(false);
-                soundFx.playSuccess();
-              }}
-              title="ធ្វើសមកាលកម្មទិន្នន័យ LAN ភ្លាមៗ (Instant Sync PC & Mobile)"
-              className={`h-8 px-2.5 rounded-xl flex items-center gap-1.5 text-xs font-bold transition-all cursor-pointer ${
-                lanSyncStatus === 'connected'
-                  ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200'
-                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-              }`}
-            >
-              <RefreshCw className={`w-3.5 h-3.5 text-emerald-600 ${isManualSyncing || lanSyncStatus === 'syncing' ? 'animate-spin' : ''}`} />
-              <span className="hidden sm:inline">Sync</span>
-            </button>
-
-            {/* Mobile Connect */}
-            <button
-              type="button"
-              onClick={() => {
-                soundFx.playPop();
-                setIsMobileConnectOpen(true);
-              }}
-              title="ភ្ជាប់ទូរស័ព្ទដៃបុគ្គលិក / ចែករំលែក Demo (Mobile Access)"
-              className="w-8 h-8 rounded-xl flex items-center justify-center text-purple-600 hover:bg-white transition-all cursor-pointer"
-            >
-              <Smartphone className="w-4 h-4" />
-            </button>
-
-            {/* Sound Toggle */}
-            <button
-              type="button"
-              onClick={toggleSound}
-              title={soundEnabled ? 'បិទសំឡេង (Mute)' : 'បើកសំឡេង (Unmute)'}
-              className="w-8 h-8 rounded-xl flex items-center justify-center text-slate-600 hover:text-pink-600 hover:bg-white transition-all cursor-pointer"
-            >
-              {soundEnabled ? <Volume2 className="w-4 h-4 text-pink-500" /> : <VolumeX className="w-4 h-4 text-slate-400" />}
-            </button>
-
-            {/* Push Notifications & Reminders */}
-            <button
-              type="button"
-              onClick={() => {
-                soundFx.playPop();
-                onOpenSettingsModal('notifications');
-              }}
-              title="ការដាស់តឿនលើទូរសព្ទ (Reminders)"
-              className="w-8 h-8 rounded-xl flex items-center justify-center text-slate-600 hover:text-pink-600 hover:bg-white transition-all cursor-pointer relative"
-            >
-              <Bell className="w-4 h-4 text-pink-500" />
-              <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-pink-500" />
-            </button>
-
-            {/* Store Settings */}
-            <button
-              type="button"
-              onClick={() => {
-                soundFx.playPop();
-                onOpenSettingsModal();
-              }}
-              title="ការកំណត់ហាង (Store Settings)"
-              className="w-8 h-8 rounded-xl flex items-center justify-center text-slate-600 hover:text-slate-900 hover:bg-white transition-all cursor-pointer"
-            >
-              <Settings className="w-4 h-4" />
-            </button>
-
-            {/* App Super Admin Portal Button */}
-            {isSuperAdmin && onOpenSuperAdminPortal && (
-              <button
-                type="button"
-                onClick={() => {
-                  soundFx.playPop();
-                  onOpenSuperAdminPortal();
-                }}
-                title="Super Admin License Manager"
-                className="w-8 h-8 rounded-xl bg-amber-400 text-amber-950 flex items-center justify-center shadow-xs cursor-pointer hover:scale-105 transition-all"
-              >
-                <Key className="w-4 h-4" />
-              </button>
-            )}
-
-            {/* Quick Logout Button */}
-            <button
-              type="button"
-              onClick={() => {
-                if (window.confirm(`តើអ្នកពិតជាចង់ចាកចេញពីគណនី «${currentStaff.name}» និងចាក់សោប្រព័ន្ធមែនទេ?`)) {
-                  logoutAndLock();
-                }
-              }}
-              title={`ចាកចេញពីគណនី «${currentStaff.name}» (Logout) 🚪`}
-              className="w-8 h-8 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200/80 flex items-center justify-center shadow-xs cursor-pointer hover:scale-105 active:scale-95 transition-all"
-            >
-              <LogOut className="w-4 h-4" />
-            </button>
-          </div>
-
-          {/* Quick Tools Dropdown for Screens < xl (Tablet/Laptop) */}
-          <div className="relative xl:hidden" ref={quickToolsRef}>
+          {/* Quick Tools Dropdown (Consolidated Tools Menu - ALWAYS VISIBLE TO PREVENT OVERFLOW) */}
+          <div className="relative" ref={quickToolsRef}>
             <button
               type="button"
               onClick={() => {
@@ -745,8 +618,8 @@ export const Navbar: React.FC<NavbarProps> = ({
             ) : (
               <Clock className="w-3.5 h-3.5" />
             )}
-            <span className="hidden sm:inline max-w-[90px] truncate">
-              {currentShift?.status === 'OPEN' ? currentShift.cashierName : text.shiftClosed}
+            <span className="hidden sm:inline">
+              {currentShift?.status === 'OPEN' ? 'វេនបើក' : text.shiftClosed}
             </span>
           </button>
 

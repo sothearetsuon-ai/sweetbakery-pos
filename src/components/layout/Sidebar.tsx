@@ -234,8 +234,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   };
 
   const renderNavList = () => (
-    <>
-      <div className="p-3.5 space-y-3.5 flex-1 overflow-y-auto">
+    <div className="flex flex-col justify-between min-h-full">
+      <div className="p-3 space-y-2.5">
         {/* Main Menu Hero Banner */}
         <div className="p-3 rounded-2xl bg-gradient-to-r from-[#FF6F68]/10 via-[#E6514D]/10 to-amber-500/10 border border-[#FFCCC6]/80 shadow-2xs flex items-center justify-between">
           <div className="flex items-center gap-2.5">
@@ -332,7 +332,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       </div>
 
       {/* Active Staff Card & Kitchen Status Widget & Settings */}
-      <div className="p-4 space-y-3 shrink-0 border-t border-rose-100/50 bg-white/40">
+      <div className="p-3 space-y-2 border-t border-rose-100/50 bg-white/40">
         {/* Active Staff Quick Info */}
         <div className="p-2.5 rounded-2xl bg-white border border-purple-100 shadow-2xs flex items-center justify-between">
           <div className="flex items-center gap-2.5">
@@ -502,13 +502,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
           SweetBakery POS v1.0 • Made with ❤️
         </div>
       </div>
-    </>
+    </div>
   );
 
   return (
     <>
       {/* 1. Desktop Permanent Sidebar (Hidden on Mobile) */}
-      <aside className="hidden md:flex w-64 glass-panel border-r border-[#F2DBD3] flex-col justify-between shrink-0 min-h-[calc(100vh-65px)] overflow-hidden">
+      <aside className="hidden md:flex w-64 glass-panel border-r border-[#F2DBD3] flex-col shrink-0 h-[calc(100vh-65px)] overflow-y-auto scrollbar-thin">
         {renderNavList()}
       </aside>
 
