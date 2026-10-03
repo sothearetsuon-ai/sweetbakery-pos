@@ -129,12 +129,13 @@ export const testGeminiApiKey = async (apiKey: string): Promise<ApiKeyTestResult
         .filter((m: any) => m.supportedGenerationMethods?.includes('generateContent'))
         .map((m: any) => m.name?.replace('models/', ''));
 
-      // Find the best flash model available for this account (prioritize gemini-2.5-flash)
+      // Find the best flash model available for this account (prioritize gemini-3.8-flash)
       const bestModel =
-        usableModels.find((m: string) => m === 'gemini-2.5-flash') ||
-        usableModels.find((m: string) => m.includes('2.5-flash')) ||
-        usableModels.find((m: string) => m.includes('flash') && !m.includes('2.0-flash') && !m.includes('1.5-flash')) ||
-        'gemini-2.5-flash';
+        usableModels.find((m: string) => m === 'gemini-3.8-flash') ||
+        usableModels.find((m: string) => m.includes('3.8-flash')) ||
+        usableModels.find((m: string) => m.includes('3.')) ||
+        usableModels.find((m: string) => m.includes('flash')) ||
+        'gemini-3.8-flash';
 
       localStorage.setItem('sweetbakery_gemini_active_model', bestModel);
 
@@ -226,19 +227,19 @@ Return ONLY a valid JSON object matching this schema without any markdown format
   "rawNotes": "ចំណាំបន្ថែម"
 }`;
 
-  // 1. Purge obsolete models and prioritize gemini-2.5-flash
+  // 1. Purge obsolete models and prioritize gemini-3.8-flash
   let activeModel = typeof localStorage !== 'undefined' ? localStorage.getItem('sweetbakery_gemini_active_model') : null;
-  if (!activeModel || activeModel.includes('2.0-flash') || activeModel.includes('1.5-flash')) {
-    activeModel = 'gemini-2.5-flash';
+  if (!activeModel || activeModel.includes('2.') || activeModel.includes('1.')) {
+    activeModel = 'gemini-3.8-flash';
     if (typeof localStorage !== 'undefined') {
-      localStorage.setItem('sweetbakery_gemini_active_model', 'gemini-2.5-flash');
+      localStorage.setItem('sweetbakery_gemini_active_model', 'gemini-3.8-flash');
     }
   }
 
-  // Strictly use active valid model (gemini-2.5-flash)
+  // Strictly use active valid model (gemini-3.8-flash)
   const candidateModels = [
     activeModel,
-    'gemini-2.5-flash',
+    'gemini-3.8-flash',
   ].filter(Boolean) as string[];
 
   const models = Array.from(new Set(candidateModels));
