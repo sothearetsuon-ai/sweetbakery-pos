@@ -333,6 +333,46 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
       {/* Active Staff Card & Kitchen Status Widget & Settings */}
       <div className="p-3 space-y-2 border-t border-rose-100/50 bg-white/40">
+        {/* Contact System Inquiries Card (Prominently Placed) */}
+        <div className="p-2.5 rounded-2xl bg-gradient-to-br from-rose-500/10 via-pink-500/5 to-amber-500/10 border border-rose-200/80 shadow-2xs space-y-1.5">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-black text-slate-800 flex items-center gap-1.5 font-battambang">
+              <Phone className="w-3.5 h-3.5 text-[#E6514D]" />
+              <span>ទំនាក់ទំនងប្រព័ន្ធ</span>
+            </span>
+            <span className="text-[9px] font-bold text-rose-700 bg-rose-100 px-1.5 py-0.2 rounded-full font-mono">
+              POS Software
+            </span>
+          </div>
+          <p className="text-[11px] text-slate-600 leading-snug font-medium font-battambang">
+            ប្រសិនបើអ្នកមានចំណាប់អារម្មណ៍ចង់ប្រើប្រាស់កម្មវិធីនេះសូមទាក់ទង
+          </p>
+          <div className="flex items-center gap-1.5">
+            <a
+              href="tel:012629160"
+              className="flex-1 py-1.5 px-2 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-black text-xs rounded-xl shadow-2xs flex items-center justify-center gap-1.5 transition-all active:scale-95"
+              title="ខលទៅកាន់លេខ 012 629 160"
+            >
+              <PhoneCall className="w-3 h-3" />
+              <span>012 629 160</span>
+            </a>
+            {onOpenContact && (
+              <button
+                type="button"
+                onClick={() => {
+                  soundFx.playPop();
+                  onOpenContact();
+                  onCloseMobile?.();
+                }}
+                className="py-1.5 px-2 bg-white hover:bg-rose-50 text-slate-700 hover:text-rose-600 font-bold text-[11px] rounded-xl border border-rose-200 transition-all cursor-pointer shadow-2xs shrink-0"
+                title="ព័ត៌មានលម្អិត"
+              >
+                លម្អិត
+              </button>
+            )}
+          </div>
+        </div>
+
         {/* Active Staff Quick Info */}
         <div className="p-2.5 rounded-2xl bg-white border border-purple-100 shadow-2xs flex items-center justify-between">
           <div className="flex items-center gap-2.5">
@@ -457,46 +497,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
             Lock
           </span>
         </button>
-
-        {/* Contact System Inquiries Card */}
-        <div className="p-3 rounded-2xl bg-gradient-to-br from-rose-500/10 via-pink-500/5 to-amber-500/10 border border-rose-200/80 shadow-2xs space-y-2">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-black text-slate-800 flex items-center gap-1.5 font-battambang">
-              <Phone className="w-3.5 h-3.5 text-[#E6514D]" />
-              <span>ទំនាក់ទំនងប្រព័ន្ធ</span>
-            </span>
-            <span className="text-[9px] font-bold text-rose-700 bg-rose-100 px-1.5 py-0.2 rounded-full font-mono">
-              POS Software
-            </span>
-          </div>
-          <p className="text-[11px] text-slate-600 leading-snug font-medium font-battambang">
-            ប្រសិនបើអ្នកមានចំណាប់អារម្មណ៍ចង់ប្រើប្រាស់កម្មវិធីនេះសូមទាក់ទង
-          </p>
-          <div className="flex items-center gap-1.5">
-            <a
-              href="tel:012629160"
-              className="flex-1 py-1.5 px-2 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-black text-xs rounded-xl shadow-2xs flex items-center justify-center gap-1.5 transition-all active:scale-95"
-              title="ខលទៅកាន់លេខ 012 629 160"
-            >
-              <PhoneCall className="w-3 h-3" />
-              <span>012 629 160</span>
-            </a>
-            {onOpenContact && (
-              <button
-                type="button"
-                onClick={() => {
-                  soundFx.playPop();
-                  onOpenContact();
-                  onCloseMobile?.();
-                }}
-                className="py-1.5 px-2.5 bg-white hover:bg-rose-50 text-slate-700 hover:text-rose-600 font-bold text-[11px] rounded-xl border border-rose-200 transition-all cursor-pointer shadow-2xs"
-                title="ព័ត៌មានលម្អិត"
-              >
-                លម្អិត
-              </button>
-            )}
-          </div>
-        </div>
 
         <div className="text-center text-[10px] text-slate-400 font-medium">
           SweetBakery POS v1.0 • Made with ❤️

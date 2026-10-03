@@ -373,20 +373,37 @@ export const Navbar: React.FC<NavbarProps> = ({
             </button>
           )}
 
-          {/* Contact System Button (Ultra-wide screens) */}
+          {/* Contact System Button (Accessible on both Desktop and Mobile) */}
           {onOpenContact && (
-            <button
-              type="button"
-              onClick={() => {
-                soundFx.playPop();
-                onOpenContact();
-              }}
-              title="ទំនាក់ទំនងទិញ ឬប្រើប្រាស់ប្រព័ន្ធ (012 629 160)"
-              className="hidden 2xl:flex items-center gap-1.5 px-2.5 py-1.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white text-xs font-black shadow-xs transition-all active:scale-95 cursor-pointer border border-emerald-400/40"
-            >
-              <Phone className="w-3.5 h-3.5" />
-              <span>Contact</span>
-            </button>
+            <>
+              {/* Desktop / Tablet Contact Button */}
+              <button
+                type="button"
+                onClick={() => {
+                  soundFx.playPop();
+                  onOpenContact();
+                }}
+                title="ទំនាក់ទំនងទិញ ឬប្រើប្រាស់ប្រព័ន្ធ (012 629 160)"
+                className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white text-xs font-black shadow-xs transition-all active:scale-95 cursor-pointer border border-emerald-400/40 shrink-0"
+              >
+                <Phone className="w-3.5 h-3.5 text-emerald-200" />
+                <span>Contact</span>
+                <span className="hidden xl:inline text-[11px] font-mono text-emerald-200">012 629 160</span>
+              </button>
+
+              {/* Mobile Phone Quick Action Icon */}
+              <button
+                type="button"
+                onClick={() => {
+                  soundFx.playPop();
+                  onOpenContact();
+                }}
+                title="ទំនាក់ទំនងទិញ ឬប្រើប្រាស់ប្រព័ន្ធ (012 629 160)"
+                className="flex sm:hidden p-1.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-2xs items-center justify-center cursor-pointer border border-emerald-500/40 active:scale-95 shrink-0"
+              >
+                <Phone className="w-3.5 h-3.5" />
+              </button>
+            </>
           )}
 
           {/* Direct Settings Shortcut (Laptop/Desktop) */}

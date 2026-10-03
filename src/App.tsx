@@ -1,3 +1,4 @@
+import { Phone } from 'lucide-react';
 import React, { useState } from 'react';
 import { Navbar } from './components/layout/Navbar';
 import { Sidebar, TabType } from './components/layout/Sidebar';
@@ -347,6 +348,30 @@ export const App: React.FC = () => {
         isOpen={isRealStoreAuthModalOpen}
         onClose={closeRealStoreAuthModal}
       />
+
+      {/* Floating System Contact Quick Pill (Always Accessible on all pages) */}
+      <button
+        type="button"
+        onClick={() => {
+          soundFx.playPop();
+          setIsContactModalOpen(true);
+        }}
+        title="ប្រសិនបើអ្នកមានចំណាប់អារម្មណ៍ចង់ប្រើប្រាស់កម្មវិធីនេះសូមទាក់ទង លេខទូរសព្ទ័៖ 012 629 160"
+        className="fixed bottom-20 md:bottom-5 right-3 md:right-5 z-40 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white pl-3 pr-3.5 py-2 rounded-full shadow-xl shadow-emerald-950/25 border-2 border-emerald-300/40 flex items-center gap-2 cursor-pointer transition-all hover:scale-105 active:scale-95 group font-battambang"
+      >
+        <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center animate-pulse shrink-0">
+          <Phone className="w-3.5 h-3.5 text-white" />
+        </div>
+        <div className="text-left">
+          <div className="text-[10px] text-emerald-100 font-bold leading-tight hidden xs:block">
+            ទំនាក់ទំនងប្រើប្រាស់ប្រព័ន្ធ
+          </div>
+          <div className="text-xs font-black font-mono tracking-wide flex items-center gap-1">
+            <span>012 629 160</span>
+            <span className="text-[10px] text-emerald-200 group-hover:translate-x-0.5 transition-transform">✨</span>
+          </div>
+        </div>
+      </button>
 
       {/* System Contact & Software Inquiries Modal */}
       <ContactModal
