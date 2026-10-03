@@ -55,6 +55,7 @@ export const InvoiceScannerModal: React.FC<InvoiceScannerModalProps> = ({
   const [keyInput, setKeyInput] = useState('');
   const [showKey, setShowKey] = useState(false);
   const [keyTestStatus, setKeyTestStatus] = useState<'IDLE' | 'TESTING' | 'VALID' | 'INVALID'>('IDLE');
+  const [keyTestMessage, setKeyTestMessage] = useState<string>('');
 
   // Scanning State
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
@@ -101,9 +102,11 @@ export const InvoiceScannerModal: React.FC<InvoiceScannerModalProps> = ({
   const handleTestApiKey = async () => {
     if (!keyInput.trim()) return;
     setKeyTestStatus('TESTING');
-    const valid = await testGeminiApiKey(keyInput.trim());
-    setKeyTestStatus(valid ? 'VALID' : 'INVALID');
-    if (valid) {
+    setKeyTestMessage('');
+    const res = await testGeminiApiKey(keyInput.trim());
+    setKeyTestStatus(res.valid ? 'VALID' : 'INVALID');
+    setKeyTestMessage(res.message || '');
+    if (res.valid) {
       soundFx.playSuccess();
     } else {
       soundFx.playNotificationAlert();
@@ -443,6 +446,23 @@ export const InvoiceScannerModal: React.FC<InvoiceScannerModalProps> = ({
                 </button>
               </div>
             </div>
+
+            {keyTestMessage && (
+              <div
+                className={`p-3 rounded-xl text-xs font-semibold flex items-start gap-2 ${
+                  keyTestStatus === 'VALID'
+                    ? 'bg-emerald-100 text-emerald-950 border border-emerald-300'
+                    : 'bg-rose-100 text-rose-950 border border-rose-300'
+                }`}
+              >
+                {keyTestStatus === 'VALID' ? (
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                ) : (
+                  <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                )}
+                <span className="leading-relaxed">{keyTestMessage}</span>
+              </div>
+            )}
           </div>
         )}
 

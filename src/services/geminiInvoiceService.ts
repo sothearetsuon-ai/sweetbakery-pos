@@ -97,24 +97,49 @@ export const compressImage = (
   });
 };
 
+export interface ApiKeyTestResult {
+  valid: boolean;
+  message?: string;
+}
+
 /**
  * Quick validation check for Gemini API Key
  */
-export const testGeminiApiKey = async (apiKey: string): Promise<boolean> => {
+export const testGeminiApiKey = async (apiKey: string): Promise<ApiKeyTestResult> => {
   try {
     const trimmed = apiKey.trim();
-    if (!trimmed) return false;
+    if (!trimmed) {
+      return { valid: false, message: 'សូមបញ្ចូល API Key ជាមុនសិន' };
+    }
     const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${trimmed}`;
     const res = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        contents: [{ parts: [{ text: 'Hello, reply with OK' }] }],
+        contents: [{ parts: [{ text: 'Hello' }] }],
       }),
     });
-    return res.ok;
-  } catch {
-    return false;
+
+    if (res.ok) {
+      return { valid: true, message: 'ជោគជ័យ ✓ API Key ត្រឹមត្រូវ អាចដំណើរការបាន' };
+    }
+
+    const data = await res.json().catch(() => ({}));
+    const rawMsg = data.error?.message || `HTTP ${res.status}: ${res.statusText}`;
+
+    let khmerMsg = rawMsg;
+    if (rawMsg.includes('API key not valid')) {
+      khmerMsg =
+        'Google បដិសេធ៖ API Key មិនត្រឹមត្រូវ (API key not valid)។ សូមប្រាកដថាបានចុច Copy ពីប៊ូតុង Copy ក្នុង Google AI Studio (Key ពិតប្រាកដតែងតែផ្ដើមដោយ AIzaSy...)';
+    } else if (rawMsg.includes('User location is not supported')) {
+      khmerMsg = 'Google Gemini មិនទាន់គាំទ្រទីតាំងបច្ចុប្បន្នរបស់អ្នកទេ';
+    } else if (rawMsg.includes('Quota exceeded')) {
+      khmerMsg = 'Quota ការប្រើប្រាស់ពេញហើយ សូមរង់ចាំបន្តិច';
+    }
+
+    return { valid: false, message: khmerMsg };
+  } catch (err: any) {
+    return { valid: false, message: err.message || 'មិនអាចភ្ជាប់ទៅកាន់ Google API បានទេ' };
   }
 };
 
