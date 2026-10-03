@@ -30,6 +30,7 @@ import { Ingredient, Product, Recipe } from '../../types';
 import { soundFx } from '../../utils/audio';
 import { getProductImageUrl } from '../../utils/imagePath';
 import { AddProductModal } from '../pos/AddProductModal';
+import { PartyAccessoriesModal } from '../pos/PartyAccessoriesModal';
 import { AddEditIngredientModal } from './AddEditIngredientModal';
 import { AddEditRecipeModal } from './AddEditRecipeModal';
 import { RecipeDetailModal } from './RecipeDetailModal';
@@ -58,8 +59,10 @@ export const InventoryManagement: React.FC = () => {
   const [selectedIngredient, setSelectedIngredient] = useState<Ingredient | null>(null);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [restockAmount, setRestockAmount] = useState<string>('10');
-  const [activeTab, setActiveTab] = useState<'products' | 'stock' | 'costing'>('products');
+  const [activeTab, setActiveTab] = useState<'cakes' | 'decorations' | 'stock' | 'costing'>('cakes');
   const [productFilter, setProductFilter] = useState<'all' | 'out' | 'low'>('all');
+  const [defaultAddCategory, setDefaultAddCategory] = useState<string>('birthday');
+  const [isPartyAccessoriesOpen, setIsPartyAccessoriesOpen] = useState(false);
 
   // Product Add / Edit / Delete modal states
   const [isAddProductOpen, setIsAddProductOpen] = useState(false);
@@ -110,7 +113,13 @@ export const InventoryManagement: React.FC = () => {
     }
   };
 
-  const filteredProducts = products.filter((prod) => {
+  // Separate Cakes vs Party & Decoration accessories
+  const cakeProducts = products.filter((p) => p.categoryId !== 'party');
+  const decorProducts = products.filter((p) => p.categoryId === 'party');
+
+  const currentProductsList = activeTab === 'decorations' ? decorProducts : cakeProducts;
+
+  const filteredProducts = currentProductsList.filter((prod) => {
     const q = searchQuery.toLowerCase().trim();
     const matchesSearch =
       !q ||
@@ -125,8 +134,14 @@ export const InventoryManagement: React.FC = () => {
     return true;
   });
 
-  const outOfStockProductsCount = products.filter((p) => p.stockQty === 0).length;
-  const lowStockProductsCount = products.filter((p) => p.stockQty <= 5 && p.stockQty > 0).length;
+  const outOfStockCakesCount = cakeProducts.filter((p) => p.stockQty === 0).length;
+  const lowStockCakesCount = cakeProducts.filter((p) => p.stockQty <= 5 && p.stockQty > 0).length;
+
+  const outOfStockDecorCount = decorProducts.filter((p) => p.stockQty === 0).length;
+  const lowStockDecorCount = decorProducts.filter((p) => p.stockQty <= 5 && p.stockQty > 0).length;
+
+  const outOfStockCurrentCount = activeTab === 'decorations' ? outOfStockDecorCount : outOfStockCakesCount;
+  const lowStockCurrentCount = activeTab === 'decorations' ? lowStockDecorCount : lowStockCakesCount;
 
   return (
     <div className="flex-1 flex flex-col p-3 sm:p-6 overflow-hidden pb-20 md:pb-6">
@@ -134,10 +149,15 @@ export const InventoryManagement: React.FC = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 mb-4 sm:mb-6 shrink-0">
         <div>
           <h2 className="text-lg sm:text-xl font-black text-slate-800 flex items-center gap-2">
-            {activeTab === 'products' ? (
+            {activeTab === 'cakes' ? (
               <>
                 <Cake className="w-5 h-5 text-pink-600" />
-                <span>ស្តុកនំ និងទំនិញលក់ (Bakery Stock)</span>
+                <span>ស្តុកនំ និងនំប៉័ង (Bakery & Cakes Stock)</span>
+              </>
+            ) : activeTab === 'decorations' ? (
+              <>
+                <Sparkles className="w-5 h-5 text-amber-500" />
+                <span>ស្តុកសម្ភារៈតុបតែង & ពិធី (Party & Decor Stock)</span>
               </>
             ) : activeTab === 'stock' ? (
               <>
@@ -152,8 +172,10 @@ export const InventoryManagement: React.FC = () => {
             )}
           </h2>
           <p className="text-xs text-slate-500 mt-0.5">
-            {activeTab === 'products'
-              ? 'ពិនិត្យមើលចំនួននំដែលនៅសល់ នំអស់ពីស្តុក និងបន្ថែមស្តុកថ្មីភ្លាមៗ'
+            {activeTab === 'cakes'
+              ? 'ពិនិត្យមើលចំនួននំខួបកំណើត នំចំណិត នំប៉័ង នំអស់ពីស្តុក និងបន្ថែមស្តុកថ្មីភ្លាមៗ'
+              : activeTab === 'decorations'
+              ? 'គ្រប់គ្រងស្តុកទៀនខួបកំណើត ស្លាកដោតនំ មួក កាំបិត កាំជ្រួចភ្លើង និងគ្រឿងតុបតែងពិធី'
               : activeTab === 'stock'
               ? 'គ្រប់គ្រងស្តុកគ្រឿងផ្សំដើម តម្លៃទិញចូល និងការជូនដំណឹងពេលជិតអស់'
               : 'ទម្រង់គណនាថ្លៃដើមគ្រឿងផ្សំ (BOM) ថ្លៃប្រអប់ ពលកម្ម និងវិភាគប្រាក់ចំណេញសុទ្ធ'}
@@ -161,18 +183,46 @@ export const InventoryManagement: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
-          {activeTab === 'products' ? (
+          {activeTab === 'cakes' ? (
             <button
               onClick={() => {
                 soundFx.playPop();
+                setDefaultAddCategory('birthday');
                 setEditingProduct(null);
                 setIsAddProductOpen(true);
               }}
               className="px-3.5 py-2 bg-gradient-to-r from-pink-600 to-rose-500 hover:from-pink-700 hover:to-rose-600 text-white rounded-xl text-xs font-black shadow-md shadow-pink-600/20 flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all"
             >
               <Plus className="w-4 h-4 stroke-[3]" />
-              <span>+ បន្ថែមទំនិញថ្មី</span>
+              <span>+ បន្ថែមនំថ្មី</span>
             </button>
+          ) : activeTab === 'decorations' ? (
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => {
+                  soundFx.playPop();
+                  setDefaultAddCategory('party');
+                  setEditingProduct(null);
+                  setIsAddProductOpen(true);
+                }}
+                className="px-3.5 py-2 bg-gradient-to-r from-amber-500 via-rose-500 to-pink-600 hover:from-amber-600 hover:to-pink-700 text-white rounded-xl text-xs font-black shadow-md shadow-amber-500/20 flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all"
+              >
+                <Plus className="w-4 h-4 stroke-[3]" />
+                <span>+ បន្ថែមសម្ភារៈតុបតែង</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  soundFx.playPop();
+                  setIsPartyAccessoriesOpen(true);
+                }}
+                className="px-3 py-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-xl text-xs font-bold shadow-2xs flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all"
+                title="គ្រប់គ្រងបញ្ជីគ្រឿងបន្ថែមពិធី (Party Add-ons Modal)"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                <span className="hidden sm:inline">បញ្ជីគ្រឿងបន្ថែម</span>
+              </button>
+            </div>
           ) : activeTab === 'stock' ? (
             <button
               onClick={() => {
@@ -205,8 +255,10 @@ export const InventoryManagement: React.FC = () => {
             <input
               type="text"
               placeholder={
-                activeTab === 'products'
-                  ? 'ស្វែងរកនំ ឬទំនិញ...'
+                activeTab === 'cakes'
+                  ? 'ស្វែងរកនំ ឬនំប៉័ង...'
+                  : activeTab === 'decorations'
+                  ? 'ស្វែងរកសម្ភារៈតុបតែង...'
                   : activeTab === 'stock'
                   ? 'ស្វែងរកគ្រឿងផ្សំ...'
                   : 'ស្វែងរកឈ្មោះរូបមន្តនំ BOM...'
@@ -218,25 +270,46 @@ export const InventoryManagement: React.FC = () => {
           </div>
 
           {/* Tab Switcher */}
-          <div className="flex items-center bg-white p-1 rounded-xl border border-slate-200 shadow-xs">
+          <div className="flex items-center bg-white p-1 rounded-xl border border-slate-200 shadow-xs overflow-x-auto max-w-full">
             <button
               onClick={() => {
                 soundFx.playPop();
-                setActiveTab('products');
+                setActiveTab('cakes');
               }}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${
-                activeTab === 'products'
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 whitespace-nowrap ${
+                activeTab === 'cakes'
                   ? 'bg-gradient-to-r from-pink-600 to-rose-500 text-white shadow-xs font-bold'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
               <Cake className="w-3.5 h-3.5" />
-              <span>ស្តុកនំ ({products.length})</span>
-              {outOfStockProductsCount > 0 && (
+              <span>ស្តុកនំ ({cakeProducts.length})</span>
+              {outOfStockCakesCount > 0 && (
                 <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-black ${
-                  activeTab === 'products' ? 'bg-white text-rose-600' : 'bg-rose-600 text-white'
+                  activeTab === 'cakes' ? 'bg-white text-rose-600' : 'bg-rose-600 text-white'
                 }`}>
-                  {outOfStockProductsCount} អស់
+                  {outOfStockCakesCount} អស់
+                </span>
+              )}
+            </button>
+            <button
+              onClick={() => {
+                soundFx.playPop();
+                setActiveTab('decorations');
+              }}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 whitespace-nowrap ${
+                activeTab === 'decorations'
+                  ? 'bg-gradient-to-r from-amber-500 via-rose-500 to-pink-600 text-white shadow-xs font-bold'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>សម្ភារៈតុបតែង ({decorProducts.length})</span>
+              {outOfStockDecorCount > 0 && (
+                <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-black ${
+                  activeTab === 'decorations' ? 'bg-white text-rose-600' : 'bg-rose-600 text-white'
+                }`}>
+                  {outOfStockDecorCount} អស់
                 </span>
               )}
             </button>
@@ -245,7 +318,7 @@ export const InventoryManagement: React.FC = () => {
                 soundFx.playPop();
                 setActiveTab('stock');
               }}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 whitespace-nowrap ${
                 activeTab === 'stock'
                   ? 'bg-gradient-to-r from-pink-600 to-rose-500 text-white shadow-xs font-bold'
                   : 'text-slate-600 hover:text-slate-900'
@@ -259,7 +332,7 @@ export const InventoryManagement: React.FC = () => {
                 soundFx.playPop();
                 setActiveTab('costing');
               }}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 whitespace-nowrap ${
                 activeTab === 'costing'
                   ? 'bg-gradient-to-r from-pink-600 to-rose-500 text-white shadow-xs font-bold'
                   : 'text-slate-600 hover:text-slate-900'
@@ -272,8 +345,8 @@ export const InventoryManagement: React.FC = () => {
         </div>
       </div>
 
-      {activeTab === 'products' ? (
-        /* Bakery Products Stock Table */
+      {(activeTab === 'cakes' || activeTab === 'decorations') ? (
+        /* Bakery Products / Party Decorations Stock Table */
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex-1 flex flex-col">
           {/* Filters row */}
           <div className="p-3 bg-slate-50/70 border-b border-slate-100 flex items-center justify-between gap-2 flex-wrap">
@@ -287,7 +360,7 @@ export const InventoryManagement: React.FC = () => {
                     : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'
                 }`}
               >
-                ទាំងអស់ ({products.length})
+                ទាំងអស់ ({currentProductsList.length})
               </button>
               <button
                 onClick={() => setProductFilter('out')}
@@ -299,7 +372,7 @@ export const InventoryManagement: React.FC = () => {
               >
                 <span>អស់ពីស្តុក</span>
                 <span className="px-1.5 py-0.2 bg-rose-100 text-rose-700 rounded-full text-[10px]">
-                  {outOfStockProductsCount}
+                  {outOfStockCurrentCount}
                 </span>
               </button>
               <button
@@ -312,7 +385,7 @@ export const InventoryManagement: React.FC = () => {
               >
                 <span>ជិតអស់ (≤5)</span>
                 <span className="px-1.5 py-0.2 bg-amber-100 text-amber-700 rounded-full text-[10px]">
-                  {lowStockProductsCount}
+                  {lowStockCurrentCount}
                 </span>
               </button>
             </div>
@@ -325,7 +398,9 @@ export const InventoryManagement: React.FC = () => {
           <div className="block sm:hidden overflow-y-auto flex-1 p-2.5 space-y-2.5">
             {filteredProducts.length === 0 ? (
               <div className="p-8 text-center text-slate-400 font-medium">
-                មិនមាននំ ឬទំនិញតាមលក្ខខណ្ឌស្វែងរកនេះទេ
+                {activeTab === 'decorations'
+                  ? 'មិនមានសម្ភារៈតុបតែង ឬគ្រឿងបន្ថែមតាមលក្ខខណ្ឌស្វែងរកនេះទេ'
+                  : 'មិនមាននំ ឬនំប៉័ងតាមលក្ខខណ្ឌស្វែងរកនេះទេ'}
               </div>
             ) : (
               filteredProducts.map((prod) => {
@@ -447,7 +522,9 @@ export const InventoryManagement: React.FC = () => {
                   {filteredProducts.length === 0 ? (
                     <tr>
                       <td colSpan={5} className="p-8 text-center text-slate-400">
-                        មិនមាននំ ឬទំនិញតាមលក្ខខណ្ឌស្វែងរកនេះទេ
+                        {activeTab === 'decorations'
+                          ? 'មិនមានសម្ភារៈតុបតែង ឬគ្រឿងបន្ថែមតាមលក្ខខណ្ឌស្វែងរកនេះទេ'
+                          : 'មិនមាននំ ឬនំប៉័ងតាមលក្ខខណ្ឌស្វែងរកនេះទេ'}
                       </td>
                     </tr>
                   ) : (
@@ -1486,6 +1563,13 @@ export const InventoryManagement: React.FC = () => {
           setEditingProduct(null);
         }}
         productToEdit={editingProduct}
+        defaultCategoryId={defaultAddCategory}
+      />
+
+      {/* Party Accessories & Addons Management Modal */}
+      <PartyAccessoriesModal
+        isOpen={isPartyAccessoriesOpen}
+        onClose={() => setIsPartyAccessoriesOpen(false)}
       />
 
       {/* Add / Edit Ingredient Modal */}

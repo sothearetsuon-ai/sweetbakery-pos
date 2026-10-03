@@ -13,9 +13,15 @@ interface AddProductModalProps {
   isOpen: boolean;
   onClose: () => void;
   productToEdit?: Product | null;
+  defaultCategoryId?: string;
 }
 
-export const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, onClose, productToEdit }) => {
+export const AddProductModal: React.FC<AddProductModalProps> = ({
+  isOpen,
+  onClose,
+  productToEdit,
+  defaultCategoryId,
+}) => {
   const { lang, categories, addProduct, updateProduct, exchangeRate } = useBakery();
   const text = t[lang];
 
@@ -23,11 +29,11 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, onClos
   const [nameKh, setNameKh] = useState('');
   const [nameEn, setNameEn] = useState('');
   const [barcode, setBarcode] = useState('');
-  const [categoryId, setCategoryId] = useState('birthday');
+  const [categoryId, setCategoryId] = useState(defaultCategoryId || 'birthday');
   const [priceKhr, setPriceKhr] = useState('');
   const [costPriceKhr, setCostPriceKhr] = useState('');
   const [stockQty, setStockQty] = useState('');
-  const [unit, setUnit] = useState('នំ');
+  const [unit, setUnit] = useState(defaultCategoryId === 'party' ? 'ដុំ' : 'នំ');
   const [description, setDescription] = useState('');
   
   // Multi-image state
@@ -68,16 +74,16 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, onClos
       setNameKh('');
       setNameEn('');
       setBarcode('');
-      setCategoryId('birthday');
+      setCategoryId(defaultCategoryId || 'birthday');
       setPriceKhr('');
       setCostPriceKhr('');
       setStockQty('');
-      setUnit('នំ');
+      setUnit(defaultCategoryId === 'party' ? 'ដុំ' : 'នំ');
       setDescription('');
       setImages([]);
       setPrimaryIndex(0);
     }
-  }, [productToEdit, isOpen, exchangeRate]);
+  }, [productToEdit, isOpen, exchangeRate, defaultCategoryId]);
 
   if (!isOpen) return null;
 
