@@ -358,7 +358,7 @@ export const App: React.FC = () => {
             setIsContactModalOpen(true);
           }}
           title="ប្រសិនបើអ្នកមានចំណាប់អារម្មណ៍ចង់ប្រើប្រាស់កម្មវិធីនេះសូមទាក់ទង លេខទូរសព្ទ័៖ 012 629 160"
-          className="fixed bottom-20 md:bottom-5 right-3 md:right-5 z-40 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white pl-3 pr-3.5 py-2 rounded-full shadow-xl shadow-emerald-950/25 border-2 border-emerald-300/40 flex items-center gap-2 cursor-pointer transition-all hover:scale-105 active:scale-95 group font-battambang"
+          className="fixed bottom-28 sm:bottom-24 right-3 sm:right-5 z-40 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white pl-3 pr-3.5 py-2 rounded-full shadow-xl shadow-emerald-950/25 border-2 border-emerald-300/40 flex items-center gap-2 cursor-pointer transition-all hover:scale-105 active:scale-95 group font-battambang"
         >
           <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center animate-pulse shrink-0">
             <Phone className="w-3.5 h-3.5 text-white" />

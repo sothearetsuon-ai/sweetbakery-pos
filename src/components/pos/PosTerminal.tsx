@@ -45,7 +45,7 @@ export const PosTerminal: React.FC = () => {
     notes?: string;
   }>({});
   const [isAddProductOpen, setIsAddProductOpen] = useState(false);
-  const [isMobileCartOpen, setIsMobileCartOpen] = useState(false);
+  const [isCartDrawerOpen, setIsCartDrawerOpen] = useState(false);
   const [activeReceiptSale, setActiveReceiptSale] = useState<CompletedSale | null>(null);
 
   // Barcode Scanner State & Buffer
@@ -112,6 +112,15 @@ export const PosTerminal: React.FC = () => {
       if (((e.key === '/' && !isInputActive) || (e.ctrlKey && e.key === 'k')) && !e.altKey) {
         e.preventDefault();
         searchInputRef.current?.focus();
+        return;
+      }
+
+      // Shortcut Escape to close Cart Drawer or F2 to toggle Cart Drawer
+      if (e.key === 'Escape') {
+        setIsCartDrawerOpen(false);
+      } else if (e.key === 'F2') {
+        e.preventDefault();
+        setIsCartDrawerOpen((prev) => !prev);
         return;
       }
 
@@ -287,21 +296,32 @@ export const PosTerminal: React.FC = () => {
                 <Barcode className="w-4 h-4 text-pink-600 animate-pulse" />
                 <span>ស្កេនបាកូដ (Auto)</span>
               </div>
-              {/* Quick Cart Button on Mobile */}
+              {/* Cart Drawer Trigger Button (Desktop & Mobile) */}
               <button
                 type="button"
                 onClick={() => {
                   soundFx.playPop();
-                  setIsMobileCartOpen(true);
+                  setIsCartDrawerOpen((prev) => !prev);
                 }}
-                className="lg:hidden px-3.5 py-2 bg-gradient-to-r from-pink-500 to-rose-600 text-white font-black rounded-2xl text-xs transition-all shadow-md shadow-pink-500/20 flex items-center gap-1.5 cursor-pointer active:scale-95"
-                title="មើលកន្ត្រក"
+                className={`px-3 sm:px-4 py-2 sm:py-2.5 rounded-2xl text-xs font-black transition-all shadow-md flex items-center gap-2 cursor-pointer active:scale-95 ${
+                  totalCartItems > 0
+                    ? 'bg-gradient-to-r from-pink-600 via-rose-600 to-amber-500 hover:from-pink-500 hover:to-amber-500 text-white shadow-pink-500/25 ring-2 ring-pink-300'
+                    : 'bg-white hover:bg-slate-50 text-slate-700 border border-slate-200'
+                }`}
+                title="បើកមើលកន្ត្រកទំនិញ (Cart) ឬចុច F2"
               >
-                <ShoppingBag className="w-4 h-4" />
+                <div className="relative">
+                  <ShoppingBag className="w-4 h-4" />
+                  {totalCartItems > 0 && (
+                    <span className="absolute -top-1.5 -right-2 bg-white text-pink-600 font-black text-[9px] w-4 h-4 rounded-full flex items-center justify-center shadow-xs">
+                      {totalCartItems}
+                    </span>
+                  )}
+                </div>
                 <span>កន្ត្រក</span>
                 {totalCartItems > 0 && (
-                  <span className="px-1.5 py-0.2 bg-white text-rose-600 rounded-full text-[10px] font-black">
-                    {totalCartItems}
+                  <span className="hidden sm:inline font-mono text-[11px] bg-white/20 px-1.5 py-0.5 rounded-md text-white font-bold">
+                    {cartTotalKhr.toLocaleString()} ៛
                   </span>
                 )}
               </button>
@@ -405,7 +425,7 @@ export const PosTerminal: React.FC = () => {
             <p className="text-xs text-slate-400 mt-1">សូមសាកល្បងស្វែងរកឈ្មោះផ្សេង ឬចុច Upload នំថ្មី</p>
           </div>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-3 sm:gap-4">
             {filteredProducts.map((product) => (
               <ProductCard
                 key={product.id}
@@ -417,24 +437,14 @@ export const PosTerminal: React.FC = () => {
         )}
       </div>
 
-      {/* 1. Desktop Cart Side Panel (Hidden on Mobile) */}
-      <div className="hidden lg:flex shrink-0">
-        <CartPanel
-          onCheckout={(opts) => {
-            setCheckoutOptions(opts || {});
-            setIsCheckoutOpen(true);
-          }}
-        />
-      </div>
-
-      {/* 2. Mobile Floating Sticky Cart Bar */}
-      {cart.length > 0 && (
-        <div className="lg:hidden fixed bottom-16 left-3 right-3 z-20">
+      {/* 1. Mobile Floating Sticky Cart Bar */}
+      {cart.length > 0 && !isCartDrawerOpen && (
+        <div className="sm:hidden fixed bottom-16 left-3 right-3 z-30">
           <button
             type="button"
             onClick={() => {
               soundFx.playPop();
-              setIsMobileCartOpen(true);
+              setIsCartDrawerOpen(true);
             }}
             className="w-full bg-gradient-to-r from-pink-600 via-rose-600 to-amber-500 text-white p-2.5 sm:p-3 rounded-2xl shadow-xl shadow-pink-600/30 flex items-center justify-between transition-all active:scale-95 cursor-pointer"
           >
@@ -447,7 +457,7 @@ export const PosTerminal: React.FC = () => {
               </div>
               <div className="text-left">
                 <div className="text-xs font-black">{totalCartItems} មុខក្នុងកន្ត្រក</div>
-                <div className="text-[11px] text-pink-100 font-bold">
+                <div className="text-[11px] text-pink-100 font-bold font-mono">
                   សរុប៖ {cartTotalKhr.toLocaleString()} ៛
                 </div>
               </div>
@@ -460,25 +470,59 @@ export const PosTerminal: React.FC = () => {
         </div>
       )}
 
-      {/* 3. Mobile Cart Bottom Sheet Modal */}
-      {isMobileCartOpen && (
-        <div className="fixed inset-0 z-50 lg:hidden flex flex-col justify-end">
-          {/* Backdrop */}
+      {/* 2. Desktop Floating Quick Cart Pill (Always Visible when Cart has items and drawer is closed) */}
+      {cart.length > 0 && !isCartDrawerOpen && (
+        <div className="hidden sm:flex fixed bottom-6 right-6 z-40 animate-in fade-in slide-in-from-bottom-4 duration-200">
+          <button
+            type="button"
+            onClick={() => {
+              soundFx.playPop();
+              setIsCartDrawerOpen(true);
+            }}
+            className="bg-gradient-to-r from-pink-600 via-rose-600 to-amber-500 hover:from-pink-500 hover:to-amber-400 text-white pl-4 pr-5 py-2.5 sm:py-3 rounded-full shadow-2xl shadow-pink-900/30 flex items-center gap-3 cursor-pointer transition-all hover:scale-105 active:scale-95 border-2 border-white/40 group font-battambang"
+            title="បើកមើលកន្ត្រកទំនិញ (Shortcut: F2)"
+          >
+            <div className="w-9 h-9 rounded-full bg-white/25 flex items-center justify-center font-black relative">
+              <ShoppingBag className="w-5 h-5 text-white" />
+              <span className="absolute -top-1 -right-1 bg-white text-pink-600 text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center shadow-xs">
+                {totalCartItems}
+              </span>
+            </div>
+            <div className="text-left">
+              <div className="text-xs font-black flex items-center gap-1.5">
+                <span>{totalCartItems} មុខក្នុងកន្ត្រក</span>
+                <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+              </div>
+              <div className="text-[11px] text-pink-100 font-bold font-mono">
+                សរុប៖ {cartTotalKhr.toLocaleString()} ៛ (~${cartTotalUsd.toFixed(2)})
+              </div>
+            </div>
+          </button>
+        </div>
+      )}
+
+      {/* 3. Slide-over Cart Drawer (Both Desktop & Mobile) */}
+      {isCartDrawerOpen && (
+        <div className="fixed inset-0 z-50 overflow-hidden">
+          {/* Backdrop with smooth blur */}
           <div
-            className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs transition-opacity"
-            onClick={() => setIsMobileCartOpen(false)}
+            className="fixed inset-0 bg-slate-950/50 backdrop-blur-xs transition-opacity duration-300 animate-fadeIn"
+            onClick={() => setIsCartDrawerOpen(false)}
           />
-          {/* Sheet Container */}
-          <div className="relative z-50 w-full max-w-xl mx-auto max-h-[94vh] bg-white rounded-t-3xl shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-bottom duration-200">
-            <CartPanel
-              isMobileSheet={true}
-              onClose={() => setIsMobileCartOpen(false)}
-              onCheckout={(opts) => {
-                setIsMobileCartOpen(false);
-                setCheckoutOptions(opts || {});
-                setIsCheckoutOpen(true);
-              }}
-            />
+
+          {/* Drawer Slide-in from Right */}
+          <div className="fixed inset-y-0 right-0 max-w-full flex pl-6 sm:pl-10 z-50">
+            <div className="w-screen max-w-md sm:max-w-lg lg:max-w-xl bg-white shadow-2xl border-l border-rose-100 flex flex-col h-full animate-in slide-in-from-right duration-300 transform-gpu overflow-hidden">
+              <CartPanel
+                isDrawer={true}
+                onClose={() => setIsCartDrawerOpen(false)}
+                onCheckout={(opts) => {
+                  setIsCartDrawerOpen(false);
+                  setCheckoutOptions(opts || {});
+                  setIsCheckoutOpen(true);
+                }}
+              />
+            </div>
           </div>
         </div>
       )}

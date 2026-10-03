@@ -46,9 +46,15 @@ interface CartPanelProps {
   }) => void;
   onClose?: () => void;
   isMobileSheet?: boolean;
+  isDrawer?: boolean;
 }
 
-export const CartPanel: React.FC<CartPanelProps> = ({ onCheckout, onClose, isMobileSheet = false }) => {
+export const CartPanel: React.FC<CartPanelProps> = ({
+  onCheckout,
+  onClose,
+  isMobileSheet = false,
+  isDrawer = false,
+}) => {
   const {
     lang,
     cart,
@@ -182,6 +188,8 @@ export const CartPanel: React.FC<CartPanelProps> = ({ onCheckout, onClose, isMob
       className={`${
         isMobileSheet
           ? 'w-full h-full max-h-[92vh] bg-white rounded-t-3xl flex flex-col justify-between overflow-hidden shadow-2xl'
+          : isDrawer
+          ? 'w-full h-full bg-white flex flex-col justify-between overflow-hidden shadow-2xl'
           : `${isWideView ? 'w-[520px] xl:w-[600px] 2xl:w-[680px]' : 'w-[420px] xl:w-[460px] 2xl:w-[500px]'} glass-panel border-l border-rose-100/80 flex flex-col justify-between shrink-0 h-[calc(100vh-65px)] sticky top-[65px] shadow-sm transition-all duration-300`
       }`}
     >
@@ -207,7 +215,7 @@ export const CartPanel: React.FC<CartPanelProps> = ({ onCheckout, onClose, isMob
         </div>
 
         <div className="flex items-center gap-2">
-          {!isMobileSheet && (
+          {!isMobileSheet && !isDrawer && (
             <button
               type="button"
               onClick={() => {
@@ -240,11 +248,11 @@ export const CartPanel: React.FC<CartPanelProps> = ({ onCheckout, onClose, isMob
             </button>
           )}
 
-          {isMobileSheet && onClose && (
+          {onClose && (
             <button
               onClick={onClose}
-              className="w-9 h-9 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center cursor-pointer transition-colors"
-              title="បិទកន្ត្រក"
+              className="w-9 h-9 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center cursor-pointer transition-colors active:scale-95"
+              title="បិទកន្ត្រក (Esc)"
             >
               <X className="w-4 h-4" />
             </button>
