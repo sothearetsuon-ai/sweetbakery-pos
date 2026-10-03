@@ -148,6 +148,7 @@ export const ReportsDashboard: React.FC = () => {
   const expenseCategoryNames: Record<ExpenseCategory, string> = {
     INGREDIENTS: 'គ្រឿងផ្សំធ្វើនំ (Ingredients)',
     PACKAGING: 'សម្ភារៈវេចខ្ចប់ (Packaging)',
+    SUPPLIES: 'សម្ភារៈ & តុបតែងនំ (Supplies)',
     UTILITIES: 'ទឹក ភ្លើង ហ្គាស (Utilities)',
     SALARY: 'ប្រាក់ខែបុគ្គលិក (Salary)',
     RENT: 'ថ្លៃជួលទីតាំង (Rent)',

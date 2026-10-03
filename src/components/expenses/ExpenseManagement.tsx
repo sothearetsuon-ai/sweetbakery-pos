@@ -52,7 +52,7 @@ export const ExpenseManagement: React.FC = () => {
   const [isReserveFundOpen, setIsReserveFundOpen] = useState(false);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [mainTypeFilter, setMainTypeFilter] = useState<'ALL' | 'INGREDIENTS' | 'GENERAL'>('ALL');
+  const [mainTypeFilter, setMainTypeFilter] = useState<'ALL' | 'INGREDIENTS' | 'SUPPLIES' | 'GENERAL'>('ALL');
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'UNPAID' | 'PAID'>('ALL');
   const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
   const [receiptFilter, setReceiptFilter] = useState<'ALL' | 'WITH_RECEIPT' | 'WITHOUT_RECEIPT'>('ALL');
@@ -98,10 +98,17 @@ export const ExpenseManagement: React.FC = () => {
     }
   };
 
-  // Helper to distinguish ingredient expense vs general expense
-  const isIngredientExpense = (e: Expense) => {
-    return e.expenseType === 'INGREDIENT' || e.category === 'INGREDIENTS';
+  // Helper to distinguish: INGREDIENTS (ទិញគ្រឿងផ្សំ) vs SUPPLIES (ទិញសម្ភារៈ) vs GENERAL (ចំណាយទូទៅ)
+  const getExpenseMainType = (e: Expense): 'INGREDIENT' | 'SUPPLY' | 'GENERAL' => {
+    if (e.expenseType) return e.expenseType;
+    if (e.category === 'INGREDIENTS') return 'INGREDIENT';
+    if (e.category === 'PACKAGING' || e.category === 'SUPPLIES') return 'SUPPLY';
+    return 'GENERAL';
   };
+
+  const isIngredientExpense = (e: Expense) => getExpenseMainType(e) === 'INGREDIENT';
+  const isSupplyExpense = (e: Expense) => getExpenseMainType(e) === 'SUPPLY';
+  const isGeneralExpense = (e: Expense) => getExpenseMainType(e) === 'GENERAL';
 
   // Financial sums (All-time)
   const totalSalesUsd = sales.reduce((sum, s) => sum + s.totalUsd, 0);
@@ -111,12 +118,16 @@ export const ExpenseManagement: React.FC = () => {
   const netProfitUsd = totalSalesUsd - totalExpensesUsd;
   const netProfitKhr = totalSalesKhr - totalExpensesKhr;
 
-  // Breakdown: Ingredients vs General (All-time)
+  // Breakdown: Ingredients vs Supplies vs General (All-time)
   const ingredientExpenses = useMemo(() => expenses.filter(isIngredientExpense), [expenses]);
-  const generalExpenses = useMemo(() => expenses.filter((e) => !isIngredientExpense(e)), [expenses]);
+  const supplyExpenses = useMemo(() => expenses.filter(isSupplyExpense), [expenses]);
+  const generalExpenses = useMemo(() => expenses.filter(isGeneralExpense), [expenses]);
 
   const totalIngredientsUsd = useMemo(() => ingredientExpenses.reduce((sum, e) => sum + e.amountUsd, 0), [ingredientExpenses]);
   const totalIngredientsKhr = useMemo(() => ingredientExpenses.reduce((sum, e) => sum + (e.amountKhr || Math.round(e.amountUsd * exchangeRate)), 0), [ingredientExpenses, exchangeRate]);
+
+  const totalSuppliesUsd = useMemo(() => supplyExpenses.reduce((sum, e) => sum + e.amountUsd, 0), [supplyExpenses]);
+  const totalSuppliesKhr = useMemo(() => supplyExpenses.reduce((sum, e) => sum + (e.amountKhr || Math.round(e.amountUsd * exchangeRate)), 0), [supplyExpenses, exchangeRate]);
 
   const totalGeneralUsd = useMemo(() => generalExpenses.reduce((sum, e) => sum + e.amountUsd, 0), [generalExpenses]);
   const totalGeneralKhr = useMemo(() => generalExpenses.reduce((sum, e) => sum + (e.amountKhr || Math.round(e.amountUsd * exchangeRate)), 0), [generalExpenses, exchangeRate]);
@@ -128,6 +139,7 @@ export const ExpenseManagement: React.FC = () => {
   const netMarginPct = totalSalesUsd > 0 ? ((netProfitUsd / totalSalesUsd) * 100).toFixed(0) : '0';
 
   const ingredientExpensePct = totalExpensesUsd > 0 ? ((totalIngredientsUsd / totalExpensesUsd) * 100).toFixed(0) : '0';
+  const supplyExpensePct = totalExpensesUsd > 0 ? ((totalSuppliesUsd / totalExpensesUsd) * 100).toFixed(0) : '0';
   const generalExpensePct = totalExpensesUsd > 0 ? ((totalGeneralUsd / totalExpensesUsd) * 100).toFixed(0) : '0';
 
   // Unpaid / Due expenses tracking
@@ -186,10 +198,11 @@ export const ExpenseManagement: React.FC = () => {
 
   // Category map
   const categoryLabels: Record<ExpenseCategory, { labelKh: string; color: string }> = {
-    INGREDIENTS: { labelKh: '🥚 គ្រឿងផ្សំធ្វើនំ', color: 'bg-amber-50 text-amber-800 border-amber-200' },
+    INGREDIENTS: { labelKh: '🌾 គ្រឿងផ្សំធ្វើនំ', color: 'bg-amber-50 text-amber-800 border-amber-200' },
     PACKAGING: { labelKh: '📦 ប្រអប់ & វេចខ្ចប់', color: 'bg-blue-50 text-blue-800 border-blue-200' },
+    SUPPLIES: { labelKh: '🎀 សម្ភារៈ & តុបតែងនំ', color: 'bg-purple-50 text-purple-800 border-purple-200' },
     UTILITIES: { labelKh: '⚡ ទឹក ភ្លើង ហ្គាស', color: 'bg-orange-50 text-orange-800 border-orange-200' },
-    SALARY: { labelKh: '👤 ប្រាក់ខែ & ថ្លៃឈ្នួល', color: 'bg-purple-50 text-purple-800 border-purple-200' },
+    SALARY: { labelKh: '👤 ប្រាក់ខែ & ថ្លៃឈ្នួល', color: 'bg-indigo-50 text-indigo-800 border-indigo-200' },
     RENT: { labelKh: '🏠 ថ្លៃជួលទីតាំង', color: 'bg-rose-50 text-rose-800 border-rose-200' },
     MAINTENANCE: { labelKh: '🔧 ជួសជុលឧបករណ៍', color: 'bg-slate-100 text-slate-800 border-slate-200' },
     MARKETING: { labelKh: '📢 ផ្សព្វផ្សាយ / Ads', color: 'bg-pink-50 text-pink-800 border-pink-200' },
@@ -198,9 +211,10 @@ export const ExpenseManagement: React.FC = () => {
 
   const filteredExpenses = useMemo(() => {
     return expenses.filter((e) => {
-      // Main Type filter
+      // Main Type filter: 'ALL' | 'INGREDIENTS' | 'SUPPLIES' | 'GENERAL'
       if (mainTypeFilter === 'INGREDIENTS' && !isIngredientExpense(e)) return false;
-      if (mainTypeFilter === 'GENERAL' && isIngredientExpense(e)) return false;
+      if (mainTypeFilter === 'SUPPLIES' && !isSupplyExpense(e)) return false;
+      if (mainTypeFilter === 'GENERAL' && !isGeneralExpense(e)) return false;
 
       // Status filter (All vs Unpaid vs Paid)
       if (statusFilter === 'UNPAID' && e.paymentStatus !== 'UNPAID') return false;
@@ -245,9 +259,10 @@ export const ExpenseManagement: React.FC = () => {
     return filteredExpenses.reduce((sum, e) => sum + e.amountUsd, 0);
   }, [filteredExpenses]);
 
-  // Filtered breakdown: Ingredients vs General
+  // Filtered breakdown: Ingredients vs Supplies vs General
   const filteredIngredients = useMemo(() => filteredExpenses.filter(isIngredientExpense), [filteredExpenses]);
-  const filteredGeneral = useMemo(() => filteredExpenses.filter((e) => !isIngredientExpense(e)), [filteredExpenses]);
+  const filteredSupplies = useMemo(() => filteredExpenses.filter(isSupplyExpense), [filteredExpenses]);
+  const filteredGeneral = useMemo(() => filteredExpenses.filter(isGeneralExpense), [filteredExpenses]);
 
   const filteredIngredientsKhr = useMemo(() => {
     return filteredIngredients.reduce((sum, e) => sum + (e.amountKhr || Math.round(e.amountUsd * exchangeRate)), 0);
@@ -256,6 +271,14 @@ export const ExpenseManagement: React.FC = () => {
   const filteredIngredientsUsd = useMemo(() => {
     return filteredIngredients.reduce((sum, e) => sum + e.amountUsd, 0);
   }, [filteredIngredients]);
+
+  const filteredSuppliesKhr = useMemo(() => {
+    return filteredSupplies.reduce((sum, e) => sum + (e.amountKhr || Math.round(e.amountUsd * exchangeRate)), 0);
+  }, [filteredSupplies, exchangeRate]);
+
+  const filteredSuppliesUsd = useMemo(() => {
+    return filteredSupplies.reduce((sum, e) => sum + e.amountUsd, 0);
+  }, [filteredSupplies]);
 
   const filteredGeneralKhr = useMemo(() => {
     return filteredGeneral.reduce((sum, e) => sum + (e.amountKhr || Math.round(e.amountUsd * exchangeRate)), 0);
@@ -281,7 +304,7 @@ export const ExpenseManagement: React.FC = () => {
       ...listToExport.map((e) =>
         [
           `"${e.title}"`,
-          isIngredientExpense(e) ? 'INGREDIENTS' : 'GENERAL',
+          getExpenseMainType(e),
           e.category,
           e.quantity ?? 1,
           `"${e.unit || ''}"`,
@@ -487,14 +510,14 @@ export const ExpenseManagement: React.FC = () => {
       </div>
 
       {/* Financial Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        {/* Card 1: 🥚 ចំណាយគ្រឿងផ្សំ (Ingredient Costs / COGS) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3 sm:gap-4">
+        {/* Card 1: 🌾 ទិញគ្រឿងផ្សំ (Ingredient Costs / COGS) */}
         <div
           onClick={() => {
             soundFx.playPop();
             setMainTypeFilter(mainTypeFilter === 'INGREDIENTS' ? 'ALL' : 'INGREDIENTS');
           }}
-          className={`bg-white p-5 rounded-3xl border transition-all cursor-pointer relative overflow-hidden shadow-sm space-y-2 hover:shadow-md ${
+          className={`bg-white p-4 sm:p-5 rounded-3xl border transition-all cursor-pointer relative overflow-hidden shadow-sm space-y-2 hover:shadow-md ${
             mainTypeFilter === 'INGREDIENTS'
               ? 'border-amber-400 ring-2 ring-amber-300/60 bg-gradient-to-b from-amber-50/40 to-white'
               : 'border-amber-200/70 hover:border-amber-300'
@@ -502,14 +525,14 @@ export const ExpenseManagement: React.FC = () => {
         >
           <div className="flex items-center justify-between">
             <span className="text-xs font-black uppercase tracking-wider text-amber-900 flex items-center gap-1.5">
-              <span>🥚</span>
-              <span>ចំណាយគ្រឿងផ្សំ (Ingredients)</span>
+              <span>🌾</span>
+              <span>ទិញគ្រឿងផ្សំ (Ingredients)</span>
             </span>
-            <div className="p-2 bg-amber-100 text-amber-700 rounded-2xl">
+            <div className="p-1.5 sm:p-2 bg-amber-100 text-amber-700 rounded-2xl">
               <span className="text-xs font-black">{ingredientExpensePct}%</span>
             </div>
           </div>
-          <div className="text-2xl font-black text-amber-600 tracking-tight">
+          <div className="text-xl sm:text-2xl font-black text-amber-600 tracking-tight">
             {(datePreset !== 'ALL' ? filteredIngredientsKhr : totalIngredientsKhr).toLocaleString()} ៛
           </div>
           <div className="text-xs text-slate-500 font-semibold flex items-center justify-between">
@@ -526,13 +549,51 @@ export const ExpenseManagement: React.FC = () => {
           </div>
         </div>
 
-        {/* Card 2: 🏢 ចំណាយទូទៅ (General Expenses / OPEX) */}
+        {/* Card 2: 📦 ទិញសម្ភារៈ (Supplies & Packaging) */}
+        <div
+          onClick={() => {
+            soundFx.playPop();
+            setMainTypeFilter(mainTypeFilter === 'SUPPLIES' ? 'ALL' : 'SUPPLIES');
+          }}
+          className={`bg-white p-4 sm:p-5 rounded-3xl border transition-all cursor-pointer relative overflow-hidden shadow-sm space-y-2 hover:shadow-md ${
+            mainTypeFilter === 'SUPPLIES'
+              ? 'border-purple-400 ring-2 ring-purple-300/60 bg-gradient-to-b from-purple-50/40 to-white'
+              : 'border-purple-200/70 hover:border-purple-300'
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-black uppercase tracking-wider text-purple-900 flex items-center gap-1.5">
+              <span>📦</span>
+              <span>ទិញសម្ភារៈ (Supplies)</span>
+            </span>
+            <div className="p-1.5 sm:p-2 bg-purple-100 text-purple-700 rounded-2xl">
+              <span className="text-xs font-black">{supplyExpensePct}%</span>
+            </div>
+          </div>
+          <div className="text-xl sm:text-2xl font-black text-purple-600 tracking-tight">
+            {(datePreset !== 'ALL' ? filteredSuppliesKhr : totalSuppliesKhr).toLocaleString()} ៛
+          </div>
+          <div className="text-xs text-slate-500 font-semibold flex items-center justify-between">
+            <span>~ ${(datePreset !== 'ALL' ? filteredSuppliesUsd : totalSuppliesUsd).toFixed(2)} USD</span>
+            <span className="text-[10px] bg-purple-50 text-purple-800 font-bold px-2 py-0.5 rounded-full border border-purple-200">
+              {datePreset !== 'ALL' ? filteredSupplies.length : supplyExpenses.length} ប្រតិបត្តិការ
+            </span>
+          </div>
+          <div className="text-[10px] text-purple-700/80 pt-1 border-t border-purple-100 flex items-center justify-between">
+            <span>ប្រអប់ ទៀន ខ្សែបូ Topper</span>
+            <span className="font-bold underline">
+              {mainTypeFilter === 'SUPPLIES' ? '✓ កំពុងជ្រើស' : 'ចុចមើលតែសម្ភារៈ →'}
+            </span>
+          </div>
+        </div>
+
+        {/* Card 3: 🏢 ចំណាយទូទៅ (General Expenses / OPEX) */}
         <div
           onClick={() => {
             soundFx.playPop();
             setMainTypeFilter(mainTypeFilter === 'GENERAL' ? 'ALL' : 'GENERAL');
           }}
-          className={`bg-white p-5 rounded-3xl border transition-all cursor-pointer relative overflow-hidden shadow-sm space-y-2 hover:shadow-md ${
+          className={`bg-white p-4 sm:p-5 rounded-3xl border transition-all cursor-pointer relative overflow-hidden shadow-sm space-y-2 hover:shadow-md ${
             mainTypeFilter === 'GENERAL'
               ? 'border-sky-400 ring-2 ring-sky-300/60 bg-gradient-to-b from-sky-50/40 to-white'
               : 'border-sky-200/70 hover:border-sky-300'
@@ -541,13 +602,13 @@ export const ExpenseManagement: React.FC = () => {
           <div className="flex items-center justify-between">
             <span className="text-xs font-black uppercase tracking-wider text-sky-900 flex items-center gap-1.5">
               <span>🏢</span>
-              <span>ចំណាយទូទៅ (General / OPEX)</span>
+              <span>ចំណាយទូទៅ (OPEX)</span>
             </span>
-            <div className="p-2 bg-sky-100 text-sky-700 rounded-2xl">
+            <div className="p-1.5 sm:p-2 bg-sky-100 text-sky-700 rounded-2xl">
               <span className="text-xs font-black">{generalExpensePct}%</span>
             </div>
           </div>
-          <div className="text-2xl font-black text-sky-600 tracking-tight">
+          <div className="text-xl sm:text-2xl font-black text-sky-600 tracking-tight">
             {(datePreset !== 'ALL' ? filteredGeneralKhr : totalGeneralKhr).toLocaleString()} ៛
           </div>
           <div className="text-xs text-slate-500 font-semibold flex items-center justify-between">
@@ -564,13 +625,13 @@ export const ExpenseManagement: React.FC = () => {
           </div>
         </div>
 
-        {/* Card 3: 💸 ការចំណាយសរុប (Total Combined Expenses) */}
+        {/* Card 4: 💸 ការចំណាយសរុបរួម (Total Combined Expenses) */}
         <div
           onClick={() => {
             soundFx.playPop();
             setMainTypeFilter('ALL');
           }}
-          className="bg-white p-5 rounded-3xl border border-rose-100 shadow-sm space-y-2 relative overflow-hidden cursor-pointer hover:border-rose-300 transition-all"
+          className="bg-white p-4 sm:p-5 rounded-3xl border border-rose-100 shadow-sm space-y-2 relative overflow-hidden cursor-pointer hover:border-rose-300 transition-all"
         >
           {datePreset !== 'ALL' && (
             <div className="absolute top-0 right-0 bg-rose-600 text-white text-[9px] font-black px-2.5 py-0.5 rounded-bl-xl shadow-xs">
@@ -581,11 +642,11 @@ export const ExpenseManagement: React.FC = () => {
             <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
               {datePreset !== 'ALL' ? `ចំណាយសរុប (${activeDateLabel})` : 'ការចំណាយសរុបរួម (Total)'}
             </span>
-            <div className="p-2 bg-rose-50 text-rose-600 rounded-2xl">
+            <div className="p-1.5 sm:p-2 bg-rose-50 text-rose-600 rounded-2xl">
               <TrendingDown className="w-4 h-4" />
             </div>
           </div>
-          <div className="text-2xl font-black text-rose-600 tracking-tight">
+          <div className="text-xl sm:text-2xl font-black text-rose-600 tracking-tight">
             {(datePreset !== 'ALL' ? filteredExpensesKhr : totalExpensesKhr).toLocaleString()} ៛
           </div>
           <div className="text-xs text-slate-500 font-semibold">
@@ -593,7 +654,7 @@ export const ExpenseManagement: React.FC = () => {
             {datePreset !== 'ALL' ? filteredExpenses.length : expenses.length} ប្រតិបត្តិការ)
           </div>
 
-          {/* Ratio bar */}
+          {/* 3-Color Ratio bar */}
           <div className="pt-1 border-t border-rose-50 space-y-1">
             <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden flex">
               <div
@@ -602,24 +663,30 @@ export const ExpenseManagement: React.FC = () => {
                 title={`គ្រឿងផ្សំ ${ingredientExpensePct}%`}
               />
               <div
+                style={{ width: `${supplyExpensePct}%` }}
+                className="bg-purple-500 h-full"
+                title={`សម្ភារៈ ${supplyExpensePct}%`}
+              />
+              <div
                 style={{ width: `${generalExpensePct}%` }}
                 className="bg-sky-500 h-full"
                 title={`ចំណាយទូទៅ ${generalExpensePct}%`}
               />
             </div>
-            <div className="flex justify-between text-[10px] text-slate-400 font-bold">
-              <span className="text-amber-700">🥚 គ្រឿងផ្សំ {ingredientExpensePct}%</span>
-              <span className="text-sky-700">🏢 ទូទៅ {generalExpensePct}%</span>
+            <div className="flex justify-between text-[9px] text-slate-400 font-bold flex-wrap gap-1">
+              <span className="text-amber-700">🌾 {ingredientExpensePct}%</span>
+              <span className="text-purple-700">📦 {supplyExpensePct}%</span>
+              <span className="text-sky-700">🏢 {generalExpensePct}%</span>
             </div>
           </div>
         </div>
 
-        {/* Card 4: 📈 ចំណេញដុល & ចំណេញសុទ្ធ (Profit Analysis) */}
-        <div className="bg-white p-5 rounded-3xl border border-emerald-100 shadow-sm space-y-2 relative overflow-hidden bg-gradient-to-br from-white to-emerald-50/20">
+        {/* Card 5: 📈 ចំណេញដុល & ចំណេញសុទ្ធ (Profit Analysis) */}
+        <div className="bg-white p-4 sm:p-5 rounded-3xl border border-emerald-100 shadow-sm space-y-2 relative overflow-hidden bg-gradient-to-br from-white to-emerald-50/20">
           <div className="flex items-center justify-between">
             <span className="text-xs font-black uppercase tracking-wider text-emerald-800 flex items-center gap-1.5">
               <Wallet className="w-4 h-4 text-emerald-600" />
-              <span>ប្រាក់ចំណេញ (Profit Insights)</span>
+              <span>ប្រាក់ចំណេញ (Profit)</span>
             </span>
             <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
               Net {netMarginPct}%
@@ -710,8 +777,8 @@ export const ExpenseManagement: React.FC = () => {
         </div>
       )}
 
-      {/* Main Expense Type Tabs (បែងចែកដាច់ស្រឡះរវាង គ្រឿងផ្សំ និង ទូទៅ) */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 p-1.5 bg-white rounded-3xl border border-rose-100/90 shadow-2xs gap-1.5">
+      {/* Main Expense Type Tabs (បែងចែកដាច់ស្រឡះរវាង គ្រឿងផ្សំ សម្ភារៈ និង ទូទៅ) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 p-1.5 bg-white rounded-3xl border border-rose-100/90 shadow-2xs gap-1.5">
         <button
           type="button"
           onClick={() => {
@@ -719,7 +786,7 @@ export const ExpenseManagement: React.FC = () => {
             setMainTypeFilter('ALL');
             setSelectedCategory('ALL');
           }}
-          className={`flex items-center justify-center gap-2.5 py-3 px-4 rounded-2xl font-black text-xs transition-all cursor-pointer ${
+          className={`flex items-center justify-center gap-2.5 py-3 px-3 rounded-2xl font-black text-xs transition-all cursor-pointer ${
             mainTypeFilter === 'ALL'
               ? 'bg-slate-900 text-white shadow-md'
               : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
@@ -727,7 +794,7 @@ export const ExpenseManagement: React.FC = () => {
         >
           <span className="text-base">🌟</span>
           <div className="text-left">
-            <div>ចំណាយទាំងអស់ (All Expenses)</div>
+            <div>ចំណាយទាំងអស់ (All)</div>
             <div className="text-[10px] font-normal opacity-80">
               {expenses.length} ប្រតិបត្តិការ • {totalExpensesKhr.toLocaleString()} ៛
             </div>
@@ -741,17 +808,39 @@ export const ExpenseManagement: React.FC = () => {
             setMainTypeFilter('INGREDIENTS');
             setSelectedCategory('ALL');
           }}
-          className={`flex items-center justify-center gap-2.5 py-3 px-4 rounded-2xl font-black text-xs transition-all cursor-pointer ${
+          className={`flex items-center justify-center gap-2.5 py-3 px-3 rounded-2xl font-black text-xs transition-all cursor-pointer ${
             mainTypeFilter === 'INGREDIENTS'
               ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-md shadow-orange-500/25 scale-[1.01]'
               : 'text-amber-900 hover:bg-amber-50/70 border border-amber-200/60'
           }`}
         >
-          <span className="text-base">🥚</span>
+          <span className="text-base">🌾</span>
           <div className="text-left">
-            <div>ចំណាយគ្រឿងផ្សំ (Ingredient Expenses)</div>
+            <div>ទិញគ្រឿងផ្សំ (Ingredients)</div>
             <div className="text-[10px] font-normal opacity-90">
               {ingredientExpenses.length} ប្រតិបត្តិការ • {totalIngredientsKhr.toLocaleString()} ៛
+            </div>
+          </div>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => {
+            soundFx.playPop();
+            setMainTypeFilter('SUPPLIES');
+            setSelectedCategory('ALL');
+          }}
+          className={`flex items-center justify-center gap-2.5 py-3 px-3 rounded-2xl font-black text-xs transition-all cursor-pointer ${
+            mainTypeFilter === 'SUPPLIES'
+              ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-md shadow-purple-600/25 scale-[1.01]'
+              : 'text-purple-900 hover:bg-purple-50/70 border border-purple-200/60'
+          }`}
+        >
+          <span className="text-base">📦</span>
+          <div className="text-left">
+            <div>ទិញសម្ភារៈ (Supplies)</div>
+            <div className="text-[10px] font-normal opacity-90">
+              {supplyExpenses.length} ប្រតិបត្តិការ • {totalSuppliesKhr.toLocaleString()} ៛
             </div>
           </div>
         </button>
@@ -763,7 +852,7 @@ export const ExpenseManagement: React.FC = () => {
             setMainTypeFilter('GENERAL');
             setSelectedCategory('ALL');
           }}
-          className={`flex items-center justify-center gap-2.5 py-3 px-4 rounded-2xl font-black text-xs transition-all cursor-pointer ${
+          className={`flex items-center justify-center gap-2.5 py-3 px-3 rounded-2xl font-black text-xs transition-all cursor-pointer ${
             mainTypeFilter === 'GENERAL'
               ? 'bg-gradient-to-r from-sky-600 to-indigo-600 text-white shadow-md shadow-sky-600/25 scale-[1.01]'
               : 'text-sky-900 hover:bg-sky-50/70 border border-sky-200/60'
@@ -771,7 +860,7 @@ export const ExpenseManagement: React.FC = () => {
         >
           <span className="text-base">🏢</span>
           <div className="text-left">
-            <div>ចំណាយទូទៅ (General Expenses)</div>
+            <div>ចំណាយទូទៅ (General OPEX)</div>
             <div className="text-[10px] font-normal opacity-90">
               {generalExpenses.length} ប្រតិបត្តិការ • {totalGeneralKhr.toLocaleString()} ៛
             </div>
@@ -1012,7 +1101,7 @@ export const ExpenseManagement: React.FC = () => {
             <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
               {mainTypeFilter === 'INGREDIENTS' ? (
                 <div className="flex items-center gap-2 text-xs font-bold text-amber-900 bg-amber-50 px-3 py-1.5 rounded-2xl border border-amber-200 shadow-2xs">
-                  <span>🥚</span>
+                  <span>🌾</span>
                   <span>គ្រឿងផ្សំធ្វើនំទាំងអស់ ({ingredientExpenses.length} ប្រតិបត្តិការ)</span>
                 </div>
               ) : (
@@ -1028,10 +1117,18 @@ export const ExpenseManagement: React.FC = () => {
                         : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
                     }`}
                   >
-                    គ្រប់ប្រភេទ {mainTypeFilter === 'GENERAL' ? `(${generalExpenses.length})` : `(${expenses.length})`}
+                    គ្រប់ប្រភេទ {mainTypeFilter === 'SUPPLIES' ? `(${supplyExpenses.length})` : mainTypeFilter === 'GENERAL' ? `(${generalExpenses.length})` : `(${expenses.length})`}
                   </button>
                   {Object.entries(categoryLabels)
-                    .filter(([catKey]) => mainTypeFilter !== 'GENERAL' || catKey !== 'INGREDIENTS')
+                    .filter(([catKey]) => {
+                      if (mainTypeFilter === 'SUPPLIES') {
+                        return catKey === 'PACKAGING' || catKey === 'SUPPLIES' || catKey === 'MAINTENANCE';
+                      }
+                      if (mainTypeFilter === 'GENERAL') {
+                        return catKey !== 'INGREDIENTS' && catKey !== 'PACKAGING' && catKey !== 'SUPPLIES';
+                      }
+                      return true;
+                    })
                     .map(([catKey, catVal]) => {
                       const isActive = selectedCategory === catKey;
                       const totalCatCount = expenses.filter((e) => e.category === catKey).length;
@@ -1149,12 +1246,20 @@ export const ExpenseManagement: React.FC = () => {
                     <div className="flex items-center gap-1.5 mt-1 flex-wrap">
                       <span
                         className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-black border ${
-                          isIngredientExpense(expense)
+                          getExpenseMainType(expense) === 'INGREDIENT'
                             ? 'bg-amber-100 text-amber-900 border-amber-300'
+                            : getExpenseMainType(expense) === 'SUPPLY'
+                            ? 'bg-purple-100 text-purple-900 border-purple-300'
                             : 'bg-sky-100 text-sky-900 border-sky-300'
                         }`}
                       >
-                        <span>{isIngredientExpense(expense) ? '🥚 គ្រឿងផ្សំ' : '🏢 ទូទៅ'}</span>
+                        <span>
+                          {getExpenseMainType(expense) === 'INGREDIENT'
+                            ? '🌾 គ្រឿងផ្សំ'
+                            : getExpenseMainType(expense) === 'SUPPLY'
+                            ? '📦 សម្ភារៈ'
+                            : '🏢 ទូទៅ'}
+                        </span>
                       </span>
                       <span className={`inline-flex items-center px-2 py-0.5 rounded-lg text-[10px] font-bold border ${catInfo.color}`}>
                         {catInfo.labelKh}
@@ -1443,12 +1548,20 @@ export const ExpenseManagement: React.FC = () => {
                         <div className="flex items-center gap-1.5 mt-1 flex-wrap">
                           <span
                             className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-black border ${
-                              isIngredientExpense(expense)
+                              getExpenseMainType(expense) === 'INGREDIENT'
                                 ? 'bg-amber-100 text-amber-900 border-amber-300'
+                                : getExpenseMainType(expense) === 'SUPPLY'
+                                ? 'bg-purple-100 text-purple-900 border-purple-300'
                                 : 'bg-sky-100 text-sky-900 border-sky-300'
                             }`}
                           >
-                            <span>{isIngredientExpense(expense) ? '🥚 គ្រឿងផ្សំ' : '🏢 ទូទៅ'}</span>
+                            <span>
+                              {getExpenseMainType(expense) === 'INGREDIENT'
+                                ? '🌾 គ្រឿងផ្សំ'
+                                : getExpenseMainType(expense) === 'SUPPLY'
+                                ? '📦 សម្ភារៈ'
+                                : '🏢 ទូទៅ'}
+                            </span>
                           </span>
                           <span
                             className={`inline-flex items-center px-2 py-0.5 rounded-lg text-[10px] font-bold border ${catInfo.color}`}

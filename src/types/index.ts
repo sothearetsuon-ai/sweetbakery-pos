@@ -201,11 +201,12 @@ export interface Shift {
   status: 'OPEN' | 'CLOSED';
 }
 
-export type ExpenseType = 'INGREDIENT' | 'GENERAL';
+export type ExpenseType = 'INGREDIENT' | 'SUPPLY' | 'GENERAL';
 
 export type ExpenseCategory =
   | 'INGREDIENTS'
   | 'PACKAGING'
+  | 'SUPPLIES'
   | 'UTILITIES'
   | 'SALARY'
   | 'RENT'
@@ -216,7 +217,7 @@ export type ExpenseCategory =
 export interface Expense {
   id: string;
   title: string;
-  expenseType?: ExpenseType; // 'INGREDIENT' (ចំណាយគ្រឿងផ្សំ) ឬ 'GENERAL' (ចំណាយទូទៅ)
+  expenseType?: ExpenseType; // 'INGREDIENT' (ចំណាយគ្រឿងផ្សំ), 'SUPPLY' (ទិញសម្ភារៈ), 'GENERAL' (ចំណាយទូទៅ)
   category: ExpenseCategory;
   ingredientId?: string;     // ភ្ជាប់ទៅគ្រឿងផ្សំក្នុងស្តុក inventory (បើមាន)
   supplier?: string;         // ហាង ឬអ្នកផ្គត់ផ្គង់

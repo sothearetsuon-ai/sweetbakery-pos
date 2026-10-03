@@ -109,11 +109,22 @@ const QUICK_INGREDIENTS = [
   { label: '🥥 ខ្ទិះដូងស្រស់', unit: 'kg', unitPriceKhr: 8000, supplier: 'ផ្សារដើមគ' },
 ];
 
+const QUICK_SUPPLIES = [
+  { label: '📦 ប្រអប់នំខេកកញ្ចក់ថ្លា 8-Inch', cat: 'PACKAGING' as ExpenseCategory, unit: 'ប្រអប់ (box)', unitPriceKhr: 3500, supplier: 'Cambodia Packaging' },
+  { label: '🎂 ស្លាក Topper រីករាយថ្ងៃខួបកំណើត', cat: 'SUPPLIES' as ExpenseCategory, unit: 'ដុំ (pcs)', unitPriceKhr: 1500, supplier: 'Party Supplies' },
+  { label: '🕯️ ទៀនខួបកំណើតពណ៌មាស Spiral', cat: 'SUPPLIES' as ExpenseCategory, unit: 'កញ្ចប់ (pack)', unitPriceKhr: 2000, supplier: 'Party Supplies' },
+  { label: '🎀 ខ្សែបូចងប្រអប់នំ Satin Ribbon', cat: 'PACKAGING' as ExpenseCategory, unit: 'ដុំ (pcs)', unitPriceKhr: 6000, supplier: 'ផ្សារអូឡាំពិក' },
+  { label: '🔪 កាំបិតកាត់នំ & សមជ័រអនាម័យ', cat: 'SUPPLIES' as ExpenseCategory, unit: 'ឈុត', unitPriceKhr: 800, supplier: 'Cambodia Packaging' },
+  { label: '🛍️ ថង់យួរក្រដាសកាតុងពិសេស', cat: 'PACKAGING' as ExpenseCategory, unit: 'ដុំ (pcs)', unitPriceKhr: 2000, supplier: 'Khmer Packaging' },
+  { label: '📜 ក្រដាសទ្រាប់នំ Baking Paper', cat: 'SUPPLIES' as ExpenseCategory, unit: 'ដុំ (pcs)', unitPriceKhr: 8000, supplier: 'Euro Gourmet' },
+  { label: '🧁 កែវ & ពុម្ពក្រដាស Cupcake', cat: 'PACKAGING' as ExpenseCategory, unit: 'កញ្ចប់ (pack)', unitPriceKhr: 4500, supplier: 'Bakery Supplies' },
+  { label: '☕ កែវកាហ្វេ & បំពង់បឺតអនាម័យ', cat: 'SUPPLIES' as ExpenseCategory, unit: 'កញ្ចប់ (pack)', unitPriceKhr: 12000, supplier: 'Eco Supplies' },
+];
+
 const QUICK_GENERAL_EXPENSES = [
   { label: '⚡ អគ្គិសនី EDC (ភ្លើងឡ & ទូក្លាសេ)', cat: 'UTILITIES' as ExpenseCategory, unit: 'ខែ (month)', supplier: 'អគ្គិសនីកម្ពុជា EDC' },
   { label: '💧 ទឹកស្អាតរដ្ឋ (Water Bill)', cat: 'UTILITIES' as ExpenseCategory, unit: 'ខែ (month)', supplier: 'រដ្ឋាករទឹកស្វយ័ត' },
   { label: '🔥 ហ្គាសឡដុតនំ (Gas Refill 48kg)', cat: 'UTILITIES' as ExpenseCategory, unit: 'ធុង (48kg)', supplier: 'ហាងហ្គាស' },
-  { label: '📦 ប្រអប់នំខេកកញ្ចក់ថ្លា & ខ្សែបូ', cat: 'PACKAGING' as ExpenseCategory, unit: 'ប្រអប់ (box)', supplier: 'Cambodia Packaging' },
   { label: '👤 ប្រាក់ខែបុគ្គលិក / ថ្លៃឈ្នួល', cat: 'SALARY' as ExpenseCategory, unit: 'ខែ (month)', supplier: 'បុគ្គលិកហាង' },
   { label: '🏠 ថ្លៃជួលទីតាំងហាងប្រចាំខែ', cat: 'RENT' as ExpenseCategory, unit: 'ខែ (month)', supplier: 'ម្ចាស់ផ្ទះ' },
   { label: '📢 ប៊ូសផេក Facebook / TikTok Ads', cat: 'MARKETING' as ExpenseCategory, unit: 'ដង', supplier: 'Meta / TikTok' },
@@ -170,7 +181,11 @@ export const NewExpenseModal: React.FC<NewExpenseModalProps> = ({
     if (expenseToEdit) {
       const type: ExpenseType =
         expenseToEdit.expenseType ||
-        (expenseToEdit.category === 'INGREDIENTS' ? 'INGREDIENT' : 'GENERAL');
+        (expenseToEdit.category === 'INGREDIENTS'
+          ? 'INGREDIENT'
+          : expenseToEdit.category === 'PACKAGING' || expenseToEdit.category === 'SUPPLIES'
+          ? 'SUPPLY'
+          : 'GENERAL');
       setExpenseType(type);
       setSelectedIngredientId(expenseToEdit.ingredientId || '');
       setSupplier(expenseToEdit.supplier || '');
@@ -310,10 +325,17 @@ export const NewExpenseModal: React.FC<NewExpenseModalProps> = ({
       origin: { y: 0.7 },
     });
 
+    let finalCategory: ExpenseCategory = category;
+    if (expenseType === 'INGREDIENT') {
+      finalCategory = 'INGREDIENTS';
+    } else if (expenseType === 'SUPPLY') {
+      finalCategory = (category === 'SUPPLIES' || category === 'PACKAGING' || category === 'MAINTENANCE') ? category : 'PACKAGING';
+    }
+
     const expensePayload: Omit<Expense, 'id' | 'createdAt'> = {
       title: title.trim(),
       expenseType,
-      category: expenseType === 'INGREDIENT' ? 'INGREDIENTS' : category,
+      category: finalCategory,
       ingredientId: expenseType === 'INGREDIENT' && selectedIngredientId ? selectedIngredientId : undefined,
       supplier: supplier.trim() || undefined,
       quantity: numQuantity,
@@ -388,12 +410,12 @@ export const NewExpenseModal: React.FC<NewExpenseModalProps> = ({
 
         {/* Form Content */}
         <form onSubmit={handleSubmit} className="p-6 overflow-y-auto space-y-4 flex-1">
-          {/* Main Segmented Toggle: 🥚 ចំណាយគ្រឿងផ្សំ vs 🏢 ចំណាយទូទៅ */}
+          {/* Main Segmented Toggle: 🌾 ចំណាយគ្រឿងផ្សំ vs 📦 ទិញសម្ភារៈ vs 🏢 ចំណាយទូទៅ */}
           <div className="space-y-1.5">
             <label className="block text-xs font-black text-slate-700 uppercase tracking-wider">
               បែងចែកប្រភេទចំណាយ (Expense Category Type) *
             </label>
-            <div className="grid grid-cols-2 p-1.5 bg-slate-100/90 rounded-2xl border border-slate-200 gap-1.5 shadow-2xs">
+            <div className="grid grid-cols-1 sm:grid-cols-3 p-1.5 bg-slate-100/90 rounded-2xl border border-slate-200 gap-1.5 shadow-2xs">
               <button
                 type="button"
                 onClick={() => {
@@ -401,14 +423,31 @@ export const NewExpenseModal: React.FC<NewExpenseModalProps> = ({
                   setExpenseType('INGREDIENT');
                   setCategory('INGREDIENTS');
                 }}
-                className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl font-black text-xs transition-all cursor-pointer ${
+                className={`flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-xl font-black text-xs transition-all cursor-pointer ${
                   expenseType === 'INGREDIENT'
                     ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-md shadow-orange-500/25 scale-[1.01]'
                     : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
                 }`}
               >
-                <span className="text-base">🥚</span>
-                <span>ចំណាយគ្រឿងផ្សំ (Ingredients)</span>
+                <span className="text-base">🌾</span>
+                <span>ទិញគ្រឿងផ្សំ (Ingredients)</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  soundFx.playPop();
+                  setExpenseType('SUPPLY');
+                  setCategory('PACKAGING');
+                }}
+                className={`flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-xl font-black text-xs transition-all cursor-pointer ${
+                  expenseType === 'SUPPLY'
+                    ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-md shadow-purple-600/25 scale-[1.01]'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+                }`}
+              >
+                <span className="text-base">📦</span>
+                <span>ទិញសម្ភារៈ (Supplies)</span>
               </button>
 
               <button
@@ -416,18 +455,18 @@ export const NewExpenseModal: React.FC<NewExpenseModalProps> = ({
                 onClick={() => {
                   soundFx.playPop();
                   setExpenseType('GENERAL');
-                  if (category === 'INGREDIENTS') {
+                  if (category === 'INGREDIENTS' || category === 'PACKAGING' || category === 'SUPPLIES') {
                     setCategory('UTILITIES');
                   }
                 }}
-                className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl font-black text-xs transition-all cursor-pointer ${
+                className={`flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-xl font-black text-xs transition-all cursor-pointer ${
                   expenseType === 'GENERAL'
                     ? 'bg-gradient-to-r from-sky-600 to-indigo-600 text-white shadow-md shadow-sky-600/25 scale-[1.01]'
                     : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
                 }`}
               >
                 <span className="text-base">🏢</span>
-                <span>ចំណាយទូទៅ (General / OPEX)</span>
+                <span>ចំណាយទូទៅ (General OPEX)</span>
               </button>
             </div>
           </div>
@@ -440,45 +479,68 @@ export const NewExpenseModal: React.FC<NewExpenseModalProps> = ({
                 <span>
                   {expenseType === 'INGREDIENT'
                     ? 'គ្រឿងផ្សំញឹកញាប់ (ចុចបំពេញរហ័ស)៖'
+                    : expenseType === 'SUPPLY'
+                    ? 'សម្ភារៈ & ប្រអប់ញឹកញាប់ (ចុចបំពេញរហ័ស)៖'
                     : 'ចំណាយទូទៅញឹកញាប់ (ចុចបំពេញរហ័ស)៖'}
                 </span>
               </span>
               <div className="flex flex-wrap gap-1.5">
-                {expenseType === 'INGREDIENT'
-                  ? QUICK_INGREDIENTS.map((qi, idx) => (
-                      <button
-                        key={idx}
-                        type="button"
-                        onClick={() => {
-                          soundFx.playPop();
-                          setTitle(qi.label);
-                          setUnit(qi.unit);
-                          setUnitPriceKhr(qi.unitPriceKhr.toString());
-                          if (qi.supplier) setSupplier(qi.supplier);
-                          const q = parseFloat(quantity) || 1;
-                          setAmountKhr(Math.round(q * qi.unitPriceKhr).toString());
-                        }}
-                        className="px-2.5 py-1 rounded-xl text-xs font-semibold bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200/80 transition-colors cursor-pointer"
-                      >
-                        {qi.label}
-                      </button>
-                    ))
-                  : QUICK_GENERAL_EXPENSES.map((qg, idx) => (
-                      <button
-                        key={idx}
-                        type="button"
-                        onClick={() => {
-                          soundFx.playPop();
-                          setTitle(qg.label);
-                          setCategory(qg.cat);
-                          setUnit(qg.unit);
-                          if (qg.supplier) setSupplier(qg.supplier);
-                        }}
-                        className="px-2.5 py-1 rounded-xl text-xs font-semibold bg-sky-50 hover:bg-sky-100 text-sky-900 border border-sky-200/80 transition-colors cursor-pointer"
-                      >
-                        {qg.label}
-                      </button>
-                    ))}
+                {expenseType === 'INGREDIENT' &&
+                  QUICK_INGREDIENTS.map((qi, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => {
+                        soundFx.playPop();
+                        setTitle(qi.label);
+                        setUnit(qi.unit);
+                        setUnitPriceKhr(qi.unitPriceKhr.toString());
+                        if (qi.supplier) setSupplier(qi.supplier);
+                        const q = parseFloat(quantity) || 1;
+                        setAmountKhr(Math.round(q * qi.unitPriceKhr).toString());
+                      }}
+                      className="px-2.5 py-1 rounded-xl text-xs font-semibold bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200/80 transition-colors cursor-pointer"
+                    >
+                      {qi.label}
+                    </button>
+                  ))}
+                {expenseType === 'SUPPLY' &&
+                  QUICK_SUPPLIES.map((qs, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => {
+                        soundFx.playPop();
+                        setTitle(qs.label);
+                        setCategory(qs.cat);
+                        setUnit(qs.unit);
+                        setUnitPriceKhr(qs.unitPriceKhr.toString());
+                        if (qs.supplier) setSupplier(qs.supplier);
+                        const q = parseFloat(quantity) || 1;
+                        setAmountKhr(Math.round(q * qs.unitPriceKhr).toString());
+                      }}
+                      className="px-2.5 py-1 rounded-xl text-xs font-semibold bg-purple-50 hover:bg-purple-100 text-purple-900 border border-purple-200/80 transition-colors cursor-pointer"
+                    >
+                      {qs.label}
+                    </button>
+                  ))}
+                {expenseType === 'GENERAL' &&
+                  QUICK_GENERAL_EXPENSES.map((qg, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => {
+                        soundFx.playPop();
+                        setTitle(qg.label);
+                        setCategory(qg.cat);
+                        setUnit(qg.unit);
+                        if (qg.supplier) setSupplier(qg.supplier);
+                      }}
+                      className="px-2.5 py-1 rounded-xl text-xs font-semibold bg-sky-50 hover:bg-sky-100 text-sky-900 border border-sky-200/80 transition-colors cursor-pointer"
+                    >
+                      {qg.label}
+                    </button>
+                  ))}
               </div>
             </div>
           )}
@@ -488,7 +550,7 @@ export const NewExpenseModal: React.FC<NewExpenseModalProps> = ({
             <div className="p-3 bg-amber-50/70 border border-amber-200/90 rounded-2xl space-y-2">
               <div className="flex items-center justify-between text-xs">
                 <span className="font-bold text-amber-950 flex items-center gap-1.5">
-                  <span>📦</span>
+                  <span>🌾</span>
                   <span>ភ្ជាប់ជាមួយគ្រឿងផ្សំក្នុងស្តុក Inventory (ជម្រើសងាយស្រួល)៖</span>
                 </span>
                 {selectedIngredientId && (
@@ -534,9 +596,13 @@ export const NewExpenseModal: React.FC<NewExpenseModalProps> = ({
 
           {/* Title, Category & Supplier */}
           <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
-            <div className={expenseType === 'INGREDIENT' ? 'sm:col-span-7' : 'sm:col-span-6'}>
+            <div className={expenseType === 'INGREDIENT' ? 'sm:col-span-7' : 'sm:col-span-5'}>
               <label className="block text-xs font-black text-slate-700 mb-1 uppercase tracking-wider">
-                {expenseType === 'INGREDIENT' ? 'ឈ្មោះគ្រឿងផ្សំធ្វើនំ *' : 'បរិយាយមុខទំនិញ / ការចំណាយទូទៅ *'}
+                {expenseType === 'INGREDIENT'
+                  ? 'ឈ្មោះគ្រឿងផ្សំធ្វើនំ *'
+                  : expenseType === 'SUPPLY'
+                  ? 'ឈ្មោះសម្ភារៈ / ប្រអប់ / ប្រដាប់ប្រដា *'
+                  : 'បរិយាយការចំណាយទូទៅ *'}
               </label>
               <input
                 type="text"
@@ -544,7 +610,9 @@ export const NewExpenseModal: React.FC<NewExpenseModalProps> = ({
                 placeholder={
                   expenseType === 'INGREDIENT'
                     ? 'ឧ. ស៊ុតមាន់ស្រស់ CP, ម្សៅខេកជប៉ុន, ប៊័របារាំង...'
-                    : 'ឧ. វិក្កយបត្រភ្លើង EDC, ទឹកស្អាត, ប្រអប់នំខេក...'
+                    : expenseType === 'SUPPLY'
+                    ? 'ឧ. ប្រអប់នំខេកកញ្ចក់ថ្លា, ទៀនខួបកំណើត, ស្លាក Topper...'
+                    : 'ឧ. វិក្កយបត្រភ្លើង EDC, ទឹកស្អាត, ថ្លៃជួលទីតាំង...'
                 }
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
@@ -552,8 +620,26 @@ export const NewExpenseModal: React.FC<NewExpenseModalProps> = ({
               />
             </div>
 
-            {expenseType === 'GENERAL' ? (
-              <div className="sm:col-span-6">
+            {expenseType === 'SUPPLY' && (
+              <div className="sm:col-span-4">
+                <label className="block text-xs font-black text-slate-700 mb-1 uppercase tracking-wider">
+                  ប្រភេទសម្ភារៈ *
+                </label>
+                <select
+                  value={category}
+                  onChange={(e) => setCategory(e.target.value as ExpenseCategory)}
+                  className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 font-semibold text-slate-800"
+                >
+                  <option value="PACKAGING">📦 ប្រអប់ & វេចខ្ចប់ (Packaging)</option>
+                  <option value="SUPPLIES">🎀 សម្ភារៈតុបតែង & ប្រដាប់ប្រដា (Supplies)</option>
+                  <option value="MAINTENANCE">🔪 ឧបករណ៍ធ្វើនំ / ពុម្ព / ថាស (Utensils)</option>
+                  <option value="OTHER">📌 សម្ភារៈផ្សេងៗ (Other)</option>
+                </select>
+              </div>
+            )}
+
+            {expenseType === 'GENERAL' && (
+              <div className="sm:col-span-4">
                 <label className="block text-xs font-black text-slate-700 mb-1 uppercase tracking-wider">
                   ប្រភេទចំណាយទូទៅ *
                 </label>
@@ -565,26 +651,25 @@ export const NewExpenseModal: React.FC<NewExpenseModalProps> = ({
                   <option value="UTILITIES">⚡ ទឹក ភ្លើង ហ្គាស (Utilities)</option>
                   <option value="SALARY">👤 ប្រាក់ខែ & ថ្លៃឈ្នួល (Salary)</option>
                   <option value="RENT">🏠 ថ្លៃជួលទីតាំង (Rent)</option>
-                  <option value="PACKAGING">📦 ប្រអប់ & វេចខ្ចប់ (Packaging)</option>
                   <option value="MAINTENANCE">🔧 ជួសជុលឧបករណ៍ / ថែទាំ</option>
                   <option value="MARKETING">📢 ផ្សព្វផ្សាយ / Boost Ads</option>
                   <option value="OTHER">📌 ផ្សេងៗ (Other)</option>
                 </select>
               </div>
-            ) : (
-              <div className="sm:col-span-5">
-                <label className="block text-xs font-black text-slate-700 mb-1 uppercase tracking-wider">
-                  ហាង / អ្នកផ្គត់ផ្គង់ (Supplier)
-                </label>
-                <input
-                  type="text"
-                  placeholder="ឧ. CP Cambodia, Euro Gourmet, ផ្សារ..."
-                  value={supplier}
-                  onChange={(e) => setSupplier(e.target.value)}
-                  className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 font-semibold text-slate-800"
-                />
-              </div>
             )}
+
+            <div className={expenseType === 'INGREDIENT' ? 'sm:col-span-5' : 'sm:col-span-3'}>
+              <label className="block text-xs font-black text-slate-700 mb-1 uppercase tracking-wider">
+                {expenseType === 'INGREDIENT' ? 'ហាង / អ្នកផ្គត់ផ្គង់' : 'ហាង / ក្រុមហ៊ុន'}
+              </label>
+              <input
+                type="text"
+                placeholder={expenseType === 'INGREDIENT' ? 'ឧ. CP, Euro Gourmet...' : 'ឧ. Cambodia Packaging, ផ្សារ...'}
+                value={supplier}
+                onChange={(e) => setSupplier(e.target.value)}
+                className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 font-semibold text-slate-800"
+              />
+            </div>
           </div>
 
           {/* Core Feature: ចំនួន, ខ្នាត, តម្លៃរាយ, សរុប */}
