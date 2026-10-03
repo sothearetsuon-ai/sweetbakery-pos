@@ -32,6 +32,7 @@ export const SalesHistory: React.FC = () => {
   const [editingSale, setEditingSale] = useState<CompletedSale | null>(null);
   const [viewingReceiptSale, setViewingReceiptSale] = useState<CompletedSale | null>(null);
   const [saleToDelete, setSaleToDelete] = useState<CompletedSale | null>(null);
+  const [restoreStockOnDelete, setRestoreStockOnDelete] = useState<boolean>(true);
   const [isConfirmClearAllSales, setIsConfirmClearAllSales] = useState(false);
 
   // Helper to extract local YYYY-MM-DD
@@ -443,6 +444,7 @@ export const SalesHistory: React.FC = () => {
                             title="លុបការលក់"
                             onClick={() => {
                               soundFx.playPop();
+                              setRestoreStockOnDelete(true);
                               setSaleToDelete(sale);
                             }}
                             className="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-500 hover:text-rose-700 rounded-xl transition-colors cursor-pointer border border-rose-200/60 shrink-0"
@@ -505,7 +507,54 @@ export const SalesHistory: React.FC = () => {
               <div className="text-[11px] text-slate-500">
                 តម្លៃសរុប៖ <span className="font-black text-pink-600">{saleToDelete.totalKhr.toLocaleString()} ៛ (${saleToDelete.totalUsd.toFixed(2)})</span>
               </div>
+
+              {/* Items in this Sale */}
+              {saleToDelete.items && saleToDelete.items.length > 0 && (
+                <div className="pt-2 mt-2 border-t border-rose-200/60">
+                  <div className="text-[11px] font-bold text-slate-600 mb-1">មុខទំនិញក្នុងវិក្កយបត្រ៖</div>
+                  <div className="max-h-24 overflow-y-auto space-y-1 pr-1">
+                    {saleToDelete.items.map((it, idx) => (
+                      <div key={idx} className="flex justify-between items-center text-[11px] text-slate-600">
+                        <span className="truncate max-w-[190px]">{it.nameKh || it.nameEn || 'ទំនិញ'}</span>
+                        <span className="font-bold font-mono text-slate-800">x{it.quantity}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
+
+            {/* Checkbox Option 2: Restore Stock to Inventory */}
+            {saleToDelete.items && saleToDelete.items.length > 0 && (
+              <label className="flex items-start gap-3 p-3 bg-amber-50/90 border border-amber-200 rounded-2xl cursor-pointer select-none transition-all hover:bg-amber-100/70">
+                <input
+                  type="checkbox"
+                  checked={restoreStockOnDelete}
+                  onChange={(e) => setRestoreStockOnDelete(e.target.checked)}
+                  className="w-4 h-4 mt-0.5 rounded text-pink-600 focus:ring-pink-500 border-slate-300 accent-pink-600 cursor-pointer shrink-0"
+                />
+                <div className="text-left">
+                  <div className="text-xs font-black text-amber-900 flex items-center gap-1.5">
+                    <span>📦 ត្រឡប់ចំនួនទំនិញចូលស្តុកវិញ</span>
+                  </div>
+                  <div className="text-[11px] text-amber-800 leading-relaxed mt-0.5">
+                    {restoreStockOnDelete ? (
+                      <>
+                        បូក{' '}
+                        <span className="font-bold underline">
+                          {saleToDelete.items.reduce((sum, it) => sum + it.quantity, 0)} មុខទំនិញ
+                        </span>{' '}
+                        ចូលស្តុកវិញដោយស្វ័យប្រវត្តិ
+                      </>
+                    ) : (
+                      <span className="text-rose-600 font-bold">
+                        ⚠️ មិនត្រឡប់ចូលស្តុកវិញទេ (ចាត់ទុកជាទំនិញខូច ឬបាត់បង់)
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </label>
+            )}
 
             <div className="grid grid-cols-2 gap-2 pt-1">
               <button
@@ -519,7 +568,7 @@ export const SalesHistory: React.FC = () => {
                 type="button"
                 onClick={() => {
                   soundFx.playSuccess();
-                  deleteSale(saleToDelete.id);
+                  deleteSale(saleToDelete.id, restoreStockOnDelete);
                   setSaleToDelete(null);
                 }}
                 className="py-2.5 px-4 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs rounded-xl shadow-lg shadow-rose-600/30 transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-1.5"

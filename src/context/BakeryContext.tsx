@@ -392,7 +392,7 @@ interface BakeryContextType {
   completeSale: (sale: Omit<CompletedSale, 'id' | 'orderNumber' | 'createdAt'>) => CompletedSale;
   addPastSale: (sale: Omit<CompletedSale, 'id'>) => void;
   updateSale: (sale: CompletedSale) => void;
-  deleteSale: (id: string) => void;
+  deleteSale: (id: string, restoreStock?: boolean) => void;
   clearAllSales: () => void;
 
   activeReceipt: CompletedSale | null;
@@ -3277,8 +3277,8 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     syncSaveDoc('sales', updatedSale.id, updatedSale);
   };
 
-  // Delete Sale
-  const deleteSale = (id: string) => {
+  // Delete Sale with stock restoration support
+  const deleteSale = (id: string, restoreStock: boolean = true) => {
     isUpdatingFromLan.current = false;
     if (lanSyncTimer.current) clearTimeout(lanSyncTimer.current);
     recordDeletedId('sales', id, deletedSaleIds);
@@ -3297,12 +3297,39 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       body: JSON.stringify({ id }),
     }).catch(() => {});
 
+    // Find the sale being deleted to inspect purchased items
+    const saleToDelete = sales.find((s) => s.id === id);
+    let updatedProducts = products;
+
+    // Restore stock if requested and items exist in the sale
+    if (restoreStock && saleToDelete && saleToDelete.items && saleToDelete.items.length > 0) {
+      updatedProducts = products.map((p) => {
+        const itemToRestore = saleToDelete.items.find((item) => item.productId === p.id);
+        if (itemToRestore && itemToRestore.quantity > 0) {
+          const restoredStock = (p.stockQty || 0) + itemToRestore.quantity;
+          const updatedProd = { ...p, stockQty: restoredStock };
+          syncSaveDoc('products', p.id, updatedProd);
+          return updatedProd;
+        }
+        return p;
+      });
+
+      setProducts(updatedProducts);
+      safeSetStorage('bakery_products', JSON.stringify(updatedProducts));
+
+      fetch('/api/save-products', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ products: updatedProducts }),
+      }).catch(() => {});
+    }
+
     // 2. Optimistically update local React state & LocalStorage + IndexedDB
     setSales((prev) => {
       const updated = prev.filter((s) => s.id !== id);
       safeSetStorage('bakery_sales', JSON.stringify(updated));
       saveToLanSync({
-        products,
+        products: updatedProducts,
         sales: updated,
         customOrders,
         expenses,
@@ -3313,6 +3340,19 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       return updated;
     });
     syncDeleteDoc('sales', id);
+
+    // Adjust open shift if the deleted sale belonged to it
+    if (saleToDelete && currentShift && currentShift.status === 'OPEN') {
+      const saleTime = new Date(saleToDelete.createdAt).getTime();
+      const shiftStartTime = new Date(currentShift.startTime).getTime();
+      if (!isNaN(saleTime) && !isNaN(shiftStartTime) && saleTime >= shiftStartTime) {
+        setCurrentShift({
+          ...currentShift,
+          totalSalesUsd: Math.max(0, currentShift.totalSalesUsd - saleToDelete.totalUsd),
+          totalOrdersCount: Math.max(0, currentShift.totalOrdersCount - 1),
+        });
+      }
+    }
   };
 
   const clearAllSales = () => {
