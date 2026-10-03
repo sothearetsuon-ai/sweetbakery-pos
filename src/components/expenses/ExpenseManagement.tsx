@@ -1269,6 +1269,14 @@ export const ExpenseManagement: React.FC = () => {
                           🏪 {expense.supplier}
                         </span>
                       )}
+                      {expense.retailSellingPriceKhr && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-black bg-emerald-50 text-emerald-800 border border-emerald-300">
+                          <span>🏷️ លក់រាយ៖ {expense.retailSellingPriceKhr.toLocaleString()} ៛</span>
+                          {expense.retailProfitMarginPct && (
+                            <span className="text-emerald-600 font-bold">(+{expense.retailProfitMarginPct}%)</span>
+                          )}
+                        </span>
+                      )}
                       <button
                         type="button"
                         onClick={() => {
@@ -1297,7 +1305,7 @@ export const ExpenseManagement: React.FC = () => {
 
                 {/* Details: Qty, Unit price, Paid by */}
                 <div className="flex items-center justify-between text-xs bg-slate-50 p-2.5 rounded-xl border border-slate-100">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <span className="font-bold text-slate-800">
                       {displayQty} {expense.unit || 'ដុំ'}
                     </span>
@@ -1305,6 +1313,11 @@ export const ExpenseManagement: React.FC = () => {
                     <span className="text-slate-600 font-medium">
                       {displayUnitPriceKhr.toLocaleString()} ៛
                     </span>
+                    {expense.retailUnitCostKhr && expense.wholesalePackQty && (
+                      <span className="text-[10px] text-emerald-700 font-bold bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
+                        ដើម {expense.retailUnitCostKhr.toLocaleString()} ៛/{expense.retailUnit || 'រាយ'}
+                      </span>
+                    )}
                   </div>
 
                   <div className="flex items-center gap-1.5">
@@ -1573,6 +1586,14 @@ export const ExpenseManagement: React.FC = () => {
                               🏪 {expense.supplier}
                             </span>
                           )}
+                          {expense.retailSellingPriceKhr && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-black bg-emerald-50 text-emerald-800 border border-emerald-300">
+                              <span>🏷️ លក់រាយ៖ {expense.retailSellingPriceKhr.toLocaleString()} ៛</span>
+                              {expense.retailProfitMarginPct && (
+                                <span className="text-emerald-600 font-bold">(+{expense.retailProfitMarginPct}%)</span>
+                              )}
+                            </span>
+                          )}
                           {expense.notes && (
                             <span
                               className="text-[11px] text-slate-400 truncate max-w-[200px]"
@@ -1600,6 +1621,11 @@ export const ExpenseManagement: React.FC = () => {
                         <div className="text-[10px] text-slate-400 font-medium">
                           ~ ${displayUnitPriceUsd.toFixed(2)} USD
                         </div>
+                        {expense.retailUnitCostKhr && expense.wholesalePackQty && (
+                          <div className="text-[10px] text-emerald-700 font-bold mt-0.5">
+                            ដើម {expense.retailUnitCostKhr.toLocaleString()} ៛/{expense.retailUnit || 'រាយ'}
+                          </div>
+                        )}
                       </td>
 
                       <td className="py-2.5 px-4">

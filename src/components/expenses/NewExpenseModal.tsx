@@ -23,6 +23,9 @@ import {
   Bell,
   AlertCircle,
   Clock,
+  Boxes,
+  Percent,
+  Check,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { useBakery } from '../../context/BakeryContext';
@@ -174,6 +177,15 @@ export const NewExpenseModal: React.FC<NewExpenseModalProps> = ({
   const [notes, setNotes] = useState('');
   const [isCameraOpen, setIsCameraOpen] = useState(false);
 
+  // Wholesale to Retail Auto-Calculator state (គណនាទិញដុំ -> លក់រាយ)
+  const [isWholesaleCalcOpen, setIsWholesaleCalcOpen] = useState(false);
+  const [wholesalePacks, setWholesalePacks] = useState('1'); // ចំនួនដុំធំ/កេស
+  const [wholesalePackUnit, setWholesalePackUnit] = useState('កេស (case)');
+  const [itemsPerPack, setItemsPerPack] = useState('24'); // ចំនួនរាយក្នុង ១ ដុំធំ
+  const [retailUnit, setRetailUnit] = useState('ដុំ (pcs)');
+  const [profitMarginPct, setProfitMarginPct] = useState('30'); // ភាគរយចំណេញ % (default 30%)
+  const [retailRoundingMode, setRetailRoundingMode] = useState<'100' | '500' | '1000' | 'none'>('100');
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Pre-fill fields when editing an existing expense
@@ -206,6 +218,14 @@ export const NewExpenseModal: React.FC<NewExpenseModalProps> = ({
       setRemindBeforeDays(expenseToEdit.remindBeforeDays ?? 1);
       setReceiptImage(expenseToEdit.receiptImage || '');
       setNotes(expenseToEdit.notes || '');
+
+      // Pre-fill wholesale calculation if previously configured
+      setIsWholesaleCalcOpen(!!expenseToEdit.retailSellingPriceKhr);
+      setWholesalePacks('1');
+      setWholesalePackUnit(expenseToEdit.wholesalePackUnit || 'កេស (case)');
+      setItemsPerPack(expenseToEdit.wholesalePackQty ? String(expenseToEdit.wholesalePackQty) : '24');
+      setRetailUnit(expenseToEdit.retailUnit || 'ដុំ (pcs)');
+      setProfitMarginPct(expenseToEdit.retailProfitMarginPct ? String(expenseToEdit.retailProfitMarginPct) : '30');
     } else {
       setExpenseType('INGREDIENT');
       setSelectedIngredientId('');
@@ -225,6 +245,15 @@ export const NewExpenseModal: React.FC<NewExpenseModalProps> = ({
       setRemindBeforeDays(1);
       setReceiptImage('');
       setNotes('');
+
+      // Reset wholesale calculator
+      setIsWholesaleCalcOpen(false);
+      setWholesalePacks('1');
+      setWholesalePackUnit('កេស (case)');
+      setItemsPerPack('24');
+      setRetailUnit('ដុំ (pcs)');
+      setProfitMarginPct('30');
+      setRetailRoundingMode('100');
     }
   }, [expenseToEdit, isOpen, currentStaff]);
 
@@ -297,6 +326,58 @@ export const NewExpenseModal: React.FC<NewExpenseModalProps> = ({
   const numAmountKhr = parseInt(amountKhr, 10) || Math.round(numQuantity * numUnitPriceKhr);
   const numAmountUsd = Number((numAmountKhr / exchangeRate).toFixed(2));
 
+  // Wholesale to Retail dynamic calculations
+  const numWholesalePacks = Math.max(1, parseFloat(wholesalePacks) || 1);
+  const numItemsPerPack = Math.max(1, parseFloat(itemsPerPack) || 1);
+  const totalRetailItems = Math.max(1, Math.round(numWholesalePacks * numItemsPerPack));
+
+  const wholesaleTotalKhr = parseInt(amountKhr, 10) || Math.round(numQuantity * numUnitPriceKhr) || 0;
+  const retailUnitCostKhr = wholesaleTotalKhr > 0 && totalRetailItems > 0 ? Math.round(wholesaleTotalKhr / totalRetailItems) : 0;
+  const retailUnitCostUsd = Number((retailUnitCostKhr / exchangeRate).toFixed(2));
+
+  const marginPct = parseFloat(profitMarginPct) || 0;
+  const rawSellingPriceKhr = retailUnitCostKhr * (1 + marginPct / 100);
+
+  const calcRoundedSellingPrice = (raw: number, mode: '100' | '500' | '1000' | 'none') => {
+    if (raw <= 0) return 0;
+    if (mode === 'none') return Math.round(raw);
+    const step = parseInt(mode, 10) || 100;
+    return Math.ceil(raw / step) * step;
+  };
+
+  const retailSellingPriceKhr = calcRoundedSellingPrice(rawSellingPriceKhr, retailRoundingMode);
+  const retailSellingPriceUsd = Number((retailSellingPriceKhr / exchangeRate).toFixed(2));
+
+  const profitPerItemKhr = Math.max(0, retailSellingPriceKhr - retailUnitCostKhr);
+  const totalExpectedProfitKhr = profitPerItemKhr * totalRetailItems;
+
+  const handleApplyRetailUnits = () => {
+    soundFx.playSuccess();
+    confetti({ particleCount: 40, spread: 50, origin: { y: 0.6 } });
+    setQuantity(totalRetailItems.toString());
+    setUnit(retailUnit);
+    setUnitPriceKhr(retailUnitCostKhr.toString());
+    setAmountKhr(wholesaleTotalKhr.toString());
+    const retailNote = `💡 [ទិញដុំ ${numWholesalePacks} ${wholesalePackUnit} (${totalRetailItems} ${retailUnit}) | ថ្លៃដើមរាយ ${retailUnitCostKhr.toLocaleString()} ៛ | តម្លៃលក់រាយណែនាំ ${retailSellingPriceKhr.toLocaleString()} ៛ (+${marginPct}%)]`;
+    if (!notes.includes('តម្លៃលក់រាយណែនាំ')) {
+      setNotes(notes ? `${notes}\n${retailNote}` : retailNote);
+    }
+  };
+
+  const handleApplyWholesaleUnits = () => {
+    soundFx.playSuccess();
+    confetti({ particleCount: 40, spread: 50, origin: { y: 0.6 } });
+    setQuantity(numWholesalePacks.toString());
+    setUnit(wholesalePackUnit);
+    const unitPriceWholesale = Math.round(wholesaleTotalKhr / numWholesalePacks);
+    setUnitPriceKhr(unitPriceWholesale.toString());
+    setAmountKhr(wholesaleTotalKhr.toString());
+    const retailNote = `💡 [ទិញដុំ ${numWholesalePacks} ${wholesalePackUnit} (${totalRetailItems} ${retailUnit}) | ថ្លៃដើមរាយ ${retailUnitCostKhr.toLocaleString()} ៛ | តម្លៃលក់រាយណែនាំ ${retailSellingPriceKhr.toLocaleString()} ៛ (+${marginPct}%)]`;
+    if (!notes.includes('តម្លៃលក់រាយណែនាំ')) {
+      setNotes(notes ? `${notes}\n${retailNote}` : retailNote);
+    }
+  };
+
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -344,6 +425,14 @@ export const NewExpenseModal: React.FC<NewExpenseModalProps> = ({
       unitPriceUsd: numUnitPriceUsd > 0 ? numUnitPriceUsd : Number((numAmountUsd / numQuantity).toFixed(2)),
       amountUsd: numAmountUsd,
       amountKhr: numAmountKhr,
+      // Wholesale to retail metadata
+      wholesalePackQty: isWholesaleCalcOpen ? numItemsPerPack : undefined,
+      wholesalePackUnit: isWholesaleCalcOpen ? wholesalePackUnit : undefined,
+      retailUnit: isWholesaleCalcOpen ? retailUnit : undefined,
+      retailUnitCostKhr: isWholesaleCalcOpen && retailUnitCostKhr > 0 ? retailUnitCostKhr : undefined,
+      retailProfitMarginPct: isWholesaleCalcOpen && marginPct > 0 ? marginPct : undefined,
+      retailSellingPriceKhr: isWholesaleCalcOpen && retailSellingPriceKhr > 0 ? retailSellingPriceKhr : undefined,
+      retailSellingPriceUsd: isWholesaleCalcOpen && retailSellingPriceUsd > 0 ? retailSellingPriceUsd : undefined,
       paidBy,
       paymentMethod,
       paymentStatus,
@@ -898,6 +987,266 @@ export const NewExpenseModal: React.FC<NewExpenseModalProps> = ({
                 </div>
                 <div className="font-black text-sm text-rose-600">
                   {numAmountKhr.toLocaleString()} ៛ ({`$${numAmountUsd.toFixed(2)}`})
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Wholesale Bulk to Retail Selling Price Auto-Calculator */}
+          <div className="rounded-2xl border border-purple-200/90 bg-gradient-to-br from-purple-50/70 via-indigo-50/40 to-pink-50/30 overflow-hidden shadow-2xs transition-all">
+            <div
+              onClick={() => {
+                soundFx.playPop();
+                setIsWholesaleCalcOpen(!isWholesaleCalcOpen);
+              }}
+              className="px-4 py-3 flex items-center justify-between cursor-pointer hover:bg-purple-100/40 transition-colors select-none"
+            >
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 bg-gradient-to-tr from-purple-600 to-indigo-600 text-white rounded-xl shadow-xs">
+                  <Boxes className="w-4 h-4" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-xs font-black text-slate-800">
+                      🧮 គណនាតម្លៃទិញដុំ & តម្លៃលក់រាយស្វ័យប្រវត្តិ (Wholesale to Retail Auto-Calculator)
+                    </span>
+                    <span className="text-[10px] font-black bg-gradient-to-r from-purple-600 to-pink-600 text-white px-2 py-0.5 rounded-full shadow-2xs">
+                      ✨ Auto-Price
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-500 mt-0.5">
+                    ទិញចូលគិតជាកេស/ឡូ/បាវ ចែកចេញជាថ្លៃដើមរាយ និងគណនាតម្លៃលក់រាយចំណេញស្វ័យប្រវត្តិ
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                className="px-2.5 py-1 text-xs font-bold text-purple-700 bg-white border border-purple-200 rounded-xl hover:bg-purple-50 transition-colors shrink-0"
+              >
+                {isWholesaleCalcOpen ? '▲ បង្រួម' : '▼ បើកគណនា'}
+              </button>
+            </div>
+
+            {isWholesaleCalcOpen && (
+              <div className="p-4 pt-1 border-t border-purple-100 space-y-3.5">
+                {/* Step 1: Pack Inputs */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-2">
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                      ចំនួនដុំធំ/កេស (Bulk Qty)
+                    </label>
+                    <input
+                      type="number"
+                      step="any"
+                      min="1"
+                      value={wholesalePacks}
+                      onChange={(e) => setWholesalePacks(e.target.value)}
+                      className="w-full px-2.5 py-1.5 text-xs font-black text-slate-800 bg-white border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/20"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                      ខ្នាតទិញដុំ (Bulk Unit)
+                    </label>
+                    <input
+                      type="text"
+                      list="bulk-pack-units"
+                      value={wholesalePackUnit}
+                      onChange={(e) => setWholesalePackUnit(e.target.value)}
+                      className="w-full px-2.5 py-1.5 text-xs font-bold text-slate-800 bg-white border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/20"
+                    />
+                    <datalist id="bulk-pack-units">
+                      <option value="កេស (case)" />
+                      <option value="ឡូ (dozen)" />
+                      <option value="បាវ (sack)" />
+                      <option value="ប្រអប់ធំ (big box)" />
+                      <option value="ធុង (carton)" />
+                      <option value="កញ្ចប់ធំ (pack)" />
+                    </datalist>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                      ចំនួនរាយក្នុង ១ ដុំធំ
+                    </label>
+                    <input
+                      type="number"
+                      step="any"
+                      min="1"
+                      placeholder="24"
+                      value={itemsPerPack}
+                      onChange={(e) => setItemsPerPack(e.target.value)}
+                      className="w-full px-2.5 py-1.5 text-xs font-black text-purple-700 bg-white border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/20"
+                    />
+                    <div className="flex gap-1 mt-1">
+                      {['12', '20', '24', '50', '100'].map((n) => (
+                        <button
+                          key={n}
+                          type="button"
+                          onClick={() => setItemsPerPack(n)}
+                          className="px-1.5 py-0.5 text-[9px] font-bold bg-white text-purple-700 border border-purple-200 rounded hover:bg-purple-100 transition-colors"
+                        >
+                          {n}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                      ខ្នាតរាយ (Retail Unit)
+                    </label>
+                    <input
+                      type="text"
+                      list="retail-units-list"
+                      value={retailUnit}
+                      onChange={(e) => setRetailUnit(e.target.value)}
+                      className="w-full px-2.5 py-1.5 text-xs font-bold text-slate-800 bg-white border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/20"
+                    />
+                    <datalist id="retail-units-list">
+                      <option value="ដុំ (pcs)" />
+                      <option value="ប្រអប់ (box)" />
+                      <option value="គីឡូ (kg)" />
+                      <option value="កំប៉ុង (can)" />
+                      <option value="ដើម (stick)" />
+                      <option value="កញ្ចប់ (pack)" />
+                      <option value="កែវ (cup)" />
+                    </datalist>
+                  </div>
+                </div>
+
+                {/* Step 2: Desired Profit Margin % */}
+                <div className="p-3 bg-white/90 rounded-2xl border border-purple-200/80 space-y-2">
+                  <div className="flex items-center justify-between flex-wrap gap-2">
+                    <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                      <Percent className="w-3.5 h-3.5 text-purple-600" />
+                      <span>ភាគរយប្រាក់ចំណេញចង់បាន (Profit Markup)៖</span>
+                    </span>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      {['20', '30', '40', '50', '70', '100'].map((pct) => (
+                        <button
+                          key={pct}
+                          type="button"
+                          onClick={() => {
+                            soundFx.playPop();
+                            setProfitMarginPct(pct);
+                          }}
+                          className={`px-2 py-0.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                            profitMarginPct === pct
+                              ? 'bg-purple-600 text-white shadow-2xs font-black'
+                              : 'bg-slate-100 text-slate-700 hover:bg-purple-100 hover:text-purple-900'
+                          }`}
+                        >
+                          +{pct}%
+                        </button>
+                      ))}
+                      <div className="relative w-20">
+                        <input
+                          type="number"
+                          step="5"
+                          min="0"
+                          value={profitMarginPct}
+                          onChange={(e) => setProfitMarginPct(e.target.value)}
+                          className="w-full pl-2 pr-5 py-0.5 text-xs font-black text-purple-700 border border-purple-300 rounded-lg text-right"
+                        />
+                        <span className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[10px] text-purple-500 font-bold">%</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-1 border-t border-slate-100 text-[11px] text-slate-500 flex-wrap gap-1">
+                    <span>ការបង្គត់តម្លៃលក់៖</span>
+                    <div className="flex items-center gap-1">
+                      {[
+                        { label: '✨ បង្គត់ 100៛', value: '100' },
+                        { label: '500៛', value: '500' },
+                        { label: '1,000៛', value: '1000' },
+                        { label: 'មិនបង្គត់', value: 'none' },
+                      ].map((r) => (
+                        <button
+                          key={r.value}
+                          type="button"
+                          onClick={() => setRetailRoundingMode(r.value as any)}
+                          className={`px-2 py-0.5 text-[10px] rounded-md font-bold transition-all cursor-pointer ${
+                            retailRoundingMode === r.value
+                              ? 'bg-purple-600 text-white font-black'
+                              : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                          }`}
+                        >
+                          {r.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Step 3: Crystal Clear Calculation Result Box */}
+                <div className="p-3.5 bg-gradient-to-r from-purple-600 to-indigo-700 text-white rounded-2xl shadow-md space-y-2">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
+                    <div className="bg-white/10 p-2 rounded-xl backdrop-blur-xs">
+                      <div className="text-[10px] text-purple-200 font-medium">ចំនួនរាយសរុប</div>
+                      <div className="text-base font-black font-sans">
+                        {totalRetailItems.toLocaleString()} <span className="text-xs font-normal opacity-80">{retailUnit}</span>
+                      </div>
+                    </div>
+
+                    <div className="bg-white/10 p-2 rounded-xl backdrop-blur-xs">
+                      <div className="text-[10px] text-purple-200 font-medium">ថ្លៃដើមរាយ (Unit Cost)</div>
+                      <div className="text-base font-black font-sans">
+                        {retailUnitCostKhr.toLocaleString()} ៛
+                      </div>
+                      <div className="text-[9px] text-purple-200 font-sans">~ ${retailUnitCostUsd.toFixed(2)}</div>
+                    </div>
+
+                    <div className="bg-white/25 p-2 rounded-xl border border-white/30 shadow-xs">
+                      <div className="text-[10px] text-amber-200 font-black">🎯 តម្លៃលក់រាយណែនាំ</div>
+                      <div className="text-lg font-black text-amber-300 font-sans">
+                        {retailSellingPriceKhr.toLocaleString()} ៛
+                      </div>
+                      <div className="text-[9px] text-white/90 font-sans">~ ${retailSellingPriceUsd.toFixed(2)}</div>
+                    </div>
+
+                    <div className="bg-white/10 p-2 rounded-xl backdrop-blur-xs">
+                      <div className="text-[10px] text-emerald-200 font-medium">ចំណេញក្នុង ១ {retailUnit}</div>
+                      <div className="text-base font-black text-emerald-300 font-sans">
+                        +{profitPerItemKhr.toLocaleString()} ៛
+                      </div>
+                      <div className="text-[9px] text-emerald-200 font-sans">+{marginPct}%</div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-1 border-t border-white/20 text-xs text-purple-100 flex-wrap gap-1">
+                    <span>
+                      ចំណេញសរុបបើលក់អស់៖ <strong className="text-emerald-300 font-sans font-black">+{totalExpectedProfitKhr.toLocaleString()} ៛</strong>
+                    </span>
+                    <span className="text-[10px] opacity-80 font-sans">
+                      (ថ្លៃទិញសរុប {wholesaleTotalKhr.toLocaleString()} ៛)
+                    </span>
+                  </div>
+                </div>
+
+                {/* Step 4: Apply Buttons */}
+                <div className="flex items-center justify-end gap-2 flex-wrap pt-1">
+                  <button
+                    type="button"
+                    onClick={handleApplyRetailUnits}
+                    className="px-3.5 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-xl text-xs font-black shadow-sm transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer"
+                    title="ប្តូរបរិមាណក្នុងវិក្កយបត្រជាខ្នាតរាយ (ឧ. 24 ដុំ @ 2,500៛)"
+                  >
+                    <Check className="w-3.5 h-3.5 stroke-[3]" />
+                    <span>✓ អនុវត្តជាខ្នាតរាយ ({totalRetailItems} {retailUnit} @ {retailUnitCostKhr.toLocaleString()} ៛)</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleApplyWholesaleUnits}
+                    className="px-3.5 py-2 bg-white hover:bg-purple-50 text-purple-900 border border-purple-300 rounded-xl text-xs font-black shadow-2xs transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer"
+                    title="រក្សាទុកបរិមាណជាខ្នាតដុំធំ (ឧ. 1 កេស @ 60,000៛) និងរក្សាទុកតម្លៃលក់រាយ"
+                  >
+                    <Check className="w-3.5 h-3.5 stroke-[3]" />
+                    <span>✓ អនុវត្តជាខ្នាតដុំ ({numWholesalePacks} {wholesalePackUnit})</span>
+                  </button>
                 </div>
               </div>
             )}

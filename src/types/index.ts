@@ -236,6 +236,14 @@ export interface Expense {
   lastDueAlertDate?: string;        // កាលបរិច្ឆេទចុងក្រោយដែលបានជូនដំណឹង (YYYY-MM-DD) ដើម្បីកុំឱ្យផ្ញើលើសពី ១ ដងក្នុងមួយថ្ងៃ
   receiptImage?: string;
   notes?: string;
+  // Wholesale to Retail Auto-Calculation (ទិញដុំ & គណនាតម្លៃលក់រាយ)
+  wholesalePackQty?: number;          // ចំនួនរាយក្នុង ១ ដុំធំ/កេស (e.g. 24, 12, 50)
+  wholesalePackUnit?: string;         // ខ្នាតដុំធំ (e.g. 'កេស', 'ឡូ', 'បាវ', 'ប្រអប់ធំ')
+  retailUnit?: string;                // ខ្នាតរាយ (e.g. 'ដុំ', 'កំប៉ុង', 'គីឡូ', 'កញ្ចប់')
+  retailUnitCostKhr?: number;         // ថ្លៃដើមរាយក្នុង ១ ឯកតា (៛ KHR)
+  retailProfitMarginPct?: number;     // ភាគរយចំណេញដែលចង់បាន (e.g. 30%, 50%)
+  retailSellingPriceKhr?: number;     // តម្លៃលក់រាយណែនាំ (៛ KHR)
+  retailSellingPriceUsd?: number;     // តម្លៃលក់រាយណែនាំ ($ USD)
   date: string;
   createdAt: string;
 }
