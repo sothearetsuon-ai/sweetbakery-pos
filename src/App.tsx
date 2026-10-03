@@ -18,6 +18,7 @@ import { MiniMusicPlayer } from './components/music/MiniMusicPlayer';
 import { NotificationReminderScheduler } from './components/layout/NotificationReminderScheduler';
 import { getSavedTheme, saveTheme, AppTheme } from './utils/themeManager';
 import { ThemePickerModal } from './components/common/ThemePickerModal';
+import { ButterflyEffect } from './components/common/ButterflyEffect';
 import { getLicenseInfo, syncLicenseFromStorage, syncRemoteLicense, LicenseInfo } from './utils/licenseManager';
 import { LicenseExpiredModal } from './components/license/LicenseExpiredModal';
 import { LicenseWarningBanner } from './components/license/LicenseWarningBanner';
@@ -44,6 +45,20 @@ export const App: React.FC = () => {
   const [currentTheme, setCurrentTheme] = useState<AppTheme>(() => getSavedTheme());
   const [isThemePickerOpen, setIsThemePickerOpen] = useState(false);
   const [dismissedBannerThemeId, setDismissedBannerThemeId] = useState<string | null>(null);
+
+  // Flying Butterflies Effect State (Enabled by default)
+  const [isButterflyEnabled, setIsButterflyEnabled] = useState<boolean>(() => {
+    const saved = localStorage.getItem('bakery_butterfly_effect');
+    return saved !== null ? saved === 'true' : true;
+  });
+
+  const handleToggleButterfly = () => {
+    setIsButterflyEnabled((prev) => {
+      const next = !prev;
+      localStorage.setItem('bakery_butterfly_effect', next ? 'true' : 'false');
+      return next;
+    });
+  };
 
   // App Super Admin Portal State
   const [isSuperAdmin, setIsSuperAdmin] = useState(() => isSuperAdminAuthenticated());
@@ -242,6 +257,8 @@ export const App: React.FC = () => {
         onOpenSuperAdminPortal={() => setIsSuperAdminModalOpen(true)}
         onOpenCustomerOrderLinkModal={() => setIsCustomerOrderLinkModalOpen(true)}
         onOpenContact={() => setIsContactModalOpen(true)}
+        isButterflyEnabled={isButterflyEnabled}
+        onToggleButterfly={handleToggleButterfly}
       />
 
       {/* Main Workspace with Sidebar & Content */}
@@ -295,12 +312,17 @@ export const App: React.FC = () => {
       <MusicPlayerModal />
       <MiniMusicPlayer />
 
+      {/* Flying 3D Butterflies Effect (Lively background atmosphere) */}
+      <ButterflyEffect enabled={isButterflyEnabled} count={16} />
+
       {/* Background Theme Customizer Modal */}
       <ThemePickerModal
         isOpen={isThemePickerOpen}
         onClose={() => setIsThemePickerOpen(false)}
         currentTheme={currentTheme}
         onSelectTheme={handleSelectTheme}
+        isButterflyEnabled={isButterflyEnabled}
+        onToggleButterfly={handleToggleButterfly}
       />
 
       {/* 35-Day Expiration Lock Modal */}

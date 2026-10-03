@@ -49,6 +49,8 @@ interface NavbarProps {
   onOpenSuperAdminPortal?: () => void;
   onOpenCustomerOrderLinkModal?: () => void;
   onOpenContact?: () => void;
+  isButterflyEnabled?: boolean;
+  onToggleButterfly?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -62,6 +64,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenSuperAdminPortal,
   onOpenCustomerOrderLinkModal,
   onOpenContact,
+  isButterflyEnabled = true,
+  onToggleButterfly,
 }) => {
   const {
     lang,
@@ -357,6 +361,32 @@ export const Navbar: React.FC<NavbarProps> = ({
             <span>KHQR</span>
           </button>
 
+          {/* Flying Butterflies Effect Toggle Button */}
+          {onToggleButterfly && (
+            <button
+              type="button"
+              onClick={() => {
+                soundFx.playPop();
+                onToggleButterfly();
+              }}
+              title={
+                isButterflyEnabled
+                  ? 'បិទសត្វមេអំបៅហើរលើអេក្រង់ (Butterflies: ON)'
+                  : 'បើកសត្វមេអំបៅហើរលើអេក្រង់ (Butterflies: OFF)'
+              }
+              className={`flex items-center gap-1 sm:gap-1.5 p-1.5 sm:px-2.5 sm:py-1.5 rounded-2xl text-xs font-black transition-all border shadow-2xs cursor-pointer active:scale-95 ${
+                isButterflyEnabled
+                  ? 'bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 text-white border-pink-300 shadow-pink-500/25 ring-1 ring-pink-300'
+                  : 'bg-white text-slate-600 hover:text-pink-600 hover:bg-pink-50 border-slate-200'
+              }`}
+            >
+              <span className="text-sm">🦋</span>
+              <span className="hidden xl:inline font-battambang">
+                {isButterflyEnabled ? 'មេអំបៅ ON' : 'មេអំបៅ'}
+              </span>
+            </button>
+          )}
+
           {/* Customer Order Link & QR Button */}
           {onOpenCustomerOrderLinkModal && (
             <button
@@ -529,6 +559,33 @@ export const Navbar: React.FC<NavbarProps> = ({
                   <Settings className="w-4 h-4 text-slate-500" />
                   <span>ការកំណត់ហាង ⚙️</span>
                 </button>
+
+                {/* Flying Butterflies Animation Toggle */}
+                {onToggleButterfly && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      soundFx.playPop();
+                      onToggleButterfly();
+                      setIsQuickToolsOpen(false);
+                    }}
+                    className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors text-left cursor-pointer"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <span className="text-base">🦋</span>
+                      <span>មេអំបៅហើរលើអេក្រង់</span>
+                    </div>
+                    <span
+                      className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                        isButterflyEnabled
+                          ? 'bg-pink-100 text-pink-700 border border-pink-200'
+                          : 'bg-slate-100 text-slate-500 border border-slate-200'
+                      }`}
+                    >
+                      {isButterflyEnabled ? 'បើក (ON)' : 'បិទ (OFF)'}
+                    </span>
+                  </button>
+                )}
 
                 {/* Super Admin */}
                 {isSuperAdmin && onOpenSuperAdminPortal && (

@@ -9,6 +9,8 @@ interface ThemePickerModalProps {
   onClose: () => void;
   currentTheme: AppTheme;
   onSelectTheme: (theme: AppTheme) => void;
+  isButterflyEnabled?: boolean;
+  onToggleButterfly?: () => void;
 }
 
 export const ThemePickerModal: React.FC<ThemePickerModalProps> = ({
@@ -16,6 +18,8 @@ export const ThemePickerModal: React.FC<ThemePickerModalProps> = ({
   onClose,
   currentTheme,
   onSelectTheme,
+  isButterflyEnabled,
+  onToggleButterfly,
 }) => {
   const [activeCategory, setActiveCategory] = useState<ThemeCategory>('all');
 
@@ -246,16 +250,37 @@ export const ThemePickerModal: React.FC<ThemePickerModalProps> = ({
             <Sparkles className="w-3.5 h-3.5 text-pink-500" />
             <span>ពណ៌ផ្ទៃខាងក្រោយ & Theme រដូវកាល នឹងរក្សាទុកជាប់ជានិច្ចពេលបើកកម្មវិធីឡើងវិញ</span>
           </div>
-          <button
-            type="button"
-            onClick={() => {
-              soundFx.playPop();
-              onClose();
-            }}
-            className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer font-battambang"
-          >
-            រួចរាល់ (Done)
-          </button>
+          <div className="flex items-center gap-2 sm:gap-3">
+            {onToggleButterfly && (
+              <button
+                type="button"
+                onClick={() => {
+                  soundFx.playPop();
+                  onToggleButterfly();
+                }}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all flex items-center gap-1.5 cursor-pointer font-battambang ${
+                  isButterflyEnabled
+                    ? 'bg-gradient-to-r from-pink-500 to-purple-600 text-white border-pink-400 shadow-2xs'
+                    : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100'
+                }`}
+                title="បើក/បិទ សត្វមេអំបៅហើរលើអេក្រង់"
+              >
+                <span>🦋</span>
+                <span>មេអំបៅ៖ {isButterflyEnabled ? 'បើក (ON)' : 'បិទ (OFF)'}</span>
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={() => {
+                soundFx.playPop();
+                onClose();
+              }}
+              className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer font-battambang"
+            >
+              រួចរាល់ (Done)
+            </button>
+          </div>
         </div>
       </div>
     </div>
