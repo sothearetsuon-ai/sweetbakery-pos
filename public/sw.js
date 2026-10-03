@@ -1,5 +1,5 @@
 // Service Worker for SweetBakery POS PWA Offline Support
-const CACHE_NAME = 'sweetbakery-app-v2';
+const CACHE_NAME = 'sweetbakery-app-v3';
 const APP_SHELL = [
   './',
   './index.html',
@@ -84,8 +84,13 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // 3. Third-party CDN assets (Google Fonts, etc.)
-  if (url.origin.includes('fonts.googleapis.com') || url.origin.includes('fonts.gstatic.com')) {
+  // 3. Third-party CDN assets & images (Google Fonts, Unsplash product images, CDN media)
+  if (
+    url.origin.includes('fonts.googleapis.com') ||
+    url.origin.includes('fonts.gstatic.com') ||
+    url.origin.includes('images.unsplash.com') ||
+    url.pathname.match(/\.(jpg|jpeg|png|webp|svg|gif|avif)$/i)
+  ) {
     event.respondWith(
       caches.match(event.request).then((cached) => {
         if (cached) return cached;

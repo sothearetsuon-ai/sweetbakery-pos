@@ -282,3 +282,27 @@
   box-shadow: 0 16px 40px rgba(230, 81, 77, 0.28);
 }
 
+/* ==========================================================================
+   Mobile Performance Optimizations (Smooth 60FPS scrolling & fast response)
+   ========================================================================== */
+@media (max-width: 768px) {
+  /* 1. Disable expensive GPU backdrop-filter blurs on mobile devices to stop frame drops and stutter */
+  [class*="backdrop-blur"] {
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+  }
+
+  /* 2. Hardware-accelerated smooth touch scrolling */
+  .overflow-y-auto,
+  .overflow-x-auto,
+  main {
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* 3. Remove mobile tap lag and gray tap highlight */
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+

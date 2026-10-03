@@ -23,6 +23,23 @@ export function getProductImageUrl(url?: string | null): string {
     return trimmed;
   }
 
+  // Optimize Unsplash URLs with responsive sizing and compression (saves up to 95% bandwidth & RAM)
+  if (trimmed.includes('images.unsplash.com')) {
+    try {
+      const u = new URL(trimmed);
+      if (!u.searchParams.has('w')) {
+        u.searchParams.set('w', '400');
+      }
+      if (!u.searchParams.has('q')) {
+        u.searchParams.set('q', '75');
+      }
+      u.searchParams.set('auto', 'format');
+      return u.toString();
+    } catch {
+      return trimmed;
+    }
+  }
+
   // Handle local upload paths like /uploads/products/xxx.jpg or public/uploads/...
   let cleanPath = trimmed.startsWith('/') ? trimmed.slice(1) : trimmed;
   if (cleanPath.startsWith('public/')) {

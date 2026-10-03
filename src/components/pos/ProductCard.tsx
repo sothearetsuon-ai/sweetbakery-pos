@@ -61,6 +61,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart }
             alt={name}
             loading="lazy"
             decoding="async"
+            // @ts-ignore
+            fetchPriority="low"
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 ease-out transform-gpu"
             onError={() => {
               if (!imgError) setImgError(true);
