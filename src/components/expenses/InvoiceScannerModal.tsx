@@ -562,9 +562,17 @@ export const InvoiceScannerModal: React.FC<InvoiceScannerModalProps> = ({
               {scanError && (
                 <div className="bg-rose-50 border border-rose-200 rounded-2xl p-4 flex items-start gap-3">
                   <AlertCircle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
-                  <div>
+                  <div className="space-y-1">
                     <h4 className="font-bold text-rose-900 text-xs">ការស្កេនមិនជោគជ័យ</h4>
-                    <p className="text-xs text-rose-700 mt-0.5 leading-relaxed">{scanError}</p>
+                    <p className="text-xs text-rose-700 leading-relaxed">{scanError}</p>
+                    {(scanError.toLowerCase().includes('high demand') || scanError.includes('កកកុញ')) && (
+                      <div className="text-[11px] text-amber-900 font-bold bg-amber-100/80 p-2.5 rounded-xl border border-amber-300 mt-2 flex items-center gap-2">
+                        <span>⏳</span>
+                        <span>
+                          ម៉ាស៊ីនមេ Google កំពុងមានអ្នកប្រើប្រាស់កកកុញច្រើន (High Demand)។ សូមរង់ចាំប្រហែល ៥ ទៅ ១០ វិនាទី រួចចុចស្កេនរូបភាពម្តងទៀត!
+                        </span>
+                      </div>
+                    )}
                     {!apiKey && (
                       <button
                         type="button"

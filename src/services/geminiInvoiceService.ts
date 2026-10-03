@@ -236,56 +236,78 @@ Return ONLY a valid JSON object matching this schema without any markdown format
     }
   }
 
-  // Strictly use active valid model (gemini-3.8-flash)
+  // Candidates list: gemini-3.8-flash with fallback to gemini-3.7-flash
   const candidateModels = [
     activeModel,
     'gemini-3.8-flash',
+    'gemini-3.7-flash',
   ].filter(Boolean) as string[];
 
   const models = Array.from(new Set(candidateModels));
   let lastError: any = null;
 
-  for (const model of models) {
-    try {
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-goog-api-key': apiKey,
-        },
-        body: JSON.stringify({
-          contents: [
-            {
-              parts: [
-                { text: systemPrompt },
-                {
-                  inlineData: {
-                    mimeType: mimeType,
-                    data: base64Data,
-                  },
-                },
-              ],
-            },
-          ],
-          generationConfig: {
-            temperature: 0.1,
-            responseMimeType: 'application/json',
-          },
-        }),
-      });
+  const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        const errMsg = errorData.error?.message || `HTTP ${response.status}: ${response.statusText}`;
-        // If this specific model returned 404 not found, try the next model.
-        // Otherwise (quota, invalid key, bad request), throw the real error immediately!
-        if (response.status === 404) {
-          lastError = new Error(errMsg);
-          continue;
+  for (const model of models) {
+    let retries = 2; // Auto-retry up to 2 times for transient high demand spikes
+    while (retries >= 0) {
+      try {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-goog-api-key': apiKey,
+          },
+          body: JSON.stringify({
+            contents: [
+              {
+                parts: [
+                  { text: systemPrompt },
+                  {
+                    inlineData: {
+                      mimeType: mimeType,
+                      data: base64Data,
+                    },
+                  },
+                ],
+              },
+            ],
+            generationConfig: {
+              temperature: 0.1,
+              responseMimeType: 'application/json',
+            },
+          }),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          const errMsg = errorData.error?.message || `HTTP ${response.status}: ${response.statusText}`;
+
+          // If high demand or rate limit spike, wait and auto-retry
+          if (
+            (response.status === 503 ||
+              response.status === 429 ||
+              errMsg.toLowerCase().includes('high demand') ||
+              errMsg.toLowerCase().includes('overloaded')) &&
+            retries > 0
+          ) {
+            retries--;
+            await sleep(1500);
+            continue;
+          }
+
+          if (response.status === 404) {
+            lastError = new Error(errMsg);
+            break; // Try next model
+          }
+
+          let friendlyMsg = errMsg;
+          if (errMsg.toLowerCase().includes('high demand') || errMsg.toLowerCase().includes('overloaded')) {
+            friendlyMsg = 'ម៉ាស៊ីនមេ Google កំពុងមានអ្នកប្រើប្រាស់កកកុញច្រើន (High Demand)។ សូមរង់ចាំប្រហែល ៥ ទៅ ១០ វិនាទី រួចចុចស្កេនម្តងទៀត!';
+          }
+          throw new Error(friendlyMsg);
         }
-        throw new Error(errMsg);
-      }
 
       const data = await response.json();
       const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text;
@@ -359,10 +381,10 @@ Return ONLY a valid JSON object matching this schema without any markdown format
       };
     } catch (err: any) {
       lastError = err;
-      // If model not found or quota, continue to next model
-      continue;
+      break; // break retry loop and try next model
     }
   }
+}
 
-  throw lastError || new Error('មិនអាចស្កេនវិក្កយបត្របានទេ សូមព្យាយាមម្តងទៀត');
+throw lastError || new Error('មិនអាចស្កេនវិក្កយបត្របានទេ សូមព្យាយាមម្តងទៀត');
 };
