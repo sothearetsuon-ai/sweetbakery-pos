@@ -103,7 +103,7 @@ export interface ApiKeyTestResult {
 }
 
 /**
- * Quick validation check for Gemini API Key
+ * Quick validation check for Gemini API Key (supports both legacy AIza and new AQ. format)
  */
 export const testGeminiApiKey = async (apiKey: string): Promise<ApiKeyTestResult> => {
   try {
@@ -111,33 +111,54 @@ export const testGeminiApiKey = async (apiKey: string): Promise<ApiKeyTestResult
     if (!trimmed) {
       return { valid: false, message: 'សូមបញ្ចូល API Key ជាមុនសិន' };
     }
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${trimmed}`;
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: 'Hello' }] }],
-      }),
-    });
 
-    if (res.ok) {
-      return { valid: true, message: 'ជោគជ័យ ✓ API Key ត្រឹមត្រូវ អាចដំណើរការបាន' };
+    const models = ['gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-2.5-flash'];
+    let lastErrorMsg = '';
+
+    for (const model of models) {
+      try {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(trimmed)}`;
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-goog-api-key': trimmed,
+          },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: 'Hello' }] }],
+          }),
+        });
+
+        if (res.ok) {
+          return { valid: true, message: `ជោគជ័យ ✓ API Key ត្រឹមត្រូវ (${model}) អាចដំណើរការបាន!` };
+        }
+
+        const data = await res.json().catch(() => ({}));
+        const rawMsg = data.error?.message || `HTTP ${res.status}: ${res.statusText}`;
+
+        // If it's a 404 model not found, try next model in loop
+        if (res.status === 404) {
+          lastErrorMsg = rawMsg;
+          continue;
+        }
+
+        let khmerMsg = rawMsg;
+        if (rawMsg.includes('API key not valid')) {
+          khmerMsg =
+            'Google បដិសេធ៖ API Key មិនទាន់ត្រឹមត្រូវ (API key not valid)។ សូមប្រាកដថាបាន Copy កូដទាំងអស់ពេញលេញចេញពី Google AI Studio (កូដថ្មី AQ. ឬកូដចាស់ AIza សុទ្ធតែដំណើរការដូចគ្នា)។';
+        } else if (rawMsg.includes('User location is not supported')) {
+          khmerMsg = 'Google Gemini មិនទាន់គាំទ្រតំបន់/ប្រទេសរបស់អ្នកទេ (សូមសាកល្បងភ្ជាប់ VPN ឬជ្រើស Project ផ្សេង)';
+        } else if (rawMsg.includes('Quota exceeded')) {
+          khmerMsg = 'Quota ការប្រើប្រាស់ពេញហើយ សូមរង់ចាំបន្តិច';
+        }
+
+        return { valid: false, message: khmerMsg };
+      } catch (e: any) {
+        lastErrorMsg = e.message;
+      }
     }
 
-    const data = await res.json().catch(() => ({}));
-    const rawMsg = data.error?.message || `HTTP ${res.status}: ${res.statusText}`;
-
-    let khmerMsg = rawMsg;
-    if (rawMsg.includes('API key not valid')) {
-      khmerMsg =
-        'Google បដិសេធ៖ API Key មិនត្រឹមត្រូវ (API key not valid)។ សូមប្រាកដថាបានចុច Copy ពីប៊ូតុង Copy ក្នុង Google AI Studio (Key ពិតប្រាកដតែងតែផ្ដើមដោយ AIzaSy...)';
-    } else if (rawMsg.includes('User location is not supported')) {
-      khmerMsg = 'Google Gemini មិនទាន់គាំទ្រទីតាំងបច្ចុប្បន្នរបស់អ្នកទេ';
-    } else if (rawMsg.includes('Quota exceeded')) {
-      khmerMsg = 'Quota ការប្រើប្រាស់ពេញហើយ សូមរង់ចាំបន្តិច';
-    }
-
-    return { valid: false, message: khmerMsg };
+    return { valid: false, message: lastErrorMsg || 'មិនអាចភ្ជាប់ទៅកាន់ Google API បានទេ' };
   } catch (err: any) {
     return { valid: false, message: err.message || 'មិនអាចភ្ជាប់ទៅកាន់ Google API បានទេ' };
   }
@@ -206,16 +227,19 @@ Return ONLY a valid JSON object matching this schema without any markdown format
   "rawNotes": "ចំណាំបន្ថែម"
 }`;
 
-  // Try gemini-1.5-flash first, and if unavailable, gemini-2.0-flash or gemini-2.5-flash
-  const models = ['gemini-1.5-flash', 'gemini-2.0-flash', 'gemini-2.5-flash'];
+  // Try gemini-2.0-flash first, then gemini-1.5-flash or gemini-2.5-flash
+  const models = ['gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-2.5-flash'];
   let lastError: any = null;
 
   for (const model of models) {
     try {
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`;
       const response = await fetch(url, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'x-goog-api-key': apiKey,
+        },
         body: JSON.stringify({
           contents: [
             {
