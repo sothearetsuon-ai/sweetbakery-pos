@@ -38,6 +38,7 @@ interface NewExpenseModalProps {
   isOpen: boolean;
   onClose: () => void;
   expenseToEdit?: Expense | null;
+  onOpenScanner?: () => void;
 }
 
 interface CommonUnitItem {
@@ -139,6 +140,7 @@ export const NewExpenseModal: React.FC<NewExpenseModalProps> = ({
   isOpen,
   onClose,
   expenseToEdit,
+  onOpenScanner,
 }) => {
   const {
     lang,
@@ -499,6 +501,40 @@ export const NewExpenseModal: React.FC<NewExpenseModalProps> = ({
 
         {/* Form Content */}
         <form onSubmit={handleSubmit} className="p-6 overflow-y-auto space-y-4 flex-1">
+          {/* AI Invoice Scanner Prompt Banner */}
+          {onOpenScanner && !expenseToEdit && (
+            <div className="bg-gradient-to-r from-violet-50 to-indigo-50 border border-indigo-200/90 rounded-2xl p-3 sm:p-3.5 flex items-center justify-between gap-3 shadow-2xs">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 bg-indigo-600 text-white rounded-xl shadow-xs shrink-0">
+                  <Camera className="w-4 h-4" />
+                </div>
+                <div>
+                  <h4 className="font-black text-slate-900 text-xs flex items-center gap-1.5">
+                    <span>មានវិក្កយបត្រក្រដាសមែនទេ?</span>
+                    <span className="text-[9px] bg-indigo-200 text-indigo-900 px-1.5 py-0.5 rounded font-bold">
+                      AI OCR
+                    </span>
+                  </h4>
+                  <p className="text-[11px] text-slate-500 mt-0.5">
+                    ស្កេនរូបភាពដើម្បីបំបែកមុខទំនិញ គណនាតម្លៃដើម និងបញ្ចូលស្វ័យប្រវត្តិ
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  soundFx.playPop();
+                  onClose();
+                  onOpenScanner();
+                }}
+                className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black rounded-xl shadow-md shadow-indigo-600/20 flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer shrink-0"
+              >
+                <span>ស្កេនរូប</span>
+                <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+              </button>
+            </div>
+          )}
+
           {/* Main Segmented Toggle: 🌾 ចំណាយគ្រឿងផ្សំ vs 📦 ទិញសម្ភារៈ vs 🏢 ចំណាយទូទៅ */}
           <div className="space-y-1.5">
             <label className="block text-xs font-black text-slate-700 uppercase tracking-wider">

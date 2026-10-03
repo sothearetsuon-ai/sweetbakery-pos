@@ -24,12 +24,15 @@ import {
   Bell,
   Clock,
   Zap,
+  Camera,
+  Sparkles,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { useBakery } from '../../context/BakeryContext';
 import { Expense, ExpenseCategory } from '../../types';
 import { NewExpenseModal } from './NewExpenseModal';
 import { ReserveFundModal } from './ReserveFundModal';
+import { InvoiceScannerModal } from './InvoiceScannerModal';
 import { soundFx } from '../../utils/audio';
 
 type DateFilterPreset = 'ALL' | 'TODAY' | 'YESTERDAY' | 'THIS_MONTH' | 'CUSTOM';
@@ -49,6 +52,7 @@ export const ExpenseManagement: React.FC = () => {
   } = useBakery();
 
   const [isAddExpenseOpen, setIsAddExpenseOpen] = useState(false);
+  const [isInvoiceScannerOpen, setIsInvoiceScannerOpen] = useState(false);
   const [isReserveFundOpen, setIsReserveFundOpen] = useState(false);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -386,6 +390,19 @@ export const ExpenseManagement: React.FC = () => {
             {deficitKhr > 0 && (
               <span className="w-2.5 h-2.5 rounded-full bg-amber-300 animate-pulse border border-emerald-900" />
             )}
+          </button>
+
+          <button
+            onClick={() => {
+              soundFx.playPop();
+              setIsInvoiceScannerOpen(true);
+            }}
+            className="px-3.5 sm:px-4 py-2 sm:py-2.5 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white text-xs font-black rounded-2xl shadow-lg shadow-indigo-600/25 flex items-center gap-1.5 sm:gap-2 transition-all active:scale-95 cursor-pointer"
+            title="ស្កេនរូបភាពវិក្កយបត្រដោយ AI (Gemini Vision OCR)"
+          >
+            <Sparkles className="w-4 h-4 text-amber-300 animate-pulse" />
+            <span className="hidden xs:inline">📷</span>
+            <span>ស្កេនវិក្កយបត្រ (AI)</span>
           </button>
 
           <button
@@ -1870,6 +1887,13 @@ export const ExpenseManagement: React.FC = () => {
           setEditingExpense(null);
         }}
         expenseToEdit={editingExpense}
+        onOpenScanner={() => setIsInvoiceScannerOpen(true)}
+      />
+
+      {/* AI Invoice Scanner Modal */}
+      <InvoiceScannerModal
+        isOpen={isInvoiceScannerOpen}
+        onClose={() => setIsInvoiceScannerOpen(false)}
       />
 
       {/* Reserve Fund Management Modal */}
