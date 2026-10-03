@@ -14,6 +14,8 @@ import {
   CheckCircle2,
   AlertCircle,
   X,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
 import { useBakery } from '../../context/BakeryContext';
 import { t } from '../../utils/translations';
@@ -28,7 +30,19 @@ import { soundFx } from '../../utils/audio';
 import { sortProductsNewestFirst } from '../../utils/productUtils';
 
 export const PosTerminal: React.FC = () => {
-  const { lang, categories, products, addToCart, cart, cartTotalKhr, cartTotalUsd, partyAddons } = useBakery();
+  const {
+    lang,
+    categories,
+    products,
+    addToCart,
+    cart,
+    cartTotalKhr,
+    cartTotalUsd,
+    partyAddons,
+    isDemoMode,
+    hideDemoPrices,
+    toggleHideDemoPrices,
+  } = useBakery();
   const text = t[lang];
 
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
@@ -330,6 +344,37 @@ export const PosTerminal: React.FC = () => {
                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
                 <span>{filteredProducts.length} មុខទំនិញ</span>
               </div>
+
+              {/* Demo Mode Hide/Show Price Toggle */}
+              {isDemoMode && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    soundFx.playPop();
+                    toggleHideDemoPrices();
+                  }}
+                  className={`px-3 py-2 rounded-2xl text-xs font-black transition-all flex items-center gap-1.5 border shadow-2xs cursor-pointer active:scale-95 ${
+                    hideDemoPrices
+                      ? 'bg-amber-500/15 hover:bg-amber-500/25 text-amber-800 border-amber-300 ring-2 ring-amber-300/30'
+                      : 'bg-white hover:bg-rose-50 text-slate-700 border-slate-200'
+                  }`}
+                  title={hideDemoPrices ? 'កំពុងបិទតម្លៃនំក្នុង Demo (ចុចដើម្បីបង្ហាញ)' : 'កំពុងបង្ហាញតម្លៃនំ (ចុចដើម្បីបិទ)'}
+                >
+                  {hideDemoPrices ? (
+                    <>
+                      <EyeOff className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                      <span className="hidden md:inline">បិទតម្លៃនំ (Demo) 🙈</span>
+                      <span className="md:hidden">បិទតម្លៃ 🙈</span>
+                    </>
+                  ) : (
+                    <>
+                      <Eye className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                      <span className="hidden md:inline">បង្ហាញតម្លៃ 👁️</span>
+                      <span className="md:hidden">បង្ហាញ 👁️</span>
+                    </>
+                  )}
+                </button>
+              )}
 
               <button
                 type="button"

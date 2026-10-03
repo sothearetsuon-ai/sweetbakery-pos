@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { FlaskConical, RotateCcw, Share2, Check, Lock, Sparkles, Users, Eye, Phone } from 'lucide-react';
+import { FlaskConical, RotateCcw, Share2, Check, Lock, Sparkles, Users, Eye, EyeOff, Phone } from 'lucide-react';
 import { useBakery } from '../../context/BakeryContext';
 import { soundFx } from '../../utils/audio';
 import { recordDemoVisitor, subscribeToDemoVisitorStats, DemoVisitorStats } from '../../services/firebase';
 import { ContactModal } from './ContactModal';
 
 export const DemoModeBanner: React.FC = () => {
-  const { isDemoMode, requestExitDemoMode, resetDemoData } = useBakery();
+  const { isDemoMode, requestExitDemoMode, resetDemoData, hideDemoPrices, toggleHideDemoPrices } = useBakery();
   const [copied, setCopied] = useState(false);
   const [visitorStats, setVisitorStats] = useState<DemoVisitorStats>({
     totalVisits: 25,
@@ -68,6 +68,33 @@ export const DemoModeBanner: React.FC = () => {
       </div>
 
       <div className="flex items-center gap-1.5 sm:gap-2">
+        {/* Toggle Hide/Show Demo Prices */}
+        <button
+          type="button"
+          onClick={() => {
+            soundFx.playPop();
+            toggleHideDemoPrices();
+          }}
+          className={`px-2.5 py-1 rounded-lg flex items-center gap-1 transition-all active:scale-95 cursor-pointer text-[11px] font-black shadow-xs border ${
+            hideDemoPrices
+              ? 'bg-amber-400 text-amber-950 border-amber-300'
+              : 'bg-white/20 hover:bg-white/30 text-white border-white/25'
+          }`}
+          title="ចុចដើម្បីបិទ ឬបង្ហាញតម្លៃនំទាំងអស់ក្នុងរបៀប Demo"
+        >
+          {hideDemoPrices ? (
+            <>
+              <EyeOff className="w-3.5 h-3.5 text-amber-950" />
+              <span>បិទតម្លៃនំ 🙈</span>
+            </>
+          ) : (
+            <>
+              <Eye className="w-3.5 h-3.5 text-emerald-300" />
+              <span>បង្ហាញតម្លៃ 👁️</span>
+            </>
+          )}
+        </button>
+
         {/* Reset Demo Button */}
         <button
           type="button"

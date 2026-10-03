@@ -279,6 +279,9 @@ interface BakeryContextType {
 
   // Demo Sandbox Mode
   isDemoMode: boolean;
+  hideDemoPrices: boolean;
+  setHideDemoPrices: React.Dispatch<React.SetStateAction<boolean>>;
+  toggleHideDemoPrices: () => void;
   enterDemoMode: () => void;
   exitDemoMode: () => void;
   requestExitDemoMode: () => void;
@@ -429,6 +432,20 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   });
 
   const [demoDevices, setDemoDevices] = useState<DemoDeviceVisitor[]>([]);
+
+  // Option to hide all cake/product prices in Demo Mode (defaults to true)
+  const [hideDemoPrices, setHideDemoPrices] = useState<boolean>(() => {
+    const saved = localStorage.getItem('bakery_demo_hide_prices');
+    return saved !== null ? saved === 'true' : true;
+  });
+
+  const toggleHideDemoPrices = () => {
+    setHideDemoPrices((prev) => {
+      const next = !prev;
+      localStorage.setItem('bakery_demo_hide_prices', String(next));
+      return next;
+    });
+  };
 
   useEffect(() => {
     setGlobalIsDemoMode(isDemoMode);
@@ -4235,6 +4252,9 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         exchangeRate,
         setExchangeRate,
         isDemoMode,
+        hideDemoPrices,
+        setHideDemoPrices,
+        toggleHideDemoPrices,
         enterDemoMode,
         exitDemoMode,
         requestExitDemoMode,

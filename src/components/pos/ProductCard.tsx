@@ -12,7 +12,7 @@ interface ProductCardProps {
 }
 
 export const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart }) => {
-  const { lang, exchangeRate, restockProduct } = useBakery();
+  const { lang, exchangeRate, restockProduct, isDemoMode, hideDemoPrices } = useBakery();
   const text = t[lang];
   const [justAdded, setJustAdded] = useState(false);
   const [isLiked, setIsLiked] = useState(false);
@@ -161,16 +161,28 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart }
 
       {/* Pricing & Add Button (Prioritizing KHR ៛ First!) */}
       <div className="px-3 sm:px-3.5 pb-3 sm:pb-3.5 pt-1.5 flex items-center justify-between border-t border-slate-100 mt-0.5">
-        <div>
-          {/* KHR FIRST in large bold font */}
-          <div className="text-xs sm:text-base font-black text-rose-600 tracking-tight">
-            {priceKhr.toLocaleString()} ៛
+        {isDemoMode && hideDemoPrices ? (
+          <div>
+            <div className="inline-flex items-center gap-1 text-[11px] sm:text-xs font-black text-rose-600 bg-rose-50 px-2 py-0.5 rounded-lg border border-rose-200/70 font-battambang">
+              <Sparkles className="w-3 h-3 text-rose-500 shrink-0" />
+              <span>តម្លៃតាមទំហំ</span>
+            </div>
+            <div className="text-[9px] text-slate-400 font-bold font-battambang mt-0.5">
+              (បិទតម្លៃក្នុង Demo)
+            </div>
           </div>
-          {/* USD second */}
-          <div className="text-[10px] sm:text-[11px] text-slate-500 font-bold">
-            ${priceUsd.toFixed(2)}
+        ) : (
+          <div>
+            {/* KHR FIRST in large bold font */}
+            <div className="text-xs sm:text-base font-black text-rose-600 tracking-tight">
+              {priceKhr.toLocaleString()} ៛
+            </div>
+            {/* USD second */}
+            <div className="text-[10px] sm:text-[11px] text-slate-500 font-bold">
+              ${priceUsd.toFixed(2)}
+            </div>
           </div>
-        </div>
+        )}
 
         {product.stockQty === 0 ? (
           <button

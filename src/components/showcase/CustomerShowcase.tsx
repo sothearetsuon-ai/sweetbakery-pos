@@ -231,14 +231,39 @@ const ShowcaseCard: React.FC<ShowcaseCardProps> = ({
 };
 
 export const CustomerShowcase: React.FC = () => {
-  const { lang, products, categories, exchangeRate, addToCart, storeInfo, isDemoMode } = useBakery();
+  const {
+    lang,
+    products,
+    categories,
+    exchangeRate,
+    addToCart,
+    storeInfo,
+    isDemoMode,
+    hideDemoPrices,
+    toggleHideDemoPrices,
+  } = useBakery();
   const text = t[lang];
 
-  // Default to true (Hide prices for customer viewing so customer picks model first)
-  const [hidePrices, setHidePrices] = useState<boolean>(() => {
+  // In demo mode, prioritize hideDemoPrices (defaults to true). In real store mode, use showcase_hide_prices
+  const [localHidePrices, setLocalHidePrices] = useState<boolean>(() => {
     const saved = localStorage.getItem('showcase_hide_prices');
     return saved !== null ? saved === 'true' : true;
   });
+
+  const hidePrices = isDemoMode ? hideDemoPrices : localHidePrices;
+
+  const handleToggleHidePrices = () => {
+    soundFx.playPop();
+    if (isDemoMode) {
+      toggleHideDemoPrices();
+    } else {
+      setLocalHidePrices((prev) => {
+        const next = !prev;
+        localStorage.setItem('showcase_hide_prices', String(next));
+        return next;
+      });
+    }
+  };
 
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -568,14 +593,7 @@ export const CustomerShowcase: React.FC = () => {
             {/* Toggle Hide/Show Prices */}
             <button
               type="button"
-              onClick={() => {
-                soundFx.playPop();
-                setHidePrices((prev) => {
-                  const next = !prev;
-                  localStorage.setItem('showcase_hide_prices', String(next));
-                  return next;
-                });
-              }}
+              onClick={handleToggleHidePrices}
               className={`px-3 sm:px-4 py-2 sm:py-2.5 rounded-2xl font-black text-xs transition-all flex items-center gap-1.5 sm:gap-2 border shadow-lg cursor-pointer ${
                 hidePrices
                   ? 'bg-amber-500/25 hover:bg-amber-500/35 text-amber-200 border-amber-400/40 ring-2 ring-amber-300/30'
@@ -975,13 +993,7 @@ export const CustomerShowcase: React.FC = () => {
           setIsKioskOpen(false);
         }}
         hidePrices={hidePrices}
-        onToggleHidePrices={() => {
-          setHidePrices((prev) => {
-            const next = !prev;
-            localStorage.setItem('showcase_hide_prices', String(next));
-            return next;
-          });
-        }}
+        onToggleHidePrices={handleToggleHidePrices}
       />
 
       {/* Modal to configure custom size, flavor, notes, and agreed price */}
