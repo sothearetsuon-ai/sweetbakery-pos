@@ -104,6 +104,7 @@ export interface ApiKeyTestResult {
 
 /**
  * Quick validation check for Gemini API Key (supports both legacy AIza and new AQ. format)
+ * Uses ModelService.ListModels to verify key and discover available models dynamically
  */
 export const testGeminiApiKey = async (apiKey: string): Promise<ApiKeyTestResult> => {
   try {
@@ -112,53 +113,52 @@ export const testGeminiApiKey = async (apiKey: string): Promise<ApiKeyTestResult
       return { valid: false, message: 'សូមបញ្ចូល API Key ជាមុនសិន' };
     }
 
-    const models = ['gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-2.5-flash'];
-    let lastErrorMsg = '';
+    // Call ModelService.ListModels - standard, model-agnostic verification
+    const listUrl = `https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(trimmed)}`;
+    const res = await fetch(listUrl, {
+      method: 'GET',
+      headers: {
+        'x-goog-api-key': trimmed,
+      },
+    });
 
-    for (const model of models) {
-      try {
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(trimmed)}`;
-        const res = await fetch(url, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-goog-api-key': trimmed,
-          },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: 'Hello' }] }],
-          }),
-        });
+    if (res.ok) {
+      const data = await res.json().catch(() => ({}));
+      const modelsList: any[] = data.models || [];
+      const usableModels = modelsList
+        .filter((m: any) => m.supportedGenerationMethods?.includes('generateContent'))
+        .map((m: any) => m.name?.replace('models/', ''));
 
-        if (res.ok) {
-          return { valid: true, message: `ជោគជ័យ ✓ API Key ត្រឹមត្រូវ (${model}) អាចដំណើរការបាន!` };
-        }
+      // Find the best flash model available for this account
+      const bestModel =
+        usableModels.find((m: string) => m.includes('2.0-flash')) ||
+        usableModels.find((m: string) => m.includes('2.5-flash')) ||
+        usableModels.find((m: string) => m.includes('flash')) ||
+        usableModels[0] ||
+        'gemini-2.0-flash';
 
-        const data = await res.json().catch(() => ({}));
-        const rawMsg = data.error?.message || `HTTP ${res.status}: ${res.statusText}`;
+      localStorage.setItem('sweetbakery_gemini_active_model', bestModel);
 
-        // If it's a 404 model not found, try next model in loop
-        if (res.status === 404) {
-          lastErrorMsg = rawMsg;
-          continue;
-        }
-
-        let khmerMsg = rawMsg;
-        if (rawMsg.includes('API key not valid')) {
-          khmerMsg =
-            'Google បដិសេធ៖ API Key មិនទាន់ត្រឹមត្រូវ (API key not valid)។ សូមប្រាកដថាបាន Copy កូដទាំងអស់ពេញលេញចេញពី Google AI Studio (កូដថ្មី AQ. ឬកូដចាស់ AIza សុទ្ធតែដំណើរការដូចគ្នា)។';
-        } else if (rawMsg.includes('User location is not supported')) {
-          khmerMsg = 'Google Gemini មិនទាន់គាំទ្រតំបន់/ប្រទេសរបស់អ្នកទេ (សូមសាកល្បងភ្ជាប់ VPN ឬជ្រើស Project ផ្សេង)';
-        } else if (rawMsg.includes('Quota exceeded')) {
-          khmerMsg = 'Quota ការប្រើប្រាស់ពេញហើយ សូមរង់ចាំបន្តិច';
-        }
-
-        return { valid: false, message: khmerMsg };
-      } catch (e: any) {
-        lastErrorMsg = e.message;
-      }
+      return {
+        valid: true,
+        message: `ជោគជ័យ ✓ API Key ត្រឹមត្រូវ (ម៉ូដែលសកម្ម៖ ${bestModel}) អាចដំណើរការបាន!`,
+      };
     }
 
-    return { valid: false, message: lastErrorMsg || 'មិនអាចភ្ជាប់ទៅកាន់ Google API បានទេ' };
+    const data = await res.json().catch(() => ({}));
+    const rawMsg = data.error?.message || `HTTP ${res.status}: ${res.statusText}`;
+
+    let khmerMsg = rawMsg;
+    if (rawMsg.includes('API key not valid')) {
+      khmerMsg =
+        'Google បដិសេធ៖ API Key មិនត្រឹមត្រូវ (API key not valid)។ សូមប្រាកដថាបាន Copy កូដទាំងអស់ពេញលេញចេញពី Google AI Studio។';
+    } else if (rawMsg.includes('User location is not supported')) {
+      khmerMsg = 'Google Gemini មិនទាន់គាំទ្រតំបន់/ប្រទេសរបស់អ្នកទេ (សូមសាកល្បងភ្ជាប់ VPN ឬជ្រើស Project ផ្សេង)';
+    } else if (rawMsg.includes('Quota exceeded')) {
+      khmerMsg = 'Quota ការប្រើប្រាស់ពេញហើយ សូមរង់ចាំបន្តិច';
+    }
+
+    return { valid: false, message: khmerMsg };
   } catch (err: any) {
     return { valid: false, message: err.message || 'មិនអាចភ្ជាប់ទៅកាន់ Google API បានទេ' };
   }
@@ -227,8 +227,18 @@ Return ONLY a valid JSON object matching this schema without any markdown format
   "rawNotes": "ចំណាំបន្ថែម"
 }`;
 
-  // Try gemini-2.0-flash first, then gemini-1.5-flash or gemini-2.5-flash
-  const models = ['gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-2.5-flash'];
+  // Try active discovered model first, then candidate fallbacks
+  const cachedModel = typeof localStorage !== 'undefined' ? localStorage.getItem('sweetbakery_gemini_active_model') : null;
+  const candidateModels = [
+    cachedModel,
+    'gemini-2.0-flash',
+    'gemini-2.5-flash',
+    'gemini-2.0-flash-exp',
+    'gemini-1.5-flash-latest',
+    'gemini-1.5-flash',
+  ].filter(Boolean) as string[];
+
+  const models = Array.from(new Set(candidateModels));
   let lastError: any = null;
 
   for (const model of models) {
