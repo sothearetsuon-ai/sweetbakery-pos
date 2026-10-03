@@ -113,8 +113,8 @@ export const testGeminiApiKey = async (apiKey: string): Promise<ApiKeyTestResult
       return { valid: false, message: 'សូមបញ្ចូល API Key ជាមុនសិន' };
     }
 
-    // Call ModelService.ListModels - standard, model-agnostic verification
-    const listUrl = `https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(trimmed)}`;
+    // Call ModelService.ListModels - standard, model-agnostic verification via header
+    const listUrl = 'https://generativelanguage.googleapis.com/v1beta/models';
     const res = await fetch(listUrl, {
       method: 'GET',
       headers: {
@@ -131,8 +131,9 @@ export const testGeminiApiKey = async (apiKey: string): Promise<ApiKeyTestResult
 
       // Find the best flash model available for this account
       const bestModel =
+        usableModels.find((m: string) => m === 'gemini-2.0-flash') ||
         usableModels.find((m: string) => m.includes('2.0-flash')) ||
-        usableModels.find((m: string) => m.includes('2.5-flash')) ||
+        usableModels.find((m: string) => m === 'gemini-2.5-flash') ||
         usableModels.find((m: string) => m.includes('flash')) ||
         usableModels[0] ||
         'gemini-2.0-flash';
@@ -149,7 +150,7 @@ export const testGeminiApiKey = async (apiKey: string): Promise<ApiKeyTestResult
     const rawMsg = data.error?.message || `HTTP ${res.status}: ${res.statusText}`;
 
     let khmerMsg = rawMsg;
-    if (rawMsg.includes('API key not valid')) {
+    if (rawMsg.includes('API key not valid') || rawMsg.includes('invalid authentication credentials')) {
       khmerMsg =
         'Google បដិសេធ៖ API Key មិនត្រឹមត្រូវ (API key not valid)។ សូមប្រាកដថាបាន Copy កូដទាំងអស់ពេញលេញចេញពី Google AI Studio។';
     } else if (rawMsg.includes('User location is not supported')) {
@@ -227,15 +228,39 @@ Return ONLY a valid JSON object matching this schema without any markdown format
   "rawNotes": "ចំណាំបន្ថែម"
 }`;
 
-  // Try active discovered model first, then candidate fallbacks
-  const cachedModel = typeof localStorage !== 'undefined' ? localStorage.getItem('sweetbakery_gemini_active_model') : null;
+  // 1. Discover active models if not cached
+  let activeModel = typeof localStorage !== 'undefined' ? localStorage.getItem('sweetbakery_gemini_active_model') : null;
+  if (!activeModel) {
+    try {
+      const listRes = await fetch('https://generativelanguage.googleapis.com/v1beta/models', {
+        method: 'GET',
+        headers: { 'x-goog-api-key': apiKey },
+      });
+      if (listRes.ok) {
+        const data = await listRes.json();
+        const usable: string[] = (data.models || [])
+          .filter((m: any) => m.supportedGenerationMethods?.includes('generateContent'))
+          .map((m: any) => m.name?.replace('models/', ''));
+        activeModel =
+          usable.find((m) => m === 'gemini-2.0-flash') ||
+          usable.find((m) => m.includes('2.0-flash')) ||
+          usable.find((m) => m === 'gemini-2.5-flash') ||
+          usable.find((m) => m.includes('flash')) ||
+          usable[0] ||
+          null;
+        if (activeModel && typeof localStorage !== 'undefined') {
+          localStorage.setItem('sweetbakery_gemini_active_model', activeModel);
+        }
+      }
+    } catch {}
+  }
+
+  // Candidates list (strictly modern models, no deprecated 1.5-flash)
   const candidateModels = [
-    cachedModel,
+    activeModel,
     'gemini-2.0-flash',
     'gemini-2.5-flash',
     'gemini-2.0-flash-exp',
-    'gemini-1.5-flash-latest',
-    'gemini-1.5-flash',
   ].filter(Boolean) as string[];
 
   const models = Array.from(new Set(candidateModels));
@@ -243,7 +268,7 @@ Return ONLY a valid JSON object matching this schema without any markdown format
 
   for (const model of models) {
     try {
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`;
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
       const response = await fetch(url, {
         method: 'POST',
         headers: {
