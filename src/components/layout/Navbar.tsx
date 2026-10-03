@@ -373,8 +373,8 @@ export const Navbar: React.FC<NavbarProps> = ({
             </button>
           )}
 
-          {/* Contact System Button (Accessible on both Desktop and Mobile) */}
-          {onOpenContact && (
+          {/* Contact System Button (Only in Demo Mode) */}
+          {onOpenContact && isDemoMode && (
             <>
               {/* Desktop / Tablet Contact Button */}
               <button
@@ -545,8 +545,8 @@ export const Navbar: React.FC<NavbarProps> = ({
                   </button>
                 )}
 
-                {/* System Contact Button */}
-                {onOpenContact && (
+                {/* System Contact Button (Only in Demo Mode) */}
+                {onOpenContact && isDemoMode && (
                   <button
                     type="button"
                     onClick={() => {

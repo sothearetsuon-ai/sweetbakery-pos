@@ -231,7 +231,7 @@ const ShowcaseCard: React.FC<ShowcaseCardProps> = ({
 };
 
 export const CustomerShowcase: React.FC = () => {
-  const { lang, products, categories, exchangeRate, addToCart, storeInfo } = useBakery();
+  const { lang, products, categories, exchangeRate, addToCart, storeInfo, isDemoMode } = useBakery();
   const text = t[lang];
 
   // Default to true (Hide prices for customer viewing so customer picks model first)
@@ -621,19 +621,21 @@ export const CustomerShowcase: React.FC = () => {
               <span>+ នំថ្មី</span>
             </button>
 
-            {/* Contact / Software System Info Button */}
-            <button
-              type="button"
-              onClick={() => {
-                soundFx.playPop();
-                setIsContactModalOpen(true);
-              }}
-              className="px-3.5 sm:px-4 py-2 sm:py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black rounded-2xl shadow-lg transition-all active:scale-95 flex items-center gap-1.5 text-xs cursor-pointer border border-emerald-400/40"
-              title="ទំនាក់ទំនងទិញ ឬប្រើប្រាស់កម្មវិធី SweetBakery POS (012 629 160)"
-            >
-              <Phone className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-200" />
-              <span>Contact</span>
-            </button>
+            {/* Contact / Software System Info Button (Only in Demo Mode) */}
+            {isDemoMode && (
+              <button
+                type="button"
+                onClick={() => {
+                  soundFx.playPop();
+                  setIsContactModalOpen(true);
+                }}
+                className="px-3.5 sm:px-4 py-2 sm:py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black rounded-2xl shadow-lg transition-all active:scale-95 flex items-center gap-1.5 text-xs cursor-pointer border border-emerald-400/40"
+                title="ទំនាក់ទំនងទិញ ឬប្រើប្រាស់កម្មវិធី SweetBakery POS (012 629 160)"
+              >
+                <Phone className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-200" />
+                <span>Contact</span>
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -697,44 +699,46 @@ export const CustomerShowcase: React.FC = () => {
         ))}
       </div>
 
-      {/* Contact Banner for System Inquiries */}
-      <div className="my-8 p-5 sm:p-6 rounded-3xl bg-gradient-to-r from-[#200E08] via-[#361B14] to-[#200E08] border-2 border-[#E6514D]/40 text-white shadow-xl flex flex-col md:flex-row items-center justify-between gap-4">
-        <div className="flex items-center gap-3.5 text-center md:text-left">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-[#FF6F68] to-[#E6514D] text-white flex items-center justify-center text-xl shadow-lg shadow-[#E6514D]/30 shrink-0">
-            📞
-          </div>
-          <div>
-            <div className="text-xs font-black text-amber-300 uppercase tracking-wider mb-1 flex items-center justify-center md:justify-start gap-1.5 font-battambang">
-              <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-              <span>ទំនាក់ទំនងប្រព័ន្ធ SweetBakery POS</span>
+      {/* Contact Banner for System Inquiries (Only in Demo Mode) */}
+      {isDemoMode && (
+        <div className="my-8 p-5 sm:p-6 rounded-3xl bg-gradient-to-r from-[#200E08] via-[#361B14] to-[#200E08] border-2 border-[#E6514D]/40 text-white shadow-xl flex flex-col md:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-3.5 text-center md:text-left">
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-[#FF6F68] to-[#E6514D] text-white flex items-center justify-center text-xl shadow-lg shadow-[#E6514D]/30 shrink-0">
+              📞
             </div>
-            <p className="text-sm font-bold text-rose-100 font-battambang leading-relaxed">
-              ប្រសិនបើអ្នកមានចំណាប់អារម្មណ៍ចង់ប្រើប្រាស់កម្មវិធីនេះសូមទាក់ទង
-            </p>
+            <div>
+              <div className="text-xs font-black text-amber-300 uppercase tracking-wider mb-1 flex items-center justify-center md:justify-start gap-1.5 font-battambang">
+                <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                <span>ទំនាក់ទំនងប្រព័ន្ធ SweetBakery POS</span>
+              </div>
+              <p className="text-sm font-bold text-rose-100 font-battambang leading-relaxed">
+                ប្រសិនបើអ្នកមានចំណាប់អារម្មណ៍ចង់ប្រើប្រាស់កម្មវិធីនេះសូមទាក់ទង
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2.5 flex-wrap justify-center">
+            <a
+              href="tel:012629160"
+              className="px-5 py-2.5 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white font-black text-xs sm:text-sm shadow-lg shadow-emerald-500/25 flex items-center gap-2 active:scale-95 transition-all"
+            >
+              <Phone className="w-4 h-4" />
+              <span>លេខទូរសព្ទ័៖ 012 629 160</span>
+            </a>
+
+            <button
+              type="button"
+              onClick={() => {
+                soundFx.playPop();
+                setIsContactModalOpen(true);
+              }}
+              className="px-4 py-2.5 rounded-2xl bg-white/15 hover:bg-white/25 text-white font-bold text-xs sm:text-sm border border-white/20 transition-all active:scale-95 cursor-pointer"
+            >
+              មើលព័ត៌មានលម្អិត
+            </button>
           </div>
         </div>
-
-        <div className="flex items-center gap-2.5 flex-wrap justify-center">
-          <a
-            href="tel:012629160"
-            className="px-5 py-2.5 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white font-black text-xs sm:text-sm shadow-lg shadow-emerald-500/25 flex items-center gap-2 active:scale-95 transition-all"
-          >
-            <Phone className="w-4 h-4" />
-            <span>លេខទូរសព្ទ័៖ 012 629 160</span>
-          </a>
-
-          <button
-            type="button"
-            onClick={() => {
-              soundFx.playPop();
-              setIsContactModalOpen(true);
-            }}
-            className="px-4 py-2.5 rounded-2xl bg-white/15 hover:bg-white/25 text-white font-bold text-xs sm:text-sm border border-white/20 transition-all active:scale-95 cursor-pointer"
-          >
-            មើលព័ត៌មានលម្អិត
-          </button>
-        </div>
-      </div>
+      )}
 
       {/* Lightbox Preview Modal with Auto-Slideshow Carousel */}
       {previewProduct && (
