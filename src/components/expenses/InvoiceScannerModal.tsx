@@ -108,6 +108,9 @@ export const InvoiceScannerModal: React.FC<InvoiceScannerModalProps> = ({
     setKeyTestMessage(res.message || '');
     if (res.valid) {
       soundFx.playSuccess();
+      const trimmed = keyInput.trim();
+      setGeminiApiKey(trimmed);
+      setApiKeyState(trimmed);
     } else {
       soundFx.playNotificationAlert();
     }
@@ -129,8 +132,9 @@ export const InvoiceScannerModal: React.FC<InvoiceScannerModalProps> = ({
       const compressedBase64 = await compressImage(file, 1600, 1600, 0.85);
       setSelectedImage(compressedBase64);
 
-      // Call Gemini Vision AI
-      const result = await scanInvoiceWithGemini(compressedBase64, apiKey, exchangeRate);
+      // Call Gemini Vision AI using active/entered key
+      const effectiveKey = keyInput.trim() || apiKey || getGeminiApiKey();
+      const result = await scanInvoiceWithGemini(compressedBase64, effectiveKey, exchangeRate);
 
       setExtractedData(result);
       setSupplier(result.supplier || 'អ្នកផ្គត់ផ្គង់ទូទៅ');

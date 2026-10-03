@@ -255,12 +255,11 @@ Return ONLY a valid JSON object matching this schema without any markdown format
     } catch {}
   }
 
-  // Candidates list (strictly modern models, no deprecated 1.5-flash)
+  // Candidates list (strictly valid flash models, prioritizing activeModel discovered)
   const candidateModels = [
     activeModel,
-    'gemini-2.0-flash',
     'gemini-2.5-flash',
-    'gemini-2.0-flash-exp',
+    'gemini-2.0-flash',
   ].filter(Boolean) as string[];
 
   const models = Array.from(new Set(candidateModels));
@@ -299,6 +298,12 @@ Return ONLY a valid JSON object matching this schema without any markdown format
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         const errMsg = errorData.error?.message || `HTTP ${response.status}: ${response.statusText}`;
+        // If this specific model returned 404 not found, try the next model.
+        // Otherwise (quota, invalid key, bad request), throw the real error immediately!
+        if (response.status === 404) {
+          lastError = new Error(errMsg);
+          continue;
+        }
         throw new Error(errMsg);
       }
 
