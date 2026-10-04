@@ -209,8 +209,8 @@ export const App: React.FC = () => {
       {/* Demo Sandbox Mode Sticky Banner */}
       <DemoModeBanner />
 
-      {/* Background Notification Scheduler & Polite Banner */}
-      <NotificationReminderScheduler />
+      {/* Background Notification Scheduler & Polite Banner (Completely disabled in Demo mode) */}
+      {!isDemoMode && <NotificationReminderScheduler />}
 
       {/* 35-Day Trial Expiring Soon Warning Banner (<= 5 days) */}
       {licenseInfo.isWarning && !licenseInfo.isExpired && (

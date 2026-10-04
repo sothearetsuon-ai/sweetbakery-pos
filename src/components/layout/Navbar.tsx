@@ -321,9 +321,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               if (isDemoMode) {
                 requestExitDemoMode();
               } else {
-                if (window.confirm('តើអ្នកចង់បើករបៀបសាកល្បង (Demo Sandbox Mode) មែនទេ? \n\n✨ រាល់ការលក់ បញ្ចូលនំ ឬកែប្រែទិន្នន័យ នឹងត្រូវបានញែកដាច់ដោយឡែក ហើយមិនប៉ះពាល់ទិន្នន័យជាក់ស្តែងរបស់ហាងឡើយ!')) {
-                  enterDemoMode();
-                }
+                enterDemoMode();
               }
             }}
             title={

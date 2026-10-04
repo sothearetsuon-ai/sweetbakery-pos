@@ -1,6 +1,6 @@
 import { NotificationConfig, CustomCakeOrder, Expense, Ingredient, StoreInfo } from '../types';
 import { soundFx } from '../utils/audio';
-import { notifyTelegramExpenseDueAlert } from './telegram';
+import { notifyTelegramExpenseDueAlert, isDemoModeActive } from './telegram';
 
 const STORAGE_KEY = 'bakery_notification_config';
 
@@ -81,6 +81,7 @@ export const sendDeviceNotification = (
     data?: any;
   }
 ): boolean => {
+  if (isDemoModeActive()) return false;
   const config = getStoredNotificationConfig();
   if (!config.enabled) return false;
 
@@ -190,6 +191,7 @@ export const runPeriodicNotificationChecks = (params: {
   storeInfo?: StoreInfo;
   exchangeRate?: number;
 }) => {
+  if (isDemoModeActive()) return;
   const config = getStoredNotificationConfig();
   if (!config.enabled) return;
 
@@ -302,6 +304,23 @@ export const runPeriodicNotificationChecks = (params: {
 
         markFiredToday(tag, todayStr);
         expense.lastDueAlertDate = todayStr;
+
+        try {
+          const raw = localStorage.getItem('bakery_expenses');
+          if (raw) {
+            const list: Expense[] = JSON.parse(raw);
+            const idx = list.findIndex((e) => e.id === expense.id);
+            if (idx >= 0) {
+              list[idx].lastDueAlertDate = todayStr;
+              localStorage.setItem('bakery_expenses', JSON.stringify(list));
+              fetch('/api/save-expense', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ expense: list[idx] }),
+              }).catch(() => {});
+            }
+          }
+        } catch (e) {}
 
         let dueStatusText = '';
         if (diffDays < 0) {

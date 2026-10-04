@@ -56,6 +56,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
     completeSale,
     addCustomOrder,
     currentShift,
+    currentStaff,
     storeInfo,
   } = useBakery();
   const text = t[lang];
@@ -197,7 +198,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
       paidUsd: paymentMethod === 'CASH_USD' ? numReceivedUsd : undefined,
       changeKhr,
       changeUsd,
-      cashierName: currentShift?.cashierName || 'បេឡាធិការ (Cashier)',
+      cashierName: currentStaff?.name || currentShift?.cashierName || 'បេឡាធិការ (Cashier)',
       customerName: customerName.trim() || undefined,
       customerPhone: customerPhone.trim() || undefined,
       isDeposit,

@@ -61,7 +61,7 @@ export const AddPastSaleModal: React.FC<AddPastSaleModalProps> = ({ isOpen, onCl
   const [cakePriceKhr, setCakePriceKhr] = useState('80000');
   const [amountKhr, setAmountKhr] = useState('80000');
   const [paymentMethod, setPaymentMethod] = useState<'CASH_KHR' | 'CASH_USD' | 'KHQR_BAKONG'>('CASH_KHR');
-  const [cashierName, setCashierName] = useState(() => currentStaff?.name || 'សុធារិទ្ធ (Sothearith)');
+  const [cashierName, setCashierName] = useState(() => currentStaff?.name || 'បេឡាធិការ (Cashier)');
   const [customerName, setCustomerName] = useState('');
   const [notes, setNotes] = useState('ការលក់កន្លងមក (Backdated record)');
 
@@ -69,7 +69,7 @@ export const AddPastSaleModal: React.FC<AddPastSaleModalProps> = ({ isOpen, onCl
   useEffect(() => {
     if (isOpen) {
       setOrderNumber(generateNewOrderNumber());
-      setCashierName(currentStaff?.name || 'សុធារិទ្ធ (Sothearith)');
+      setCashierName(currentStaff?.name || 'បេឡាធិការ (Cashier)');
     }
   }, [isOpen, currentStaff]);
 

@@ -1172,6 +1172,15 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     safeSetStorage('bakery_shift', JSON.stringify(currentShift));
   }, [currentShift]);
 
+  // Auto-sync active shift's cashier name to current logged-in staff member when staff switches
+  useEffect(() => {
+    if (currentStaff?.name && currentShift && currentShift.status === 'OPEN') {
+      if (currentShift.cashierName !== currentStaff.name && (currentStaff.role === 'CASHIER' || currentStaff.role === 'ADMIN')) {
+        setCurrentShift((prev) => (prev ? { ...prev, cashierName: currentStaff.name } : null));
+      }
+    }
+  }, [currentStaff]);
+
   // Initial mount: Hydrate complete dataset from IndexedDB (preserves all high-res photos and full collections)
   const isIdbHydrated = useRef(false);
   useEffect(() => {

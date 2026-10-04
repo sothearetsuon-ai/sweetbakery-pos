@@ -718,7 +718,7 @@ export const initialSales: CompletedSale[] = [];
 
 export const initialShift: Shift = {
   id: 'shift-today',
-  cashierName: 'សុធារិទ្ធ (Sothearith)',
+  cashierName: 'វិជ្ជតា (Cashier)',
   startTime: '2026-09-14T07:30:00Z',
   openingCashUsd: 50.0,
   openingCashKhr: 200000,

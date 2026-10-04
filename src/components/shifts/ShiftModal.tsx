@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Clock, ShieldCheck, DollarSign, Banknote, AlertCircle, CheckCircle } from 'lucide-react';
 import { useBakery } from '../../context/BakeryContext';
 import { t } from '../../utils/translations';
@@ -12,12 +12,18 @@ export const ShiftModal: React.FC<ShiftModalProps> = ({ isOpen, onClose }) => {
   const { lang, currentShift, openShift, closeShift, exchangeRate, currentStaff } = useBakery();
   const text = t[lang];
 
-  const [cashierName, setCashierName] = useState(currentStaff?.name || 'សុធារិទ្ធ (Sothearith)');
+  const [cashierName, setCashierName] = useState(currentStaff?.name || 'បេឡាធិការ (Cashier)');
   const [openingUsd, setOpeningUsd] = useState('50.00');
   const [openingKhr, setOpeningKhr] = useState('200000');
 
   const [closingUsd, setClosingUsd] = useState('');
   const [closingKhr, setClosingKhr] = useState('');
+
+  useEffect(() => {
+    if (isOpen && currentStaff?.name) {
+      setCashierName(currentStaff.name);
+    }
+  }, [isOpen, currentStaff]);
 
   if (!isOpen) return null;
 

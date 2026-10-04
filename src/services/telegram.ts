@@ -569,6 +569,7 @@ export const notifyTelegramExpenseDueAlert = async (
   storeInfo?: StoreInfo,
   exchangeRate = 4100
 ): Promise<void> => {
+  if (isDemoModeActive()) return;
   const config = await getStoredTelegramConfigAsync();
   if (!config.enabled || config.notifyExpenseDue === false || !config.botToken || !config.chatId) return;
 
@@ -615,6 +616,7 @@ export const notifyTelegramShiftClose = async (
   storeInfo?: StoreInfo,
   exchangeRate = 4100
 ): Promise<void> => {
+  if (isDemoModeActive()) return;
   const config = await getStoredTelegramConfigAsync();
   if (!config.enabled || !config.notifyShiftClose || !config.botToken || !config.chatId) return;
 

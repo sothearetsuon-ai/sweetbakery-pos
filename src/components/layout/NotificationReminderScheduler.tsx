@@ -13,7 +13,7 @@ import {
 import { soundFx } from '../../utils/audio';
 
 export const NotificationReminderScheduler: React.FC = () => {
-  const { customOrders, expenses, ingredients, storeInfo, exchangeRate } = useBakery();
+  const { customOrders, expenses, ingredients, storeInfo, exchangeRate, isDemoMode } = useBakery();
   const [permission, setPermission] = useState<NotificationPermission | 'unsupported'>(
     getNotificationPermission
   );
@@ -22,29 +22,30 @@ export const NotificationReminderScheduler: React.FC = () => {
   });
   const [isEnabling, setIsEnabling] = useState(false);
 
-  // 1. Run background periodic notification checks every 30 seconds
+  // Ref to hold latest params without restarting interval on every state update
+  const paramsRef = React.useRef({ customOrders, expenses, ingredients, storeInfo, exchangeRate });
   useEffect(() => {
-    const timer = setInterval(() => {
-      runPeriodicNotificationChecks({
-        customOrders,
-        expenses,
-        ingredients,
-        storeInfo,
-        exchangeRate,
-      });
-    }, 30000);
-
-    // Initial check on mount
-    runPeriodicNotificationChecks({
-      customOrders,
-      expenses,
-      ingredients,
-      storeInfo,
-      exchangeRate,
-    });
-
-    return () => clearInterval(timer);
+    paramsRef.current = { customOrders, expenses, ingredients, storeInfo, exchangeRate };
   }, [customOrders, expenses, ingredients, storeInfo, exchangeRate]);
+
+  // 1. Run background periodic notification checks smoothly (every 60s, with safe initial delay)
+  useEffect(() => {
+    if (isDemoMode) return;
+
+    const timer = setInterval(() => {
+      runPeriodicNotificationChecks(paramsRef.current);
+    }, 60000);
+
+    // Initial check delayed by 10s to let app finish hydrating and avoid double-firing
+    const initialTimer = setTimeout(() => {
+      runPeriodicNotificationChecks(paramsRef.current);
+    }, 10000);
+
+    return () => {
+      clearInterval(timer);
+      clearTimeout(initialTimer);
+    };
+  }, [isDemoMode]);
 
   // 2. Refresh permission status when window gains focus
   useEffect(() => {
@@ -79,8 +80,8 @@ export const NotificationReminderScheduler: React.FC = () => {
     localStorage.setItem('bakery_notification_banner_dismissed', 'true');
   };
 
-  // If already granted, unsupported, or dismissed, don't show the prompt banner
-  if (permission === 'granted' || permission === 'unsupported' || isBannerDismissed) {
+  // If in Demo mode, already granted, unsupported, or dismissed, don't show the prompt banner
+  if (isDemoMode || permission === 'granted' || permission === 'unsupported' || isBannerDismissed) {
     return null;
   }
 
