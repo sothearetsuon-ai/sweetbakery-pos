@@ -462,7 +462,7 @@ export const CustomerOrderPortal: React.FC = () => {
             </div>
           </div>
 
-          {/* Customer Support Contact & POS Shortcut */}
+          {/* Customer Support Contact */}
           <div className="flex items-center gap-2">
             <a
               href={`tel:${storeInfo.phone || '012345678'}`}
@@ -470,13 +470,6 @@ export const CustomerOrderPortal: React.FC = () => {
             >
               <Phone className="w-3.5 h-3.5" />
               <span>ទំនាក់ទំនង</span>
-            </a>
-            <a
-              href="./"
-              className="flex items-center gap-1 px-2.5 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition-all shadow-xs active:scale-95 border border-slate-700"
-              title="ចូលប្រព័ន្ធគ្រប់គ្រង POS សម្រាប់បុគ្គលិក"
-            >
-              <span>💼 ចូល POS</span>
             </a>
           </div>
         </div>
