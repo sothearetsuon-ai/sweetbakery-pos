@@ -24,54 +24,86 @@ import { CompletedSale, ExpenseCategory } from '../../types';
 import { soundFx } from '../../utils/audio';
 
 type DateFilterType =
-  | 'all'
+  | 'this_month'
+  | 'specific_month'
   | 'today'
   | 'yesterday'
   | 'week'
-  | 'this_month'
   | 'last_month'
   | 'this_year'
-  | 'custom';
+  | 'custom'
+  | 'all';
 
 export const ReportsDashboard: React.FC = () => {
   const { lang, sales, expenses, exchangeRate, customOrders } = useBakery();
   const text = t[lang];
 
+  // Always default to the current real month (ខែជាក់ស្តែងជាប្រចាំ)
   const [dateFilter, setDateFilter] = useState<DateFilterType>('this_month');
   const [selectedSaleForReprint, setSelectedSaleForReprint] = useState<CompletedSale | null>(null);
 
-  // Custom date range state
-  const [customStartDate, setCustomStartDate] = useState(() => {
-    const d = new Date();
-    d.setDate(d.getDate() - 30);
-    return d.toISOString().slice(0, 10);
-  });
-  const [customEndDate, setCustomEndDate] = useState(() => new Date().toISOString().slice(0, 10));
+  // Helper to extract local calendar YYYY-MM-DD
+  const getLocalDateStr = (d?: string | Date) => {
+    if (!d) return '';
+    if (typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d.trim())) {
+      return d.trim();
+    }
+    const date = typeof d === 'string' ? new Date(d) : d;
+    if (isNaN(date.getTime())) return String(d).slice(0, 10);
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  };
 
-  // Date constants
-  const now = new Date();
-  const todayStr = now.toISOString().slice(0, 10);
+  const formatKhmerMonthYear = (monthStr: string) => {
+    try {
+      const [y, m] = monthStr.split('-');
+      if (!y || !m) return monthStr;
+      const monthNamesKh = [
+        'មករា', 'កុម្ភៈ', 'មីនា', 'មេសា', 'ឧសភា', 'មិថុនា',
+        'កក្កដា', 'សីហា', 'កញ្ញា', 'តុលា', 'វិច្ឆិកា', 'ធ្នូ'
+      ];
+      const mIdx = parseInt(m, 10) - 1;
+      return `${monthNamesKh[mIdx] || m} ${y}`;
+    } catch {
+      return monthStr;
+    }
+  };
+
+  // Local calendar date constants
+  const todayStr = useMemo(() => getLocalDateStr(new Date()), []);
 
   const yesterday = new Date();
   yesterday.setDate(yesterday.getDate() - 1);
-  const yesterdayStr = yesterday.toISOString().slice(0, 10);
+  const yesterdayStr = useMemo(() => getLocalDateStr(yesterday), []);
 
   const sevenDaysAgo = new Date();
   sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-  const sevenDaysAgoStr = sevenDaysAgo.toISOString().slice(0, 10);
+  const sevenDaysAgoStr = useMemo(() => getLocalDateStr(sevenDaysAgo), []);
 
   const thisMonthStr = todayStr.slice(0, 7); // YYYY-MM
 
   const lastMonthDate = new Date();
   lastMonthDate.setMonth(lastMonthDate.getMonth() - 1);
-  const lastMonthStr = lastMonthDate.toISOString().slice(0, 7); // YYYY-MM
+  const lastMonthStr = getLocalDateStr(lastMonthDate).slice(0, 7); // YYYY-MM
 
   const thisYearStr = todayStr.slice(0, 4); // YYYY
+
+  const [selectedMonth, setSelectedMonth] = useState<string>(() => thisMonthStr);
+
+  // Custom date range state
+  const [customStartDate, setCustomStartDate] = useState(() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 30);
+    return getLocalDateStr(d);
+  });
+  const [customEndDate, setCustomEndDate] = useState(() => getLocalDateStr(new Date()));
 
   // Date filter evaluator
   const isDateInFilter = (dateStr: string | undefined): boolean => {
     if (!dateStr) return false;
-    const d = dateStr.slice(0, 10);
+    const d = getLocalDateStr(dateStr);
     switch (dateFilter) {
       case 'today':
         return d === todayStr;
@@ -81,6 +113,8 @@ export const ReportsDashboard: React.FC = () => {
         return d >= sevenDaysAgoStr && d <= todayStr;
       case 'this_month':
         return d.slice(0, 7) === thisMonthStr;
+      case 'specific_month':
+        return d.slice(0, 7) === selectedMonth;
       case 'last_month':
         return d.slice(0, 7) === lastMonthStr;
       case 'this_year':
@@ -231,16 +265,18 @@ export const ReportsDashboard: React.FC = () => {
   // Filter description text
   const getFilterDescription = () => {
     switch (dateFilter) {
+      case 'this_month':
+        return `ខែនេះ (${formatKhmerMonthYear(thisMonthStr)})`;
+      case 'specific_month':
+        return `ខែ ${formatKhmerMonthYear(selectedMonth)}`;
       case 'today':
         return `ថ្ងៃនេះ (${todayStr})`;
       case 'yesterday':
         return `ម្សិលមិញ (${yesterdayStr})`;
       case 'week':
         return `៧ ថ្ងៃចុងក្រោយ (${sevenDaysAgoStr} ដល់ ${todayStr})`;
-      case 'this_month':
-        return `ខែនេះ (${thisMonthStr})`;
       case 'last_month':
-        return `ខែមុន (${lastMonthStr})`;
+        return `ខែមុន (${formatKhmerMonthYear(lastMonthStr)})`;
       case 'this_year':
         return `ឆ្នាំនេះ (${thisYearStr})`;
       case 'custom':
@@ -262,7 +298,7 @@ export const ReportsDashboard: React.FC = () => {
           </h2>
           <p className="text-xs text-slate-500 mt-0.5 flex items-center gap-1.5 flex-wrap">
             <span>ស្ថិតិការលក់ ការចំណាយ និងប្រាក់ចំណេញសុទ្ធ៖</span>
-            <span className="font-bold text-pink-600 bg-pink-50 px-2 py-0.5 rounded-full border border-pink-200">
+            <span className="font-bold text-pink-600 bg-pink-50 px-2.5 py-0.5 rounded-full border border-pink-200">
               📌 {getFilterDescription()}
             </span>
           </p>
@@ -289,17 +325,17 @@ export const ReportsDashboard: React.FC = () => {
           </span>
         </div>
 
-        {/* Quick Filter Buttons */}
-        <div className="flex flex-wrap gap-1.5">
+        {/* Quick Filter Buttons & Month Selector */}
+        <div className="flex flex-wrap items-center gap-1.5">
           {[
-            { id: 'all', label: '🌐 ទាំងអស់ (All)' },
+            { id: 'this_month', label: `🗓️ ខែនេះ (${formatKhmerMonthYear(thisMonthStr)})` },
             { id: 'today', label: '☀️ ថ្ងៃនេះ' },
             { id: 'yesterday', label: '⏪ ម្សិលមិញ' },
             { id: 'week', label: '📆 ៧ ថ្ងៃចុងក្រោយ' },
-            { id: 'this_month', label: '🗓️ ខែនេះ' },
-            { id: 'last_month', label: '🗓️ ខែមុន' },
+            { id: 'last_month', label: `🗓️ ខែមុន (${formatKhmerMonthYear(lastMonthStr)})` },
             { id: 'this_year', label: '📅 ឆ្នាំនេះ' },
-            { id: 'custom', label: '🎯 ចន្លោះកាលបរិច្ឆេទផ្ទាល់ខ្លួន' },
+            { id: 'all', label: '🌐 ទាំងអស់ (All)' },
+            { id: 'custom', label: '🎯 ចន្លោះកាលបរិច្ឆេទ' },
           ].map((tab) => {
             const isActive = dateFilter === tab.id;
             return (
@@ -312,7 +348,7 @@ export const ReportsDashboard: React.FC = () => {
                 }}
                 className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                   isActive
-                    ? 'bg-gradient-to-r from-pink-600 to-rose-500 text-white shadow-sm scale-102'
+                    ? 'bg-gradient-to-r from-pink-600 to-rose-500 text-white shadow-sm scale-102 ring-2 ring-pink-400/40'
                     : 'bg-slate-50 hover:bg-rose-50 text-slate-700 border border-slate-200/80 hover:border-pink-200'
                 }`}
               >
@@ -320,6 +356,28 @@ export const ReportsDashboard: React.FC = () => {
               </button>
             );
           })}
+
+          {/* Specific Month Picker */}
+          <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-bold transition-all ${
+            dateFilter === 'specific_month'
+              ? 'bg-rose-50 border-rose-300 ring-2 ring-rose-400/30 text-rose-700'
+              : 'bg-slate-50 hover:bg-rose-50/50 border-slate-200 text-slate-700'
+          }`}>
+            <Calendar className="w-3.5 h-3.5 text-pink-600 shrink-0" />
+            <span className="hidden sm:inline">រើសខែ៖</span>
+            <input
+              type="month"
+              value={selectedMonth}
+              onChange={(e) => {
+                if (e.target.value) {
+                  soundFx.playPop();
+                  setSelectedMonth(e.target.value);
+                  setDateFilter('specific_month');
+                }
+              }}
+              className="bg-transparent focus:outline-none font-bold cursor-pointer text-slate-800"
+            />
+          </div>
         </div>
 
         {/* Custom Date Range Inputs */}

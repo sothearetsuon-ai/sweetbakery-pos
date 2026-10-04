@@ -35,7 +35,7 @@ import { ReserveFundModal } from './ReserveFundModal';
 import { InvoiceScannerModal } from './InvoiceScannerModal';
 import { soundFx } from '../../utils/audio';
 
-type DateFilterPreset = 'ALL' | 'TODAY' | 'YESTERDAY' | 'THIS_MONTH' | 'CUSTOM';
+type DateFilterPreset = 'THIS_MONTH' | 'ALL' | 'TODAY' | 'YESTERDAY' | 'SPECIFIC_MONTH' | 'CUSTOM';
 
 export const ExpenseManagement: React.FC = () => {
   const {
@@ -64,9 +64,36 @@ export const ExpenseManagement: React.FC = () => {
   const [expenseToDelete, setExpenseToDelete] = useState<Expense | null>(null);
   const [isConfirmClearAll, setIsConfirmClearAll] = useState(false);
 
-  // Date filtering state
-  const [datePreset, setDatePreset] = useState<DateFilterPreset>('ALL');
-  const [customDate, setCustomDate] = useState<string>(() => new Date().toISOString().slice(0, 10));
+  // Local calendar date helpers (accurate for Cambodia timezone)
+  const getLocalDateStr = (d: Date = new Date()) => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  };
+
+  const todayStr = useMemo(() => getLocalDateStr(new Date()), []);
+  const yesterdayStr = useMemo(() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 1);
+    return getLocalDateStr(d);
+  }, []);
+  const thisMonthStr = useMemo(() => {
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    return `${y}-${m}`;
+  }, []);
+
+  // Date filtering state - Defaulted to THIS_MONTH (ខែជាក់ស្តែងជាប្រចាំ)
+  const [datePreset, setDatePreset] = useState<DateFilterPreset>('THIS_MONTH');
+  const [selectedMonth, setSelectedMonth] = useState<string>(() => {
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    return `${y}-${m}`;
+  });
+  const [customDate, setCustomDate] = useState<string>(() => getLocalDateStr(new Date()));
 
   // Cash expenses that have not been deducted from Reserve Fund
   const undeductedCashExpenses = useMemo(() => {
@@ -77,15 +104,6 @@ export const ExpenseManagement: React.FC = () => {
   const undeductedCashTotalKhr = useMemo(() => {
     return undeductedCashExpenses.reduce((sum, e) => sum + e.amountKhr, 0);
   }, [undeductedCashExpenses]);
-
-  // Date helpers
-  const todayStr = useMemo(() => new Date().toISOString().slice(0, 10), []);
-  const yesterdayStr = useMemo(() => {
-    const d = new Date();
-    d.setDate(d.getDate() - 1);
-    return d.toISOString().slice(0, 10);
-  }, []);
-  const thisMonthStr = useMemo(() => new Date().toISOString().slice(0, 7), []);
 
   const formatKhmerDate = (dateStr: string) => {
     try {
@@ -99,6 +117,21 @@ export const ExpenseManagement: React.FC = () => {
       return `${parseInt(d, 10)} ${monthNamesKh[mIdx] || m} ${y}`;
     } catch {
       return dateStr;
+    }
+  };
+
+  const formatKhmerMonthYear = (monthStr: string) => {
+    try {
+      const [y, m] = monthStr.split('-');
+      if (!y || !m) return monthStr;
+      const monthNamesKh = [
+        'មករា', 'កុម្ភៈ', 'មីនា', 'មេសា', 'ឧសភា', 'មិថុនា',
+        'កក្កដា', 'សីហា', 'កញ្ញា', 'តុលា', 'វិច្ឆិកា', 'ធ្នូ'
+      ];
+      const mIdx = parseInt(m, 10) - 1;
+      return `${monthNamesKh[mIdx] || m} ${y}`;
+    } catch {
+      return monthStr;
     }
   };
 
@@ -238,6 +271,8 @@ export const ExpenseManagement: React.FC = () => {
         matchDate = e.date === yesterdayStr;
       } else if (datePreset === 'THIS_MONTH') {
         matchDate = !!e.date && e.date.startsWith(thisMonthStr);
+      } else if (datePreset === 'SPECIFIC_MONTH') {
+        matchDate = !!e.date && e.date.startsWith(selectedMonth);
       } else if (datePreset === 'CUSTOM') {
         matchDate = e.date === customDate;
       }
@@ -252,7 +287,7 @@ export const ExpenseManagement: React.FC = () => {
 
       return matchCat && matchReceipt && matchDate && matchSearch;
     });
-  }, [expenses, mainTypeFilter, statusFilter, selectedCategory, receiptFilter, datePreset, customDate, todayStr, yesterdayStr, thisMonthStr, searchQuery]);
+  }, [expenses, mainTypeFilter, statusFilter, selectedCategory, receiptFilter, datePreset, customDate, selectedMonth, todayStr, yesterdayStr, thisMonthStr, searchQuery]);
 
   // Filtered sums
   const filteredExpensesKhr = useMemo(() => {
@@ -293,12 +328,13 @@ export const ExpenseManagement: React.FC = () => {
   }, [filteredGeneral]);
 
   const activeDateLabel = useMemo(() => {
-    if (datePreset === 'ALL') return null;
+    if (datePreset === 'ALL') return 'ទិន្នន័យចំណាយទាំងអស់ (All Time)';
     if (datePreset === 'TODAY') return `ថ្ងៃនេះ (${formatKhmerDate(todayStr)})`;
     if (datePreset === 'YESTERDAY') return `ម្សិលមិញ (${formatKhmerDate(yesterdayStr)})`;
-    if (datePreset === 'THIS_MONTH') return `ខែនេះ (${thisMonthStr})`;
+    if (datePreset === 'THIS_MONTH') return `ខែនេះ (${formatKhmerMonthYear(thisMonthStr)})`;
+    if (datePreset === 'SPECIFIC_MONTH') return `ខែ ${formatKhmerMonthYear(selectedMonth)}`;
     return `ថ្ងៃទី ${formatKhmerDate(customDate)}`;
-  }, [datePreset, todayStr, yesterdayStr, thisMonthStr, customDate]);
+  }, [datePreset, todayStr, yesterdayStr, thisMonthStr, selectedMonth, customDate]);
 
   // Export CSV
   const handleExportCsv = () => {
@@ -901,15 +937,20 @@ export const ExpenseManagement: React.FC = () => {
                 type="button"
                 onClick={() => {
                   soundFx.playPop();
-                  setDatePreset('ALL');
+                  setDatePreset('THIS_MONTH');
                 }}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                  datePreset === 'ALL'
-                    ? 'bg-slate-900 text-white shadow-xs'
-                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 ${
+                  datePreset === 'THIS_MONTH'
+                    ? 'bg-gradient-to-r from-rose-600 to-pink-600 text-white shadow-sm ring-2 ring-rose-400/40'
+                    : 'bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200/80'
                 }`}
               >
-                ទាំងអស់
+                <span>📅 ខែនេះ ({formatKhmerMonthYear(thisMonthStr)})</span>
+                <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
+                  datePreset === 'THIS_MONTH' ? 'bg-white/25 text-white' : 'bg-rose-200 text-rose-900'
+                }`}>
+                  {expenses.filter((e) => !!e.date && e.date.startsWith(thisMonthStr)).length}
+                </span>
               </button>
 
               <button
@@ -921,7 +962,7 @@ export const ExpenseManagement: React.FC = () => {
                 className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
                   datePreset === 'TODAY'
                     ? 'bg-rose-600 text-white shadow-xs'
-                    : 'bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200/60'
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                 }`}
               >
                 <span>⚡ ថ្ងៃនេះ</span>
@@ -948,25 +989,64 @@ export const ExpenseManagement: React.FC = () => {
                 type="button"
                 onClick={() => {
                   soundFx.playPop();
-                  setDatePreset('THIS_MONTH');
+                  setDatePreset('ALL');
                 }}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
-                  datePreset === 'THIS_MONTH'
-                    ? 'bg-rose-600 text-white shadow-xs'
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  datePreset === 'ALL'
+                    ? 'bg-slate-900 text-white shadow-xs'
                     : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                 }`}
               >
-                <span>📅 ខែនេះ</span>
-                <span className="text-[10px] opacity-80">({expenses.filter((e) => !!e.date && e.date.startsWith(thisMonthStr)).length})</span>
+                🌐 ទាំងអស់ ({expenses.length})
               </button>
             </div>
           </div>
 
-          {/* Custom Date Picker */}
-          <div className="flex items-center gap-2">
-            <div className="flex items-center gap-1.5 bg-slate-50 hover:bg-rose-50/50 border border-slate-200 hover:border-rose-300 px-3 py-1.5 rounded-2xl transition-all shadow-2xs">
+          {/* Custom Month & Date Pickers */}
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Specific Month Picker */}
+            <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-2xl transition-all shadow-2xs border ${
+              datePreset === 'SPECIFIC_MONTH'
+                ? 'bg-rose-50 border-rose-300 ring-2 ring-rose-400/30'
+                : 'bg-slate-50 hover:bg-rose-50/50 border-slate-200 hover:border-rose-300'
+            }`}>
               <Calendar className="w-3.5 h-3.5 text-rose-500 shrink-0" />
-              <span className="text-[11px] font-bold text-slate-600 hidden sm:inline">រើសថ្ងៃជាក់លាក់៖</span>
+              <span className="text-[11px] font-bold text-slate-600 hidden sm:inline">រើសខែ៖</span>
+              <input
+                type="month"
+                value={selectedMonth}
+                onChange={(e) => {
+                  if (e.target.value) {
+                    soundFx.playPop();
+                    setSelectedMonth(e.target.value);
+                    setDatePreset('SPECIFIC_MONTH');
+                  }
+                }}
+                className="text-xs font-black text-slate-800 bg-transparent focus:outline-none cursor-pointer"
+              />
+              {datePreset === 'SPECIFIC_MONTH' && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    soundFx.playPop();
+                    setDatePreset('THIS_MONTH');
+                  }}
+                  className="p-0.5 hover:bg-rose-100 text-rose-500 rounded-md transition-colors cursor-pointer"
+                  title="ត្រឡប់មកខែនេះ"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+
+            {/* Specific Day Picker */}
+            <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-2xl transition-all shadow-2xs border ${
+              datePreset === 'CUSTOM'
+                ? 'bg-rose-50 border-rose-300 ring-2 ring-rose-400/30'
+                : 'bg-slate-50 hover:bg-rose-50/50 border-slate-200 hover:border-rose-300'
+            }`}>
+              <Calendar className="w-3.5 h-3.5 text-rose-500 shrink-0" />
+              <span className="text-[11px] font-bold text-slate-600 hidden sm:inline">រើសថ្ងៃ៖</span>
               <input
                 type="date"
                 value={customDate}
@@ -984,10 +1064,10 @@ export const ExpenseManagement: React.FC = () => {
                   type="button"
                   onClick={() => {
                     soundFx.playPop();
-                    setDatePreset('ALL');
+                    setDatePreset('THIS_MONTH');
                   }}
                   className="p-0.5 hover:bg-rose-100 text-rose-500 rounded-md transition-colors cursor-pointer"
-                  title="បង្ហាញទាំងអស់"
+                  title="ត្រឡប់មកខែនេះ"
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>

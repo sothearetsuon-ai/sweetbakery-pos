@@ -24,7 +24,8 @@ export const SalesHistory: React.FC = () => {
   const { sales, expenses, deleteSale, clearAllSales, exchangeRate } = useBakery();
 
   const [searchQuery, setSearchQuery] = useState('');
-  const [dateFilter, setDateFilter] = useState<'all' | 'today' | 'yesterday' | 'month' | 'custom'>('all');
+  // Always default to current month (ខែជាក់ស្តែងជាប្រចាំ)
+  const [dateFilter, setDateFilter] = useState<'all' | 'today' | 'yesterday' | 'month' | 'custom'>('month');
   const [customDate, setCustomDate] = useState<string>('');
 
   // Modals state
@@ -264,10 +265,10 @@ export const SalesHistory: React.FC = () => {
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-1.5 bg-white/90 p-1.5 rounded-2xl border border-rose-100 shadow-2xs flex-wrap">
           {[
-            { id: 'all', label: `ទាំងអស់ (${sales.length})` },
-            { id: 'today', label: 'ថ្ងៃនេះ' },
-            { id: 'yesterday', label: 'ម្សិលមិញ' },
-            { id: 'month', label: 'ខែនេះ' },
+            { id: 'month', label: '🗓️ ខែនេះ' },
+            { id: 'today', label: '☀️ ថ្ងៃនេះ' },
+            { id: 'yesterday', label: '⏪ ម្សិលមិញ' },
+            { id: 'all', label: `🌐 ទាំងអស់ (${sales.length})` },
           ].map((tab) => (
             <button
               key={tab.id}
