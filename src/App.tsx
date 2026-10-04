@@ -269,6 +269,7 @@ export const App: React.FC = () => {
           onOpenSettings={handleOpenSettings}
           onOpenThemePicker={() => setIsThemePickerOpen(true)}
           onOpenContact={() => setIsContactModalOpen(true)}
+          onOpenCustomerOrderLinkModal={() => setIsCustomerOrderLinkModalOpen(true)}
           currentTheme={currentTheme}
           isMobileOpen={isMobileDrawerOpen}
           onCloseMobile={() => setIsMobileDrawerOpen(false)}

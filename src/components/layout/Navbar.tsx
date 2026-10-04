@@ -385,7 +385,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             </button>
           )}
 
-          {/* Customer Order Link & QR Button */}
+          {/* Customer Order Link & QR Button (Visible on all devices) */}
           {onOpenCustomerOrderLinkModal && (
             <button
               type="button"
@@ -394,7 +394,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 onOpenCustomerOrderLinkModal();
               }}
               title="លីងកុម្ម៉ង់សម្រាប់ភ្ញៀវ (Customer Self-Ordering Link & QR)"
-              className="hidden 2xl:flex items-center gap-1 px-2.5 py-1.5 rounded-2xl bg-gradient-to-r from-pink-600 to-rose-500 hover:from-pink-700 hover:to-rose-600 text-white text-xs font-black shadow-xs transition-all active:scale-95 cursor-pointer"
+              className="flex items-center gap-1 px-2 py-1.5 sm:px-2.5 sm:py-1.5 rounded-2xl bg-gradient-to-r from-pink-600 to-rose-500 hover:from-pink-700 hover:to-rose-600 text-white text-xs font-black shadow-xs transition-all active:scale-95 cursor-pointer shrink-0"
             >
               <LinkIcon className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">លីងភ្ញៀវ</span>
@@ -481,6 +481,26 @@ export const Navbar: React.FC<NavbarProps> = ({
                   <Music className="w-4 h-4 text-pink-500" />
                   <span>ម៉ាស៊ីនចាក់ភ្លេងហាងនំ {isMusicPlaying ? '🎵' : ''}</span>
                 </button>
+
+                {/* Customer Self-Ordering Link & QR */}
+                {onOpenCustomerOrderLinkModal && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsQuickToolsOpen(false);
+                      onOpenCustomerOrderLinkModal();
+                    }}
+                    className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold text-pink-700 hover:bg-pink-50 transition-colors text-left cursor-pointer"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <LinkIcon className="w-4 h-4 text-pink-600" />
+                      <span>លីងកុម្ម៉ង់សម្រាប់ភ្ញៀវ & QR</span>
+                    </div>
+                    <span className="text-[10px] text-white font-bold bg-pink-500 px-2 py-0.5 rounded-full">
+                      QR
+                    </span>
+                  </button>
+                )}
 
                 {/* Theme */}
                 {onOpenThemePicker && (

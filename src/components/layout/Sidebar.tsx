@@ -19,6 +19,7 @@ import {
   LogOut,
   Phone,
   PhoneCall,
+  Link as LinkIcon,
 } from 'lucide-react';
 import { useBakery } from '../../context/BakeryContext';
 import { useMusic } from '../../context/MusicContext';
@@ -44,6 +45,7 @@ interface SidebarProps {
   onOpenSettings: (tab?: 'store' | 'khqr' | 'staff' | 'currency') => void;
   onOpenThemePicker?: () => void;
   onOpenContact?: () => void;
+  onOpenCustomerOrderLinkModal?: () => void;
   currentTheme?: AppTheme;
   isMobileOpen?: boolean;
   onCloseMobile?: () => void;
@@ -55,6 +57,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onOpenSettings,
   onOpenThemePicker,
   onOpenContact,
+  onOpenCustomerOrderLinkModal,
   currentTheme,
   isMobileOpen = false,
   onCloseMobile,
@@ -397,6 +400,37 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </button>
           )}
         </div>
+
+        {/* Customer Self-Ordering Link Button */}
+        {onOpenCustomerOrderLinkModal && (
+          <button
+            type="button"
+            onClick={() => {
+              soundFx.playPop();
+              onOpenCustomerOrderLinkModal();
+              onCloseMobile?.();
+            }}
+            className="w-full flex items-center justify-between p-3 rounded-2xl bg-gradient-to-r from-pink-500/10 via-rose-500/10 to-amber-500/10 hover:from-pink-500/20 hover:to-rose-500/20 border border-pink-300/80 shadow-2xs transition-all active:scale-95 cursor-pointer group"
+          >
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-pink-600 to-rose-500 text-white flex items-center justify-center text-sm shadow-sm shadow-pink-500/25 group-hover:scale-105 transition-transform">
+                <LinkIcon className="w-4 h-4" />
+              </div>
+              <div className="text-left">
+                <div className="text-xs font-black text-pink-900 flex items-center gap-1.5 font-battambang">
+                  <span>លីងកុម្ម៉ង់សម្រាប់ភ្ញៀវ</span>
+                </div>
+                <div className="text-[10px] text-pink-700/80 font-medium">
+                  ចែករំលែក Link & QR Code
+                </div>
+              </div>
+            </div>
+            <span className="text-[10px] font-black bg-pink-600 text-white px-2 py-0.5 rounded-full shadow-2xs">
+              QR
+            </span>
+          </button>
+        )}
+
         {/* Kitchen Oven Status Card */}
         <div className="p-3 rounded-2xl bg-gradient-to-br from-amber-50 to-orange-50/70 border border-amber-200/80 shadow-2xs">
           <div className="flex items-center justify-between text-xs font-bold text-amber-900 mb-1.5">
