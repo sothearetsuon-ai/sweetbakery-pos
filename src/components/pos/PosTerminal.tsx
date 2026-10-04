@@ -204,8 +204,12 @@ export const PosTerminal: React.FC = () => {
   };
 
   // Filter products (newest first, matches category, name, or barcode)
+  // Exclude decoration materials / party supplies from POS terminal
   const filteredProducts = useMemo(() => {
     const list = products.filter((p) => {
+      // Exclude decoration materials / party supplies from POS
+      if (p.categoryId === 'party') return false;
+
       const matchesCategory =
         selectedCategory === 'all' || p.categoryId === selectedCategory;
 
@@ -377,20 +381,6 @@ export const PosTerminal: React.FC = () => {
               )}
 
               <button
-                type="button"
-                onClick={() => {
-                  soundFx.playPop();
-                  setIsPartyAccessoriesOpen(true);
-                }}
-                className="px-3 sm:px-3.5 py-2 sm:py-2.5 bg-gradient-to-r from-amber-500 via-rose-500 to-pink-600 hover:from-amber-600 hover:to-pink-700 text-white font-black rounded-2xl text-xs transition-all shadow-md shadow-amber-500/20 flex items-center gap-1.5 active:scale-95 cursor-pointer"
-                title="គ្រប់គ្រងគ្រឿងបន្ថែមសម្រាប់កម្មវិធី និងកែប្រែតម្លៃ"
-              >
-                <Sparkles className="w-4 h-4 text-amber-200" />
-                <span className="hidden sm:inline">🎉 គ្រឿងបន្ថែម ({partyAddons.length})</span>
-                <span className="sm:hidden">🎉 គ្រឿងពិធី</span>
-              </button>
-
-              <button
                 onClick={() => {
                   soundFx.playPop();
                   setIsAddProductOpen(true);
@@ -404,61 +394,33 @@ export const PosTerminal: React.FC = () => {
             </div>
           </div>
 
-          {/* Category Tabs Bar */}
+          {/* Category Tabs Bar (Excludes decoration/party category) */}
           <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
-            {categories.map((cat) => {
-              const isActive = selectedCategory === cat.id;
-              const catName = lang === 'km' ? cat.nameKh : cat.nameEn;
-              return (
-                <button
-                  key={cat.id}
-                  onClick={() => {
-                    soundFx.playPop();
-                    setSelectedCategory(cat.id);
-                  }}
-                  className={`px-4 py-2 sm:py-2.5 rounded-full text-xs font-black whitespace-nowrap transition-all duration-200 flex items-center gap-2 shadow-2xs active:scale-95 cursor-pointer relative ${
-                    isActive
-                      ? 'bg-gradient-to-r from-[#FF6F68] to-[#E6514D] text-white shadow-md shadow-[#E6514D]/30 scale-102 ring-2 ring-[#FFB4AE]'
-                      : 'bg-white text-slate-800 hover:bg-[#FFF5F2] hover:text-[#E6514D] border border-[#F2DBD3] hover:shadow-xs'
-                  }`}
-                >
-                  {getCategoryIcon(cat.icon)}
-                  <span>{catName}</span>
-                </button>
-              );
-            })}
+            {categories
+              .filter((cat) => cat.id !== 'party')
+              .map((cat) => {
+                const isActive = selectedCategory === cat.id;
+                const catName = lang === 'km' ? cat.nameKh : cat.nameEn;
+                return (
+                  <button
+                    key={cat.id}
+                    onClick={() => {
+                      soundFx.playPop();
+                      setSelectedCategory(cat.id);
+                    }}
+                    className={`px-4 py-2 sm:py-2.5 rounded-full text-xs font-black whitespace-nowrap transition-all duration-200 flex items-center gap-2 shadow-2xs active:scale-95 cursor-pointer relative ${
+                      isActive
+                        ? 'bg-gradient-to-r from-[#FF6F68] to-[#E6514D] text-white shadow-md shadow-[#E6514D]/30 scale-102 ring-2 ring-[#FFB4AE]'
+                        : 'bg-white text-slate-800 hover:bg-[#FFF5F2] hover:text-[#E6514D] border border-[#F2DBD3] hover:shadow-xs'
+                    }`}
+                  >
+                    {getCategoryIcon(cat.icon)}
+                    <span>{catName}</span>
+                  </button>
+                );
+              })}
           </div>
         </div>
-
-        {/* Dedicated Party Accessories Banner when Category is selected */}
-        {selectedCategory === 'party' && (
-          <div className="mb-4 p-3.5 sm:p-4 bg-gradient-to-r from-amber-500/10 via-rose-500/10 to-pink-500/10 border-2 border-pink-300 rounded-3xl flex flex-wrap items-center justify-between gap-3 shadow-xs animate-in fade-in duration-200">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-amber-500 to-pink-600 text-white flex items-center justify-center shadow-md shrink-0">
-                <Sparkles className="w-5 h-5 text-amber-100" />
-              </div>
-              <div>
-                <h3 className="text-xs sm:text-sm font-black text-slate-800">
-                  🎉 គ្រឿងបន្ថែមសម្រាប់កម្មវិធី (Party Accessories)
-                </h3>
-                <p className="text-[11px] sm:text-xs text-slate-500">
-                  មាន {partyAddons.length} មុខទំនិញ — លោកអ្នកអាចថែមថ្មី កែប្រែតម្លៃលក់ ($/៛) ឬចុចដាក់កន្ត្រកភ្លាមៗ
-                </p>
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={() => {
-                soundFx.playPop();
-                setIsPartyAccessoriesOpen(true);
-              }}
-              className="px-4 py-2 bg-gradient-to-r from-pink-600 via-rose-600 to-amber-500 text-white rounded-2xl text-xs font-black flex items-center gap-2 shadow-md shadow-pink-500/25 active:scale-95 cursor-pointer transition-all"
-            >
-              <Plus className="w-4 h-4 stroke-[3]" />
-              <span>+ ថែម និងកែតម្លៃគ្រឿងបន្ថែម</span>
-            </button>
-          </div>
-        )}
 
         {/* Product Grid */}
         {filteredProducts.length === 0 ? (
