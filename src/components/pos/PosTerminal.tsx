@@ -284,8 +284,8 @@ export const PosTerminal: React.FC = () => {
 
       {/* Products catalog area */}
       <div className="flex-1 flex flex-col min-w-0 p-3 sm:p-6 overflow-y-auto pb-28 lg:pb-6">
-        {/* Search & Category Tabs */}
-        <div className="space-y-3 sm:space-y-4 mb-4 sm:mb-6">
+        {/* Search & Category Tabs (Sticky at top when scrolling products) */}
+        <div className="sticky -top-3 sm:-top-6 z-20 bg-white/90 backdrop-blur-md pt-3 sm:pt-6 pb-2.5 mb-3 sm:mb-5 space-y-3 sm:space-y-4 border-b border-rose-100/80 shadow-2xs -mx-3 sm:-mx-6 px-3 sm:px-6">
           <div className="flex flex-wrap items-center justify-between gap-3">
             {/* Search Input with shortcut chip */}
             <div className="relative flex-1 min-w-[200px] max-w-md">

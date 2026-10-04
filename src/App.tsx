@@ -203,7 +203,7 @@ export const App: React.FC = () => {
 
   return (
     <div
-      className={`min-h-screen ${currentTheme.bgClass} flex flex-col font-sans selection:bg-pink-100 selection:text-pink-700 overflow-x-hidden transition-colors duration-300`}
+      className={`h-screen h-[100dvh] max-h-screen ${currentTheme.bgClass} flex flex-col font-sans selection:bg-pink-100 selection:text-pink-700 overflow-hidden transition-colors duration-300`}
       style={currentTheme.bgStyle}
     >
       {/* Demo Sandbox Mode Sticky Banner */}
@@ -262,7 +262,7 @@ export const App: React.FC = () => {
       />
 
       {/* Main Workspace with Sidebar & Content */}
-      <div className="flex-1 flex overflow-hidden relative">
+      <div className="flex-1 min-h-0 flex overflow-hidden relative">
         <Sidebar
           activeTab={activeTab}
           setActiveTab={handleSelectTab}
@@ -276,7 +276,7 @@ export const App: React.FC = () => {
         />
 
         {/* Dynamic Views */}
-        <main className="flex-1 flex flex-col min-w-0 overflow-hidden pb-16 md:pb-0">
+        <main className="flex-1 min-h-0 flex flex-col min-w-0 overflow-hidden pb-16 md:pb-0">
           {activeTab === 'pos' && <PosTerminal />}
           {activeTab === 'showcase' && <CustomerShowcase />}
           {activeTab === 'custom-orders' && <CustomOrderPipeline />}

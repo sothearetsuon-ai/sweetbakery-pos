@@ -544,7 +544,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   return (
     <>
       {/* 1. Desktop Permanent Sidebar (Hidden on Mobile) */}
-      <aside className="hidden md:flex w-64 glass-panel border-r border-[#F2DBD3] flex-col shrink-0 h-[calc(100vh-65px)] overflow-y-auto scrollbar-thin">
+      <aside className="hidden md:flex w-64 glass-panel border-r border-[#F2DBD3] flex-col shrink-0 h-full overflow-y-auto scrollbar-thin">
         {renderNavList()}
       </aside>
 
