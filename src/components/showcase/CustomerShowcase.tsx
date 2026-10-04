@@ -316,6 +316,9 @@ export const CustomerShowcase: React.FC = () => {
 
   const filteredProducts = useMemo(() => {
     const list = products.filter((p) => {
+      // Exclude party & decoration accessories from customer catalog/showcase
+      if (p.categoryId === 'party') return false;
+
       const matchCategory = selectedCategory === 'all' || p.categoryId === selectedCategory;
       const q = searchQuery.toLowerCase().trim();
       const matchSearch =
@@ -330,12 +333,13 @@ export const CustomerShowcase: React.FC = () => {
     return sortProductsNewestFirst(list);
   }, [products, selectedCategory, searchQuery]);
 
-  // Real products with images for circular showcase cutouts & centerpiece showpiece
+  // Real products with images for circular showcase cutouts & centerpiece showpiece (excluding party supplies)
   const showcaseProducts = useMemo(() => {
-    const list = products.filter(
+    const nonParty = products.filter((p) => p.categoryId !== 'party');
+    const list = nonParty.filter(
       (p) => (p.imageUrl && p.imageUrl.trim() !== '') || (p.images && p.images.length > 0)
     );
-    return list.length > 0 ? list : products;
+    return list.length > 0 ? list : nonParty;
   }, [products]);
 
   const featuredProduct = showcaseProducts[0] || null;
@@ -500,13 +504,16 @@ export const CustomerShowcase: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Dynamic Category Capsule Pills with Left Arrow Pointers */}
+                {/* Dynamic Category Capsule Pills with Left Arrow Pointers (Excludes decoration/party accessories) */}
                 <div className="space-y-2 max-h-[360px] overflow-y-auto pr-1 scrollbar-none">
-                  {categories.map((cat) => {
+                  {categories
+                    .filter((cat) => cat.id !== 'party')
+                    .map((cat) => {
                     const isActive = selectedCategory === cat.id;
                     const catName = lang === 'km' ? cat.nameKh : cat.nameEn;
+                    const nonPartyCount = products.filter((p) => p.categoryId !== 'party').length;
                     const count = cat.id === 'all'
-                      ? products.length
+                      ? nonPartyCount
                       : products.filter((p) => p.categoryId === cat.id).length;
 
                     return (
