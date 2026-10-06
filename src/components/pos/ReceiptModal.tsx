@@ -4,6 +4,7 @@ import { CompletedSale } from '../../types';
 import { useBakery } from '../../context/BakeryContext';
 import { t } from '../../utils/translations';
 import { getProductImageUrl } from '../../utils/imagePath';
+import { formatDateTimeDMY, formatDateDMY } from '../../utils/dateUtils';
 
 interface ReceiptModalProps {
   sale: CompletedSale | null;
@@ -77,8 +78,8 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({ sale, isOpen, onClos
                 <span className="font-bold">{sale.orderNumber}</span>
               </div>
               <div className="flex justify-between">
-                <span>កាលបរិច្ឆេទ:</span>
-                <span>{new Date(sale.createdAt).toLocaleString('km-KH')}</span>
+                <span>កាលបរិច្ឆេទ (Date):</span>
+                <span className="font-bold">{formatDateTimeDMY(sale.createdAt)}</span>
               </div>
               {sale.customerName && (
                 <div className="flex justify-between">
@@ -95,7 +96,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({ sale, isOpen, onClos
               {sale.pickupDate && (
                 <div className="flex justify-between font-bold text-amber-900 bg-amber-50 px-1.5 py-0.5 rounded">
                   <span>ពេលមកយក (Pickup):</span>
-                  <span>{sale.pickupDate} {sale.pickupTime || ''}</span>
+                  <span>{formatDateDMY(sale.pickupDate)} {sale.pickupTime || ''}</span>
                 </div>
               )}
               <div className="flex justify-between">

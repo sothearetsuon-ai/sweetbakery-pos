@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Clock, ShieldCheck, DollarSign, Banknote, AlertCircle, CheckCircle } from 'lucide-react';
 import { useBakery } from '../../context/BakeryContext';
 import { t } from '../../utils/translations';
+import { formatDateTimeDMY } from '../../utils/dateUtils';
 
 interface ShiftModalProps {
   isOpen: boolean;
@@ -76,7 +77,7 @@ export const ShiftModal: React.FC<ShiftModalProps> = ({ isOpen, onClose }) => {
                   </div>
                   <div className="flex justify-between">
                     <span>ពេលចាប់ផ្តើម៖</span>
-                    <span>{new Date(currentShift.startTime).toLocaleTimeString('km-KH')}</span>
+                    <span className="font-semibold text-slate-800">{formatDateTimeDMY(currentShift.startTime)}</span>
                   </div>
                   <div className="flex justify-between">
                     <span>លុយដើមគ្រា (Float):</span>

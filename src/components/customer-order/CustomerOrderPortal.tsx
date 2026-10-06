@@ -34,6 +34,7 @@ import { Product, CustomCakeOrder, OrderStatus } from '../../types';
 import { soundFx } from '../../utils/audio';
 import { compressImageBase64 } from '../../utils/imageCompressor';
 import { getProductImageUrl } from '../../utils/imagePath';
+import { formatDateDMY } from '../../utils/dateUtils';
 import { isTelegramWebApp, getTelegramUser, tgHapticImpact, tgHapticNotification } from '../../services/telegramWebApp';
 import { StoreLocationModal } from '../common/StoreLocationModal';
 
@@ -1023,7 +1024,7 @@ export const CustomerOrderPortal: React.FC = () => {
               <div className="space-y-1.5">
                 <label className="text-xs font-black text-slate-700 flex items-center gap-1.5">
                   <Calendar className="w-3.5 h-3.5 text-pink-500" />
-                  <span>កាលបរិច្ឆេទមកយកនំ (Pickup Date) *</span>
+                  <span>កាលបរិច្ឆេទមកយកនំ (DD/MM/YYYY) *</span>
                 </label>
                 <input
                   type="date"
@@ -1033,6 +1034,11 @@ export const CustomerOrderPortal: React.FC = () => {
                   className="w-full px-4 py-3 bg-white border border-rose-100 rounded-2xl text-xs sm:text-sm font-black text-slate-800 focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500 shadow-2xs cursor-pointer"
                   required
                 />
+                {pickupDate && (
+                  <p className="text-[11px] font-black text-pink-600 mt-1">
+                    ថ្ងៃមកយក៖ {formatDateDMY(pickupDate)}
+                  </p>
+                )}
               </div>
 
               <div className="space-y-1.5">
@@ -1496,7 +1502,7 @@ export const CustomerOrderPortal: React.FC = () => {
                 <div className="flex justify-between">
                   <span className="text-slate-500">ថ្ងៃ & ម៉ោងមកយក៖</span>
                   <span className="font-black text-amber-700">
-                    {confirmedOrder.pickupDate} ម៉ោង {confirmedOrder.pickupTime}
+                    {formatDateDMY(confirmedOrder.pickupDate)} ម៉ោង {confirmedOrder.pickupTime}
                   </span>
                 </div>
                 <div className="flex justify-between pt-1 border-t border-rose-100">

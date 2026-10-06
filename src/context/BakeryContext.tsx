@@ -58,6 +58,7 @@ import {
 } from '../services/telegram';
 import { offlineSyncService, SyncState } from '../services/offlineSyncService';
 import { soundFx } from '../utils/audio';
+import { formatDateDMY, formatDateTimeDMY } from '../utils/dateUtils';
 
 // Global demo mode flag to safely block cloud sync, LAN disk writes, and Telegram alerts during Demo mode
 let globalIsDemoMode = false;
@@ -3995,7 +3996,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         .join('; ');
       return [
         `"${s.orderNumber}"`,
-        `"${new Date(s.createdAt).toLocaleString('km-KH')}"`,
+        `"${formatDateTimeDMY(s.createdAt)}"`,
         `"${s.cashierName || '-'}"`,
         `"${s.customerName || '-'}"`,
         s.totalUsd.toFixed(2),
@@ -4020,7 +4021,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const exportExpensesCsv = () => {
     const BOM = '\uFEFF';
     const headers = [
-      'កាលបរិច្ឆេទ',
+      'កាលបរិច្ឆេទ (DD/MM/YYYY)',
       'ចំណងជើងចំណាយ',
       'ប្រភេទ',
       'ចំនួន (USD)',
@@ -4029,7 +4030,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       'កំណត់ចំណាំ',
     ];
     const rows = expenses.map((e) => [
-      `"${new Date(e.createdAt).toLocaleDateString('km-KH')}"`,
+      `"${formatDateDMY(e.date || e.createdAt)}"`,
       `"${(e.title || '').replace(/"/g, '""')}"`,
       `"${(e.category || '').replace(/"/g, '""')}"`,
       e.amountUsd.toFixed(2),

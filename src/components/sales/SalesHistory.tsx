@@ -19,6 +19,7 @@ import { ReceiptModal } from '../pos/ReceiptModal';
 import { AddPastSaleModal } from './AddPastSaleModal';
 import { EditSaleModal } from './EditSaleModal';
 import { soundFx } from '../../utils/audio';
+import { formatDateTimeDMY, formatDateDMY } from '../../utils/dateUtils';
 
 export const SalesHistory: React.FC = () => {
   const { sales, expenses, deleteSale, clearAllSales, exchangeRate } = useBakery();
@@ -130,11 +131,11 @@ export const SalesHistory: React.FC = () => {
   // Export CSV
   const handleExportCsv = () => {
     const csvRows = [
-      ['OrderNumber', 'Date', 'Customer', 'Cashier', 'PaymentMethod', 'TotalKHR', 'TotalUSD', 'Notes'].join(','),
+      ['OrderNumber', 'Date (DD/MM/YYYY)', 'Customer', 'Cashier', 'PaymentMethod', 'TotalKHR', 'TotalUSD', 'Notes'].join(','),
       ...sales.map((s) =>
         [
           s.orderNumber,
-          s.createdAt,
+          `"${formatDateTimeDMY(s.createdAt)}"`,
           `"${s.customerName || 'N/A'}"`,
           `"${s.cashierName}"`,
           s.paymentMethod,
@@ -377,10 +378,7 @@ export const SalesHistory: React.FC = () => {
           {/* Mobile Cards View (Visible on Small Screens / Phones < 768px) */}
           <div className="space-y-3 block md:hidden">
             {filteredSales.map((sale) => {
-              const saleDate = new Date(sale.createdAt);
-              const formattedDate = !isNaN(saleDate.getTime())
-                ? saleDate.toLocaleString('km-KH')
-                : sale.createdAt;
+              const formattedDate = formatDateTimeDMY(sale.createdAt);
 
               return (
                 <div
@@ -487,7 +485,7 @@ export const SalesHistory: React.FC = () => {
                 <thead className="bg-slate-50 text-slate-700 font-black border-b border-slate-200">
                   <tr>
                     <th className="p-4">លេខវិក្កយបត្រ</th>
-                    <th className="p-4">កាលបរិច្ឆេទ & ម៉ោង</th>
+                    <th className="p-4">កាលបរិច្ឆេទ & ម៉ោង (DD/MM/YYYY)</th>
                     <th className="p-4">អតិថិជន</th>
                     <th className="p-4">មុខទំនិញ</th>
                     <th className="p-4">តម្លៃសរុប (៛ KHR)</th>
@@ -498,10 +496,7 @@ export const SalesHistory: React.FC = () => {
                 </thead>
                 <tbody className="divide-y divide-slate-100 font-medium">
                   {filteredSales.map((sale) => {
-                    const saleDate = new Date(sale.createdAt);
-                    const formattedDate = !isNaN(saleDate.getTime())
-                      ? saleDate.toLocaleString('km-KH')
-                      : sale.createdAt;
+                    const formattedDate = formatDateTimeDMY(sale.createdAt);
 
                     return (
                       <tr key={sale.id} className="hover:bg-rose-50/40 transition-colors">
@@ -634,7 +629,7 @@ export const SalesHistory: React.FC = () => {
                 អតិថិជន៖ <span className="font-semibold text-slate-800">{saleToDelete.customerName || 'អតិថិជនទូទៅ'}</span>
               </div>
               <div className="text-[11px] text-slate-500">
-                កាលបរិច្ឆេទ៖ <span className="font-semibold text-slate-800">{saleToDelete.createdAt.slice(0, 10)}</span>
+                កាលបរិច្ឆេទ៖ <span className="font-semibold text-slate-800">{formatDateDMY(saleToDelete.createdAt)}</span>
               </div>
               <div className="text-[11px] text-slate-500">
                 តម្លៃសរុប៖ <span className="font-black text-pink-600">{saleToDelete.totalKhr.toLocaleString()} ៛ (${saleToDelete.totalUsd.toFixed(2)})</span>

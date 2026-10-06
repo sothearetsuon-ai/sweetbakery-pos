@@ -3,6 +3,7 @@ import { X, Edit3, Calendar, DollarSign, CheckCircle } from 'lucide-react';
 import { useBakery } from '../../context/BakeryContext';
 import { CompletedSale } from '../../types';
 import { soundFx } from '../../utils/audio';
+import { formatDateDMY } from '../../utils/dateUtils';
 
 interface EditSaleModalProps {
   sale: CompletedSale | null;
@@ -92,7 +93,7 @@ export const EditSaleModal: React.FC<EditSaleModalProps> = ({ sale, isOpen, onCl
           <div className="grid grid-cols-2 gap-4 bg-rose-50/30 p-3.5 rounded-2xl border border-rose-100/80">
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-1">
-                ថ្ងៃលក់ (Sale Date)
+                ថ្ងៃលក់ (Sale Date: DD/MM/YYYY)
               </label>
               <input
                 type="date"
@@ -101,6 +102,11 @@ export const EditSaleModal: React.FC<EditSaleModalProps> = ({ sale, isOpen, onCl
                 onChange={(e) => setDate(e.target.value)}
                 className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl bg-white font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-pink-500/20"
               />
+              {date && (
+                <p className="text-[10px] text-pink-600 font-bold mt-1">
+                  កាលបរិច្ឆេទ៖ {formatDateDMY(date)}
+                </p>
+              )}
             </div>
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-1">

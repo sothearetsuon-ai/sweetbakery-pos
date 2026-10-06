@@ -34,6 +34,7 @@ import { NewExpenseModal } from './NewExpenseModal';
 import { ReserveFundModal } from './ReserveFundModal';
 import { InvoiceScannerModal } from './InvoiceScannerModal';
 import { soundFx } from '../../utils/audio';
+import { formatDateDMY } from '../../utils/dateUtils';
 
 type DateFilterPreset = 'THIS_MONTH' | 'ALL' | 'TODAY' | 'YESTERDAY' | 'SPECIFIC_MONTH' | 'CUSTOM';
 
@@ -1385,7 +1386,7 @@ export const ExpenseManagement: React.FC = () => {
                         title="ចុចដើម្បីមើលចំណាយក្នុងថ្ងៃនេះ"
                       >
                         <Calendar className="w-3 h-3 text-rose-500" />
-                        <span>{expense.date}</span>
+                        <span>{formatDateDMY(expense.date)}</span>
                       </button>
                     </div>
                   </div>
@@ -1746,7 +1747,7 @@ export const ExpenseManagement: React.FC = () => {
                           title="ចុចដើម្បីមើលចំណាយក្នុងថ្ងៃនេះ (Filter by this date)"
                         >
                           <Calendar className="w-3.5 h-3.5 text-slate-400 group-hover/date:text-rose-500" />
-                          <span className="group-hover/date:underline font-bold">{expense.date}</span>
+                          <span className="group-hover/date:underline font-bold">{formatDateDMY(expense.date)}</span>
                         </button>
                         <div className="flex items-center gap-1.5 mt-0.5">
                           <span className="font-bold text-slate-800 text-[11px]">{expense.paidBy}</span>

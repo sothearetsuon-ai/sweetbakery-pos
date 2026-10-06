@@ -5,6 +5,7 @@ import { CustomCakeOrder, OrderStatus } from '../../types';
 import { useBakery } from '../../context/BakeryContext';
 import { soundFx } from '../../utils/audio';
 import { getProductImageUrl } from '../../utils/imagePath';
+import { formatDateDMY } from '../../utils/dateUtils';
 
 interface OrderCardProps {
   order: CustomCakeOrder;
@@ -264,7 +265,7 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, onAdvanceStatus, on
       <div className="flex items-center gap-1.5 text-xs text-amber-800 bg-amber-50/90 px-3 py-1.5 rounded-2xl border border-amber-200/80">
         <Clock className="w-3.5 h-3.5 text-amber-600 shrink-0" />
         <span className="font-bold">
-          មកយក៖ {order.pickupDate} ម៉ោង {order.pickupTime}
+          មកយក៖ {formatDateDMY(order.pickupDate)} ម៉ោង {order.pickupTime}
         </span>
       </div>
 

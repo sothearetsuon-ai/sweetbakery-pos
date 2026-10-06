@@ -21,6 +21,7 @@ import { t } from '../../utils/translations';
 import { CompletedSale } from '../../types';
 import { soundFx } from '../../utils/audio';
 import { KhqrStandeeModal } from './KhqrStandeeModal';
+import { formatDateDMY } from '../../utils/dateUtils';
 
 interface CheckoutModalProps {
   isOpen: boolean;
@@ -442,7 +443,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
             <div className="grid grid-cols-2 gap-2">
               <div>
                 <label className="text-[10px] font-bold text-slate-500 block mb-0.5">
-                  កាលបរិច្ឆេទមកយក (Pickup Date)
+                  កាលបរិច្ឆេទមកយក (Pickup Date: DD/MM/YYYY)
                 </label>
                 <input
                   type="date"
@@ -450,6 +451,11 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                   onChange={(e) => setPickupDate(e.target.value)}
                   className="w-full px-2.5 py-1.5 text-xs border border-slate-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500 font-bold"
                 />
+                {pickupDate && (
+                  <p className="text-[9px] text-pink-600 font-bold mt-0.5">
+                    ថ្ងៃមកយក៖ {formatDateDMY(pickupDate)}
+                  </p>
+                )}
               </div>
               <div>
                 <label className="text-[10px] font-bold text-slate-500 block mb-0.5">

@@ -25,6 +25,7 @@ import { t } from '../../utils/translations';
 import { soundFx } from '../../utils/audio';
 import { PartyAddon } from '../../types';
 import { CameraCaptureModal } from '../common/CameraCaptureModal';
+import { formatDateDMY } from '../../utils/dateUtils';
 
 interface NewCustomOrderModalProps {
   isOpen: boolean;
@@ -994,7 +995,7 @@ export const NewCustomOrderModal: React.FC<NewCustomOrderModalProps> = ({ isOpen
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 bg-rose-50/40 p-4 rounded-2xl border border-rose-100">
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-1">
-                កាលបរិច្ឆេទមកយក (Pickup Date) <span className="text-rose-500">*</span>
+                កាលបរិច្ឆេទមកយក (DD/MM/YYYY) <span className="text-rose-500">*</span>
               </label>
               <input
                 type="date"
@@ -1003,6 +1004,11 @@ export const NewCustomOrderModal: React.FC<NewCustomOrderModalProps> = ({ isOpen
                 onChange={(e) => setPickupDate(e.target.value)}
                 className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500 font-bold"
               />
+              {pickupDate && (
+                <div className="text-[11px] text-pink-600 font-bold mt-1">
+                  ថ្ងៃមកយក៖ {formatDateDMY(pickupDate)}
+                </div>
+              )}
             </div>
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-1">

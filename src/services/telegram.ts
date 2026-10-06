@@ -1,4 +1,5 @@
 import { CompletedSale, CustomCakeOrder, Expense, Shift, StoreInfo } from '../types';
+import { formatDateDMY, formatDateTimeDMY } from '../utils/dateUtils';
 
 export interface TelegramConfig {
   botToken: string;
@@ -357,7 +358,7 @@ export const testTelegramConnection = async (
     const botUsername = meData.result?.username || 'Unknown';
 
     // 2. Send test message
-    const nowStr = new Date().toLocaleString('km-KH');
+    const nowStr = formatDateTimeDMY(new Date());
     const testMsg = `🎉 <b>ការតភ្ជាប់ Telegram Bot ជោគជ័យ!</b>\n\n` +
       `🍰 <b>ហាង៖</b> SweetBakery & Cafe\n` +
       `🤖 <b>Bot Name:</b> ${botName} (@${botUsername})\n` +
@@ -417,7 +418,7 @@ export const notifyTelegramSale = async (
   const totalKhr = sale.totalKhr ?? Math.round(sale.totalUsd * exchangeRate);
   const now = new Date(sale.createdAt || Date.now());
   const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-  const dateStr = now.toLocaleDateString('km-KH');
+  const dateStr = formatDateDMY(sale.createdAt || Date.now());
 
   const paymentText =
     sale.paymentMethod === 'KHQR_BAKONG'
@@ -441,7 +442,7 @@ export const notifyTelegramSale = async (
     `👤 <b>អ្នកគិតប្រាក់៖</b> ${escapeHtml(sale.cashierName || 'Cashier')}\n` +
     (sale.customerName ? `🧑‍💼 <b>អតិថិជន៖</b> <b>${escapeHtml(sale.customerName)}</b>\n` : '') +
     (sale.customerPhone ? `📞 <b>ទូរស័ព្ទ៖</b> <a href="tel:${sale.customerPhone}">${sale.customerPhone}</a>\n` : '') +
-    (sale.pickupDate ? `📅 <b>ថ្ងៃ & ម៉ោងមកយក៖</b> <b>${sale.pickupDate} ${sale.pickupTime ? `វេលាម៉ោង ${sale.pickupTime}` : ''}</b>\n` : '') +
+    (sale.pickupDate ? `📅 <b>ថ្ងៃ & ម៉ោងមកយក៖</b> <b>${formatDateDMY(sale.pickupDate)} ${sale.pickupTime ? `វេលាម៉ោង ${sale.pickupTime}` : ''}</b>\n` : '') +
     (sale.notes ? `✍️ <b>ចំណាំ/សរសេរលើនំ៖</b> <i>"${escapeHtml(sale.notes)}"</i>\n` : '') +
     `\n🛒 <b>មុខទំនិញដែលបានលក់៖</b>\n` +
     `${itemsList}\n` +
@@ -504,7 +505,7 @@ export const notifyTelegramCustomOrder = async (
     (order.inscription ? `✍️ <b>អក្សរលើនំ៖</b> <i>"${escapeHtml(order.inscription)}"</i>\n` : '') +
     (order.themeNotes ? `📝 <b>ចំណាំ៖</b> ${escapeHtml(order.themeNotes)}\n` : '') +
     `━━━━━━━━━━━━━━━━━━\n` +
-    `⏰ <b>ថ្ងៃ & ម៉ោងមកយក៖</b> <b>${order.pickupDate} វេលាម៉ោង ${order.pickupTime}</b>\n\n` +
+    `⏰ <b>ថ្ងៃ & ម៉ោងមកយក៖</b> <b>${formatDateDMY(order.pickupDate)} វេលាម៉ោង ${order.pickupTime}</b>\n\n` +
     `💵 <b>តម្លៃសរុប៖</b> <b>${totalKhr.toLocaleString()} ៛</b> ($${order.totalUsd.toFixed(2)})\n` +
     `👛 <b>បានកក់រួច៖</b> <b>${depositKhr.toLocaleString()} ៛ ($${order.depositUsd.toFixed(2)})</b>\n` +
     (remainingUsd > 0

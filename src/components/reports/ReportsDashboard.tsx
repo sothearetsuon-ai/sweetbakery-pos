@@ -22,6 +22,7 @@ import { t } from '../../utils/translations';
 import { ReceiptModal } from '../pos/ReceiptModal';
 import { CompletedSale, ExpenseCategory } from '../../types';
 import { soundFx } from '../../utils/audio';
+import { formatDateDMY, formatDateTimeDMY, formatTime } from '../../utils/dateUtils';
 
 type DateFilterType =
   | 'this_month'
@@ -241,11 +242,11 @@ export const ReportsDashboard: React.FC = () => {
   const handleExportCsv = () => {
     soundFx.playPop();
     const csvRows = [
-      ['OrderNumber', 'Date', 'Cashier', 'Customer', 'PaymentMethod', 'TotalUSD', 'TotalKHR'].join(','),
+      ['OrderNumber', 'Date (DD/MM/YYYY)', 'Cashier', 'Customer', 'PaymentMethod', 'TotalUSD', 'TotalKHR'].join(','),
       ...filteredSales.map((s) =>
         [
           s.orderNumber,
-          s.createdAt,
+          `"${formatDateTimeDMY(s.createdAt)}"`,
           `"${s.cashierName}"`,
           `"${s.customerName || 'N/A'}"`,
           s.paymentMethod,
@@ -849,7 +850,7 @@ export const ReportsDashboard: React.FC = () => {
             <thead className="bg-slate-50 text-slate-700 font-bold border-b border-slate-200">
               <tr>
                 <th className="p-3">លេខវិក្កយបត្រ</th>
-                <th className="p-3">កាលបរិច្ឆេទ & ម៉ោង</th>
+                <th className="p-3">កាលបរិច្ឆេទ & ម៉ោង (DD/MM/YYYY)</th>
                 <th className="p-3">ឈ្មោះអតិថិជន</th>
                 <th className="p-3">បេឡាធិការ</th>
                 <th className="p-3">វិធីសាស្ត្រ</th>
@@ -870,9 +871,9 @@ export const ReportsDashboard: React.FC = () => {
                   <tr key={sale.id} className="hover:bg-slate-50/80 transition-colors">
                     <td className="p-3 font-bold text-slate-900">{sale.orderNumber}</td>
                     <td className="p-3">
-                      <div>{sale.createdAt.slice(0, 10)}</div>
+                      <div className="font-mono font-bold text-slate-800">{formatDateDMY(sale.createdAt)}</div>
                       <div className="text-[10px] text-slate-400">
-                        {new Date(sale.createdAt).toLocaleTimeString('km-KH')}
+                        {formatTime(sale.createdAt)}
                       </div>
                     </td>
                     <td className="p-3 font-semibold text-slate-700">

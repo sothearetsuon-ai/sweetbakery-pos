@@ -33,6 +33,7 @@ import { soundFx } from '../../utils/audio';
 import { Product, PartyAddon } from '../../types';
 import { getProductImageUrl } from '../../utils/imagePath';
 import { PartyAccessoriesModal } from './PartyAccessoriesModal';
+import { formatDateDMY } from '../../utils/dateUtils';
 
 interface CartPanelProps {
   onCheckout: (options?: {
@@ -978,7 +979,7 @@ export const CartPanel: React.FC<CartPanelProps> = ({
                   <div>
                     <label className="text-[10px] font-bold text-slate-600 flex items-center gap-1 mb-1">
                       <Calendar className="w-3 h-3 text-pink-600" />
-                      <span>កាលបរិច្ឆេទមកយក (Date)</span>
+                      <span>កាលបរិច្ឆេទមកយក (DD/MM/YYYY)</span>
                     </label>
                     <input
                       type="date"
@@ -986,6 +987,11 @@ export const CartPanel: React.FC<CartPanelProps> = ({
                       onChange={(e) => setPickupDate(e.target.value)}
                       className="w-full px-3 py-2 bg-white border border-rose-200/80 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500 shadow-2xs"
                     />
+                    {pickupDate && (
+                      <div className="text-[10px] text-pink-600 font-bold mt-0.5">
+                        មកយក៖ {formatDateDMY(pickupDate)}
+                      </div>
+                    )}
                   </div>
                   <div>
                     <label className="text-[10px] font-bold text-slate-600 flex items-center gap-1 mb-1">

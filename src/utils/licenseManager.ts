@@ -19,6 +19,7 @@ import {
   isDemoModeActive,
   DEFAULT_STORE_ID,
 } from '../services/firebase';
+import { formatDateDMY } from './dateUtils';
 
 export interface LicenseInfo {
   deviceId: string;
@@ -334,7 +335,7 @@ export const syncRemoteLicense = (
         idbSet(STORAGE_EXPIRES_AT, remoteExp.toString()).catch(() => {});
         localStorage.setItem(STORAGE_LAST_TIMESTAMP, now.toString());
         onRemoteUnlocked({
-          message: `បានដោះសោពីចម្ងាយតាម Cloud ដោយជោគជ័យ (សុពលភាពដល់៖ ${new Date(remoteExp).toLocaleDateString('km-KH')})!`,
+          message: `បានដោះសោពីចម្ងាយតាម Cloud ដោយជោគជ័យ (សុពលភាពដល់៖ ${formatDateDMY(remoteExp)})!`,
         });
       }
     }
