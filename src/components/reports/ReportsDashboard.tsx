@@ -905,6 +905,74 @@ export const ReportsDashboard: React.FC = () => {
         </div>
       </div>
 
+      {/* Expenses Transactions Table */}
+      <div className="bg-white rounded-3xl border border-rose-100 p-5 shadow-sm space-y-4">
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <h3 className="font-bold text-slate-800 text-sm flex items-center gap-1.5">
+            <span>💸</span>
+            <span>ប្រវត្តិប្រតិបត្តិការចំណាយ (Expense Transactions - {getFilterDescription()})</span>
+          </h3>
+          <span className="text-xs font-bold text-slate-400">
+            បង្ហាញ {filteredExpenses.length} ប្រតិបត្តិការ • សរុប {totalExpensesKhr.toLocaleString()} ៛ (${totalExpensesUsd.toFixed(2)})
+          </span>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-xs text-slate-600 min-w-[760px]">
+            <thead className="bg-slate-50 text-slate-700 font-bold border-b border-slate-200">
+              <tr>
+                <th className="p-3">កាលបរិច្ឆេទ (DD/MM/YYYY)</th>
+                <th className="p-3">បរិយាយការចំណាយ</th>
+                <th className="p-3">ផ្នែកចំណាយ</th>
+                <th className="p-3">ចំនួន & ខ្នាត</th>
+                <th className="p-3">អ្នកចំណាយ / ហាងផ្គត់ផ្គង់</th>
+                <th className="p-3">វិធីសាស្ត្រ</th>
+                <th className="p-3 text-right">សរុបជា KHR (៛)</th>
+                <th className="p-3 text-right">សរុបជា USD ($)</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {filteredExpenses.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="p-6 text-center text-slate-400">
+                    ពុំមានទិន្នន័យចំណាយក្នុងចន្លោះកាលបរិច្ឆេទនេះទេ
+                  </td>
+                </tr>
+              ) : (
+                filteredExpenses.map((expense) => (
+                  <tr key={expense.id} className="hover:bg-slate-50/80 transition-colors">
+                    <td className="p-3 font-mono font-bold text-slate-800">
+                      {formatDateDMY(expense.date || expense.createdAt)}
+                    </td>
+                    <td className="p-3 font-bold text-slate-900">{expense.title}</td>
+                    <td className="p-3">
+                      <span className="px-2 py-0.5 rounded-lg text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-200">
+                        {expenseCategoryNames[expense.category] || expense.category}
+                      </span>
+                    </td>
+                    <td className="p-3 text-slate-600">
+                      {expense.quantity ? `${expense.quantity} ${expense.unit || ''}` : '-'}
+                    </td>
+                    <td className="p-3 text-slate-700 font-medium">
+                      {expense.supplier ? `${expense.supplier} (${expense.paidBy})` : expense.paidBy}
+                    </td>
+                    <td className="p-3 text-slate-600">
+                      {expense.paymentMethod === 'RESERVE_FUND' ? '🏦 ទុនបម្រុង' : expense.paymentMethod || 'CASH'}
+                    </td>
+                    <td className="p-3 text-right font-black text-rose-600">
+                      {(expense.amountKhr || Math.round(expense.amountUsd * exchangeRate)).toLocaleString()} ៛
+                    </td>
+                    <td className="p-3 text-right text-slate-600 font-bold">
+                      ${expense.amountUsd.toFixed(2)}
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
       {/* Reprint Modal */}
       <ReceiptModal
         isOpen={!!selectedSaleForReprint}

@@ -86,8 +86,15 @@ export const ExpenseManagement: React.FC = () => {
     return `${y}-${m}`;
   }, []);
 
-  // Date filtering state - Defaulted to THIS_MONTH (ខែជាក់ស្តែងជាប្រចាំ)
-  const [datePreset, setDatePreset] = useState<DateFilterPreset>('THIS_MONTH');
+  // Date filtering state - Smartly defaults to THIS_MONTH if has expenses this month, or ALL so recorded data is always visible immediately
+  const [datePreset, setDatePreset] = useState<DateFilterPreset>(() => {
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const thisM = `${y}-${m}`;
+    const hasThisMonth = expenses.some((e) => !!e.date && e.date.startsWith(thisM));
+    return hasThisMonth ? 'THIS_MONTH' : 'ALL';
+  });
   const [selectedMonth, setSelectedMonth] = useState<string>(() => {
     const d = new Date();
     const y = d.getFullYear();
@@ -95,6 +102,9 @@ export const ExpenseManagement: React.FC = () => {
     return `${y}-${m}`;
   });
   const [customDate, setCustomDate] = useState<string>(() => getLocalDateStr(new Date()));
+
+  // View Mode: Table (default) vs Cards (responsive on mobile, tablet, and desktop)
+  const [viewMode, setViewMode] = useState<'table' | 'cards'>('table');
 
   // Cash expenses that have not been deducted from Reserve Fund
   const undeductedCashExpenses = useMemo(() => {
@@ -1303,8 +1313,65 @@ export const ExpenseManagement: React.FC = () => {
         )}
       </div>
 
-      {/* Mobile Expenses Cards View (Visible on Small Screens) */}
-      <div className="md:hidden space-y-3">
+      {/* Table & Cards Header Toolbar */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-white p-3.5 sm:p-4 rounded-3xl border border-rose-100/90 shadow-2xs">
+        <div className="flex items-center gap-2.5 flex-wrap">
+          <div className="w-9 h-9 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center font-black text-base shadow-2xs">
+            📊
+          </div>
+          <div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <h3 className="font-black text-sm text-slate-800">
+                តារាងប្រតិបត្តិការចំណាយ (Expenses Table)
+              </h3>
+              <span className="text-xs font-bold text-rose-700 bg-rose-50 px-2.5 py-0.5 rounded-full border border-rose-200">
+                {filteredExpenses.length} ប្រតិបត្តិការ
+              </span>
+            </div>
+            <p className="text-[11px] text-slate-400 mt-0.5">
+              {viewMode === 'table' ? 'ទិដ្ឋភាពតារាងពេញលេញ (អាចអូសឆ្វេង-ស្តាំលើទូរស័ព្ទ)' : 'ទិដ្ឋភាពកាតសង្ខេប'}
+            </p>
+          </div>
+        </div>
+
+        {/* View Switcher: Table vs Cards */}
+        <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-2xl border border-slate-200 shadow-2xs self-stretch sm:self-auto justify-center">
+          <button
+            type="button"
+            onClick={() => {
+              soundFx.playPop();
+              setViewMode('table');
+            }}
+            className={`flex-1 sm:flex-initial px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+              viewMode === 'table'
+                ? 'bg-slate-900 text-white shadow-xs font-black'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <FileText className="w-3.5 h-3.5" />
+            <span>📋 តារាង (Table)</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              soundFx.playPop();
+              setViewMode('cards');
+            }}
+            className={`flex-1 sm:flex-initial px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+              viewMode === 'cards'
+                ? 'bg-slate-900 text-white shadow-xs font-black'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <Receipt className="w-3.5 h-3.5" />
+            <span>📱 កាត (Cards)</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Expenses Cards View */}
+      {viewMode === 'cards' && (
+        <div className="space-y-3 animate-in fade-in duration-200">
         {filteredExpenses.length === 0 ? (
           <div className="bg-white rounded-3xl border border-rose-100 p-8 text-center text-slate-400 space-y-3">
             <Receipt className="w-8 h-8 text-rose-300 mx-auto" />
@@ -1577,11 +1644,13 @@ export const ExpenseManagement: React.FC = () => {
           })
         )}
       </div>
+      )}
 
-      {/* Desktop Expenses Table (Hidden on Mobile) */}
-      <div className="hidden md:flex bg-white rounded-3xl border border-rose-100/90 shadow-sm overflow-hidden flex-col">
+      {/* Expenses Table View (Responsive on All Devices with Horizontal Scroll) */}
+      {viewMode === 'table' && (
+      <div className="bg-white rounded-3xl border border-rose-100/90 shadow-sm overflow-hidden flex flex-col animate-in fade-in duration-200">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs text-slate-600">
+          <table className="w-full text-left text-xs text-slate-600 min-w-[760px]">
             <thead className="bg-slate-50 text-slate-700 font-black border-b border-slate-200">
               <tr>
                 <th className="py-3 px-4">ផ្នែក & បរិយាយការចំណាយ</th>
@@ -1610,6 +1679,18 @@ export const ExpenseManagement: React.FC = () => {
                         : 'លោកអ្នកអាចចុចប៊ូតុងខាងក្រោមដើម្បីមើលទិន្នន័យទាំងអស់'}
                     </p>
                     <div className="flex items-center justify-center gap-2 mt-4 flex-wrap">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          soundFx.playPop();
+                          setEditingExpense(null);
+                          setIsAddExpenseOpen(true);
+                        }}
+                        className="px-3.5 py-1.5 bg-gradient-to-r from-rose-600 to-pink-600 hover:from-rose-700 hover:to-pink-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer flex items-center gap-1.5"
+                      >
+                        <Plus className="w-3.5 h-3.5 stroke-[3]" />
+                        <span>+ កត់ត្រាចំណាយថ្មី (Add Expense)</span>
+                      </button>
                       {datePreset !== 'ALL' && (
                         <button
                           type="button"
@@ -1937,6 +2018,7 @@ export const ExpenseManagement: React.FC = () => {
           </div>
         )}
       </div>
+      )}
 
       {/* Receipt Image Zoom Modal */}
       {previewReceiptImage && (
