@@ -42,19 +42,30 @@ export const RealStoreAuthModal: React.FC<RealStoreAuthModalProps> = ({
     }
   }, [isOpen]);
 
-  // Physical Keyboard Support
+  // Physical Keyboard Support (prevents duplicate keystrokes when input is focused)
   useEffect(() => {
     if (!isOpen) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key >= '0' && e.key <= '9') {
-        handleKeyPress(e.key);
-      } else if (e.key === 'Backspace') {
-        handleBackspace();
-      } else if (e.key === 'Enter') {
+      const isInputFocused =
+        e.target instanceof HTMLInputElement ||
+        e.target instanceof HTMLTextAreaElement;
+
+      if (e.key === 'Enter') {
+        e.preventDefault();
         handleSubmit();
       } else if (e.key === 'Escape') {
+        e.preventDefault();
         handleCancel();
+      } else if (!isInputFocused) {
+        // Only capture digits and backspace if user has not focused the input element
+        if (e.key >= '0' && e.key <= '9') {
+          e.preventDefault();
+          handleKeyPress(e.key);
+        } else if (e.key === 'Backspace') {
+          e.preventDefault();
+          handleBackspace();
+        }
       }
     };
 
@@ -76,6 +87,20 @@ export const RealStoreAuthModal: React.FC<RealStoreAuthModalProps> = ({
         if (checkAndAuthenticate(nextPin)) {
           triggerSuccess();
         }
+      }
+    }
+  };
+
+  const handleInputChange = (val: string) => {
+    soundFx.playPop();
+    const clean = val;
+    setPinInput(clean);
+    setErrorMessage('');
+
+    // Auto-submit when PIN length >= 4 and matches any staff member or master key
+    if (clean.trim().length >= 4) {
+      if (checkAndAuthenticate(clean.trim())) {
+        triggerSuccess();
       }
     }
   };
@@ -279,10 +304,7 @@ export const RealStoreAuthModal: React.FC<RealStoreAuthModalProps> = ({
               <input
                 type={showPin ? 'text' : 'password'}
                 value={pinInput}
-                onChange={(e) => {
-                  setPinInput(e.target.value);
-                  setErrorMessage('');
-                }}
+                onChange={(e) => handleInputChange(e.target.value)}
                 placeholder="បញ្ចូលលេខសម្ងាត់ PIN"
                 className="w-full pl-9 pr-9 py-2 text-center text-base sm:text-lg font-black tracking-widest bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-rose-500 focus:bg-white transition-all placeholder:text-xs placeholder:font-normal placeholder:tracking-normal placeholder:text-slate-400"
                 autoFocus

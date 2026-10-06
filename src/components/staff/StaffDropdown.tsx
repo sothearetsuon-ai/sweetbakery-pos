@@ -36,12 +36,21 @@ export const StaffDropdown: React.FC<StaffDropdownProps> = ({
   useEffect(() => {
     if (!isOpen) return;
     const handleKeyDown = (e: KeyboardEvent) => {
+      const isInputFocused =
+        e.target instanceof HTMLInputElement ||
+        e.target instanceof HTMLTextAreaElement;
+
       if (e.key === 'Escape') {
+        e.preventDefault();
         onClose();
-      } else if (isPinMode && e.key >= '0' && e.key <= '9') {
-        handleKeypadPress(e.key);
-      } else if (isPinMode && e.key === 'Backspace') {
-        handleBackspace();
+      } else if (isPinMode && !isInputFocused) {
+        if (e.key >= '0' && e.key <= '9') {
+          e.preventDefault();
+          handleKeypadPress(e.key);
+        } else if (e.key === 'Backspace') {
+          e.preventDefault();
+          handleBackspace();
+        }
       }
     };
     window.addEventListener('keydown', handleKeyDown);

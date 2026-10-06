@@ -30,11 +30,19 @@ export const SwitchStaffModal: React.FC<SwitchStaffModalProps> = ({ isOpen, onCl
   useEffect(() => {
     if (!isOpen) return;
     const handleKeyDown = (e: KeyboardEvent) => {
+      const isInputFocused =
+        e.target instanceof HTMLInputElement ||
+        e.target instanceof HTMLTextAreaElement;
+      if (isInputFocused) return;
+
       if (e.key >= '0' && e.key <= '9') {
+        e.preventDefault();
         handleKeypadPress(e.key);
       } else if (e.key === 'Backspace') {
+        e.preventDefault();
         handleBackspace();
       } else if (e.key === 'Escape') {
+        e.preventDefault();
         onClose();
       }
     };
