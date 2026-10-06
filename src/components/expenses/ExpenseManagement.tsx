@@ -42,6 +42,7 @@ export const ExpenseManagement: React.FC = () => {
   const {
     lang,
     expenses,
+    addExpense,
     updateExpense,
     deleteExpense,
     clearAllExpenses,
@@ -105,6 +106,105 @@ export const ExpenseManagement: React.FC = () => {
 
   // View Mode: Table (default) vs Cards (responsive on mobile, tablet, and desktop)
   const [viewMode, setViewMode] = useState<'table' | 'cards'>('table');
+
+  // One-click sample expenses generator so the table is never mysteriously empty when testing
+  const handleSeedSampleExpenses = () => {
+    soundFx.playSuccess();
+    confetti({ particleCount: 60, spread: 70, origin: { y: 0.6 } });
+    const today = new Date().toISOString().slice(0, 10);
+    const samples = [
+      {
+        title: 'ទិញស៊ុតមាន់ស្រស់កសិដ្ឋាន CP',
+        expenseType: 'INGREDIENT' as const,
+        category: 'INGREDIENTS' as const,
+        ingredientId: 'ing-4',
+        supplier: 'CP Cambodia',
+        quantity: 200,
+        unit: 'គ្រាប់ (eggs)',
+        unitPriceKhr: 492,
+        unitPriceUsd: 0.12,
+        amountUsd: 24.0,
+        amountKhr: 98400,
+        paidBy: 'មេការហាង (Manager)',
+        paymentMethod: 'CASH_KHR' as const,
+        paymentStatus: 'PAID' as const,
+        notes: 'ទិញគ្រឿងផ្សំសម្រាប់ដុតនំពេលព្រឹក',
+        date: today,
+      },
+      {
+        title: 'ទិញម្សៅខេកជប៉ុនពិសេស (Cake Flour)',
+        expenseType: 'INGREDIENT' as const,
+        category: 'INGREDIENTS' as const,
+        ingredientId: 'ing-1',
+        supplier: 'Khmer Food Supply Co.',
+        quantity: 25,
+        unit: 'kg',
+        unitPriceKhr: 5740,
+        unitPriceUsd: 1.4,
+        amountUsd: 35.0,
+        amountKhr: 143500,
+        paidBy: 'ចុងភៅដុតនំ (Chef)',
+        paymentMethod: 'CASH_KHR' as const,
+        paymentStatus: 'PAID' as const,
+        notes: 'ម្សៅមីម៉ត់ពិសេសធ្វើនំខេកខួបកំណើត',
+        date: today,
+      },
+      {
+        title: 'ទិញប៊័រស្រស់បារាំង Elle & Vire',
+        expenseType: 'INGREDIENT' as const,
+        category: 'INGREDIENTS' as const,
+        ingredientId: 'ing-2',
+        supplier: 'Euro Gourmet imports',
+        quantity: 10,
+        unit: 'kg',
+        unitPriceKhr: 38950,
+        unitPriceUsd: 9.5,
+        amountUsd: 95.0,
+        amountKhr: 389500,
+        paidBy: 'មេការហាង (Manager)',
+        paymentMethod: 'BANK_TRANSFER' as const,
+        paymentStatus: 'PAID' as const,
+        notes: 'ប៊័រ AOP ក្លិនឈ្ងុយសម្រាប់ធ្វើក្រូសង់',
+        date: today,
+      },
+      {
+        title: 'ទិញប្រអប់នំខេកកញ្ចក់ថ្លា & ខ្សែបូ',
+        expenseType: 'SUPPLY' as const,
+        category: 'PACKAGING' as const,
+        supplier: 'Cambodia Packaging Co.',
+        quantity: 50,
+        unit: 'ប្រអប់ (box)',
+        unitPriceKhr: 2665,
+        unitPriceUsd: 0.65,
+        amountUsd: 32.5,
+        amountKhr: 133250,
+        paidBy: 'មេការហាង (Manager)',
+        paymentMethod: 'BANK_TRANSFER' as const,
+        paymentStatus: 'PAID' as const,
+        notes: 'Cambodia Packaging Co.',
+        date: today,
+      },
+      {
+        title: 'ថ្លៃអគ្គិសនីដំណើរការឡដុតនំ & ទូក្លាសេ (EDC)',
+        expenseType: 'GENERAL' as const,
+        category: 'UTILITIES' as const,
+        quantity: 1,
+        unit: 'ខែ (month)',
+        unitPriceKhr: 348500,
+        unitPriceUsd: 85.0,
+        amountUsd: 85.0,
+        amountKhr: 348500,
+        paidBy: 'គណនេយ្យ (Admin)',
+        paymentMethod: 'BANK_TRANSFER' as const,
+        paymentStatus: 'PAID' as const,
+        notes: 'វិក្កយបត្រ EDC ប្រចាំខែ',
+        date: today,
+      },
+    ];
+
+    samples.forEach((s) => addExpense(s));
+    setDatePreset('ALL');
+  };
 
   // Cash expenses that have not been deducted from Reserve Fund
   const undeductedCashExpenses = useMemo(() => {
@@ -274,18 +374,20 @@ export const ExpenseManagement: React.FC = () => {
         (receiptFilter === 'WITH_RECEIPT' && !!e.receiptImage) ||
         (receiptFilter === 'WITHOUT_RECEIPT' && !e.receiptImage);
 
-      // Date matching
+      // Date matching (robust against ISO strings and timestamps)
       let matchDate = true;
+      const rawDate = e.date || e.createdAt || '';
+      const expDate = rawDate.slice(0, 10);
       if (datePreset === 'TODAY') {
-        matchDate = e.date === todayStr;
+        matchDate = expDate === todayStr;
       } else if (datePreset === 'YESTERDAY') {
-        matchDate = e.date === yesterdayStr;
+        matchDate = expDate === yesterdayStr;
       } else if (datePreset === 'THIS_MONTH') {
-        matchDate = !!e.date && e.date.startsWith(thisMonthStr);
+        matchDate = expDate.startsWith(thisMonthStr);
       } else if (datePreset === 'SPECIFIC_MONTH') {
-        matchDate = !!e.date && e.date.startsWith(selectedMonth);
+        matchDate = expDate.startsWith(selectedMonth);
       } else if (datePreset === 'CUSTOM') {
-        matchDate = e.date === customDate;
+        matchDate = expDate === customDate;
       }
 
       const q = searchQuery.toLowerCase().trim();
@@ -451,6 +553,17 @@ export const ExpenseManagement: React.FC = () => {
             <span className="hidden xs:inline">📷</span>
             <span>ស្កេនវិក្កយបត្រ (AI)</span>
           </button>
+
+          {expenses.length === 0 && (
+            <button
+              onClick={handleSeedSampleExpenses}
+              className="px-3.5 sm:px-4 py-2 sm:py-2.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white text-xs font-black rounded-2xl shadow-lg shadow-amber-500/25 flex items-center gap-1.5 sm:gap-2 transition-all active:scale-95 cursor-pointer"
+              title="បញ្ចូលទិន្នន័យចំណាយគំរូ ៥ មុខភ្លាមៗដើម្បីសាកល្បងតារាង"
+            >
+              <Sparkles className="w-4 h-4" />
+              <span>🌾 បញ្ចូលទិន្នន័យគំរូ</span>
+            </button>
+          )}
 
           <button
             onClick={() => {
@@ -1378,16 +1491,40 @@ export const ExpenseManagement: React.FC = () => {
             <p className="font-bold text-slate-700 text-sm">
               គ្មានទិន្នន័យការចំណាយក្នុងលក្ខខណ្ឌនេះទេ
             </p>
-            {datePreset !== 'ALL' && (
+            <div className="flex items-center justify-center gap-2 flex-wrap pt-2">
               <button
                 type="button"
-                onClick={() => setDatePreset('ALL')}
-                className="px-4 py-2 bg-rose-600 text-white rounded-xl text-xs font-bold shadow-xs cursor-pointer inline-flex items-center gap-1.5"
+                onClick={() => {
+                  soundFx.playPop();
+                  setEditingExpense(null);
+                  setIsAddExpenseOpen(true);
+                }}
+                className="px-4 py-2 bg-gradient-to-r from-rose-600 to-pink-600 text-white rounded-xl text-xs font-bold shadow-xs cursor-pointer inline-flex items-center gap-1.5"
               >
-                <RotateCcw className="w-3.5 h-3.5" />
-                <span>បង្ហាញចំណាយទាំងអស់</span>
+                <Plus className="w-3.5 h-3.5 stroke-[3]" />
+                <span>+ កត់ត្រាចំណាយ</span>
               </button>
-            )}
+              {expenses.length === 0 && (
+                <button
+                  type="button"
+                  onClick={handleSeedSampleExpenses}
+                  className="px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-xl text-xs font-bold shadow-xs cursor-pointer inline-flex items-center gap-1.5"
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>🌾 បញ្ចូលទិន្នន័យគំរូ</span>
+                </button>
+              )}
+              {datePreset !== 'ALL' && (
+                <button
+                  type="button"
+                  onClick={() => setDatePreset('ALL')}
+                  className="px-4 py-2 bg-rose-600 text-white rounded-xl text-xs font-bold shadow-xs cursor-pointer inline-flex items-center gap-1.5"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  <span>បង្ហាញចំណាយទាំងអស់</span>
+                </button>
+              )}
+            </div>
           </div>
         ) : (
           filteredExpenses.map((expense) => {
@@ -1446,7 +1583,7 @@ export const ExpenseManagement: React.FC = () => {
                         type="button"
                         onClick={() => {
                           soundFx.playPop();
-                          setCustomDate(expense.date);
+                          setCustomDate((expense.date || expense.createdAt || '').slice(0, 10));
                           setDatePreset('CUSTOM');
                         }}
                         className="inline-flex items-center gap-1 text-[11px] font-bold text-slate-600 bg-slate-50 hover:bg-rose-50 px-2 py-0.5 rounded-lg border border-slate-200 cursor-pointer"
@@ -1691,6 +1828,17 @@ export const ExpenseManagement: React.FC = () => {
                         <Plus className="w-3.5 h-3.5 stroke-[3]" />
                         <span>+ កត់ត្រាចំណាយថ្មី (Add Expense)</span>
                       </button>
+                      {expenses.length === 0 && (
+                        <button
+                          type="button"
+                          onClick={handleSeedSampleExpenses}
+                          className="px-3.5 py-1.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer flex items-center gap-1.5"
+                          title="ចុចដើម្បីបញ្ចូលទិន្នន័យចំណាយគំរូ ៥ ប្រតិបត្តិការភ្លាមៗ"
+                        >
+                          <Sparkles className="w-3.5 h-3.5" />
+                          <span>🌾 បញ្ចូលទិន្នន័យចំណាយគំរូ (Load Sample)</span>
+                        </button>
+                      )}
                       {datePreset !== 'ALL' && (
                         <button
                           type="button"
@@ -1821,7 +1969,7 @@ export const ExpenseManagement: React.FC = () => {
                           type="button"
                           onClick={() => {
                             soundFx.playPop();
-                            setCustomDate(expense.date);
+                            setCustomDate((expense.date || expense.createdAt || '').slice(0, 10));
                             setDatePreset('CUSTOM');
                           }}
                           className="flex items-center gap-1.5 text-slate-700 hover:text-rose-600 font-semibold text-xs cursor-pointer transition-colors group/date"
