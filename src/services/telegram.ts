@@ -549,10 +549,10 @@ export const notifyTelegramExpense = async (
     (expense.quantity ? `🔢 <b>ចំនួន៖</b> ${expense.quantity} ${expense.unit || ''}\n` : '') +
     `💰 <b>ទឹកប្រាក់ចំណាយ៖</b> <b>${amountKhr.toLocaleString()} ៛</b> <i>($${expense.amountUsd.toFixed(2)})</i>\n` +
     `💳 <b>ស្ថានភាព៖</b> <b>${paymentStatusText}</b>\n` +
-    (isUnpaid && expense.dueDate ? `📅 <b>ថ្ងៃផុតកំណត់បង់៖</b> <b>${expense.dueDate}</b>\n` : '') +
+    (expense.dueDate ? `📅 <b>ថ្ងៃផុតកំណត់${isUnpaid ? 'បង់' : ''}៖</b> <b>${formatDateDMY(expense.dueDate)}</b>\n` : '') +
     `👤 <b>អ្នកចំណាយ/ទទួលបន្ទុក៖</b> ${expense.paidBy}\n` +
     (expense.notes ? `📝 <b>កំណត់សម្គាល់៖</b> ${expense.notes}\n` : '') +
-    `⏰ <b>កាលបរិច្ឆេទកត់ត្រា៖</b> ${expense.date}`;
+    `⏰ <b>កាលបរិច្ឆេទកត់ត្រា៖</b> ${formatDateDMY(expense.date)}`;
 
   if (expense.receiptImage) {
     await sendTelegramPhoto(expense.receiptImage, text, config);
@@ -596,7 +596,7 @@ export const notifyTelegramExpenseDueAlert = async (
     `🏢 <b>ការចំណាយ៖</b> <b>${expense.title}</b>\n` +
     (expense.supplier ? `🏪 <b>អ្នកផ្គត់ផ្គង់/ម្ចាស់ទីតាំង៖</b> ${expense.supplier}\n` : '') +
     `💰 <b>ទឹកប្រាក់ត្រូវបង់៖</b> <b>${amountKhr.toLocaleString()} ៛</b> <i>($${expense.amountUsd.toFixed(2)})</i>\n` +
-    `📅 <b>ថ្ងៃផុតកំណត់៖</b> <b>${expense.dueDate}</b>\n` +
+    `📅 <b>ថ្ងៃផុតកំណត់៖</b> <b>${formatDateDMY(expense.dueDate)}</b>\n` +
     `👤 <b>អ្នកទទួលបន្ទុក៖</b> ${expense.paidBy}\n` +
     (expense.notes ? `📝 <b>សម្គាល់៖</b> ${expense.notes}\n` : '') +
     `━━━━━━━━━━━━━━━━━━\n` +

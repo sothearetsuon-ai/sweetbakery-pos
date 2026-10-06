@@ -210,6 +210,7 @@ export const ExpenseManagement: React.FC<ExpenseManagementProps> = ({
         paymentStatus: 'PAID' as const,
         notes: 'វិក្កយបត្រ EDC ប្រចាំខែ',
         date: today,
+        dueDate: today,
       },
     ];
 
@@ -1596,7 +1597,7 @@ export const ExpenseManagement: React.FC<ExpenseManagementProps> = ({
                                 <span className="font-black text-rose-700 bg-rose-100 px-1.5 py-0.5 rounded text-[10px]">
                                   🚨 ហួសកំណត់ {Math.abs(st.diffDays)} ថ្ងៃ
                                 </span>
-                                <span className="text-[10px] text-rose-600 font-mono">({expense.dueDate})</span>
+                                <span className="text-[10px] text-rose-600 font-medium">({formatDateDMY(expense.dueDate)})</span>
                               </div>
                             );
                           }
@@ -1606,6 +1607,7 @@ export const ExpenseManagement: React.FC<ExpenseManagementProps> = ({
                                 <span className="font-black text-white bg-amber-500 px-1.5 py-0.5 rounded text-[10px] animate-pulse">
                                   ⏰ ដល់ថ្ងៃបង់ថ្ងៃនេះ!
                                 </span>
+                                <span className="text-[10px] text-amber-700 font-medium">({formatDateDMY(expense.dueDate)})</span>
                               </div>
                             );
                           }
@@ -1614,7 +1616,7 @@ export const ExpenseManagement: React.FC<ExpenseManagementProps> = ({
                               <span className="font-bold text-amber-800 bg-amber-100/80 px-1.5 py-0.5 rounded text-[10px]">
                                 ⏳ សល់ {st.diffDays} ថ្ងៃ
                               </span>
-                              <span className="text-[10px] text-amber-700 font-mono">({expense.dueDate})</span>
+                              <span className="text-[10px] text-amber-700 font-medium">({formatDateDMY(expense.dueDate)})</span>
                             </div>
                           );
                         })()}
@@ -1634,12 +1636,18 @@ export const ExpenseManagement: React.FC<ExpenseManagementProps> = ({
                   <div className="flex items-center gap-1.5 text-[10px] text-emerald-700 font-bold px-1 flex-wrap">
                     <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
                     <span>បានបង់ប្រាក់រួចរាល់</span>
+                    {expense.dueDate && (
+                      <span className="text-[10px] bg-amber-50 text-amber-900 border border-amber-200/70 px-1.5 py-0.5 rounded font-medium flex items-center gap-1">
+                        <Calendar className="w-3 h-3 text-amber-600 shrink-0" />
+                        <span>ផុតកំណត់៖ {formatDateDMY(expense.dueDate)}</span>
+                      </span>
+                    )}
                     {expense.paidAt && (
-                      <span className="text-slate-400 font-normal">({expense.paidAt})</span>
+                      <span className="text-slate-500 font-normal">({formatDateDMY(expense.paidAt)})</span>
                     )}
                     {expense.dueDate && expense.paidAt && expense.paidAt <= expense.dueDate && (
                       <span className="text-[9px] bg-emerald-100 text-emerald-800 px-1.5 py-0.2 rounded font-bold">
-                        ✓ បង់មុនថ្ងៃផុតកំណត់
+                        ✓ បង់ទាន់ពេល
                       </span>
                     )}
                   </div>
@@ -1965,8 +1973,8 @@ export const ExpenseManagement: React.FC<ExpenseManagementProps> = ({
                                     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-black bg-rose-100 text-rose-800 border border-rose-300">
                                       <span>🚨 ហួស {Math.abs(st.diffDays)} ថ្ងៃ</span>
                                     </span>
-                                    <div className="text-[10px] text-rose-600 font-bold font-mono">
-                                      ផុតកំណត់៖ {expense.dueDate}
+                                    <div className="text-[10px] text-rose-600 font-bold">
+                                      ផុតកំណត់៖ {formatDateDMY(expense.dueDate)}
                                     </div>
                                   </div>
                                 );
@@ -1977,8 +1985,8 @@ export const ExpenseManagement: React.FC<ExpenseManagementProps> = ({
                                     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-black bg-amber-500 text-white animate-pulse shadow-2xs">
                                       <span>⏰ ត្រូវបង់ថ្ងៃនេះ!</span>
                                     </span>
-                                    <div className="text-[10px] text-amber-700 font-bold font-mono">
-                                      {expense.dueDate}
+                                    <div className="text-[10px] text-amber-700 font-bold">
+                                      {formatDateDMY(expense.dueDate)}
                                     </div>
                                   </div>
                                 );
@@ -1989,8 +1997,8 @@ export const ExpenseManagement: React.FC<ExpenseManagementProps> = ({
                                     <Clock className="w-3 h-3 text-amber-600" />
                                     <span>សល់ {st.diffDays} ថ្ងៃ</span>
                                   </span>
-                                  <div className="text-[10px] text-slate-500 font-mono">
-                                    ផុតកំណត់៖ {expense.dueDate}
+                                  <div className="text-[10px] text-slate-500 font-medium">
+                                    ផុតកំណត់៖ {formatDateDMY(expense.dueDate)}
                                   </div>
                                 </div>
                               );
@@ -2002,14 +2010,20 @@ export const ExpenseManagement: React.FC<ExpenseManagementProps> = ({
                               <CheckCircle2 className="w-3 h-3 text-emerald-600" />
                               <span>បានបង់រួច</span>
                             </span>
+                            {expense.dueDate && (
+                              <div className="text-[10px] text-amber-800 font-medium flex items-center gap-1">
+                                <Calendar className="w-2.5 h-2.5 text-amber-600 shrink-0" />
+                                <span>ផុតកំណត់៖ {formatDateDMY(expense.dueDate)}</span>
+                              </div>
+                            )}
                             {expense.paidAt && (
-                              <div className="text-[10px] text-slate-400 font-mono">
-                                {expense.paidAt}
+                              <div className="text-[10px] text-slate-500">
+                                បង់នៅ៖ {formatDateDMY(expense.paidAt)}
                               </div>
                             )}
                             {expense.dueDate && expense.paidAt && expense.paidAt <= expense.dueDate && (
                               <div className="text-[9px] text-emerald-600 font-bold">
-                                ✓ បង់មុនថ្ងៃផុតកំណត់
+                                ✓ បង់ទាន់ពេល
                               </div>
                             )}
                           </div>
