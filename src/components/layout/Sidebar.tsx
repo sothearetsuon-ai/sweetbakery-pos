@@ -20,6 +20,7 @@ import {
   Phone,
   PhoneCall,
   Link as LinkIcon,
+  ShieldCheck,
 } from 'lucide-react';
 import { useBakery } from '../../context/BakeryContext';
 import { useMusic } from '../../context/MusicContext';
@@ -34,6 +35,7 @@ export type TabType =
   | 'custom-orders'
   | 'sales'
   | 'expenses'
+  | 'reserve-fund'
   | 'inventory'
   | 'reports'
   | 'shifts'
@@ -62,7 +64,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   isMobileOpen = false,
   onCloseMobile,
 }) => {
-  const { lang, customOrders, lowStockCount, expenses, sales, currentStaff, hasPermission, staffMembers, storeInfo, logoutAndLock, isDemoMode } = useBakery();
+  const { lang, customOrders, lowStockCount, expenses, sales, currentStaff, hasPermission, staffMembers, storeInfo, logoutAndLock, isDemoMode, reserveFund } = useBakery();
   const { isPlaying: isMusicPlaying, setIsPlayerOpen: setIsMusicPlayerOpen } = useMusic();
   const text = t[lang];
 
@@ -152,6 +154,21 @@ export const Sidebar: React.FC<SidebarProps> = ({
           iconColor: 'text-rose-600',
           badge: expenses.length > 0 ? `${expenses.length}` : null,
           badgeColor: 'bg-rose-500 text-white font-bold',
+          permission: 'canAccessExpenses',
+        },
+        {
+          id: 'reserve-fund',
+          label: 'ទុនបម្រុងហាង 🏦',
+          subLabel: 'Reserve Fund & Petty Cash',
+          icon: ShieldCheck,
+          iconBg: 'bg-emerald-100 text-emerald-600',
+          iconColor: 'text-emerald-600',
+          badge:
+            reserveFund &&
+            Math.max(0, reserveFund.targetAmountKhr - reserveFund.currentBalanceKhr) > 0
+              ? 'ខ្វះ'
+              : null,
+          badgeColor: 'bg-amber-500 text-white font-bold animate-pulse',
           permission: 'canAccessExpenses',
         },
         {

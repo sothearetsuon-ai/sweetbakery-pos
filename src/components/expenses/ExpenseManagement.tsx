@@ -38,7 +38,13 @@ import { formatDateDMY } from '../../utils/dateUtils';
 
 type DateFilterPreset = 'THIS_MONTH' | 'ALL' | 'TODAY' | 'YESTERDAY' | 'SPECIFIC_MONTH' | 'CUSTOM';
 
-export const ExpenseManagement: React.FC = () => {
+interface ExpenseManagementProps {
+  onNavigateToReserveFund?: () => void;
+}
+
+export const ExpenseManagement: React.FC<ExpenseManagementProps> = ({
+  onNavigateToReserveFund,
+}) => {
   const {
     lang,
     expenses,
@@ -529,7 +535,11 @@ export const ExpenseManagement: React.FC = () => {
           <button
             onClick={() => {
               soundFx.playPop();
-              setIsReserveFundOpen(true);
+              if (onNavigateToReserveFund) {
+                onNavigateToReserveFund();
+              } else {
+                setIsReserveFundOpen(true);
+              }
             }}
             className="px-3.5 sm:px-4 py-2 sm:py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-black rounded-2xl shadow-md shadow-emerald-700/30 flex items-center gap-1.5 sm:gap-2 transition-all active:scale-95 cursor-pointer border border-emerald-600"
             title="គ្រប់គ្រងទុនបម្រុងហាង & Petty Cash"
@@ -537,7 +547,9 @@ export const ExpenseManagement: React.FC = () => {
             <ShieldCheck className="w-4 h-4 stroke-[2.5] text-white" />
             <span className="text-white font-black">🏦 ទុនបម្រុងហាង</span>
             {deficitKhr > 0 && (
-              <span className="w-2.5 h-2.5 rounded-full bg-amber-300 animate-pulse border border-emerald-900" />
+              <span className="px-1.5 py-0.2 bg-amber-400 text-slate-900 text-[10px] font-black rounded-full shadow-2xs">
+                ខ្វះ
+              </span>
             )}
           </button>
 
@@ -575,113 +587,6 @@ export const ExpenseManagement: React.FC = () => {
           >
             <Plus className="w-4 h-4 stroke-[3]" />
             <span>+ កត់ត្រាចំណាយ</span>
-          </button>
-        </div>
-      </div>
-
-      {/* Reserve Fund Banner Widget - High Contrast, Clean & Crystal Clear */}
-      <div className="bg-white dark:bg-slate-800 border-2 border-emerald-500 rounded-3xl p-4 sm:p-5 text-slate-800 dark:text-white shadow-sm relative overflow-hidden flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-        <div className="flex items-start sm:items-center gap-3.5">
-          <div className="p-3 bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-200 rounded-2xl border border-emerald-300 dark:border-emerald-700 flex-shrink-0">
-            <ShieldCheck className="w-7 h-7" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2 flex-wrap">
-              <h3 className="font-black text-base sm:text-lg text-slate-900 dark:text-white tracking-wide flex items-center gap-1.5">
-                <span>🏦</span>
-                <span>ទុនបម្រុងហាង & Petty Cash</span>
-              </h3>
-              <span className={`text-xs font-black px-2.5 py-0.5 rounded-full ${
-                deficitKhr > 0 
-                  ? 'bg-amber-100 text-amber-950 border border-amber-400 font-bold' 
-                  : 'bg-emerald-100 text-emerald-950 border border-emerald-400 font-bold'
-              }`}>
-                {deficitKhr > 0 ? `ខ្វះត្រូវបង្គ្រប់ (នៅសល់ ${reserveFundPct}%)` : 'គ្រប់ ១០០%'}
-              </span>
-            </div>
-            <div className="text-xs sm:text-sm text-slate-700 dark:text-slate-200 mt-1.5 flex items-baseline gap-2 flex-wrap">
-              <span className="font-medium text-slate-600 dark:text-slate-300">សមតុល្យបច្ចុប្បន្ន៖</span>
-              <strong className="text-emerald-700 dark:text-emerald-400 font-black font-sans text-xl sm:text-2xl">
-                {reserveFund.currentBalanceKhr.toLocaleString()} ៛
-              </strong>
-              <span className="text-slate-700 dark:text-slate-300 font-sans font-bold">
-                (~${reserveFund.currentBalanceUsd.toFixed(2)})
-              </span>
-              <span className="text-slate-400 mx-1">•</span>
-              <span className="text-slate-700 dark:text-slate-300 font-medium">
-                គោលដៅកំណត់៖ <strong className="text-slate-900 dark:text-white font-sans font-bold">{reserveFund.targetAmountKhr.toLocaleString()} ៛</strong>
-              </span>
-              {deficitKhr > 0 && (
-                <>
-                  <span className="text-slate-400 mx-1">•</span>
-                  <span className="text-rose-600 dark:text-rose-400 font-bold">
-                    កាត់ចំណាយសរុប៖ -{deficitKhr.toLocaleString()} ៛
-                  </span>
-                </>
-              )}
-            </div>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2 sm:gap-3 w-full md:w-auto justify-between md:justify-end border-t md:border-t-0 pt-3 md:pt-0 border-slate-100 dark:border-slate-700 flex-wrap">
-          {deficitKhr > 0 ? (
-            <div className="text-left md:text-right bg-amber-50 dark:bg-amber-950/50 px-3.5 py-2 rounded-2xl border border-amber-300 dark:border-amber-700">
-              <div className="text-xs font-black text-amber-950 dark:text-amber-200">ចំនួនត្រូវបូកបង្គ្រប់៖</div>
-              <div className="text-base font-black text-rose-600 dark:text-rose-400 font-sans">
-                +{deficitKhr.toLocaleString()} ៛ <span className="text-xs font-bold text-slate-700 dark:text-slate-300">(${deficitUsd.toFixed(2)})</span>
-              </div>
-            </div>
-          ) : (
-            <div className="text-left md:text-right text-xs font-black text-emerald-800 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/50 px-3.5 py-2.5 rounded-2xl border border-emerald-300 dark:border-emerald-700 hidden sm:block">
-              ✓ ទុនបម្រុងពេញលេញ ១០០%
-            </div>
-          )}
-
-          {undeductedCashExpenses.length > 0 && (
-            <button
-              type="button"
-              onClick={() => {
-                soundFx.playPop();
-                if (
-                  confirm(
-                    `តើអ្នកចង់កាត់ចំណាយសាច់ប្រាក់ចំនួន ${undeductedCashExpenses.length} ប្រតិបត្តិការ (សរុប ${undeductedCashTotalKhr.toLocaleString()} ៛) ចេញពីទុនបម្រុងទាំងអស់មែនទេ?`
-                  )
-                ) {
-                  soundFx.playSuccess();
-                  batchDeductExpensesToReserveFund(undeductedCashExpenses.map((e) => e.id));
-                }
-              }}
-              className="px-3 sm:px-4 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white rounded-2xl text-xs font-black transition-all shadow-md shadow-amber-500/20 flex items-center gap-1.5 cursor-pointer active:scale-95"
-              title="កាត់ចំណាយសាច់ប្រាក់ដែលបានកត់ត្រាពីមុនចេញពីទុនបម្រុង"
-            >
-              <Zap className="w-3.5 h-3.5 fill-current" />
-              <span>⚡ កាត់ចំណាយសាច់ប្រាក់ ({undeductedCashExpenses.length}) ពីទុន</span>
-            </button>
-          )}
-
-          <button
-            type="button"
-            onClick={() => {
-              soundFx.playSuccess();
-              const rf = reconcileReserveFundWithExpenses();
-              alert(`បានគណនាកាត់រាល់ចំណាយចេញពីទុនបម្រុងរួចរាល់!\nសមតុល្យជាក់ស្តែងនៅសល់៖ ${rf.currentBalanceKhr.toLocaleString()} ៛ ($${rf.currentBalanceUsd.toFixed(2)})`);
-            }}
-            className="px-3 sm:px-3.5 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-800 dark:text-slate-100 rounded-2xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 border border-slate-300 dark:border-slate-600"
-            title="គណនាកាត់រាល់ចំណាយសាច់ប្រាក់ទាំងអស់ចេញពីទុនបម្រុងឡើងវិញ"
-          >
-            <RotateCcw className="w-3.5 h-3.5 text-slate-600 dark:text-slate-300" />
-            <span>🔄 គណនាកាត់ពីទុន</span>
-          </button>
-
-          <button
-            onClick={() => {
-              soundFx.playPop();
-              setIsReserveFundOpen(true);
-            }}
-            className="px-4 sm:px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl text-xs sm:text-sm font-black transition-all shadow-md shadow-emerald-600/30 flex items-center gap-1.5 cursor-pointer ml-auto md:ml-0 active:scale-95"
-          >
-            <Plus className="w-4 h-4 stroke-[3]" />
-            <span>{deficitKhr > 0 ? '+ បូកបង្គ្រប់ទុន' : 'គ្រប់គ្រងទុន'}</span>
           </button>
         </div>
       </div>

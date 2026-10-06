@@ -8,6 +8,7 @@ import { CustomerShowcase } from './components/showcase/CustomerShowcase';
 import { CustomOrderPipeline } from './components/custom-orders/CustomOrderPipeline';
 import { SalesHistory } from './components/sales/SalesHistory';
 import { ExpenseManagement } from './components/expenses/ExpenseManagement';
+import { ReserveFundDashboard } from './components/reserve-fund/ReserveFundDashboard';
 import { InventoryManagement } from './components/inventory/InventoryManagement';
 import { ReportsDashboard } from './components/reports/ReportsDashboard';
 import { ShiftModal } from './components/shifts/ShiftModal';
@@ -281,7 +282,12 @@ export const App: React.FC = () => {
           {activeTab === 'showcase' && <CustomerShowcase />}
           {activeTab === 'custom-orders' && <CustomOrderPipeline />}
           {activeTab === 'sales' && <SalesHistory />}
-          {activeTab === 'expenses' && <ExpenseManagement />}
+          {activeTab === 'expenses' && (
+            <ExpenseManagement onNavigateToReserveFund={() => handleSelectTab('reserve-fund')} />
+          )}
+          {activeTab === 'reserve-fund' && (
+            <ReserveFundDashboard onNavigateToExpenses={() => handleSelectTab('expenses')} />
+          )}
           {activeTab === 'inventory' && <InventoryManagement />}
           {activeTab === 'reports' && <ReportsDashboard />}
           {activeTab === 'staff' && !isDemoMode && <StaffManagement />}
