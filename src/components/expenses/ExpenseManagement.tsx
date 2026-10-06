@@ -110,8 +110,13 @@ export const ExpenseManagement: React.FC<ExpenseManagementProps> = ({
   });
   const [customDate, setCustomDate] = useState<string>(() => getLocalDateStr(new Date()));
 
-  // View Mode: Table (default) vs Cards (responsive on mobile, tablet, and desktop)
-  const [viewMode, setViewMode] = useState<'table' | 'cards'>('table');
+  // View Mode: Cards (default on mobile for 100% full visibility) vs Table (desktop)
+  const [viewMode, setViewMode] = useState<'table' | 'cards'>(() => {
+    if (typeof window !== 'undefined' && window.innerWidth < 768) {
+      return 'cards';
+    }
+    return 'table';
+  });
 
   // One-click sample expenses generator so the table is never mysteriously empty when testing
   const handleSeedSampleExpenses = () => {
@@ -1691,6 +1696,17 @@ export const ExpenseManagement: React.FC<ExpenseManagementProps> = ({
       {/* Expenses Table View (Responsive on All Devices with Horizontal Scroll) */}
       {viewMode === 'table' && (
       <div className="bg-white rounded-3xl border border-rose-100/90 shadow-sm overflow-hidden flex flex-col animate-in fade-in duration-200">
+        {/* Mobile Swipe Hint */}
+        <div className="sm:hidden bg-rose-50/60 border-b border-rose-100 px-3 py-1.5 text-[11px] font-bold text-slate-600 flex items-center justify-between">
+          <span>👉 អូសទៅស្តាំ (Swipe ➡️) ដើម្បីមើលគ្រប់ជួរឈរ</span>
+          <button
+            type="button"
+            onClick={() => setViewMode('cards')}
+            className="text-rose-600 font-black underline cursor-pointer"
+          >
+            ប្តូរទៅមើល «📱 កាត»
+          </button>
+        </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs text-slate-600 min-w-[760px]">
             <thead className="bg-slate-50 text-slate-700 font-black border-b border-slate-200">
@@ -1790,6 +1806,12 @@ export const ExpenseManagement: React.FC<ExpenseManagementProps> = ({
                     <tr key={expense.id} className="hover:bg-rose-50/40 transition-colors">
                       <td className="py-2.5 px-4">
                         <div className="font-black text-slate-900 text-sm">{expense.title}</div>
+                        {/* On mobile screens, also show amount & qty directly in first column */}
+                        <div className="sm:hidden flex items-center gap-2 mt-0.5 font-sans font-black text-rose-600 text-xs">
+                          <span>{expense.amountKhr.toLocaleString()} ៛</span>
+                          <span className="text-slate-400 font-normal">(${expense.amountUsd.toFixed(2)})</span>
+                          <span className="text-slate-500 font-semibold">• {displayQty} {expense.unit || 'ដុំ'}</span>
+                        </div>
                         <div className="flex items-center gap-1.5 mt-1 flex-wrap">
                           <span
                             className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-black border ${
