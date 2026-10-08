@@ -843,10 +843,22 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       if (saved) {
         const parsed: Expense[] = JSON.parse(saved);
         if (Array.isArray(parsed)) {
-          const existingIds = new Set(parsed.map((e) => e.id));
+          const isCakeSupplyExp = (e: Expense) =>
+            e.id?.startsWith('exp-cake-') ||
+            (e.date === '2026-10-07' && (e.supplier?.includes('Cake Supply') || e.title?.includes('Coal Black') || e.title?.includes('ទៀនលេខមាស')));
+          
+          const existingCakeCount = parsed.filter(isCakeSupplyExp).length;
+          let base = parsed;
+          let needsUpdate = false;
+          if (existingCakeCount < 26) {
+            base = parsed.filter((e) => !isCakeSupplyExp(e));
+            needsUpdate = true;
+          }
+
+          const existingIds = new Set(base.map((e) => e.id));
           const missingItems = initialExpenses.filter((ie) => !existingIds.has(ie.id));
-          if (missingItems.length > 0) {
-            const combined = [...missingItems, ...parsed];
+          if (missingItems.length > 0 || needsUpdate) {
+            const combined = [...missingItems, ...base];
             setExpenses(combined);
             safeSetStorage('bakery_expenses', JSON.stringify(combined));
           }
@@ -1078,9 +1090,19 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         if (Array.isArray(parsed)) {
           const mockExpenseIds = new Set(['exp-1', 'exp-2', 'exp-3', 'exp-4', 'exp-5', 'exp-6', 'exp-7']);
           const active = parsed.filter((e) => e && e.id && !mockExpenseIds.has(e.id));
-          const existingIds = new Set(active.map((e) => e.id));
+          const isCakeSupplyExp = (e: Expense) =>
+            e.id?.startsWith('exp-cake-') ||
+            (e.date === '2026-10-07' && (e.supplier?.includes('Cake Supply') || e.title?.includes('Coal Black') || e.title?.includes('ទៀនលេខមាស')));
+          
+          const existingCakeCount = active.filter(isCakeSupplyExp).length;
+          let base = active;
+          if (existingCakeCount < 26) {
+            base = active.filter((e) => !isCakeSupplyExp(e));
+          }
+
+          const existingIds = new Set(base.map((e) => e.id));
           const missingInitials = initialExpenses.filter((ie) => !existingIds.has(ie.id));
-          const combined = [...active, ...missingInitials];
+          const combined = [...base, ...missingInitials];
           return autoMigrateExpenseDates(combined);
         }
       } catch (e) {}
