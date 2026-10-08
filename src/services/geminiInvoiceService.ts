@@ -302,27 +302,37 @@ Return ONLY a valid JSON object matching this schema without any markdown format
   "rawNotes": "ចំណាំបន្ថែម"
 }`;
 
-  // 1. Purge obsolete or low-quota preview models from cache
-  let activeModel = typeof localStorage !== 'undefined' ? localStorage.getItem('sweetbakery_gemini_active_model') : null;
-  if (!activeModel || activeModel.includes('3.') || activeModel.includes('preview')) {
-    activeModel = 'gemini-2.5-flash';
-    if (typeof localStorage !== 'undefined') {
-      localStorage.setItem('sweetbakery_gemini_active_model', 'gemini-2.5-flash');
+  // 1. Dynamic model discovery directly from Google ModelService
+  let validModels: string[] = [];
+  try {
+    const listRes = await fetch('https://generativelanguage.googleapis.com/v1beta/models', {
+      headers: { 'x-goog-api-key': apiKey },
+    });
+    if (listRes.ok) {
+      const data = await listRes.json();
+      const rawList: any[] = data.models || [];
+      validModels = rawList
+        .filter((m: any) => m.supportedGenerationMethods?.includes('generateContent'))
+        .map((m: any) => m.name?.replace('models/', ''))
+        .filter((name: string) => name && !name.includes('embedding') && !name.includes('aqa') && !name.includes('imagen'));
     }
-  }
+  } catch (e) {}
 
-  // Candidates list: High-quota stable models (1,500 requests/day) with automatic fallback
-  const candidateModels = [
-    activeModel,
-    'gemini-2.5-flash',
-    'gemini-2.0-flash',
+  // Prioritize high-quota stable models (1,500 req/day: gemini-1.5-flash, gemini-2.0-flash, gemini-1.5-pro)
+  const prioritizedCandidates = [
+    ...validModels.filter((m) => m === 'gemini-1.5-flash' || m === 'gemini-1.5-flash-latest'),
+    ...validModels.filter((m) => m.includes('2.0-flash')),
+    ...validModels.filter((m) => m.includes('1.5-flash') && !m.includes('8b')),
+    ...validModels.filter((m) => m.includes('1.5-pro')),
     'gemini-1.5-flash',
-    'gemini-2.5-pro',
+    'gemini-1.5-flash-latest',
+    'gemini-2.0-flash',
+    'gemini-2.0-flash-exp',
     'gemini-1.5-pro',
-    'gemini-1.5-flash-8b',
+    ...validModels,
   ].filter(Boolean) as string[];
 
-  const models = Array.from(new Set(candidateModels));
+  const models = Array.from(new Set(prioritizedCandidates));
   let lastError: any = null;
 
   const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -363,7 +373,7 @@ Return ONLY a valid JSON object matching this schema without any markdown format
           const errorData = await response.json().catch(() => ({}));
           const errMsg = errorData.error?.message || `HTTP ${response.status}: ${response.statusText}`;
 
-          // If Quota exceeded on this model, or model 404, or high demand:
+          // If Quota exceeded on this model, or model 404, or rate limit:
           // Immediately try the next candidate model in the list!
           if (
             response.status === 404 ||
@@ -371,6 +381,8 @@ Return ONLY a valid JSON object matching this schema without any markdown format
             response.status === 503 ||
             errMsg.toLowerCase().includes('quota') ||
             errMsg.toLowerCase().includes('exceeded') ||
+            errMsg.toLowerCase().includes('not found') ||
+            errMsg.toLowerCase().includes('not supported') ||
             errMsg.toLowerCase().includes('rate limit')
           ) {
             lastError = new Error(errMsg);
