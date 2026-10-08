@@ -198,20 +198,22 @@ export const testGeminiApiKey = async (apiKey: string): Promise<ApiKeyTestResult
       const modelsList: any[] = data.models || [];
       const usableModels = modelsList
         .filter((m: any) => m.supportedGenerationMethods?.includes('generateContent'))
-        .map((m: any) => m.name?.replace('models/', ''));
+        .map((m: any) => m.name?.replace('models/', ''))
+        .filter((name: string) => name && !name.includes('embedding') && !name.includes('aqa') && !name.includes('imagen'));
 
-      // Find the best flash model available for this account (prioritize high-quota stable models)
-      const bestModel =
-        usableModels.find((m: string) => m === 'gemini-2.5-flash') ||
-        usableModels.find((m: string) => m === 'gemini-2.0-flash') ||
-        usableModels.find((m: string) => m === 'gemini-1.5-flash') ||
-        usableModels.find((m: string) => m.includes('2.5-flash')) ||
-        usableModels.find((m: string) => m.includes('2.0-flash')) ||
-        usableModels.find((m: string) => m.includes('1.5-flash')) ||
-        usableModels.find((m: string) => m.includes('flash')) ||
-        'gemini-2.5-flash';
+      // Sort flash models to the front for maximum speed
+      usableModels.sort((a: string, b: string) => {
+        const aScore = a.includes('2.5-flash') ? 4 : a.includes('2.0-flash') ? 3 : a.includes('1.5-flash') ? 2 : 1;
+        const bScore = b.includes('2.5-flash') ? 4 : b.includes('2.0-flash') ? 3 : b.includes('1.5-flash') ? 2 : 1;
+        return bScore - aScore;
+      });
 
-      localStorage.setItem('sweetbakery_gemini_active_model', bestModel);
+      if (usableModels.length > 0) {
+        localStorage.setItem('sweetbakery_usable_models', JSON.stringify(usableModels));
+        localStorage.setItem('sweetbakery_gemini_active_model', usableModels[0]);
+      }
+
+      const bestModel = usableModels[0] || 'gemini-1.5-flash';
 
       return {
         valid: true,
@@ -305,21 +307,61 @@ Return ONLY a valid JSON object matching this schema without any markdown format
   "rawNotes": "ចំណាំបន្ថែម"
 }`;
 
-  // 1. Prioritized modern, ultra-fast vision models
-  const defaultFastModels = [
-    'gemini-2.5-flash',
-    'gemini-2.0-flash',
-    'gemini-1.5-flash',
-    'gemini-1.5-flash-latest',
-    'gemini-2.0-flash-exp',
-    'gemini-1.5-pro',
-  ];
+  // 1. Dynamic model discovery to get the EXACT models available on this API key
+  let models: string[] = [];
 
-  // Try cached model first, otherwise use default list immediately without blocking
-  let models = defaultFastModels;
+  try {
+    const cachedStr = localStorage.getItem('sweetbakery_usable_models');
+    if (cachedStr) {
+      const parsed = JSON.parse(cachedStr);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        models = parsed;
+      }
+    }
+  } catch (e) {}
+
+  if (models.length === 0) {
+    try {
+      const listRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`, {
+        method: 'GET',
+        headers: { 'x-goog-api-key': apiKey },
+      });
+      if (listRes.ok) {
+        const data = await listRes.json();
+        const rawList: any[] = data.models || [];
+        const usable = rawList
+          .filter((m: any) => m.supportedGenerationMethods?.includes('generateContent'))
+          .map((m: any) => m.name?.replace('models/', ''))
+          .filter((name: string) => name && !name.includes('embedding') && !name.includes('aqa') && !name.includes('imagen'));
+
+        if (usable.length > 0) {
+          usable.sort((a: string, b: string) => {
+            const aScore = a.includes('2.5-flash') ? 4 : a.includes('2.0-flash') ? 3 : a.includes('1.5-flash') ? 2 : 1;
+            const bScore = b.includes('2.5-flash') ? 4 : b.includes('2.0-flash') ? 3 : b.includes('1.5-flash') ? 2 : 1;
+            return bScore - aScore;
+          });
+          models = usable;
+          localStorage.setItem('sweetbakery_usable_models', JSON.stringify(usable));
+        }
+      }
+    } catch (e) {}
+  }
+
+  // Fallback defaults if list retrieval failed
+  if (models.length === 0) {
+    models = [
+      'gemini-1.5-flash',
+      'gemini-1.5-flash-latest',
+      'gemini-2.0-flash',
+      'gemini-2.0-flash-exp',
+      'gemini-1.5-flash-8b',
+    ];
+  }
+
+  // Put currently active model first if available
   const savedActiveModel = localStorage.getItem('sweetbakery_gemini_active_model');
-  if (savedActiveModel && defaultFastModels.includes(savedActiveModel)) {
-    models = [savedActiveModel, ...defaultFastModels.filter((m) => m !== savedActiveModel)];
+  if (savedActiveModel && models.includes(savedActiveModel)) {
+    models = [savedActiveModel, ...models.filter((m) => m !== savedActiveModel)];
   }
 
   let lastError: any = null;
@@ -330,7 +372,7 @@ Return ONLY a valid JSON object matching this schema without any markdown format
     let retries = 1; // Auto-retry for transient network hiccups
     while (retries >= 0) {
       try {
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
         const response = await fetch(url, {
           method: 'POST',
           headers: {
@@ -457,6 +499,9 @@ Return ONLY a valid JSON object matching this schema without any markdown format
 
       const todayStr = new Date().toISOString().split('T')[0];
       const extractedDate = normalizeDateToYMD(parsed.date) || todayStr;
+
+      // Remember the working model for instant next-time execution
+      localStorage.setItem('sweetbakery_gemini_active_model', model);
 
       return {
         supplier: parsed.supplier || 'អ្នកផ្គត់ផ្គង់ទូទៅ',
