@@ -311,11 +311,13 @@ export const autoMigrateExpenseDates = (items: Expense[]): Expense[] => {
   return migrated;
 };
 
-// Helper to cleanly deduplicate and merge expenses (strictly guarantees no duplicate items)
+// Helper to cleanly deduplicate and merge expenses (strictly guarantees no duplicate items and respects deletions)
 export const cleanDeduplicateExpenses = (items: Expense[]): Expense[] => {
-  if (!Array.isArray(items)) return initialExpenses;
+  const deletedIds = loadDeletedIds('expenses');
   const mockExpenseIds = new Set(['exp-1', 'exp-2', 'exp-4', 'exp-5', 'exp-6', 'exp-7']);
-  const nonMock = items.filter((e) => e && e.id && !mockExpenseIds.has(e.id));
+  const nonMock = (Array.isArray(items) ? items : []).filter(
+    (e) => e && e.id && !mockExpenseIds.has(e.id) && !deletedIds.has(e.id)
+  );
 
   // Identify Cake Supply / B0208720 invoice items
   const isCakeSupplyInvoiceItem = (e: Expense) => {
@@ -336,8 +338,8 @@ export const cleanDeduplicateExpenses = (items: Expense[]): Expense[] => {
   // Keep all general/utility expenses (Electricity EDC, Gas, Rent, Salary, Custom user expenses)
   const otherExpenses = nonMock.filter((e) => !isCakeSupplyInvoiceItem(e) && !isSwanInvoiceItem(e));
 
-  // Clean initial official items (26 Cake Supply items, 10 Swan items, EDC, Gas)
-  const officialInitials = initialExpenses;
+  // Clean initial official items (only include items that haven't been deleted by the user)
+  const officialInitials = initialExpenses.filter((e) => e && e.id && !deletedIds.has(e.id));
   const allItems = [...officialInitials, ...otherExpenses];
 
   const seenIds = new Set<string>();
@@ -345,7 +347,7 @@ export const cleanDeduplicateExpenses = (items: Expense[]): Expense[] => {
   const result: Expense[] = [];
 
   for (const exp of allItems) {
-    if (!exp || !exp.id || seenIds.has(exp.id)) continue;
+    if (!exp || !exp.id || seenIds.has(exp.id) || deletedIds.has(exp.id)) continue;
     seenIds.add(exp.id);
 
     const d = normalizeDateToYMD(exp.date || exp.createdAt || '');
@@ -936,8 +938,11 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       const deduped = cleanDeduplicateExpenses(Array.isArray(parsed) ? parsed : []);
       setExpenses(deduped);
       safeSetStorage('bakery_expenses', JSON.stringify(deduped));
+      const deletedIds = loadDeletedIds('expenses');
       initialExpenses.forEach((exp) => {
-        saveFirestoreDoc('expenses', exp.id, exp);
+        if (!deletedIds.has(exp.id)) {
+          saveFirestoreDoc('expenses', exp.id, exp);
+        }
       });
     } catch (e) {}
   }, []);
@@ -2072,8 +2077,11 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       if (globalIsDemoMode) return;
       if (Array.isArray(cloudExpenses)) {
         const deduped = cleanDeduplicateExpenses(cloudExpenses);
+        const deletedIds = loadDeletedIds('expenses');
         initialExpenses.forEach((exp) => {
-          saveFirestoreDoc('expenses', exp.id, exp);
+          if (!deletedIds.has(exp.id)) {
+            saveFirestoreDoc('expenses', exp.id, exp);
+          }
         });
 
         if (deduped.length > 0) {
