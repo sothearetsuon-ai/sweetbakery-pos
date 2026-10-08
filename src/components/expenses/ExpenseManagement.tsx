@@ -545,7 +545,7 @@ export const ExpenseManagement: React.FC<ExpenseManagementProps> = ({
   }, [expenses]);
 
   return (
-    <div className="flex-1 flex flex-col p-3 sm:p-6 overflow-y-auto space-y-4 sm:space-y-6 pb-24 md:pb-6">
+    <div className="flex-1 flex flex-col p-3 sm:p-6 overflow-y-auto space-y-4 sm:space-y-6 pb-40 md:pb-36">
       {/* 2024 to 2026 Quick Migration Banner */}
       {count2024 > 0 && (
         <div className="bg-gradient-to-r from-amber-500/15 via-rose-500/15 to-orange-500/15 border-2 border-amber-300 rounded-3xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm animate-in fade-in duration-300">
@@ -1659,23 +1659,21 @@ export const ExpenseManagement: React.FC<ExpenseManagementProps> = ({
           </div>
         ) : viewMode === 'TABLE' ? (
           /* Table View */
-          <div className="bg-white rounded-3xl border border-rose-100 shadow-2xs overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
+          <div className="bg-white rounded-3xl border border-rose-100 shadow-sm overflow-hidden">
+            <div className="overflow-x-auto scrollbar-thin">
+              <table className="w-full text-left text-xs border-collapse">
                 <thead>
-                  <tr className="bg-gradient-to-r from-slate-900 to-slate-800 text-white text-[11px] uppercase tracking-wider font-bold">
-                    <th className="py-3 px-3">#</th>
-                    <th className="py-3 px-3">📅 កាលបរិច្ឆេទ</th>
-                    <th className="py-3 px-3">📝 ឈ្មោះចំណាយ / មុខទំនិញ</th>
-                    <th className="py-3 px-3">🏷️ ប្រភេទ</th>
-                    <th className="py-3 px-3 text-right">📦 ចំនួន</th>
-                    <th className="py-3 px-3 text-right">💵 តម្លៃរាយ</th>
-                    <th className="py-3 px-3 text-right">💰 សរុប (៛ KHR)</th>
-                    <th className="py-3 px-3">👤 អ្នកចំណាយ</th>
-                    <th className="py-3 px-3">🏦 វិធីទូទាត់</th>
-                    <th className="py-3 px-3">⏰ ស្ថានភាព</th>
-                    <th className="py-3 px-3 text-center">🧾 វិក្កយបត្រ</th>
-                    <th className="py-3 px-3 text-center">⚙️ សកម្មភាព</th>
+                  <tr className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white text-[11px] font-bold tracking-wider">
+                    <th className="py-2.5 px-2.5 text-center whitespace-nowrap w-16"># / ថ្ងៃ</th>
+                    <th className="py-2.5 px-3 whitespace-nowrap min-w-[170px]">📝 ឈ្មោះចំណាយ / មុខទំនិញ</th>
+                    <th className="py-2.5 px-2.5 whitespace-nowrap">🏷️ ប្រភេទ</th>
+                    <th className="py-2.5 px-2.5 text-right whitespace-nowrap">📦 បរិមាណ & តម្លៃរាយ</th>
+                    <th className="py-2.5 px-2.5 text-right whitespace-nowrap">💰 សរុប (៛ KHR)</th>
+                    <th className="py-2.5 px-2.5 whitespace-nowrap">👤 អ្នកចំណាយ & វិធីទូទាត់</th>
+                    <th className="py-2.5 px-2.5 text-center whitespace-nowrap">⏰ ស្ថានភាព & វិក្កយបត្រ</th>
+                    <th className="py-2.5 px-3 text-center whitespace-nowrap sticky right-0 bg-slate-900 z-20 shadow-[-6px_0_10px_-2px_rgba(0,0,0,0.3)]">
+                      ⚙️ សកម្មភាព
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -1691,15 +1689,13 @@ export const ExpenseManagement: React.FC<ExpenseManagementProps> = ({
                     return (
                       <tr
                         key={expense.id}
-                        className="hover:bg-rose-50/40 transition-colors"
+                        className="group hover:bg-rose-50/50 transition-colors"
                       >
-                        {/* Index */}
-                        <td className="py-3 px-3 text-slate-400 font-mono text-[11px]">
-                          {idx + 1}
-                        </td>
-
-                        {/* Date */}
-                        <td className="py-3 px-3 whitespace-nowrap">
+                        {/* Index & Date */}
+                        <td className="py-2.5 px-2.5 whitespace-nowrap text-center">
+                          <span className="text-[10px] text-slate-400 font-mono font-bold block leading-tight">
+                            #{idx + 1}
+                          </span>
                           <button
                             type="button"
                             onClick={() => {
@@ -1709,7 +1705,7 @@ export const ExpenseManagement: React.FC<ExpenseManagementProps> = ({
                               setCustomEndDate(expD);
                               setDatePreset('CUSTOM_RANGE');
                             }}
-                            className="font-bold text-slate-700 hover:text-rose-600 flex items-center gap-1 cursor-pointer"
+                            className="font-bold text-slate-700 hover:text-rose-600 inline-flex items-center gap-1 cursor-pointer text-[11px] mt-0.5"
                             title="ចុចដើម្បីមើលតែថ្ងៃនេះ"
                           >
                             <Calendar className="w-3 h-3 text-rose-500 shrink-0" />
@@ -1717,26 +1713,28 @@ export const ExpenseManagement: React.FC<ExpenseManagementProps> = ({
                           </button>
                         </td>
 
-                        {/* Title & Notes */}
-                        <td className="py-3 px-3 min-w-[180px]">
-                          <div className="font-black text-slate-900 text-xs">{expense.title}</div>
+                        {/* Title, Supplier, & Notes */}
+                        <td className="py-2.5 px-3 min-w-[170px] max-w-[260px]">
+                          <div className="font-black text-slate-900 text-xs leading-snug line-clamp-2" title={expense.title}>
+                            {expense.title}
+                          </div>
                           {expense.supplier && (
-                            <div className="text-[10px] text-slate-500 font-semibold mt-0.5">
+                            <div className="text-[10px] text-slate-500 font-medium mt-0.5 truncate" title={expense.supplier}>
                               🏪 {expense.supplier}
                             </div>
                           )}
                           {expense.notes && (
-                            <div className="text-[10px] text-slate-400 mt-0.5 truncate max-w-[200px]" title={expense.notes}>
+                            <div className="text-[10px] text-slate-400 mt-0.5 truncate" title={expense.notes}>
                               📝 {expense.notes}
                             </div>
                           )}
                         </td>
 
                         {/* Category */}
-                        <td className="py-3 px-3 whitespace-nowrap">
+                        <td className="py-2.5 px-2.5 whitespace-nowrap">
                           <div className="flex flex-col gap-1 items-start">
                             <span
-                              className={`inline-flex items-center px-2 py-0.5 rounded-lg text-[10px] font-black border ${
+                              className={`inline-flex items-center px-1.5 py-0.2 rounded text-[9px] font-black border ${
                                 getExpenseMainType(expense) === 'INGREDIENT'
                                   ? 'bg-amber-100 text-amber-900 border-amber-300'
                                   : getExpenseMainType(expense) === 'SUPPLY'
@@ -1750,24 +1748,24 @@ export const ExpenseManagement: React.FC<ExpenseManagementProps> = ({
                                 ? '📦 សម្ភារៈ'
                                 : '🏢 ទូទៅ'}
                             </span>
-                            <span className={`inline-flex items-center px-1.5 py-0.2 rounded text-[9px] font-bold border ${catInfo.color}`}>
+                            <span className={`inline-flex items-center px-1.5 py-0.2 rounded text-[9px] font-semibold border ${catInfo.color}`}>
                               {catInfo.labelKh}
                             </span>
                           </div>
                         </td>
 
-                        {/* Quantity */}
-                        <td className="py-3 px-3 text-right whitespace-nowrap font-bold text-slate-800">
-                          {displayQty} <span className="text-slate-500 text-[10px]">{expense.unit || 'ដុំ'}</span>
-                        </td>
-
-                        {/* Unit Price */}
-                        <td className="py-3 px-3 text-right whitespace-nowrap font-semibold text-slate-600">
-                          {displayUnitPriceKhr.toLocaleString()} ៛
+                        {/* Quantity & Unit Price */}
+                        <td className="py-2.5 px-2.5 text-right whitespace-nowrap">
+                          <div className="font-black text-slate-800 text-xs">
+                            {displayQty} <span className="text-slate-500 text-[10px] font-normal">{expense.unit || 'ដុំ'}</span>
+                          </div>
+                          <div className="text-[10px] text-slate-500 font-medium mt-0.5">
+                            @ {displayUnitPriceKhr.toLocaleString()} ៛
+                          </div>
                         </td>
 
                         {/* Total Amount */}
-                        <td className="py-3 px-3 text-right whitespace-nowrap">
+                        <td className="py-2.5 px-2.5 text-right whitespace-nowrap">
                           <div className="font-black text-rose-600 text-xs">
                             {expense.amountKhr.toLocaleString()} ៛
                           </div>
@@ -1776,111 +1774,105 @@ export const ExpenseManagement: React.FC<ExpenseManagementProps> = ({
                           </div>
                         </td>
 
-                        {/* Paid By */}
-                        <td className="py-3 px-3 whitespace-nowrap text-slate-700 font-bold text-xs">
-                          {expense.paidBy}
-                        </td>
-
-                        {/* Payment Method */}
-                        <td className="py-3 px-3 whitespace-nowrap">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              if (expense.paymentMethod === 'RESERVE_FUND') {
-                                soundFx.playPop();
-                                updateExpense(expense.id, { paymentMethod: 'CASH_KHR' });
-                              } else {
-                                soundFx.playSuccess();
-                                updateExpense(expense.id, { paymentMethod: 'RESERVE_FUND' });
-                              }
-                            }}
-                            className={`text-[10px] px-2 py-0.5 rounded-lg font-bold transition-all cursor-pointer border flex items-center gap-1 ${
-                              expense.paymentMethod === 'RESERVE_FUND'
-                                ? 'bg-emerald-100 text-emerald-900 border-emerald-300'
-                                : 'bg-amber-50 text-amber-900 border-amber-300 hover:bg-emerald-50'
-                            }`}
-                            title={
-                              expense.paymentMethod === 'RESERVE_FUND'
-                                ? 'បានកាត់ពីទុនបម្រុងរួច (ចុចដើម្បីបង្វិលសងទុនវិញ)'
-                                : 'ចុចដើម្បីកាត់ចំណាយនេះចេញពីទុនបម្រុងភ្លាមៗ'
-                            }
-                          >
-                            {expense.paymentMethod === 'RESERVE_FUND' ? (
-                              <>
-                                <span className="text-emerald-700 font-black">✓</span>
-                                <span>🏦 ទុនបម្រុង</span>
-                              </>
-                            ) : (
-                              <>
-                                <span>+ 🏦 កាត់ទុន</span>
-                                <span className="text-[9px] text-amber-700">
-                                  ({expense.paymentMethod === 'CASH_KHR' ? '៛' : expense.paymentMethod === 'BANK_TRANSFER' ? 'ABA' : '$'})
-                                </span>
-                              </>
-                            )}
-                          </button>
-                        </td>
-
-                        {/* Payment Status */}
-                        <td className="py-3 px-3 whitespace-nowrap">
-                          {expense.paymentStatus === 'UNPAID' ? (
+                        {/* Paid By & Payment Method */}
+                        <td className="py-2.5 px-2.5 whitespace-nowrap">
+                          <div className="text-xs font-bold text-slate-800">{expense.paidBy}</div>
+                          <div className="mt-1">
                             <button
                               type="button"
-                              onClick={() => handleMarkAsPaid(expense)}
-                              className="px-2 py-0.5 bg-amber-500 hover:bg-emerald-600 text-white rounded-lg text-[10px] font-black shadow-2xs transition-all flex items-center gap-1 cursor-pointer"
-                              title="ចុចដើម្បីកំណត់ថាបានបង់ប្រាក់រួច"
+                              onClick={() => {
+                                if (expense.paymentMethod === 'RESERVE_FUND') {
+                                  soundFx.playPop();
+                                  updateExpense(expense.id, { paymentMethod: 'CASH_KHR' });
+                                } else {
+                                  soundFx.playSuccess();
+                                  updateExpense(expense.id, { paymentMethod: 'RESERVE_FUND' });
+                                }
+                              }}
+                              className={`text-[9px] px-2 py-0.5 rounded-lg font-bold transition-all cursor-pointer border inline-flex items-center gap-1 ${
+                                expense.paymentMethod === 'RESERVE_FUND'
+                                  ? 'bg-emerald-100 text-emerald-900 border-emerald-300'
+                                  : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-emerald-50'
+                              }`}
+                              title={
+                                expense.paymentMethod === 'RESERVE_FUND'
+                                  ? 'បានកាត់ពីទុនបម្រុងរួច (ចុចដើម្បីបង្វិលសងទុនវិញ)'
+                                  : 'ចុចដើម្បីកាត់ចំណាយនេះចេញពីទុនបម្រុងភ្លាមៗ'
+                              }
                             >
-                              <Clock className="w-3 h-3" />
-                              <span>ជំពាក់ (បង់ឥឡូវ)</span>
+                              {expense.paymentMethod === 'RESERVE_FUND' ? (
+                                <>
+                                  <span className="text-emerald-700 font-black">✓</span>
+                                  <span>🏦 ទុនបម្រុង</span>
+                                </>
+                              ) : (
+                                <>
+                                  <span>🏦 {expense.paymentMethod === 'CASH_KHR' ? 'សាច់ប្រាក់ (៛)' : expense.paymentMethod === 'BANK_TRANSFER' ? 'ABA/ធនាគារ' : 'ដុល្លារ ($)'}</span>
+                                </>
+                              )}
                             </button>
-                          ) : (
-                            <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
-                              <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                              <span>បង់រួច</span>
-                            </span>
-                          )}
+                          </div>
                         </td>
 
-                        {/* Invoice / Receipt Photo Column */}
-                        <td className="py-3 px-3 text-center whitespace-nowrap">
-                          {expense.receiptImage ? (
-                            <div className="flex items-center justify-center gap-1.5">
-                              <img
-                                src={expense.receiptImage}
-                                alt="Thumbnail"
-                                onClick={() => setPreviewReceiptImage(expense.receiptImage || null)}
-                                className="w-8 h-8 rounded-lg object-cover border border-rose-200 cursor-pointer shadow-2xs hover:scale-110 transition-transform"
-                                title="ចុចដើម្បីពង្រីករូបវិក្កយបត្រ"
-                              />
+                        {/* Payment Status & Receipt */}
+                        <td className="py-2.5 px-2.5 whitespace-nowrap text-center">
+                          <div className="flex flex-col items-center gap-1">
+                            {expense.paymentStatus === 'UNPAID' ? (
                               <button
                                 type="button"
-                                onClick={() => setPreviewReceiptImage(expense.receiptImage || null)}
-                                className="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg transition-colors cursor-pointer"
-                                title="មើលរូបភាពវិក្កយបត្រធំ"
+                                onClick={() => handleMarkAsPaid(expense)}
+                                className="px-2 py-0.5 bg-amber-500 hover:bg-emerald-600 text-white rounded-lg text-[9px] font-black shadow-2xs transition-all flex items-center gap-0.5 cursor-pointer"
+                                title="ចុចដើម្បីកំណត់ថាបានបង់ប្រាក់រួច"
                               >
-                                <Eye className="w-3.5 h-3.5" />
+                                <Clock className="w-2.5 h-2.5" />
+                                <span>ជំពាក់ (បង់ឥឡូវ)</span>
                               </button>
-                            </div>
-                          ) : (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                soundFx.playPop();
-                                setEditingExpense(expense);
-                                setIsAddExpenseOpen(true);
-                              }}
-                              className="px-2 py-1 bg-slate-50 hover:bg-rose-50 text-slate-500 hover:text-rose-600 rounded-lg border border-slate-200 text-[10px] font-bold flex items-center gap-1 mx-auto cursor-pointer transition-colors"
-                              title="ចុចដើម្បីភ្ជាប់រូបភាពវិក្កយបត្រ"
-                            >
-                              <Camera className="w-3 h-3" />
-                              <span>+ ដាក់រូប</span>
-                            </button>
-                          )}
+                            ) : (
+                              <span className="inline-flex items-center gap-0.5 text-[9px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                                <CheckCircle2 className="w-2.5 h-2.5 text-emerald-600" />
+                                <span>បង់រួច</span>
+                              </span>
+                            )}
+
+                            {expense.receiptImage ? (
+                              <div className="flex items-center justify-center gap-1">
+                                <img
+                                  src={expense.receiptImage}
+                                  alt="Thumbnail"
+                                  onClick={() => setPreviewReceiptImage(expense.receiptImage || null)}
+                                  className="w-5 h-5 rounded object-cover border border-rose-200 cursor-pointer shadow-2xs hover:scale-125 transition-transform"
+                                  title="ចុចដើម្បីពង្រីករូបវិក្កយបត្រ"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => setPreviewReceiptImage(expense.receiptImage || null)}
+                                  className="px-1.5 py-0.2 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded text-[9px] font-bold transition-colors cursor-pointer"
+                                  title="មើលរូបភាពវិក្កយបត្រធំ"
+                                >
+                                  មើលរូប
+                                </button>
+                              </div>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  soundFx.playPop();
+                                  setEditingExpense(expense);
+                                  setIsAddExpenseOpen(true);
+                                }}
+                                className="px-1.5 py-0.2 bg-slate-50 hover:bg-rose-50 text-slate-400 hover:text-rose-600 rounded border border-slate-200 text-[9px] font-medium flex items-center gap-0.5 cursor-pointer transition-colors"
+                                title="ចុចដើម្បីភ្ជាប់រូបភាពវិក្កយបត្រ"
+                              >
+                                <Camera className="w-2.5 h-2.5" />
+                                <span>+ រូប</span>
+                              </button>
+                            )}
+                          </div>
                         </td>
 
-                        {/* Actions */}
-                        <td className="py-3 px-3 text-center whitespace-nowrap">
-                          <div className="flex items-center justify-center gap-1">
+                        {/* Actions (Sticky Right) */}
+                        <td className="py-2.5 px-3 text-center whitespace-nowrap sticky right-0 bg-white/95 group-hover:bg-rose-50/95 backdrop-blur-xs shadow-[-6px_0_12px_-4px_rgba(0,0,0,0.08)] z-10">
+                          <div className="flex items-center justify-center gap-1.5">
                             <button
                               type="button"
                               onClick={() => {
@@ -1888,8 +1880,8 @@ export const ExpenseManagement: React.FC<ExpenseManagementProps> = ({
                                 setEditingExpense(expense);
                                 setIsAddExpenseOpen(true);
                               }}
-                              className="p-1.5 bg-slate-100 hover:bg-pink-50 text-slate-600 hover:text-pink-600 rounded-lg transition-colors cursor-pointer"
-                              title="កែប្រែ"
+                              className="p-1.5 bg-slate-100 hover:bg-pink-100 text-slate-700 hover:text-pink-700 rounded-xl transition-all cursor-pointer shadow-2xs active:scale-90"
+                              title="កែប្រែ (Edit)"
                             >
                               <Edit2 className="w-3.5 h-3.5" />
                             </button>
@@ -1899,8 +1891,8 @@ export const ExpenseManagement: React.FC<ExpenseManagementProps> = ({
                                 soundFx.playPop();
                                 setExpenseToDelete(expense);
                               }}
-                              className="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg transition-colors cursor-pointer"
-                              title="លុប"
+                              className="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 hover:text-rose-700 rounded-xl transition-all cursor-pointer shadow-2xs active:scale-90"
+                              title="លុប (Delete)"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
                             </button>
