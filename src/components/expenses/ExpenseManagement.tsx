@@ -84,6 +84,7 @@ export const ExpenseManagement: React.FC<ExpenseManagementProps> = ({
     updateExpense,
     deleteExpense,
     clearAllExpenses,
+    updateExpenseDatesFrom2024To2026,
     sales,
     exchangeRate,
     reserveFund,
@@ -524,8 +525,47 @@ export const ExpenseManagement: React.FC<ExpenseManagementProps> = ({
     ? Math.min(100, Math.max(0, Math.round((reserveFund.currentBalanceKhr / reserveFund.targetAmountKhr) * 100)))
     : 100;
 
+  // Detect any expenses that have year 2024
+  const count2024 = useMemo(() => {
+    return expenses.filter(
+      (e) => (e.date && e.date.includes('2024')) || (e.createdAt && e.createdAt.includes('2024'))
+    ).length;
+  }, [expenses]);
+
   return (
     <div className="flex-1 flex flex-col p-3 sm:p-6 overflow-y-auto space-y-4 sm:space-y-6 pb-24 md:pb-6">
+      {/* 2024 to 2026 Quick Migration Banner */}
+      {count2024 > 0 && (
+        <div className="bg-gradient-to-r from-amber-500/15 via-rose-500/15 to-orange-500/15 border-2 border-amber-300 rounded-3xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm animate-in fade-in duration-300">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-amber-500 text-white flex items-center justify-center font-black text-lg shadow-sm shrink-0">
+              🗓️
+            </div>
+            <div>
+              <h4 className="font-black text-xs sm:text-sm text-slate-800">
+                រកឃើញមាន {count2024} ប្រតិបត្តិការដែលជាប់កាលបរិច្ឆេទឆ្នាំ ២០២៤
+              </h4>
+              <p className="text-[11px] text-slate-600 mt-0.5">
+                ចុចប៊ូតុងខាងស្តាំដើម្បីប្តូរចូលឆ្នាំ ២០២៦ (តុលា ២០២៦) ដោយស្វ័យប្រវត្តិ
+              </p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => {
+              const count = updateExpenseDatesFrom2024To2026();
+              soundFx.playSuccess();
+              confetti({ particleCount: 70, spread: 70, origin: { y: 0.6 } });
+            }}
+            className="px-4 py-2.5 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white font-black text-xs rounded-2xl shadow-md transition-all active:scale-95 cursor-pointer flex items-center gap-2 self-stretch sm:self-auto justify-center"
+          >
+            <RotateCcw className="w-4 h-4" />
+            <span>🔄 ប្តូរមកឆ្នាំ ២០២៦ ឥឡូវនេះ</span>
+          </button>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
         <div>

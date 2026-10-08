@@ -377,6 +377,7 @@ interface BakeryContextType {
   updateExpense: (id: string, updatedData: Partial<Expense>) => void;
   deleteExpense: (id: string) => void;
   clearAllExpenses: () => void;
+  updateExpenseDatesFrom2024To2026: () => number;
   totalExpensesUsd: number;
   totalExpensesKhr: number;
 
@@ -1001,12 +1002,52 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     return saved ? JSON.parse(saved) : initialRecipes;
   });
 
+  // Helper to auto-migrate any 2024 expense dates to 2026
+  const autoMigrateExpenseDates = (items: Expense[]): Expense[] => {
+    let changed = false;
+    const migrated = items.map((e) => {
+      let itemChanged = false;
+      let newDate = e.date;
+      let newCreatedAt = e.createdAt;
+      let newDueDate = e.dueDate;
+
+      if (e.date && e.date.includes('2024')) {
+        newDate = e.date.replace(/2024/g, '2026');
+        itemChanged = true;
+      }
+      if (e.createdAt && e.createdAt.includes('2024')) {
+        newCreatedAt = e.createdAt.replace(/2024/g, '2026');
+        itemChanged = true;
+      }
+      if (e.dueDate && e.dueDate.includes('2024')) {
+        newDueDate = e.dueDate.replace(/2024/g, '2026');
+        itemChanged = true;
+      }
+
+      if (itemChanged) {
+        changed = true;
+        return {
+          ...e,
+          date: newDate,
+          createdAt: newCreatedAt,
+          dueDate: newDueDate,
+        };
+      }
+      return e;
+    });
+
+    if (changed) {
+      safeSetStorage('bakery_expenses', JSON.stringify(migrated));
+    }
+    return migrated;
+  };
+
   // Expenses management
   const [expenses, setExpenses] = useState<Expense[]>(() => {
     if (globalIsDemoMode) {
       seedDemoDataIfMissing();
       const saved = localStorage.getItem('demo_bakery_expenses');
-      return saved ? JSON.parse(saved) : demoExpenses;
+      return saved ? autoMigrateExpenseDates(JSON.parse(saved)) : demoExpenses;
     }
     const saved = localStorage.getItem('bakery_expenses');
     if (saved) {
@@ -1014,7 +1055,8 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed)) {
           const mockExpenseIds = new Set(['exp-1', 'exp-2', 'exp-3', 'exp-4', 'exp-5', 'exp-6', 'exp-7']);
-          return parsed.filter((e) => e && e.id && !mockExpenseIds.has(e.id));
+          const active = parsed.filter((e) => e && e.id && !mockExpenseIds.has(e.id));
+          return autoMigrateExpenseDates(active);
         }
       } catch (e) {}
     }
@@ -1234,7 +1276,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             if (Array.isArray(parsed) && parsed.length > 0) {
               const mockExpenseIds = new Set(['exp-1', 'exp-2', 'exp-3', 'exp-4', 'exp-5', 'exp-6', 'exp-7']);
               const active = parsed.filter((e: any) => e && e.id && !deletedExpenseIds.current.has(e.id) && !mockExpenseIds.has(e.id));
-              setExpenses(active);
+              setExpenses(autoMigrateExpenseDates(active));
             }
           } catch (e) {}
         }
@@ -2651,6 +2693,61 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       flavors,
       telegramConfig: getStoredTelegramConfig(),
     }, true);
+  };
+
+  const updateExpenseDatesFrom2024To2026 = (): number => {
+    let count = 0;
+    setExpenses((prev) => {
+      const updated = prev.map((e) => {
+        let changed = false;
+        let newDate = e.date;
+        let newCreatedAt = e.createdAt;
+        let newDueDate = e.dueDate;
+
+        if (e.date && e.date.includes('2024')) {
+          newDate = e.date.replace(/2024/g, '2026');
+          changed = true;
+        }
+        if (e.createdAt && e.createdAt.includes('2024')) {
+          newCreatedAt = e.createdAt.replace(/2024/g, '2026');
+          changed = true;
+        }
+        if (e.dueDate && e.dueDate.includes('2024')) {
+          newDueDate = e.dueDate.replace(/2024/g, '2026');
+          changed = true;
+        }
+
+        if (changed) {
+          count++;
+          const updatedItem = {
+            ...e,
+            date: newDate,
+            createdAt: newCreatedAt,
+            dueDate: newDueDate,
+          };
+          syncSaveDoc('expenses', e.id, updatedItem);
+          return updatedItem;
+        }
+        return e;
+      });
+
+      if (count > 0) {
+        safeSetStorage('bakery_expenses', JSON.stringify(updated));
+        saveToLanSync({
+          products,
+          sales,
+          customOrders,
+          expenses: updated,
+          storeInfo,
+          flavors,
+          reserveFund: reserveFundRef.current,
+          telegramConfig: getStoredTelegramConfig(),
+        }, true);
+      }
+      return updated;
+    });
+
+    return count;
   };
 
   const totalExpensesUsd = expenses.reduce((acc, exp) => acc + exp.amountUsd, 0);
@@ -4259,6 +4356,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         updateExpense,
         deleteExpense,
         clearAllExpenses,
+        updateExpenseDatesFrom2024To2026,
         totalExpensesUsd,
         totalExpensesKhr,
         reserveFund: dynamicReserveFund,
