@@ -60,7 +60,7 @@ import {
 import { setGeminiApiKeyLocally } from '../services/geminiInvoiceService';
 import { offlineSyncService, SyncState } from '../services/offlineSyncService';
 import { soundFx } from '../utils/audio';
-import { formatDateDMY, formatDateTimeDMY } from '../utils/dateUtils';
+import { formatDateDMY, formatDateTimeDMY, normalizeDateToYMD } from '../utils/dateUtils';
 
 // Global demo mode flag to safely block cloud sync, LAN disk writes, and Telegram alerts during Demo mode
 let globalIsDemoMode = false;
@@ -272,6 +272,91 @@ export const isExpensePaidFromReserve = (exp?: Partial<Expense> | null) => {
   if (!exp) return false;
   const isPaid = !exp.paymentStatus || exp.paymentStatus === 'PAID';
   return isPaid && exp.paymentMethod === 'RESERVE_FUND';
+};
+
+// Helper to auto-migrate any 2024 expense dates to 2026
+export const autoMigrateExpenseDates = (items: Expense[]): Expense[] => {
+  let changed = false;
+  const migrated = items.map((e) => {
+    let itemChanged = false;
+    let newDate = e.date;
+    let newCreatedAt = e.createdAt;
+    let newDueDate = e.dueDate;
+
+    if (e.date && e.date.includes('2024')) {
+      newDate = e.date.replace(/2024/g, '2026');
+      itemChanged = true;
+    }
+    if (e.createdAt && e.createdAt.includes('2024')) {
+      newCreatedAt = e.createdAt.replace(/2024/g, '2026');
+      itemChanged = true;
+    }
+    if (e.dueDate && e.dueDate.includes('2024')) {
+      newDueDate = e.dueDate.replace(/2024/g, '2026');
+      itemChanged = true;
+    }
+
+    if (itemChanged) {
+      changed = true;
+      return {
+        ...e,
+        date: newDate,
+        createdAt: newCreatedAt,
+        dueDate: newDueDate,
+      };
+    }
+    return e;
+  });
+
+  return migrated;
+};
+
+// Helper to cleanly deduplicate and merge expenses (strictly guarantees no duplicate items)
+export const cleanDeduplicateExpenses = (items: Expense[]): Expense[] => {
+  if (!Array.isArray(items)) return initialExpenses;
+  const mockExpenseIds = new Set(['exp-1', 'exp-2', 'exp-3', 'exp-4', 'exp-5', 'exp-6', 'exp-7']);
+  const nonMock = items.filter((e) => e && e.id && !mockExpenseIds.has(e.id));
+
+  // Special purge for 2026-10-07 & 2026-10-06 to keep strictly standard official invoice items
+  const filtered = nonMock.filter((e) => {
+    const d = normalizeDateToYMD(e.date || e.createdAt || '');
+    if (d === '2026-10-07' && !e.id.startsWith('exp-cake-')) {
+      return false;
+    }
+    if (d === '2026-10-06' && !e.id.startsWith('exp-swan-')) {
+      return false;
+    }
+    return true;
+  });
+
+  const existingIds = new Set(filtered.map((e) => e.id));
+  const missingInitials = initialExpenses.filter((ie) => !existingIds.has(ie.id));
+  const combined = [...filtered, ...missingInitials];
+
+  const seenIds = new Set<string>();
+  const seenSignatures = new Set<string>();
+  const result: Expense[] = [];
+
+  for (const exp of combined) {
+    if (!exp || !exp.id || seenIds.has(exp.id)) continue;
+    seenIds.add(exp.id);
+
+    const d = normalizeDateToYMD(exp.date || exp.createdAt || '');
+    const cleanTitle = (exp.title || '').replace(/\s+/g, ' ').trim().toLowerCase();
+    const amt = Number(exp.amountUsd || 0).toFixed(2);
+    const sig = `${d}|${cleanTitle}|${amt}`;
+
+    if (seenSignatures.has(sig)) continue;
+    seenSignatures.add(sig);
+
+    result.push(exp);
+  }
+
+  return autoMigrateExpenseDates(
+    result.sort(
+      (a, b) => new Date(b.createdAt || b.date).getTime() - new Date(a.createdAt || a.date).getTime()
+    )
+  );
 };
 
 interface BakeryContextType {
@@ -840,38 +925,13 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     if (globalIsDemoMode) return;
     try {
       const saved = localStorage.getItem('bakery_expenses');
-      if (saved) {
-        const parsed: Expense[] = JSON.parse(saved);
-        if (Array.isArray(parsed)) {
-          const isCakeSupplyExp = (e: Expense) =>
-            e.id?.startsWith('exp-cake-') ||
-            (e.date === '2026-10-07' && (e.supplier?.includes('Cake Supply') || e.title?.includes('Coal Black') || e.title?.includes('ទៀនលេខមាស')));
-          
-          const existingCakeCount = parsed.filter(isCakeSupplyExp).length;
-          let base = parsed;
-          let needsUpdate = false;
-          if (existingCakeCount < 26) {
-            base = parsed.filter((e) => !isCakeSupplyExp(e));
-            needsUpdate = true;
-          }
-
-          const existingIds = new Set(base.map((e) => e.id));
-          const missingItems = initialExpenses.filter((ie) => !existingIds.has(ie.id));
-          if (missingItems.length > 0 || needsUpdate) {
-            const combined = [...missingItems, ...base];
-            setExpenses(combined);
-            safeSetStorage('bakery_expenses', JSON.stringify(combined));
-            initialExpenses.forEach((exp) => {
-              saveFirestoreDoc('expenses', exp.id, exp);
-            });
-          }
-        }
-      } else if (initialExpenses.length > 0) {
-        safeSetStorage('bakery_expenses', JSON.stringify(initialExpenses));
-        initialExpenses.forEach((exp) => {
-          saveFirestoreDoc('expenses', exp.id, exp);
-        });
-      }
+      const parsed = saved ? JSON.parse(saved) : [];
+      const deduped = cleanDeduplicateExpenses(Array.isArray(parsed) ? parsed : []);
+      setExpenses(deduped);
+      safeSetStorage('bakery_expenses', JSON.stringify(deduped));
+      initialExpenses.forEach((exp) => {
+        saveFirestoreDoc('expenses', exp.id, exp);
+      });
     } catch (e) {}
   }, []);
 
@@ -1042,46 +1102,6 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     return saved ? JSON.parse(saved) : initialRecipes;
   });
 
-  // Helper to auto-migrate any 2024 expense dates to 2026
-  const autoMigrateExpenseDates = (items: Expense[]): Expense[] => {
-    let changed = false;
-    const migrated = items.map((e) => {
-      let itemChanged = false;
-      let newDate = e.date;
-      let newCreatedAt = e.createdAt;
-      let newDueDate = e.dueDate;
-
-      if (e.date && e.date.includes('2024')) {
-        newDate = e.date.replace(/2024/g, '2026');
-        itemChanged = true;
-      }
-      if (e.createdAt && e.createdAt.includes('2024')) {
-        newCreatedAt = e.createdAt.replace(/2024/g, '2026');
-        itemChanged = true;
-      }
-      if (e.dueDate && e.dueDate.includes('2024')) {
-        newDueDate = e.dueDate.replace(/2024/g, '2026');
-        itemChanged = true;
-      }
-
-      if (itemChanged) {
-        changed = true;
-        return {
-          ...e,
-          date: newDate,
-          createdAt: newCreatedAt,
-          dueDate: newDueDate,
-        };
-      }
-      return e;
-    });
-
-    if (changed) {
-      safeSetStorage('bakery_expenses', JSON.stringify(migrated));
-    }
-    return migrated;
-  };
-
   // Expenses management
   const [expenses, setExpenses] = useState<Expense[]>(() => {
     if (globalIsDemoMode) {
@@ -1094,22 +1114,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       try {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed)) {
-          const mockExpenseIds = new Set(['exp-1', 'exp-2', 'exp-3', 'exp-4', 'exp-5', 'exp-6', 'exp-7']);
-          const active = parsed.filter((e) => e && e.id && !mockExpenseIds.has(e.id));
-          const isCakeSupplyExp = (e: Expense) =>
-            e.id?.startsWith('exp-cake-') ||
-            (e.date === '2026-10-07' && (e.supplier?.includes('Cake Supply') || e.title?.includes('Coal Black') || e.title?.includes('ទៀនលេខមាស')));
-          
-          const existingCakeCount = active.filter(isCakeSupplyExp).length;
-          let base = active;
-          if (existingCakeCount < 26) {
-            base = active.filter((e) => !isCakeSupplyExp(e));
-          }
-
-          const existingIds = new Set(base.map((e) => e.id));
-          const missingInitials = initialExpenses.filter((ie) => !existingIds.has(ie.id));
-          const combined = [...base, ...missingInitials];
-          return autoMigrateExpenseDates(combined);
+          return cleanDeduplicateExpenses(parsed);
         }
       } catch (e) {}
     }
@@ -1616,20 +1621,15 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             expensesMap.set(e.id, e);
           }
         });
-        const merged = Array.from(expensesMap.values())
-          .filter((e: any) => !deletedExpenseIds.current.has(e.id))
-          .sort(
-            (a: any, b: any) =>
-              new Date(b.createdAt || b.date).getTime() - new Date(a.createdAt || a.date).getTime()
-          );
+        const deduped = cleanDeduplicateExpenses(Array.from(expensesMap.values()));
         if (
-          merged.length === prev.length &&
-          merged.every((e, idx) => e.id === prev[idx]?.id && e.amountUsd === prev[idx]?.amountUsd)
+          deduped.length === prev.length &&
+          deduped.every((e, idx) => e.id === prev[idx]?.id && e.amountUsd === prev[idx]?.amountUsd)
         ) {
           return prev;
         }
-        safeSetStorage('bakery_expenses', JSON.stringify(merged));
-        return merged;
+        safeSetStorage('bakery_expenses', JSON.stringify(deduped));
+        return deduped;
       });
     }
 
@@ -2064,48 +2064,18 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     const unsubExpenses = subscribeToFirestoreCollection<Expense>('expenses', (cloudExpenses) => {
       if (globalIsDemoMode) return;
       if (Array.isArray(cloudExpenses)) {
-        const mockExpenseIds = new Set(['exp-1', 'exp-2', 'exp-3', 'exp-4', 'exp-5', 'exp-6', 'exp-7']);
-        const filtered = cloudExpenses.filter(
-          (e) => e && e.id && !deletedExpenseIds.current.has(e.id) && !mockExpenseIds.has(e.id)
-        );
+        const deduped = cleanDeduplicateExpenses(cloudExpenses);
+        initialExpenses.forEach((exp) => {
+          saveFirestoreDoc('expenses', exp.id, exp);
+        });
 
-        const isCakeSupplyExp = (e: Expense) =>
-          e.id?.startsWith('exp-cake-') ||
-          (e.date === '2026-10-07' && (e.supplier?.includes('Cake Supply') || e.title?.includes('Coal Black') || e.title?.includes('ទៀនលេខមាស')));
-
-        const existingCakeCount = filtered.filter(isCakeSupplyExp).length;
-        let base = filtered;
-        let needsCloudUpload = false;
-        if (existingCakeCount < 26) {
-          base = filtered.filter((e) => !isCakeSupplyExp(e));
-          needsCloudUpload = true;
-        }
-
-        const existingIds = new Set(base.map((e) => e.id));
-        const missingInitials = initialExpenses.filter((ie) => !existingIds.has(ie.id) && !deletedExpenseIds.current.has(ie.id));
-        if (missingInitials.length > 0) {
-          needsCloudUpload = true;
-        }
-
-        const combined = [...base, ...missingInitials];
-        const sorted = combined.sort(
-          (a, b) =>
-            new Date(b.createdAt || b.date).getTime() - new Date(a.createdAt || a.date).getTime()
-        );
-
-        if (needsCloudUpload) {
-          initialExpenses.forEach((exp) => {
-            saveFirestoreDoc('expenses', exp.id, exp);
-          });
-        }
-
-        if (sorted.length > 0) {
+        if (deduped.length > 0) {
           setExpenses((prev) => {
-            if (prev.length === sorted.length && prev[0]?.id === sorted[0]?.id) {
+            if (prev.length === deduped.length && prev[0]?.id === deduped[0]?.id) {
               return prev;
             }
-            safeSetStorage('bakery_expenses', JSON.stringify(sorted));
-            return sorted;
+            safeSetStorage('bakery_expenses', JSON.stringify(deduped));
+            return deduped;
           });
         }
       }
