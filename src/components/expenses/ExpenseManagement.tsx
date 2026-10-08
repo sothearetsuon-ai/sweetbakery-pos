@@ -39,26 +39,56 @@ import { formatDateDMY } from '../../utils/dateUtils';
 type DateFilterPreset = 'ALL' | 'THIS_MONTH' | 'LAST_MONTH' | 'TODAY' | 'YESTERDAY' | 'SPECIFIC_MONTH' | 'CUSTOM';
 
 /**
- * Universal date normalizer for expenses (handles YYYY-MM-DD, DD/MM/YYYY, ISO, etc.)
+ * Universal date normalizer for expenses (handles YYYY-MM-DD, DD/MM/YYYY, MM/DD/YYYY, ISO, timestamps, etc.)
  */
-export const normalizeDateToYMD = (raw?: string): string => {
-  if (!raw) return '';
+export const normalizeDateToYMD = (raw?: any): string => {
+  if (!raw && raw !== 0) return '';
   const str = String(raw).trim();
-  // YYYY-MM-DD
-  if (/^\d{4}-\d{2}-\d{2}/.test(str)) {
-    return str.slice(0, 10);
+  if (!str || str === 'undefined' || str === 'null' || str === 'Invalid Date') return '';
+
+  // 1. Numeric timestamp (10 digits for seconds or 13 digits for ms)
+  if (/^\d{10,14}$/.test(str)) {
+    try {
+      const num = Number(str);
+      const d = new Date(num > 10000000000 ? num : num * 1000);
+      if (!isNaN(d.getTime())) {
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${y}-${m}-${day}`;
+      }
+    } catch {}
   }
-  // YYYY/MM/DD
-  if (/^\d{4}\/\d{1,2}\/\d{1,2}/.test(str)) {
-    const parts = str.split('/');
-    return `${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].slice(0, 2).padStart(2, '0')}`;
+
+  // 2. Starts with YYYY-MM-DD or YYYY/MM/DD or YYYY.MM.DD (1 or 2 digits for M and D)
+  const ymdMatch = str.match(/^(\d{4})[-\/\.](\d{1,2})[-\/\.](\d{1,2})/);
+  if (ymdMatch) {
+    const y = ymdMatch[1];
+    const m = ymdMatch[2].padStart(2, '0');
+    const d = ymdMatch[3].padStart(2, '0');
+    return `${y}-${m}-${d}`;
   }
-  // DD/MM/YYYY or DD-MM-YYYY
-  if (/^\d{1,2}[\/\-]\d{1,2}[\/\-]\d{4}/.test(str)) {
-    const parts = str.split(/[\/\-]/);
-    return `${parts[2].slice(0, 4)}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+
+  // 3. DD/MM/YYYY or MM/DD/YYYY or DD-MM-YYYY
+  const dmyMatch = str.match(/^(\d{1,2})[-\/\.](\d{1,2})[-\/\.](\d{4})/);
+  if (dmyMatch) {
+    const p1 = Number(dmyMatch[1]);
+    const p2 = Number(dmyMatch[2]);
+    const y = dmyMatch[3];
+    // If p1 > 12, p1 must be day (DD/MM/YYYY)
+    // If p2 > 12, p2 must be day (MM/DD/YYYY)
+    let day = p1;
+    let month = p2;
+    if (p2 > 12 && p1 <= 12) {
+      month = p1;
+      day = p2;
+    }
+    const mStr = String(month).padStart(2, '0');
+    const dStr = String(day).padStart(2, '0');
+    return `${y}-${mStr}-${dStr}`;
   }
-  // Fallback
+
+  // 4. ISO or standard JS Date parser fallback (e.g. "2026-10-08T08:15:30.000Z")
   try {
     const d = new Date(str);
     if (!isNaN(d.getTime())) {
@@ -68,6 +98,7 @@ export const normalizeDateToYMD = (raw?: string): string => {
       return `${y}-${m}-${day}`;
     }
   } catch {}
+
   return str.slice(0, 10);
 };
 
@@ -157,6 +188,7 @@ export const ExpenseManagement: React.FC<ExpenseManagementProps> = ({
   }, []);
   const lastMonthStr = useMemo(() => {
     const d = new Date();
+    d.setDate(1);
     d.setMonth(d.getMonth() - 1);
     const y = d.getFullYear();
     const m = String(d.getMonth() + 1).padStart(2, '0');
@@ -167,8 +199,9 @@ export const ExpenseManagement: React.FC<ExpenseManagementProps> = ({
   const availableExpenseMonths = useMemo(() => {
     const monthMap = new Map<string, number>();
     expenses.forEach((e) => {
-      const ym = normalizeDateToYMD(e.date || e.createdAt || '').slice(0, 7);
-      if (ym && ym.length === 7) {
+      const raw = e.date || e.createdAt || (e as any).timestamp || (e as any).created_at || '';
+      const ym = normalizeDateToYMD(raw).slice(0, 7);
+      if (ym && ym.length === 7 && !ym.includes('NaN')) {
         monthMap.set(ym, (monthMap.get(ym) || 0) + 1);
       }
     });
@@ -1042,74 +1075,71 @@ export const ExpenseManagement: React.FC<ExpenseManagementProps> = ({
                 </span>
               </button>
 
-              {/* This Month */}
-              <button
-                type="button"
-                onClick={() => {
-                  soundFx.playPop();
-                  setDatePreset('THIS_MONTH');
-                }}
-                className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 ${
-                  datePreset === 'THIS_MONTH'
-                    ? 'bg-gradient-to-r from-rose-600 to-pink-600 text-white shadow-sm ring-2 ring-rose-400/40'
-                    : 'bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200/80'
-                }`}
-              >
-                <span>📅 ខែនេះ ({formatKhmerMonthYear(thisMonthStr)})</span>
-                <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
-                  datePreset === 'THIS_MONTH' ? 'bg-white/25 text-white' : 'bg-rose-200 text-rose-900'
-                }`}>
-                  {expenses.filter((e) => normalizeDateToYMD(e.date || e.createdAt).startsWith(thisMonthStr)).length}
-                </span>
-              </button>
+              {/* Render all months that contain recorded expense transactions */}
+              {availableExpenseMonths.length > 0 ? (
+                availableExpenseMonths.map((m) => {
+                  const isSelected =
+                    (datePreset === 'THIS_MONTH' && m.ym === thisMonthStr) ||
+                    (datePreset === 'LAST_MONTH' && m.ym === lastMonthStr) ||
+                    (datePreset === 'SPECIFIC_MONTH' && selectedMonth === m.ym);
 
-              {/* Last Month */}
-              <button
-                type="button"
-                onClick={() => {
-                  soundFx.playPop();
-                  setDatePreset('LAST_MONTH');
-                }}
-                className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 ${
-                  datePreset === 'LAST_MONTH'
-                    ? 'bg-gradient-to-r from-amber-600 to-orange-600 text-white shadow-sm ring-2 ring-amber-400/40'
-                    : 'bg-amber-50 text-amber-800 hover:bg-amber-100 border border-amber-200/80'
-                }`}
-              >
-                <span>⏳ ខែមុន ({formatKhmerMonthYear(lastMonthStr)})</span>
-                <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
-                  datePreset === 'LAST_MONTH' ? 'bg-white/25 text-white' : 'bg-amber-200 text-amber-900'
-                }`}>
-                  {expenses.filter((e) => normalizeDateToYMD(e.date || e.createdAt).startsWith(lastMonthStr)).length}
-                </span>
-              </button>
-
-              {/* Dynamic Month Pills from recorded data (e.g. September 2026) */}
-              {availableExpenseMonths
-                .filter((m) => m.ym !== thisMonthStr && m.ym !== lastMonthStr)
-                .map((m) => (
-                  <button
-                    key={m.ym}
-                    type="button"
-                    onClick={() => {
-                      soundFx.playPop();
-                      setSelectedMonth(m.ym);
-                      setDatePreset('SPECIFIC_MONTH');
-                    }}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-                      datePreset === 'SPECIFIC_MONTH' && selectedMonth === m.ym
-                        ? 'bg-rose-600 text-white shadow-xs ring-2 ring-rose-400/40'
-                        : 'bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200/80'
-                    }`}
-                  >
-                    <span>🗓️ {m.labelKh}</span>
-                    <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
-                      datePreset === 'SPECIFIC_MONTH' && selectedMonth === m.ym ? 'bg-white/25 text-white' : 'bg-indigo-200 text-indigo-900'
-                    }`}>
-                      {m.count}
-                    </span>
-                  </button>
-                ))}
+                  return (
+                    <button
+                      key={m.ym}
+                      type="button"
+                      onClick={() => {
+                        soundFx.playPop();
+                        setSelectedMonth(m.ym);
+                        if (m.ym === thisMonthStr) {
+                          setDatePreset('THIS_MONTH');
+                        } else if (m.ym === lastMonthStr) {
+                          setDatePreset('LAST_MONTH');
+                        } else {
+                          setDatePreset('SPECIFIC_MONTH');
+                        }
+                      }}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 ${
+                        isSelected
+                          ? 'bg-gradient-to-r from-rose-600 to-pink-600 text-white shadow-sm ring-2 ring-rose-400/40'
+                          : 'bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200/80'
+                      }`}
+                    >
+                      <span>
+                        {m.ym === thisMonthStr
+                          ? `📅 ខែនេះ (${m.labelKh})`
+                          : m.ym === lastMonthStr
+                          ? `⏳ ខែមុន (${m.labelKh})`
+                          : `🗓️ ${m.labelKh}`}
+                      </span>
+                      <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
+                        isSelected ? 'bg-white/25 text-white' : 'bg-rose-200 text-rose-900'
+                      }`}>
+                        {m.count}
+                      </span>
+                    </button>
+                  );
+                })
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    soundFx.playPop();
+                    setDatePreset('THIS_MONTH');
+                  }}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 ${
+                    datePreset === 'THIS_MONTH'
+                      ? 'bg-gradient-to-r from-rose-600 to-pink-600 text-white shadow-sm ring-2 ring-rose-400/40'
+                      : 'bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200/80'
+                  }`}
+                >
+                  <span>📅 ខែនេះ ({formatKhmerMonthYear(thisMonthStr)})</span>
+                  <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
+                    datePreset === 'THIS_MONTH' ? 'bg-white/25 text-white' : 'bg-rose-200 text-rose-900'
+                  }`}>
+                    0
+                  </span>
+                </button>
+              )}
 
               {/* Today */}
               <button
