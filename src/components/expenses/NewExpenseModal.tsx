@@ -124,6 +124,10 @@ const QUICK_SUPPLIES = [
 ];
 
 const QUICK_GENERAL_EXPENSES = [
+  { label: '🚚 ថ្លៃដឹកជញ្ជូនទំនិញចូលហាង (Delivery In)', cat: 'TRANSPORTATION' as ExpenseCategory, unit: 'ជើង (trip)', supplier: 'អ្នកដឹកជញ្ជូន' },
+  { label: '🛵 ថ្លៃសាំងម៉ូតូ / ថ្លៃធ្វើដំណើរ (Gasoline/Fuel)', cat: 'TRANSPORTATION' as ExpenseCategory, unit: 'ដង', supplier: 'ស្ថានីយ៍សាំង' },
+  { label: '🛺 ថ្លៃ PassApp / TukTuk / រ៉ឺម៉ក', cat: 'TRANSPORTATION' as ExpenseCategory, unit: 'ជើង (trip)', supplier: 'PassApp' },
+  { label: '📦 ថ្លៃផ្ញើទំនិញតាមឡានក្រុង (Virak Buntham / J&T)', cat: 'TRANSPORTATION' as ExpenseCategory, unit: 'កញ្ចប់ (pack)', supplier: 'វីរៈប៊ុនថាំ' },
   { label: '⚡ អគ្គិសនី EDC (ភ្លើងឡ & ទូក្លាសេ)', cat: 'UTILITIES' as ExpenseCategory, unit: 'ខែ (month)', supplier: 'អគ្គិសនីកម្ពុជា EDC' },
   { label: '💧 ទឹកស្អាតរដ្ឋ (Water Bill)', cat: 'UTILITIES' as ExpenseCategory, unit: 'ខែ (month)', supplier: 'រដ្ឋាករទឹកស្វយ័ត' },
   { label: '🔥 ហ្គាសឡដុតនំ (Gas Refill 48kg)', cat: 'UTILITIES' as ExpenseCategory, unit: 'ធុង (48kg)', supplier: 'ហាងហ្គាស' },
@@ -745,6 +749,7 @@ export const NewExpenseModal: React.FC<NewExpenseModalProps> = ({
                 >
                   <option value="PACKAGING">📦 ប្រអប់ & វេចខ្ចប់ (Packaging)</option>
                   <option value="SUPPLIES">🎀 សម្ភារៈតុបតែង & ប្រដាប់ប្រដា (Supplies)</option>
+                  <option value="TRANSPORTATION">🚚 ថ្លៃដឹកជញ្ជូនសម្ភារៈ (Delivery)</option>
                   <option value="MAINTENANCE">🔪 ឧបករណ៍ធ្វើនំ / ពុម្ព / ថាស (Utensils)</option>
                   <option value="OTHER">📌 សម្ភារៈផ្សេងៗ (Other)</option>
                 </select>
@@ -761,6 +766,7 @@ export const NewExpenseModal: React.FC<NewExpenseModalProps> = ({
                   onChange={(e) => setCategory(e.target.value as ExpenseCategory)}
                   className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 font-semibold text-slate-800"
                 >
+                  <option value="TRANSPORTATION">🚚 ថ្លៃធ្វើដំណើរ & ដឹកជញ្ជូន (Transportation & Delivery)</option>
                   <option value="UTILITIES">⚡ ទឹក ភ្លើង ហ្គាស (Utilities)</option>
                   <option value="SALARY">👤 ប្រាក់ខែ & ថ្លៃឈ្នួល (Salary)</option>
                   <option value="RENT">🏠 ថ្លៃជួលទីតាំង (Rent)</option>

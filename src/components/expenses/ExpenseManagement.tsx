@@ -381,6 +381,7 @@ export const ExpenseManagement: React.FC<ExpenseManagementProps> = ({
     INGREDIENTS: { labelKh: '🌾 គ្រឿងផ្សំធ្វើនំ', color: 'bg-amber-50 text-amber-800 border-amber-200' },
     PACKAGING: { labelKh: '📦 ប្រអប់ & វេចខ្ចប់', color: 'bg-blue-50 text-blue-800 border-blue-200' },
     SUPPLIES: { labelKh: '🎀 សម្ភារៈ & តុបតែងនំ', color: 'bg-purple-50 text-purple-800 border-purple-200' },
+    TRANSPORTATION: { labelKh: '🚚 ធ្វើដំណើរ & ដឹកជញ្ជូន', color: 'bg-teal-50 text-teal-800 border-teal-200' },
     UTILITIES: { labelKh: '⚡ ទឹក ភ្លើង ហ្គាស', color: 'bg-orange-50 text-orange-800 border-orange-200' },
     SALARY: { labelKh: '👤 ប្រាក់ខែ & ថ្លៃឈ្នួល', color: 'bg-indigo-50 text-indigo-800 border-indigo-200' },
     RENT: { labelKh: '🏠 ថ្លៃជួលទីតាំង', color: 'bg-rose-50 text-rose-800 border-rose-200' },

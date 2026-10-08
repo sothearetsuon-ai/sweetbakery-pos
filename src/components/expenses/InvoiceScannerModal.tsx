@@ -897,12 +897,13 @@ export const InvoiceScannerModal: React.FC<InvoiceScannerModalProps> = ({
                                   }
                                   className="text-[10px] font-semibold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-lg border border-slate-200 cursor-pointer"
                                 >
-                                  <option value="INGREDIENTS">គ្រឿងផ្សំធ្វើនំ</option>
-                                  <option value="PACKAGING">ប្រអប់/ថង់វិចខ្ចប់</option>
-                                  <option value="SUPPLIES">សម្ភារៈតុបតែង/ទៀន</option>
-                                  <option value="UTILITIES">ទឹក/ភ្លើង/ហ្គាស</option>
-                                  <option value="MAINTENANCE">ជួសជុល/ថែទាំ</option>
-                                  <option value="OTHER">ចំណាយផ្សេងៗ</option>
+                                  <option value="INGREDIENTS">🌾 គ្រឿងផ្សំធ្វើនំ</option>
+                                  <option value="PACKAGING">📦 ប្រអប់/ថង់វិចខ្ចប់</option>
+                                  <option value="SUPPLIES">🎀 សម្ភារៈតុបតែង/ទៀន</option>
+                                  <option value="TRANSPORTATION">🚚 ថ្លៃដឹកជញ្ជូន/ធ្វើដំណើរ</option>
+                                  <option value="UTILITIES">⚡ ទឹក/ភ្លើង/ហ្គាស</option>
+                                  <option value="MAINTENANCE">🔧 ជួសជុល/ថែទាំ</option>
+                                  <option value="OTHER">📌 ចំណាយផ្សេងៗ</option>
                                 </select>
 
                                 {/* Stock Sync Checkbox */}

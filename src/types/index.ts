@@ -212,6 +212,7 @@ export type ExpenseCategory =
   | 'RENT'
   | 'MAINTENANCE'
   | 'MARKETING'
+  | 'TRANSPORTATION'
   | 'OTHER';
 
 export interface Expense {

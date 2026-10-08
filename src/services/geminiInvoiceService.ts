@@ -267,7 +267,7 @@ Rules:
 4. currency: 'KHR' or 'USD'.
 5. items: Array of purchased items:
    - name: Clear product name in Khmer or English.
-   - category: One of: 'INGREDIENTS' (flour, sugar, butter, yeast, milk, eggs, chocolate, matcha, cheese, cream, fruit), 'PACKAGING' (cake boxes, bread bags, cupcake cups, ribbons, cake boards, plastic bags), 'SUPPLIES' (candles, toppers, knives, baking paper, piping bags, molds, cutlery), 'UTILITIES' (gas, electricity, water, ice), 'MAINTENANCE' (oven repair, cleaning agents), 'OTHER'.
+   - category: One of: 'INGREDIENTS' (flour, sugar, butter, yeast, milk, eggs, chocolate, matcha, cheese, cream, fruit), 'PACKAGING' (cake boxes, bread bags, cupcake cups, ribbons, cake boards, plastic bags), 'SUPPLIES' (candles, toppers, knives, baking paper, piping bags, molds, cutlery), 'UTILITIES' (gas, electricity, water, ice), 'TRANSPORTATION' (delivery fee, shipping, fuel, gasoline, PassApp, taxi, tuktuk), 'MAINTENANCE' (oven repair, cleaning agents), 'OTHER'.
    - mainType: 'INGREDIENT' (for baking ingredients), 'SUPPLY' (for packaging, decorations, tools), or 'GENERAL' (utilities, maintenance, general).
    - quantity: Number of units (default 1).
    - unit: Khmer unit (e.g. 'គីឡូ', 'កេស', 'ដុំ', 'កញ្ចប់', 'ដប', 'បាវ', 'ប្រអប់', 'ឡូ', 'លីត្រ').
