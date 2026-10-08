@@ -296,6 +296,21 @@ export const ExpenseManagement: React.FC<ExpenseManagementProps> = ({
   const isSupplyExpense = (e: Expense) => getExpenseMainType(e) === 'SUPPLY';
   const isGeneralExpense = (e: Expense) => getExpenseMainType(e) === 'GENERAL';
 
+  // Helper to get item/product code (e.g. P0006568)
+  const getExpenseItemCode = (e?: Partial<Expense> | null): string | undefined => {
+    if (!e) return undefined;
+    if (e.itemCode && e.itemCode.trim()) return e.itemCode.trim();
+    if (e.notes) {
+      const m = e.notes.match(/Code:\s*([A-Za-z0-9_-]+)/i);
+      if (m) return m[1];
+    }
+    if (e.id && e.id.startsWith('exp-cake-')) {
+      const raw = e.id.replace('exp-cake-', '');
+      if (raw.startsWith('P')) return raw;
+    }
+    return undefined;
+  };
+
   // Financial sums (All-time)
   const totalSalesUsd = sales.reduce((sum, s) => sum + s.totalUsd, 0);
   const totalSalesKhr = sales.reduce((sum, s) => sum + (s.totalKhr || Math.round(s.totalUsd * exchangeRate)), 0);
@@ -437,9 +452,11 @@ export const ExpenseManagement: React.FC<ExpenseManagementProps> = ({
       }
 
       const q = searchQuery.toLowerCase().trim();
+      const code = (getExpenseItemCode(e) || '').toLowerCase();
       const matchSearch =
         !q ||
         e.title.toLowerCase().includes(q) ||
+        code.includes(q) ||
         e.paidBy.toLowerCase().includes(q) ||
         (e.supplier && e.supplier.toLowerCase().includes(q)) ||
         (e.notes && e.notes.toLowerCase().includes(q));
@@ -1713,17 +1730,24 @@ export const ExpenseManagement: React.FC<ExpenseManagementProps> = ({
                           </button>
                         </td>
 
-                        {/* Title, Supplier, & Notes */}
+                        {/* Title, Item Code, Supplier, & Notes */}
                         <td className="py-2.5 px-3 min-w-[170px] max-w-[260px]">
                           <div className="font-black text-slate-900 text-xs leading-snug line-clamp-2" title={expense.title}>
                             {expense.title}
                           </div>
-                          {expense.supplier && (
-                            <div className="text-[10px] text-slate-500 font-medium mt-0.5 truncate" title={expense.supplier}>
-                              🏪 {expense.supplier}
-                            </div>
-                          )}
-                          {expense.notes && (
+                          <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
+                            {getExpenseItemCode(expense) && (
+                              <span className="inline-flex items-center px-1.5 py-0.2 rounded-md text-[9px] font-mono font-bold bg-slate-100 text-slate-700 border border-slate-200 shadow-2xs" title={`លេខកូដទំនិញ៖ ${getExpenseItemCode(expense)}`}>
+                                🏷️ {getExpenseItemCode(expense)}
+                              </span>
+                            )}
+                            {expense.supplier && (
+                              <span className="text-[10px] text-slate-500 font-medium truncate max-w-[180px]" title={expense.supplier}>
+                                🏪 {expense.supplier}
+                              </span>
+                            )}
+                          </div>
+                          {expense.notes && !expense.notes.startsWith('Code: ' + (getExpenseItemCode(expense) || '')) && (
                             <div className="text-[10px] text-slate-400 mt-0.5 truncate" title={expense.notes}>
                               📝 {expense.notes}
                             </div>
@@ -1921,10 +1945,18 @@ export const ExpenseManagement: React.FC<ExpenseManagementProps> = ({
                 key={expense.id}
                 className="bg-white rounded-2xl border border-rose-100/90 p-3.5 shadow-2xs space-y-2.5"
               >
-                {/* Header: Title & Total */}
+                {/* Header: Title, Item Code & Total */}
                 <div className="flex items-start justify-between gap-2">
                   <div>
-                    <h4 className="font-black text-slate-900 text-sm">{expense.title}</h4>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h4 className="font-black text-slate-900 text-sm">{expense.title}</h4>
+                      {getExpenseItemCode(expense) && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-mono font-bold bg-slate-100 text-slate-800 border border-slate-300 shadow-2xs">
+                          <span>🏷️ កូដ៖</span>
+                          <span className="text-rose-600 font-black">{getExpenseItemCode(expense)}</span>
+                        </span>
+                      )}
+                    </div>
                     <div className="flex items-center gap-1.5 mt-1 flex-wrap">
                       <span
                         className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-black border ${

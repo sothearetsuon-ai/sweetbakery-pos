@@ -217,6 +217,7 @@ export type ExpenseCategory =
 
 export interface Expense {
   id: string;
+  itemCode?: string;         // លេខកូដទំនិញ / Barcode / Code (e.g. P0006568, P0004874)
   title: string;
   expenseType?: ExpenseType; // 'INGREDIENT' (ចំណាយគ្រឿងផ្សំ), 'SUPPLY' (ទិញសម្ភារៈ), 'GENERAL' (ចំណាយទូទៅ)
   category: ExpenseCategory;

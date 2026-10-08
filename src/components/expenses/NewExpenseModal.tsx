@@ -162,6 +162,7 @@ export const NewExpenseModal: React.FC<NewExpenseModalProps> = ({
   const [autoRestock, setAutoRestock] = useState<boolean>(true);
   const [supplier, setSupplier] = useState<string>('');
 
+  const [itemCode, setItemCode] = useState('');
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState<ExpenseCategory>('INGREDIENTS');
   
@@ -205,7 +206,8 @@ export const NewExpenseModal: React.FC<NewExpenseModalProps> = ({
       setExpenseType(type);
       setSelectedIngredientId(expenseToEdit.ingredientId || '');
       setSupplier(expenseToEdit.supplier || '');
-      setAutoRestock(false);
+      const extractedCode = expenseToEdit.itemCode || (expenseToEdit.notes?.match(/Code:\s*([A-Za-z0-9_-]+)/i)?.[1]) || (expenseToEdit.id?.startsWith('exp-cake-') && expenseToEdit.id.replace('exp-cake-', '').startsWith('P') ? expenseToEdit.id.replace('exp-cake-', '') : '') || '';
+      setItemCode(extractedCode);
       setTitle(expenseToEdit.title);
       setCategory(expenseToEdit.category);
       const q = expenseToEdit.quantity ?? 1;
@@ -235,6 +237,7 @@ export const NewExpenseModal: React.FC<NewExpenseModalProps> = ({
       setSelectedIngredientId('');
       setSupplier('');
       setAutoRestock(true);
+      setItemCode('');
       setTitle('');
       setCategory('INGREDIENTS');
       setQuantity('1');
@@ -404,6 +407,7 @@ export const NewExpenseModal: React.FC<NewExpenseModalProps> = ({
 
     const expensePayload: Omit<Expense, 'id' | 'createdAt'> = {
       title: title.trim(),
+      itemCode: itemCode.trim() || undefined,
       expenseType,
       category: finalCategory,
       ingredientId: expenseType === 'INGREDIENT' && selectedIngredientId ? selectedIngredientId : undefined,
@@ -445,6 +449,7 @@ export const NewExpenseModal: React.FC<NewExpenseModalProps> = ({
 
     // Reset Form
     setTitle('');
+    setItemCode('');
     setSelectedIngredientId('');
     setSupplier('');
     setQuantity('1');
@@ -711,9 +716,9 @@ export const NewExpenseModal: React.FC<NewExpenseModalProps> = ({
             </div>
           )}
 
-          {/* Title, Category & Supplier */}
+          {/* Title, Category, Item Code & Supplier */}
           <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
-            <div className={expenseType === 'INGREDIENT' ? 'sm:col-span-7' : 'sm:col-span-5'}>
+            <div className="sm:col-span-8">
               <label className="block text-xs font-black text-slate-700 mb-1 uppercase tracking-wider">
                 {expenseType === 'INGREDIENT'
                   ? 'ឈ្មោះគ្រឿងផ្សំធ្វើនំ *'
@@ -737,8 +742,21 @@ export const NewExpenseModal: React.FC<NewExpenseModalProps> = ({
               />
             </div>
 
+            <div className="sm:col-span-4">
+              <label className="block text-xs font-black text-slate-700 mb-1 uppercase tracking-wider">
+                🏷️ លេខកូដទំនិញ (Code / Barcode)
+              </label>
+              <input
+                type="text"
+                placeholder="ឧ. P0006568, P0004874..."
+                value={itemCode}
+                onChange={(e) => setItemCode(e.target.value)}
+                className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 font-mono font-bold text-slate-800"
+              />
+            </div>
+
             {expenseType === 'SUPPLY' && (
-              <div className="sm:col-span-4">
+              <div className="sm:col-span-6">
                 <label className="block text-xs font-black text-slate-700 mb-1 uppercase tracking-wider">
                   ប្រភេទសម្ភារៈ *
                 </label>
@@ -757,7 +775,7 @@ export const NewExpenseModal: React.FC<NewExpenseModalProps> = ({
             )}
 
             {expenseType === 'GENERAL' && (
-              <div className="sm:col-span-4">
+              <div className="sm:col-span-6">
                 <label className="block text-xs font-black text-slate-700 mb-1 uppercase tracking-wider">
                   ប្រភេទចំណាយទូទៅ *
                 </label>
@@ -777,13 +795,13 @@ export const NewExpenseModal: React.FC<NewExpenseModalProps> = ({
               </div>
             )}
 
-            <div className={expenseType === 'INGREDIENT' ? 'sm:col-span-5' : 'sm:col-span-3'}>
+            <div className={expenseType === 'INGREDIENT' ? 'sm:col-span-12' : 'sm:col-span-6'}>
               <label className="block text-xs font-black text-slate-700 mb-1 uppercase tracking-wider">
                 {expenseType === 'INGREDIENT' ? 'ហាង / អ្នកផ្គត់ផ្គង់' : 'ហាង / ក្រុមហ៊ុន'}
               </label>
               <input
                 type="text"
-                placeholder={expenseType === 'INGREDIENT' ? 'ឧ. CP, Euro Gourmet...' : 'ឧ. Cambodia Packaging, ផ្សារ...'}
+                placeholder={expenseType === 'INGREDIENT' ? 'ឧ. CP, Euro Gourmet, The Cake Supply...' : 'ឧ. Cambodia Packaging, ផ្សារ...'}
                 value={supplier}
                 onChange={(e) => setSupplier(e.target.value)}
                 className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 font-semibold text-slate-800"
