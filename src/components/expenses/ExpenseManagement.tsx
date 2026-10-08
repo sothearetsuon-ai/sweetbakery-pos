@@ -36,7 +36,70 @@ import { InvoiceScannerModal } from './InvoiceScannerModal';
 import { soundFx } from '../../utils/audio';
 import { formatDateDMY } from '../../utils/dateUtils';
 
-type DateFilterPreset = 'THIS_MONTH' | 'ALL' | 'TODAY' | 'YESTERDAY' | 'SPECIFIC_MONTH' | 'CUSTOM';
+type DateFilterPreset = 'ALL' | 'THIS_MONTH' | 'LAST_MONTH' | 'TODAY' | 'YESTERDAY' | 'SPECIFIC_MONTH' | 'CUSTOM';
+
+/**
+ * Universal date normalizer for expenses (handles YYYY-MM-DD, DD/MM/YYYY, ISO, etc.)
+ */
+export const normalizeDateToYMD = (raw?: string): string => {
+  if (!raw) return '';
+  const str = String(raw).trim();
+  // YYYY-MM-DD
+  if (/^\d{4}-\d{2}-\d{2}/.test(str)) {
+    return str.slice(0, 10);
+  }
+  // YYYY/MM/DD
+  if (/^\d{4}\/\d{1,2}\/\d{1,2}/.test(str)) {
+    const parts = str.split('/');
+    return `${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].slice(0, 2).padStart(2, '0')}`;
+  }
+  // DD/MM/YYYY or DD-MM-YYYY
+  if (/^\d{1,2}[\/\-]\d{1,2}[\/\-]\d{4}/.test(str)) {
+    const parts = str.split(/[\/\-]/);
+    return `${parts[2].slice(0, 4)}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+  }
+  // Fallback
+  try {
+    const d = new Date(str);
+    if (!isNaN(d.getTime())) {
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${y}-${m}-${day}`;
+    }
+  } catch {}
+  return str.slice(0, 10);
+};
+
+export const formatKhmerDate = (dateStr: string) => {
+  try {
+    const [y, m, d] = dateStr.split('-');
+    if (!y || !m || !d) return dateStr;
+    const monthNamesKh = [
+      'មករា', 'កុម្ភៈ', 'មីនា', 'មេសា', 'ឧសភា', 'មិថុនា',
+      'កក្កដា', 'សីហា', 'កញ្ញា', 'តុលា', 'វិច្ឆិកា', 'ធ្នូ'
+    ];
+    const mIdx = parseInt(m, 10) - 1;
+    return `${parseInt(d, 10)} ${monthNamesKh[mIdx] || m} ${y}`;
+  } catch {
+    return dateStr;
+  }
+};
+
+export const formatKhmerMonthYear = (monthStr: string) => {
+  try {
+    const [y, m] = monthStr.split('-');
+    if (!y || !m) return monthStr;
+    const monthNamesKh = [
+      'មករា', 'កុម្ភៈ', 'មីនា', 'មេសា', 'ឧសភា', 'មិថុនា',
+      'កក្កដា', 'សីហា', 'កញ្ញា', 'តុលា', 'វិច្ឆិកា', 'ធ្នូ'
+    ];
+    const mIdx = parseInt(m, 10) - 1;
+    return `${monthNamesKh[mIdx] || m} ${y}`;
+  } catch {
+    return monthStr;
+  }
+};
 
 interface ExpenseManagementProps {
   onNavigateToReserveFund?: () => void;
@@ -92,16 +155,30 @@ export const ExpenseManagement: React.FC<ExpenseManagementProps> = ({
     const m = String(d.getMonth() + 1).padStart(2, '0');
     return `${y}-${m}`;
   }, []);
-
-  // Date filtering state - Smartly defaults to THIS_MONTH if has expenses this month, or ALL so recorded data is always visible immediately
-  const [datePreset, setDatePreset] = useState<DateFilterPreset>(() => {
+  const lastMonthStr = useMemo(() => {
     const d = new Date();
+    d.setMonth(d.getMonth() - 1);
     const y = d.getFullYear();
     const m = String(d.getMonth() + 1).padStart(2, '0');
-    const thisM = `${y}-${m}`;
-    const hasThisMonth = expenses.some((e) => !!e.date && e.date.startsWith(thisM));
-    return hasThisMonth ? 'THIS_MONTH' : 'ALL';
-  });
+    return `${y}-${m}`;
+  }, []);
+
+  // Dynamically extract all available months that actually contain recorded expenses
+  const availableExpenseMonths = useMemo(() => {
+    const monthMap = new Map<string, number>();
+    expenses.forEach((e) => {
+      const ym = normalizeDateToYMD(e.date || e.createdAt || '').slice(0, 7);
+      if (ym && ym.length === 7) {
+        monthMap.set(ym, (monthMap.get(ym) || 0) + 1);
+      }
+    });
+    return Array.from(monthMap.entries())
+      .sort((a, b) => b[0].localeCompare(a[0]))
+      .map(([ym, count]) => ({ ym, count, labelKh: formatKhmerMonthYear(ym) }));
+  }, [expenses]);
+
+  // Date filtering state - Defaults to ALL so all recorded data is ALWAYS visible immediately without blank screen
+  const [datePreset, setDatePreset] = useState<DateFilterPreset>('ALL');
   const [selectedMonth, setSelectedMonth] = useState<string>(() => {
     const d = new Date();
     const y = d.getFullYear();
@@ -109,6 +186,7 @@ export const ExpenseManagement: React.FC<ExpenseManagementProps> = ({
     return `${y}-${m}`;
   });
   const [customDate, setCustomDate] = useState<string>(() => getLocalDateStr(new Date()));
+
 
   // View Mode: Cards (default on mobile for 100% full visibility) vs Table (desktop)
   const [viewMode, setViewMode] = useState<'table' | 'cards'>(() => {
@@ -227,36 +305,6 @@ export const ExpenseManagement: React.FC<ExpenseManagementProps> = ({
   const undeductedCashTotalKhr = useMemo(() => {
     return undeductedCashExpenses.reduce((sum, e) => sum + e.amountKhr, 0);
   }, [undeductedCashExpenses]);
-
-  const formatKhmerDate = (dateStr: string) => {
-    try {
-      const [y, m, d] = dateStr.split('-');
-      if (!y || !m || !d) return dateStr;
-      const monthNamesKh = [
-        'មករា', 'កុម្ភៈ', 'មីនា', 'មេសា', 'ឧសភា', 'មិថុនា',
-        'កក្កដា', 'សីហា', 'កញ្ញា', 'តុលា', 'វិច្ឆិកា', 'ធ្នូ'
-      ];
-      const mIdx = parseInt(m, 10) - 1;
-      return `${parseInt(d, 10)} ${monthNamesKh[mIdx] || m} ${y}`;
-    } catch {
-      return dateStr;
-    }
-  };
-
-  const formatKhmerMonthYear = (monthStr: string) => {
-    try {
-      const [y, m] = monthStr.split('-');
-      if (!y || !m) return monthStr;
-      const monthNamesKh = [
-        'មករា', 'កុម្ភៈ', 'មីនា', 'មេសា', 'ឧសភា', 'មិថុនា',
-        'កក្កដា', 'សីហា', 'កញ្ញា', 'តុលា', 'វិច្ឆិកា', 'ធ្នូ'
-      ];
-      const mIdx = parseInt(m, 10) - 1;
-      return `${monthNamesKh[mIdx] || m} ${y}`;
-    } catch {
-      return monthStr;
-    }
-  };
 
   // Helper to distinguish: INGREDIENTS (ទិញគ្រឿងផ្សំ) vs SUPPLIES (ទិញសម្ភារៈ) vs GENERAL (ចំណាយទូទៅ)
   const getExpenseMainType = (e: Expense): 'INGREDIENT' | 'SUPPLY' | 'GENERAL' => {
@@ -386,20 +434,23 @@ export const ExpenseManagement: React.FC<ExpenseManagementProps> = ({
         (receiptFilter === 'WITH_RECEIPT' && !!e.receiptImage) ||
         (receiptFilter === 'WITHOUT_RECEIPT' && !e.receiptImage);
 
-      // Date matching (robust against ISO strings and timestamps)
+      // Date matching (robust universal parser for all formats)
       let matchDate = true;
-      const rawDate = e.date || e.createdAt || '';
-      const expDate = rawDate.slice(0, 10);
+      const normalizedExpDate = normalizeDateToYMD(e.date || e.createdAt || '');
+      const expMonth = normalizedExpDate.slice(0, 7);
+
       if (datePreset === 'TODAY') {
-        matchDate = expDate === todayStr;
+        matchDate = normalizedExpDate === todayStr;
       } else if (datePreset === 'YESTERDAY') {
-        matchDate = expDate === yesterdayStr;
+        matchDate = normalizedExpDate === yesterdayStr;
       } else if (datePreset === 'THIS_MONTH') {
-        matchDate = expDate.startsWith(thisMonthStr);
+        matchDate = expMonth === thisMonthStr;
+      } else if (datePreset === 'LAST_MONTH') {
+        matchDate = expMonth === lastMonthStr;
       } else if (datePreset === 'SPECIFIC_MONTH') {
-        matchDate = expDate.startsWith(selectedMonth);
+        matchDate = expMonth === selectedMonth;
       } else if (datePreset === 'CUSTOM') {
-        matchDate = expDate === customDate;
+        matchDate = normalizedExpDate === customDate;
       }
 
       const q = searchQuery.toLowerCase().trim();
@@ -412,7 +463,7 @@ export const ExpenseManagement: React.FC<ExpenseManagementProps> = ({
 
       return matchCat && matchReceipt && matchDate && matchSearch;
     });
-  }, [expenses, mainTypeFilter, statusFilter, selectedCategory, receiptFilter, datePreset, customDate, selectedMonth, todayStr, yesterdayStr, thisMonthStr, searchQuery]);
+  }, [expenses, mainTypeFilter, statusFilter, selectedCategory, receiptFilter, datePreset, customDate, selectedMonth, todayStr, yesterdayStr, thisMonthStr, lastMonthStr, searchQuery]);
 
   // Filtered sums
   const filteredExpensesKhr = useMemo(() => {
@@ -457,9 +508,11 @@ export const ExpenseManagement: React.FC<ExpenseManagementProps> = ({
     if (datePreset === 'TODAY') return `ថ្ងៃនេះ (${formatKhmerDate(todayStr)})`;
     if (datePreset === 'YESTERDAY') return `ម្សិលមិញ (${formatKhmerDate(yesterdayStr)})`;
     if (datePreset === 'THIS_MONTH') return `ខែនេះ (${formatKhmerMonthYear(thisMonthStr)})`;
+    if (datePreset === 'LAST_MONTH') return `ខែមុន (${formatKhmerMonthYear(lastMonthStr)})`;
     if (datePreset === 'SPECIFIC_MONTH') return `ខែ ${formatKhmerMonthYear(selectedMonth)}`;
     return `ថ្ងៃទី ${formatKhmerDate(customDate)}`;
-  }, [datePreset, todayStr, yesterdayStr, thisMonthStr, selectedMonth, customDate]);
+  }, [datePreset, todayStr, yesterdayStr, thisMonthStr, lastMonthStr, selectedMonth, customDate]);
+
 
   // Export CSV
   const handleExportCsv = () => {
@@ -959,15 +1012,37 @@ export const ExpenseManagement: React.FC<ExpenseManagementProps> = ({
       {/* Date Filter & Search Section */}
       <div className="bg-white p-4 rounded-3xl border border-rose-100/90 shadow-2xs space-y-3">
         {/* Date Filter Bar */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+        <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-3">
           <div className="flex items-center gap-2 flex-wrap">
             <div className="flex items-center gap-1.5 text-xs font-black text-slate-700 bg-rose-50 text-rose-700 px-3 py-1.5 rounded-2xl border border-rose-100 shrink-0">
               <CalendarDays className="w-3.5 h-3.5 text-rose-500" />
-              <span>មើលតាមថ្ងៃខែ៖</span>
+              <span>មើលតាមកាលបរិច្ឆេទ៖</span>
             </div>
 
             {/* Quick Date Presets */}
             <div className="flex items-center gap-1.5 flex-wrap">
+              {/* All Time button */}
+              <button
+                type="button"
+                onClick={() => {
+                  soundFx.playPop();
+                  setDatePreset('ALL');
+                }}
+                className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 ${
+                  datePreset === 'ALL'
+                    ? 'bg-slate-900 text-white shadow-md ring-2 ring-slate-400/40'
+                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200'
+                }`}
+              >
+                <span>🌐 ទាំងអស់</span>
+                <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
+                  datePreset === 'ALL' ? 'bg-white/25 text-white' : 'bg-slate-200 text-slate-800'
+                }`}>
+                  {expenses.length}
+                </span>
+              </button>
+
+              {/* This Month */}
               <button
                 type="button"
                 onClick={() => {
@@ -984,10 +1059,59 @@ export const ExpenseManagement: React.FC<ExpenseManagementProps> = ({
                 <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
                   datePreset === 'THIS_MONTH' ? 'bg-white/25 text-white' : 'bg-rose-200 text-rose-900'
                 }`}>
-                  {expenses.filter((e) => !!e.date && e.date.startsWith(thisMonthStr)).length}
+                  {expenses.filter((e) => normalizeDateToYMD(e.date || e.createdAt).startsWith(thisMonthStr)).length}
                 </span>
               </button>
 
+              {/* Last Month */}
+              <button
+                type="button"
+                onClick={() => {
+                  soundFx.playPop();
+                  setDatePreset('LAST_MONTH');
+                }}
+                className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 ${
+                  datePreset === 'LAST_MONTH'
+                    ? 'bg-gradient-to-r from-amber-600 to-orange-600 text-white shadow-sm ring-2 ring-amber-400/40'
+                    : 'bg-amber-50 text-amber-800 hover:bg-amber-100 border border-amber-200/80'
+                }`}
+              >
+                <span>⏳ ខែមុន ({formatKhmerMonthYear(lastMonthStr)})</span>
+                <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
+                  datePreset === 'LAST_MONTH' ? 'bg-white/25 text-white' : 'bg-amber-200 text-amber-900'
+                }`}>
+                  {expenses.filter((e) => normalizeDateToYMD(e.date || e.createdAt).startsWith(lastMonthStr)).length}
+                </span>
+              </button>
+
+              {/* Dynamic Month Pills from recorded data (e.g. September 2026) */}
+              {availableExpenseMonths
+                .filter((m) => m.ym !== thisMonthStr && m.ym !== lastMonthStr)
+                .map((m) => (
+                  <button
+                    key={m.ym}
+                    type="button"
+                    onClick={() => {
+                      soundFx.playPop();
+                      setSelectedMonth(m.ym);
+                      setDatePreset('SPECIFIC_MONTH');
+                    }}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                      datePreset === 'SPECIFIC_MONTH' && selectedMonth === m.ym
+                        ? 'bg-rose-600 text-white shadow-xs ring-2 ring-rose-400/40'
+                        : 'bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200/80'
+                    }`}
+                  >
+                    <span>🗓️ {m.labelKh}</span>
+                    <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
+                      datePreset === 'SPECIFIC_MONTH' && selectedMonth === m.ym ? 'bg-white/25 text-white' : 'bg-indigo-200 text-indigo-900'
+                    }`}>
+                      {m.count}
+                    </span>
+                  </button>
+                ))}
+
+              {/* Today */}
               <button
                 type="button"
                 onClick={() => {
@@ -1001,9 +1125,12 @@ export const ExpenseManagement: React.FC<ExpenseManagementProps> = ({
                 }`}
               >
                 <span>⚡ ថ្ងៃនេះ</span>
-                <span className="text-[10px] opacity-80">({expenses.filter((e) => e.date === todayStr).length})</span>
+                <span className="text-[10px] opacity-80">
+                  ({expenses.filter((e) => normalizeDateToYMD(e.date || e.createdAt) === todayStr).length})
+                </span>
               </button>
 
+              {/* Yesterday */}
               <button
                 type="button"
                 onClick={() => {
@@ -1017,22 +1144,9 @@ export const ExpenseManagement: React.FC<ExpenseManagementProps> = ({
                 }`}
               >
                 <span>⏳ ម្សិលមិញ</span>
-                <span className="text-[10px] opacity-80">({expenses.filter((e) => e.date === yesterdayStr).length})</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  soundFx.playPop();
-                  setDatePreset('ALL');
-                }}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                  datePreset === 'ALL'
-                    ? 'bg-slate-900 text-white shadow-xs'
-                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                }`}
-              >
-                🌐 ទាំងអស់ ({expenses.length})
+                <span className="text-[10px] opacity-80">
+                  ({expenses.filter((e) => normalizeDateToYMD(e.date || e.createdAt) === yesterdayStr).length})
+                </span>
               </button>
             </div>
           </div>
@@ -1064,10 +1178,10 @@ export const ExpenseManagement: React.FC<ExpenseManagementProps> = ({
                   type="button"
                   onClick={() => {
                     soundFx.playPop();
-                    setDatePreset('THIS_MONTH');
+                    setDatePreset('ALL');
                   }}
                   className="p-0.5 hover:bg-rose-100 text-rose-500 rounded-md transition-colors cursor-pointer"
-                  title="ត្រឡប់មកខែនេះ"
+                  title="បង្ហាញទាំងអស់"
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>
@@ -1099,10 +1213,10 @@ export const ExpenseManagement: React.FC<ExpenseManagementProps> = ({
                   type="button"
                   onClick={() => {
                     soundFx.playPop();
-                    setDatePreset('THIS_MONTH');
+                    setDatePreset('ALL');
                   }}
                   className="p-0.5 hover:bg-rose-100 text-rose-500 rounded-md transition-colors cursor-pointer"
-                  title="ត្រឡប់មកខែនេះ"
+                  title="បង្ហាញទាំងអស់"
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>
