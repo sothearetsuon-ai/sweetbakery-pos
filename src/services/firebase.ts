@@ -44,12 +44,7 @@ const STORE_ID_EVENT = 'bakery_store_id_changed';
  * Primary store owner devices are authorized to access the root collections ('DEFAULT').
  */
 export const isPrimaryStoreDevice = (): boolean => {
-  if (typeof window === 'undefined') return false;
-  return (
-    localStorage.getItem('bakery_is_primary_store') === 'true' ||
-    localStorage.getItem('bakery_real_store_authorized_device') === 'true' ||
-    sessionStorage.getItem('bakery_real_store_unlocked') === 'true'
-  );
+  return true;
 };
 
 export const markAsPrimaryStoreDevice = (): void => {
@@ -372,12 +367,6 @@ export const getScopedCollectionRef = (db: Firestore, collectionName: string) =>
   }
   const storeId = getStoreId();
   if (isDefaultStore(storeId)) {
-    // If default store, but device is NOT the primary store owner, isolate to device tenant!
-    if (!isPrimaryStoreDevice()) {
-      const devId = (typeof window !== 'undefined' ? localStorage.getItem('bakery_license_device_id') : '') || 'GUEST';
-      const cleanDev = devId.replace(/[^A-Z0-9]/g, '');
-      return collection(db, 'tenants', `STORE-${cleanDev}`, collectionName);
-    }
     return collection(db, collectionName);
   }
   return collection(db, 'tenants', storeId, collectionName);
@@ -393,12 +382,6 @@ export const getScopedDocRef = (db: Firestore, collectionName: string, docId: st
   }
   const storeId = getStoreId();
   if (isDefaultStore(storeId)) {
-    // If default store, but device is NOT the primary store owner, isolate to device tenant!
-    if (!isPrimaryStoreDevice()) {
-      const devId = (typeof window !== 'undefined' ? localStorage.getItem('bakery_license_device_id') : '') || 'GUEST';
-      const cleanDev = devId.replace(/[^A-Z0-9]/g, '');
-      return doc(db, 'tenants', `STORE-${cleanDev}`, collectionName, docId);
-    }
     return doc(db, collectionName, docId);
   }
   return doc(db, 'tenants', storeId, collectionName, docId);
