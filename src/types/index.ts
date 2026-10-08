@@ -268,6 +268,7 @@ export interface ReserveFund {
   currentBalanceUsd: number;
   history: ReserveFundTransaction[];
   updatedAt: string;
+  isInitialDefault?: boolean;
 }
 
 export type StaffRole = 'ADMIN' | 'CASHIER' | 'BAKER' | 'INVENTORY';

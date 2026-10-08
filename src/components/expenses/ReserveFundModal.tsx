@@ -51,7 +51,7 @@ export const ReserveFundModal: React.FC<ReserveFundModalProps> = ({ isOpen, onCl
   // Target edit state
   const [editTargetKhr, setEditTargetKhr] = useState<number>(reserveFund.targetAmountKhr);
   const [editTargetUsd, setEditTargetUsd] = useState<string>(reserveFund.targetAmountUsd.toString());
-  const [syncBalanceWithTarget, setSyncBalanceWithTarget] = useState<boolean>(false);
+  const [syncBalanceWithTarget, setSyncBalanceWithTarget] = useState<boolean>(true);
 
   // Direct balance adjustment state
   const [isAdjustingBalance, setIsAdjustingBalance] = useState<boolean>(false);

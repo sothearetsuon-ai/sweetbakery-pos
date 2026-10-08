@@ -68,7 +68,7 @@ export const ReserveFundDashboard: React.FC<ReserveFundDashboardProps> = ({
 
   // Target inline edit state
   const [targetKhrInput, setTargetKhrInput] = useState<number>(reserveFund.targetAmountKhr);
-  const [syncTargetBalance, setSyncTargetBalance] = useState<boolean>(false);
+  const [syncTargetBalance, setSyncTargetBalance] = useState<boolean>(true);
 
   // Direct balance adjustment inline state
   const [directBalanceKhr, setDirectBalanceKhr] = useState<number>(reserveFund.currentBalanceKhr);

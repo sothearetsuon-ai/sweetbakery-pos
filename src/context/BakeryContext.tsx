@@ -1023,8 +1023,8 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   // Reserve Fund (ទុនបម្រុងហាង & Petty Cash) state
   const [reserveFund, setReserveFund] = useState<ReserveFund>(() => {
-    const defaultTargetKhr = 1000000;
-    const defaultTargetUsd = 250;
+    const defaultTargetKhr = 4000000;
+    const defaultTargetUsd = 1000;
     if (globalIsDemoMode) {
       seedDemoDataIfMissing();
       const savedDemo = localStorage.getItem('demo_bakery_reserve_fund');
@@ -1064,13 +1064,14 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           createdAt: new Date().toISOString(),
         },
       ],
-      updatedAt: new Date().toISOString(),
+      updatedAt: '1970-01-01T00:00:00.000Z',
+      isInitialDefault: true,
     };
   });
 
   // Live dynamic reserve fund calculation: Target Float - Paid Cash Expenses + Replenishments
   const dynamicReserveFund: ReserveFund = useMemo(() => {
-    const targetKhr = Number(reserveFund.targetAmountKhr) || 1000000;
+    const targetKhr = Number(reserveFund.targetAmountKhr) || 4000000;
     const targetUsd = Number(reserveFund.targetAmountUsd) || Number((targetKhr / exchangeRate).toFixed(2));
 
     // Sum all expenses explicitly paid from Reserve Fund
@@ -1107,9 +1108,9 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       localStorage.setItem('demo_bakery_reserve_fund', JSON.stringify(dynamicReserveFund));
     } else {
       safeSetStorage('bakery_reserve_fund', JSON.stringify(dynamicReserveFund));
-      syncSaveDoc('settings', 'reserveFund', dynamicReserveFund);
     }
   }, [dynamicReserveFund]);
+
 
   // Sales management (including past sales)
   const [sales, setSales] = useState<CompletedSale[]>(() => {
@@ -2146,14 +2147,15 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       }
     });
 
-    // Subscribe to reserve fund (timestamp protected)
+    // Subscribe to reserve fund (timestamp protected & instant adoption of cloud over initial default)
     const unsubReserveFund = subscribeToFirestoreDoc<ReserveFund>('settings', 'reserveFund', (cloudRf) => {
       if (globalIsDemoMode || !cloudRf) return;
       if (typeof cloudRf.targetAmountKhr === 'number') {
         setReserveFund((currentLocal) => {
           const cloudTime = cloudRf.updatedAt ? new Date(cloudRf.updatedAt).getTime() : 0;
           const localTime = currentLocal?.updatedAt ? new Date(currentLocal.updatedAt).getTime() : 0;
-          if (cloudTime >= localTime) {
+          const isLocalDefault = (currentLocal as any)?.isInitialDefault || localTime === 0 || currentLocal?.updatedAt === '1970-01-01T00:00:00.000Z';
+          if (isLocalDefault || cloudTime >= localTime) {
             safeSetStorage('bakery_reserve_fund', JSON.stringify(cloudRf));
             reserveFundRef.current = cloudRf;
             return cloudRf;
@@ -2194,26 +2196,32 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   // Synchronous persist helper for Reserve Fund across storage, server disk & LAN
   const persistReserveFund = (nextRf: ReserveFund) => {
     isUpdatingFromLan.current = false;
-    reserveFundRef.current = nextRf;
-    setReserveFund(nextRf);
+    const cleanRf: ReserveFund = {
+      ...nextRf,
+      isInitialDefault: false,
+      updatedAt: new Date().toISOString(),
+    };
+    reserveFundRef.current = cleanRf;
+    setReserveFund(cleanRf);
 
     if (globalIsDemoMode) {
-      localStorage.setItem('demo_bakery_reserve_fund', JSON.stringify(nextRf));
+      localStorage.setItem('demo_bakery_reserve_fund', JSON.stringify(cleanRf));
     } else {
-      safeSetStorage('bakery_reserve_fund', JSON.stringify(nextRf));
-      syncSaveDoc('settings', 'reserveFund', nextRf);
+      safeSetStorage('bakery_reserve_fund', JSON.stringify(cleanRf));
+      syncSaveDoc('settings', 'reserveFund', cleanRf);
 
       // Fast atomic write to backend disk JSON
       fetch('/api/save-reserve-fund', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ reserveFund: nextRf }),
+        body: JSON.stringify({ reserveFund: cleanRf }),
       }).catch(() => {});
 
       // Instant broadcast
-      saveToLanSync({ reserveFund: nextRf }, true);
+      saveToLanSync({ reserveFund: cleanRf }, true);
     }
   };
+
 
   // Reserve Fund actions
   const updateReserveTarget = (targetKhr: number, targetUsd?: number, updateCurrentBalance?: boolean) => {
