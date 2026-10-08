@@ -1900,143 +1900,72 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setFirebaseSyncStatus('connected');
 
     // Automatically trigger queue processing and reconciliation when Firebase initializes & connects
+    // Automatically trigger queue processing when Firebase initializes & connects
     if (!globalIsDemoMode) {
-      offlineSyncService.processQueue().then(() => {
-        const lastSync = offlineSyncService.getLastSyncTime();
-        const shouldFullReconcile = !lastSync || (Date.now() - new Date(lastSync).getTime() > 4 * 3600 * 1000);
-        if (shouldFullReconcile) {
-          offlineSyncService.reconcileLocalDataToCloud({
-            sales,
-            customOrders,
-            expenses,
-            products,
-            storeInfo,
-            ingredients,
-            recipes,
-            staffMembers,
-            reserveFund,
-          }).catch(() => {});
-        }
-      }).catch(() => {});
+      offlineSyncService.processQueue().catch(() => {});
     }
 
-    // Subscribe to products
+    // Subscribe to products (High-speed, zero-loop read sync)
     const unsubProducts = subscribeToFirestoreCollection<Product>('products', (cloudProducts) => {
       if (globalIsDemoMode) return;
-      if (Array.isArray(cloudProducts)) {
-        const filtered = sortProductsNewestFirst(cloudProducts.filter((p) => p && p.id && !deletedProductIds.current.has(p.id)));
-
-        // If Cloud collection is empty, NEVER wipe out local products!
-        // Instead, seed Firestore with existing local products or initialProducts
-        if (filtered.length === 0) {
+      if (Array.isArray(cloudProducts) && cloudProducts.length > 0) {
+        const filtered = sortProductsNewestFirst(
+          cloudProducts.filter((p) => p && p.id && !deletedProductIds.current.has(p.id))
+        );
+        if (filtered.length > 0) {
           setProducts((prev) => {
-            const list = prev.length > 0 ? prev : sortProductsNewestFirst(initialProducts);
-            list.forEach((p) => {
-              saveFirestoreDoc('products', p.id, p);
-            });
-            return list;
-          });
-          return;
-        }
-
-        setProducts((prev) => {
-          const map = new Map<string, Product>();
-          // Cloud products take precedence
-          filtered.forEach((p) => map.set(p.id, p));
-          // Keep all existing non-deleted local products and ensure they are saved to Firestore
-          prev.forEach((p) => {
-            if (p && p.id && !deletedProductIds.current.has(p.id) && !map.has(p.id)) {
-              map.set(p.id, p);
-              saveFirestoreDoc('products', p.id, p);
+            // Skip re-render if identical length and top product ID
+            if (prev.length === filtered.length && prev[0]?.id === filtered[0]?.id) {
+              return prev;
             }
+            safeSetStorage('bakery_products', JSON.stringify(filtered));
+            return filtered;
           });
-          const merged = sortProductsNewestFirst(Array.from(map.values()).filter((p) => !deletedProductIds.current.has(p.id)));
-          safeSetStorage('bakery_products', JSON.stringify(merged));
-          return merged;
-        });
+        }
       }
     });
 
-    // Subscribe to sales (Preserves all local sales and seeds cloud if empty)
+    // Subscribe to sales (Preserves real-time cloud sales without feedback loop)
     const unsubSales = subscribeToFirestoreCollection<CompletedSale>('sales', (cloudSales) => {
       if (globalIsDemoMode) return;
-      if (Array.isArray(cloudSales)) {
+      if (Array.isArray(cloudSales) && cloudSales.length > 0) {
         const filtered = cloudSales
           .filter((s) => s && s.id && !deletedSaleIds.current.has(s.id))
           .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
-        if (filtered.length === 0) {
+        if (filtered.length > 0) {
           setSales((prev) => {
-            prev.forEach((s) => {
-              if (s && s.id && !deletedSaleIds.current.has(s.id)) {
-                saveFirestoreDoc('sales', s.id, s);
-              }
-            });
-            return prev;
-          });
-          return;
-        }
-
-        setSales((prev) => {
-          const map = new Map<string, CompletedSale>();
-          // Cloud sales take precedence
-          filtered.forEach((s) => map.set(s.id, s));
-          // Keep all existing non-deleted local sales and ensure they are saved to Firestore
-          prev.forEach((s) => {
-            if (s && s.id && !deletedSaleIds.current.has(s.id) && !map.has(s.id)) {
-              map.set(s.id, s);
-              saveFirestoreDoc('sales', s.id, s);
+            if (prev.length === filtered.length && prev[0]?.id === filtered[0]?.id) {
+              return prev;
             }
+            safeSetStorage('bakery_sales', JSON.stringify(filtered));
+            return filtered;
           });
-          const merged = Array.from(map.values())
-            .filter((s) => !deletedSaleIds.current.has(s.id))
-            .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-          safeSetStorage('bakery_sales', JSON.stringify(merged));
-          return merged;
-        });
+        }
       }
     });
 
-    // Subscribe to custom orders (Preserves all local orders and seeds cloud if empty)
+    // Subscribe to custom orders
     const unsubOrders = subscribeToFirestoreCollection<CustomCakeOrder>('customOrders', (cloudOrders) => {
       if (globalIsDemoMode) return;
-      if (Array.isArray(cloudOrders)) {
+      if (Array.isArray(cloudOrders) && cloudOrders.length > 0) {
         const filtered = cloudOrders.filter((o) => o && o.id && !deletedOrderIds.current.has(o.id));
-
-        if (filtered.length === 0) {
+        if (filtered.length > 0) {
           setCustomOrders((prev) => {
-            prev.forEach((o) => {
-              if (o && o.id && !deletedOrderIds.current.has(o.id)) {
-                saveFirestoreDoc('customOrders', o.id, o);
-              }
-            });
-            return prev;
-          });
-          return;
-        }
-
-        setCustomOrders((prev) => {
-          const map = new Map<string, CustomCakeOrder>();
-          filtered.forEach((o) => map.set(o.id, o));
-          prev.forEach((o) => {
-            if (o && o.id && !deletedOrderIds.current.has(o.id) && !map.has(o.id)) {
-              map.set(o.id, o);
-              saveFirestoreDoc('customOrders', o.id, o);
+            if (prev.length === filtered.length && prev[0]?.id === filtered[0]?.id) {
+              return prev;
             }
+            safeSetStorage('bakery_custom_orders', JSON.stringify(filtered));
+            return filtered;
           });
-          const merged = Array.from(map.values())
-            .filter((o) => !deletedOrderIds.current.has(o.id))
-            .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-          safeSetStorage('bakery_custom_orders', JSON.stringify(merged));
-          return merged;
-        });
+        }
       }
     });
 
-    // Subscribe to expenses (Preserves all local expenses and seeds cloud if empty)
+    // Subscribe to expenses
     const unsubExpenses = subscribeToFirestoreCollection<Expense>('expenses', (cloudExpenses) => {
       if (globalIsDemoMode) return;
-      if (Array.isArray(cloudExpenses)) {
+      if (Array.isArray(cloudExpenses) && cloudExpenses.length > 0) {
         const mockExpenseIds = new Set(['exp-1', 'exp-2', 'exp-3', 'exp-4', 'exp-5', 'exp-6', 'exp-7']);
         const sorted = cloudExpenses
           .filter((e) => e && e.id && !deletedExpenseIds.current.has(e.id) && !mockExpenseIds.has(e.id))
@@ -2045,64 +1974,32 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
               new Date(b.createdAt || b.date).getTime() - new Date(a.createdAt || a.date).getTime()
           );
 
-        if (sorted.length === 0) {
+        if (sorted.length > 0) {
           setExpenses((prev) => {
-            prev.forEach((e) => {
-              if (e && e.id && !deletedExpenseIds.current.has(e.id) && !mockExpenseIds.has(e.id)) {
-                saveFirestoreDoc('expenses', e.id, e);
-              }
-            });
-            return prev;
-          });
-          return;
-        }
-
-        setExpenses((prev) => {
-          const map = new Map<string, Expense>();
-          sorted.forEach((e) => map.set(e.id, e));
-          prev.forEach((e) => {
-            if (e && e.id && !deletedExpenseIds.current.has(e.id) && !mockExpenseIds.has(e.id) && !map.has(e.id)) {
-              map.set(e.id, e);
-              saveFirestoreDoc('expenses', e.id, e);
+            if (prev.length === sorted.length && prev[0]?.id === sorted[0]?.id) {
+              return prev;
             }
+            safeSetStorage('bakery_expenses', JSON.stringify(sorted));
+            return sorted;
           });
-          const merged = Array.from(map.values())
-            .filter((e) => !deletedExpenseIds.current.has(e.id) && !mockExpenseIds.has(e.id))
-            .sort((a, b) => new Date(b.createdAt || b.date).getTime() - new Date(a.createdAt || a.date).getTime());
-          safeSetStorage('bakery_expenses', JSON.stringify(merged));
-          return merged;
-        });
+        }
       }
     });
 
     // Subscribe to staff members
     const unsubStaff = subscribeToFirestoreCollection<StaffMember>('staffMembers', (cloudStaff) => {
       if (globalIsDemoMode) return;
-      if (Array.isArray(cloudStaff)) {
-        if (cloudStaff.length === 0) {
-          // If cloud has no staff, seed cloud with local staff
-          setStaffMembers((prev) => {
-            const list = prev.length > 0 ? prev : initialStaffMembers;
-            list.forEach((s) => {
-              saveFirestoreDoc('staffMembers', s.id, s);
-            });
-            return list;
-          });
-          return;
-        }
+      if (Array.isArray(cloudStaff) && cloudStaff.length > 0) {
         const sanitizedCloud = cloudStaff
           .filter((s) => s && s.id && !deletedStaffIds.current.has(s.id))
           .map((s) => {
-            // Ensure isActive defaults to true for cloud data that may not have this field
             const staff = { ...s, isActive: s.isActive !== false ? true : false };
-            // Only migrate display name/avatar — NEVER override saved pinCode
             if (staff.name?.includes('ម៉ារី') || staff.name?.includes('Mary') || staff.id === 'staff-1') {
               return {
                 ...staff,
                 name: staff.name?.includes('ម៉ារី') || staff.name?.includes('Mary') ? 'ម្ចាស់ហាង (Admin)' : staff.name,
                 nameEn: staff.nameEn?.includes('Mary') ? 'Store Owner (Admin)' : staff.nameEn,
                 avatar: staff.avatar === '👩‍🍳' ? '👑' : staff.avatar,
-                // preserve actual saved pinCode from Firestore
                 pinCode: staff.pinCode || '1111',
               };
             }
@@ -2112,7 +2009,6 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                 name: staff.name?.includes('សុធារិទ្ធ') || staff.name?.includes('Sothearith') ? 'វិជ្ជតា (Vicheta)' : staff.name,
                 nameEn: staff.nameEn?.includes('Sothearith') ? 'Vicheta (Cashier)' : staff.nameEn,
                 avatar: '👩‍💼',
-                // preserve actual saved pinCode from Firestore — do NOT force '2222'
                 pinCode: staff.pinCode || '2222',
               };
             }
@@ -2126,30 +2022,13 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     // Subscribe to ingredients (Stock)
     const unsubIngredients = subscribeToFirestoreCollection<Ingredient>('ingredients', (cloudIngredients) => {
       if (globalIsDemoMode) return;
-      if (Array.isArray(cloudIngredients)) {
-        if (cloudIngredients.length === 0) {
-          // If cloud has no ingredients, seed cloud with local ingredients
-          setIngredients((prev) => {
-            const list = prev.length > 0 ? prev : initialIngredients;
-            list.forEach((ing) => {
-              saveFirestoreDoc('ingredients', ing.id, ing);
-            });
-            return list;
-          });
-          return;
-        }
+      if (Array.isArray(cloudIngredients) && cloudIngredients.length > 0) {
         setIngredients((prev) => {
-          const map = new Map<string, Ingredient>();
-          cloudIngredients.forEach((ing) => map.set(ing.id, ing));
-          prev.forEach((ing) => {
-            if (ing && ing.id && !map.has(ing.id)) {
-              map.set(ing.id, ing);
-              saveFirestoreDoc('ingredients', ing.id, ing);
-            }
-          });
-          const merged = Array.from(map.values());
-          safeSetStorage('bakery_ingredients', JSON.stringify(merged));
-          return merged;
+          if (prev.length === cloudIngredients.length && prev[0]?.id === cloudIngredients[0]?.id) {
+            return prev;
+          }
+          safeSetStorage('bakery_ingredients', JSON.stringify(cloudIngredients));
+          return cloudIngredients;
         });
       }
     });
@@ -2157,30 +2036,13 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     // Subscribe to recipes
     const unsubRecipes = subscribeToFirestoreCollection<Recipe>('recipes', (cloudRecipes) => {
       if (globalIsDemoMode) return;
-      if (Array.isArray(cloudRecipes)) {
-        if (cloudRecipes.length === 0) {
-          // If cloud has no recipes, seed cloud with local recipes
-          setRecipes((prev) => {
-            const list = prev.length > 0 ? prev : initialRecipes;
-            list.forEach((r) => {
-              saveFirestoreDoc('recipes', r.id, r);
-            });
-            return list;
-          });
-          return;
-        }
+      if (Array.isArray(cloudRecipes) && cloudRecipes.length > 0) {
         setRecipes((prev) => {
-          const map = new Map<string, Recipe>();
-          cloudRecipes.forEach((r) => map.set(r.id, r));
-          prev.forEach((r) => {
-            if (r && r.id && !map.has(r.id)) {
-              map.set(r.id, r);
-              saveFirestoreDoc('recipes', r.id, r);
-            }
-          });
-          const merged = Array.from(map.values());
-          safeSetStorage('bakery_recipes', JSON.stringify(merged));
-          return merged;
+          if (prev.length === cloudRecipes.length && prev[0]?.id === cloudRecipes[0]?.id) {
+            return prev;
+          }
+          safeSetStorage('bakery_recipes', JSON.stringify(cloudRecipes));
+          return cloudRecipes;
         });
       }
     });

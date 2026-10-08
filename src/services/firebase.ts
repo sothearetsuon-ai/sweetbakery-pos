@@ -11,6 +11,7 @@ import {
   enableIndexedDbPersistence,
   increment,
   serverTimestamp,
+  writeBatch,
 } from 'firebase/firestore';
 import {
   getStorage,
@@ -491,7 +492,69 @@ export const subscribeToFirestoreDoc = <T>(
 };
 
 /**
- * Bulk upload all local store data into Cloud Firestore
+ * Ultra-fast Batched Saves to Firestore (Commits up to 450 items per network roundtrip)
+ * Massively speeds up mobile syncing by turning hundreds of sequential HTTP calls into 1-2 batch calls.
+ */
+export const batchSaveFirestoreDocs = async (
+  collectionName: string,
+  items: { id: string; data: any }[]
+): Promise<number> => {
+  const db = getFirestoreDb();
+  if (!db || !Array.isArray(items) || items.length === 0) return 0;
+
+  const validItems = items.filter((item) => item && item.id);
+  if (validItems.length === 0) return 0;
+
+  const BATCH_SIZE = 400; // Under Firestore 500 limit for absolute safety
+  let savedCount = 0;
+
+  for (let i = 0; i < validItems.length; i += BATCH_SIZE) {
+    const chunk = validItems.slice(i, i + BATCH_SIZE);
+    const batch = writeBatch(db);
+    for (const item of chunk) {
+      const docRef = getScopedDocRef(db, collectionName, item.id);
+      const cleanData = sanitizeForFirestore(item.data);
+      batch.set(docRef, cleanData, { merge: true });
+    }
+    await batch.commit();
+    savedCount += chunk.length;
+  }
+
+  return savedCount;
+};
+
+/**
+ * Ultra-fast Batched Deletions in Firestore
+ */
+export const batchDeleteFirestoreDocs = async (
+  collectionName: string,
+  docIds: string[]
+): Promise<number> => {
+  const db = getFirestoreDb();
+  if (!db || !Array.isArray(docIds) || docIds.length === 0) return 0;
+
+  const validIds = docIds.filter(Boolean);
+  if (validIds.length === 0) return 0;
+
+  const BATCH_SIZE = 400;
+  let deletedCount = 0;
+
+  for (let i = 0; i < validIds.length; i += BATCH_SIZE) {
+    const chunk = validIds.slice(i, i + BATCH_SIZE);
+    const batch = writeBatch(db);
+    for (const id of chunk) {
+      const docRef = getScopedDocRef(db, collectionName, id);
+      batch.delete(docRef);
+    }
+    await batch.commit();
+    deletedCount += chunk.length;
+  }
+
+  return deletedCount;
+};
+
+/**
+ * Bulk upload all local store data into Cloud Firestore using high-speed atomic batches
  */
 export const bulkUploadLocalToFirebase = async (
   data: BakeryBackupData
@@ -502,16 +565,9 @@ export const bulkUploadLocalToFirebase = async (
   }
 
   try {
-    let uploadedSales = 0;
-    let uploadedProducts = 0;
-    let uploadedOrders = 0;
-    let uploadedExpenses = 0;
-    let uploadedStaff = 0;
-    let uploadedIngredients = 0;
-
-    // Save Settings
+    // 1. Save Settings
     if (data.storeInfo) {
-      await setDoc(getScopedDocRef(db, 'settings', 'storeInfo'), data.storeInfo);
+      await setDoc(getScopedDocRef(db, 'settings', 'storeInfo'), sanitizeForFirestore(data.storeInfo));
     }
     if (data.exchangeRate) {
       await setDoc(getScopedDocRef(db, 'settings', 'currency'), { exchangeRate: data.exchangeRate });
@@ -520,45 +576,38 @@ export const bulkUploadLocalToFirebase = async (
       await setDoc(getScopedDocRef(db, 'settings', 'flavors'), { list: data.flavors });
     }
 
-    // Upload Products
-    for (const p of data.products || []) {
-      await setDoc(getScopedDocRef(db, 'products', p.id), p);
-      uploadedProducts++;
-    }
-
-    // Upload Sales
-    for (const s of data.sales || []) {
-      await setDoc(getScopedDocRef(db, 'sales', s.id), s);
-      uploadedSales++;
-    }
-
-    // Upload Custom Orders
-    for (const o of data.customOrders || []) {
-      await setDoc(getScopedDocRef(db, 'customOrders', o.id), o);
-      uploadedOrders++;
-    }
-
-    // Upload Expenses
-    for (const e of data.expenses || []) {
-      await setDoc(getScopedDocRef(db, 'expenses', e.id), e);
-      uploadedExpenses++;
-    }
-
-    // Upload Staff
-    for (const st of data.staffMembers || []) {
-      await setDoc(getScopedDocRef(db, 'staffMembers', st.id), st);
-      uploadedStaff++;
-    }
-
-    // Upload Ingredients
-    for (const ing of data.ingredients || []) {
-      await setDoc(getScopedDocRef(db, 'ingredients', ing.id), ing);
-      uploadedIngredients++;
-    }
+    // 2. High-speed parallel batches for all collections
+    const [
+      uploadedProducts,
+      uploadedSales,
+      uploadedOrders,
+      uploadedExpenses,
+      uploadedStaff,
+      uploadedIngredients,
+    ] = await Promise.all([
+      data.products?.length
+        ? batchSaveFirestoreDocs('products', data.products.map((p) => ({ id: p.id, data: p })))
+        : Promise.resolve(0),
+      data.sales?.length
+        ? batchSaveFirestoreDocs('sales', data.sales.map((s) => ({ id: s.id, data: s })))
+        : Promise.resolve(0),
+      data.customOrders?.length
+        ? batchSaveFirestoreDocs('customOrders', data.customOrders.map((o) => ({ id: o.id, data: o })))
+        : Promise.resolve(0),
+      data.expenses?.length
+        ? batchSaveFirestoreDocs('expenses', data.expenses.map((e) => ({ id: e.id, data: e })))
+        : Promise.resolve(0),
+      data.staffMembers?.length
+        ? batchSaveFirestoreDocs('staffMembers', data.staffMembers.map((st) => ({ id: st.id, data: st })))
+        : Promise.resolve(0),
+      data.ingredients?.length
+        ? batchSaveFirestoreDocs('ingredients', data.ingredients.map((ing) => ({ id: ing.id, data: ing })))
+        : Promise.resolve(0),
+    ]);
 
     return {
       success: true,
-      message: 'បាន Sync ទិន្នន័យឡើង Cloud Firebase ជោគជ័យ!',
+      message: 'បាន Sync ទិន្នន័យឡើង Cloud Firebase ជោគជ័យយ៉ាងលឿន!',
       counts: {
         products: uploadedProducts,
         sales: uploadedSales,
