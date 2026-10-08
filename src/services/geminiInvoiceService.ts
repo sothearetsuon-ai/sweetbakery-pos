@@ -6,6 +6,7 @@ import { normalizeDateToYMD } from '../utils/dateUtils';
 export interface ExtractedInvoiceItem {
   id: string;
   name: string;
+  itemCode?: string;
   category: ExpenseCategory;
   mainType: ExpenseType;
   quantity: number;
@@ -267,6 +268,7 @@ Rules:
 4. currency: 'KHR' or 'USD'.
 5. items: Array of purchased items:
    - name: Clear product name in Khmer or English.
+   - itemCode: Item code, SKU, barcode, or product code if printed on the invoice (e.g. "ITM-001", "P102", "8850..."). If not printed or visible, leave as "".
    - category: One of: 'INGREDIENTS' (flour, sugar, butter, yeast, milk, eggs, chocolate, matcha, cheese, cream, fruit), 'PACKAGING' (cake boxes, bread bags, cupcake cups, ribbons, cake boards, plastic bags), 'SUPPLIES' (candles, toppers, knives, baking paper, piping bags, molds, cutlery), 'UTILITIES' (gas, electricity, water, ice), 'TRANSPORTATION' (delivery fee, shipping, fuel, gasoline, PassApp, taxi, tuktuk), 'MAINTENANCE' (oven repair, cleaning agents), 'OTHER'.
    - mainType: 'INGREDIENT' (for baking ingredients), 'SUPPLY' (for packaging, decorations, tools), or 'GENERAL' (utilities, maintenance, general).
    - quantity: Number of units (default 1).
@@ -288,6 +290,7 @@ Return ONLY a valid JSON object matching this schema without any markdown format
   "items": [
     {
       "name": "ឈ្មោះមុខទំនិញ",
+      "itemCode": "កូដទំនិញ",
       "category": "INGREDIENTS",
       "mainType": "INGREDIENT",
       "quantity": 1,

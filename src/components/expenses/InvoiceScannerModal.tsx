@@ -267,6 +267,7 @@ export const InvoiceScannerModal: React.FC<InvoiceScannerModalProps> = ({
     const newItem: ExtractedInvoiceItem = {
       id: `item_manual_${Date.now()}`,
       name: '',
+      itemCode: '',
       category: 'INGREDIENTS',
       mainType: 'INGREDIENT',
       quantity: 1,
@@ -299,6 +300,7 @@ export const InvoiceScannerModal: React.FC<InvoiceScannerModalProps> = ({
         // 1. Save as Expense
         const expensePayload = {
           title: item.name.trim(),
+          itemCode: item.itemCode?.trim() || undefined,
           expenseType: item.mainType,
           category: item.category,
           supplier: supplier.trim(),
@@ -851,14 +853,27 @@ export const InvoiceScannerModal: React.FC<InvoiceScannerModalProps> = ({
                               onChange={() => toggleSelectItem(item.id)}
                               className="mt-1 w-4 h-4 rounded text-indigo-600 focus:ring-0 cursor-pointer"
                             />
-                            <div className="flex-1 space-y-1">
-                              <input
-                                type="text"
-                                value={item.name}
-                                onChange={(e) => updateItem(item.id, { name: e.target.value })}
-                                placeholder="ឈ្មោះមុខទំនិញ..."
-                                className="w-full font-black text-slate-900 text-sm bg-transparent border-b border-transparent hover:border-slate-300 focus:border-indigo-500 focus:outline-none px-1 py-0.5"
-                              />
+                            <div className="flex-1 space-y-1.5">
+                              <div className="flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-2">
+                                <input
+                                  type="text"
+                                  value={item.name}
+                                  onChange={(e) => updateItem(item.id, { name: e.target.value })}
+                                  placeholder="ឈ្មោះមុខទំនិញ..."
+                                  className="flex-1 font-black text-slate-900 text-sm bg-transparent border-b border-transparent hover:border-slate-300 focus:border-indigo-500 focus:outline-none px-1 py-0.5"
+                                />
+
+                                <div className="flex items-center gap-1 shrink-0 bg-slate-100 hover:bg-slate-200/80 px-2 py-0.5 rounded-lg border border-slate-200 self-start sm:self-auto">
+                                  <span className="text-[10px] font-bold text-slate-500">🏷️ កូដ:</span>
+                                  <input
+                                    type="text"
+                                    value={item.itemCode || ''}
+                                    onChange={(e) => updateItem(item.id, { itemCode: e.target.value })}
+                                    placeholder="កូដទំនិញ / Barcode"
+                                    className="w-24 sm:w-32 bg-transparent font-mono text-[11px] font-bold text-indigo-900 placeholder:text-slate-400 focus:outline-none"
+                                  />
+                                </div>
+                              </div>
 
                               <div className="flex items-center gap-2 flex-wrap">
                                 {/* Main Type Badge */}
