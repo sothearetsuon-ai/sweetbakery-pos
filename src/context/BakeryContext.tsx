@@ -317,27 +317,38 @@ export const cleanDeduplicateExpenses = (items: Expense[]): Expense[] => {
   const mockExpenseIds = new Set(['exp-1', 'exp-2', 'exp-3', 'exp-4', 'exp-5', 'exp-6', 'exp-7']);
   const nonMock = items.filter((e) => e && e.id && !mockExpenseIds.has(e.id));
 
-  // Special purge for 2026-10-07 & 2026-10-06 to keep strictly standard official invoice items
-  const filtered = nonMock.filter((e) => {
+  // Identify any Cake Supply / 2026-10-07 or Swan / 2026-10-06 item
+  const isCakeDayItem = (e: Expense) => {
     const d = normalizeDateToYMD(e.date || e.createdAt || '');
-    if (d === '2026-10-07' && !e.id.startsWith('exp-cake-')) {
-      return false;
-    }
-    if (d === '2026-10-06' && !e.id.startsWith('exp-swan-')) {
-      return false;
-    }
-    return true;
-  });
+    const rawDate = String(e.date || '') + ' ' + String(e.createdAt || '');
+    const isDate7 = d === '2026-10-07' || rawDate.includes('2026-10-07') || rawDate.includes('07-10-2026') || rawDate.includes('07/10/2026') || rawDate.includes('2026-10-7');
+    const isCakeSupplier = (e.supplier && (e.supplier.includes('Cake Supply') || e.supplier.includes('B0208720'))) || (e.notes && e.notes.includes('B0208720'));
+    return isDate7 || isCakeSupplier || (e.id && e.id.startsWith('exp-cake-'));
+  };
 
-  const existingIds = new Set(filtered.map((e) => e.id));
-  const missingInitials = initialExpenses.filter((ie) => !existingIds.has(ie.id));
-  const combined = [...filtered, ...missingInitials];
+  const isSwanDayItem = (e: Expense) => {
+    const d = normalizeDateToYMD(e.date || e.createdAt || '');
+    const rawDate = String(e.date || '') + ' ' + String(e.createdAt || '');
+    const isDate6 = d === '2026-10-06' || rawDate.includes('2026-10-06') || rawDate.includes('06-10-2026') || rawDate.includes('06/10/2026') || rawDate.includes('2026-10-6');
+    const isSwanSupplier = (e.supplier && e.supplier.includes('SWAN')) || (e.notes && e.notes.includes('8003609'));
+    return isDate6 || isSwanSupplier || (e.id && e.id.startsWith('exp-swan-'));
+  };
+
+  // Keep all OTHER expenses from different dates/suppliers
+  const otherExpenses = nonMock.filter((e) => !isCakeDayItem(e) && !isSwanDayItem(e));
+
+  // Clean initial official items for Cake Supply (strictly 26 items)
+  const cakeOfficial = initialExpenses.filter((e) => e.id.startsWith('exp-cake-'));
+  // Clean initial official items for Swan (strictly 10 items)
+  const swanOfficial = initialExpenses.filter((e) => e.id.startsWith('exp-swan-'));
+
+  const allItems = [...cakeOfficial, ...swanOfficial, ...otherExpenses];
 
   const seenIds = new Set<string>();
   const seenSignatures = new Set<string>();
   const result: Expense[] = [];
 
-  for (const exp of combined) {
+  for (const exp of allItems) {
     if (!exp || !exp.id || seenIds.has(exp.id)) continue;
     seenIds.add(exp.id);
 
