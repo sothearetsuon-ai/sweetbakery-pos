@@ -319,34 +319,12 @@ export const cleanDeduplicateExpenses = (items: Expense[]): Expense[] => {
     (e) => e && e.id && !mockExpenseIds.has(e.id) && !deletedIds.has(e.id)
   );
 
-  // Identify Cake Supply / B0208720 invoice items
-  const isCakeSupplyInvoiceItem = (e: Expense) => {
-    if (e.id && e.id.startsWith('exp-cake-')) return true;
-    if (e.supplier && (e.supplier.includes('Cake Supply') || e.supplier.includes('B0208720'))) return true;
-    if (e.notes && e.notes.includes('B0208720')) return true;
-    return false;
-  };
-
-  // Identify Swan Bedding & Bakery invoice items
-  const isSwanInvoiceItem = (e: Expense) => {
-    if (e.id && e.id.startsWith('exp-swan-')) return true;
-    if (e.supplier && e.supplier.includes('SWAN')) return true;
-    if (e.notes && e.notes.includes('8003609')) return true;
-    return false;
-  };
-
-  // Keep all general/utility expenses (Electricity EDC, Gas, Rent, Salary, Custom user expenses)
-  const otherExpenses = nonMock.filter((e) => !isCakeSupplyInvoiceItem(e) && !isSwanInvoiceItem(e));
-
-  // Clean initial official items (only include items that haven't been deleted by the user)
-  const officialInitials = initialExpenses.filter((e) => e && e.id && !deletedIds.has(e.id));
-  const allItems = [...officialInitials, ...otherExpenses];
-
   const seenIds = new Set<string>();
   const seenSignatures = new Set<string>();
   const result: Expense[] = [];
 
-  for (const exp of allItems) {
+  // 1. First, prioritize user-provided items (which include their edits, paymentMethod updates, and reserve fund allocations)
+  for (const exp of nonMock) {
     if (!exp || !exp.id || seenIds.has(exp.id) || deletedIds.has(exp.id)) continue;
     seenIds.add(exp.id);
 
@@ -356,6 +334,21 @@ export const cleanDeduplicateExpenses = (items: Expense[]): Expense[] => {
     const sig = `${d}|${cleanTitle}|${amt}`;
 
     if (seenSignatures.has(sig)) continue;
+    seenSignatures.add(sig);
+
+    result.push(exp);
+  }
+
+  // 2. Only add initialExpenses if the item is not already present or deleted
+  const officialInitials = initialExpenses.filter((e) => e && e.id && !deletedIds.has(e.id) && !seenIds.has(e.id));
+  for (const exp of officialInitials) {
+    const d = normalizeDateToYMD(exp.date || exp.createdAt || '');
+    const cleanTitle = (exp.title || '').replace(/\s+/g, ' ').trim().toLowerCase();
+    const amt = Number(exp.amountUsd || 0).toFixed(2);
+    const sig = `${d}|${cleanTitle}|${amt}`;
+
+    if (seenSignatures.has(sig) || seenIds.has(exp.id)) continue;
+    seenIds.add(exp.id);
     seenSignatures.add(sig);
 
     result.push(exp);
@@ -938,12 +931,6 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       const deduped = cleanDeduplicateExpenses(Array.isArray(parsed) ? parsed : []);
       setExpenses(deduped);
       safeSetStorage('bakery_expenses', JSON.stringify(deduped));
-      const deletedIds = loadDeletedIds('expenses');
-      initialExpenses.forEach((exp) => {
-        if (!deletedIds.has(exp.id)) {
-          saveFirestoreDoc('expenses', exp.id, exp);
-        }
-      });
     } catch (e) {}
   }, []);
 
