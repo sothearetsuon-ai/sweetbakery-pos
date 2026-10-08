@@ -38,7 +38,7 @@ import { formatDateDMY, normalizeDateToYMD } from '../../utils/dateUtils';
 
 export { normalizeDateToYMD };
 
-type DateFilterPreset = 'ALL' | 'THIS_MONTH' | 'LAST_MONTH' | 'TODAY' | 'YESTERDAY' | 'SPECIFIC_MONTH' | 'CUSTOM';
+type DateFilterPreset = 'ALL' | 'THIS_MONTH' | 'LAST_MONTH' | 'TODAY' | 'YESTERDAY' | 'WEEK' | 'SPECIFIC_MONTH' | 'CUSTOM_RANGE';
 
 export const formatKhmerDate = (dateStr: string) => {
   try {
@@ -119,6 +119,11 @@ export const ExpenseManagement: React.FC<ExpenseManagementProps> = ({
     d.setDate(d.getDate() - 1);
     return getLocalDateStr(d);
   }, []);
+  const sevenDaysAgoStr = useMemo(() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 7);
+    return getLocalDateStr(d);
+  }, []);
   const thisMonthStr = useMemo(() => {
     const d = new Date();
     const y = d.getFullYear();
@@ -157,7 +162,13 @@ export const ExpenseManagement: React.FC<ExpenseManagementProps> = ({
     const m = String(d.getMonth() + 1).padStart(2, '0');
     return `${y}-${m}`;
   });
-  const [customDate, setCustomDate] = useState<string>(() => getLocalDateStr(new Date()));
+  // Custom Date Range: ចាប់ពីថ្ងៃទី (Start Date) ដល់ថ្ងៃទី (End Date)
+  const [customStartDate, setCustomStartDate] = useState<string>(() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 30);
+    return getLocalDateStr(d);
+  });
+  const [customEndDate, setCustomEndDate] = useState<string>(() => getLocalDateStr(new Date()));
 
   // One-click sample expenses generator so the list is never empty when testing
   const handleSeedSampleExpenses = () => {
@@ -407,14 +418,18 @@ export const ExpenseManagement: React.FC<ExpenseManagementProps> = ({
         matchDate = normalizedExpDate === todayStr;
       } else if (datePreset === 'YESTERDAY') {
         matchDate = normalizedExpDate === yesterdayStr;
+      } else if (datePreset === 'WEEK') {
+        matchDate = normalizedExpDate >= sevenDaysAgoStr && normalizedExpDate <= todayStr;
       } else if (datePreset === 'THIS_MONTH') {
         matchDate = expMonth === thisMonthStr;
       } else if (datePreset === 'LAST_MONTH') {
         matchDate = expMonth === lastMonthStr;
       } else if (datePreset === 'SPECIFIC_MONTH') {
         matchDate = expMonth === selectedMonth;
-      } else if (datePreset === 'CUSTOM') {
-        matchDate = normalizedExpDate === customDate;
+      } else if (datePreset === 'CUSTOM_RANGE') {
+        const start = customStartDate || '1970-01-01';
+        const end = customEndDate || '2099-12-31';
+        matchDate = normalizedExpDate >= start && normalizedExpDate <= end;
       }
 
       const q = searchQuery.toLowerCase().trim();
@@ -427,7 +442,7 @@ export const ExpenseManagement: React.FC<ExpenseManagementProps> = ({
 
       return matchCat && matchReceipt && matchDate && matchSearch;
     });
-  }, [expenses, mainTypeFilter, statusFilter, selectedCategory, receiptFilter, datePreset, customDate, selectedMonth, todayStr, yesterdayStr, thisMonthStr, lastMonthStr, searchQuery]);
+  }, [expenses, mainTypeFilter, statusFilter, selectedCategory, receiptFilter, datePreset, customStartDate, customEndDate, selectedMonth, todayStr, yesterdayStr, sevenDaysAgoStr, thisMonthStr, lastMonthStr, searchQuery]);
 
   // Filtered sums
   const filteredExpensesKhr = useMemo(() => {
@@ -471,11 +486,12 @@ export const ExpenseManagement: React.FC<ExpenseManagementProps> = ({
     if (datePreset === 'ALL') return 'ទិន្នន័យចំណាយទាំងអស់ (All Time)';
     if (datePreset === 'TODAY') return `ថ្ងៃនេះ (${formatKhmerDate(todayStr)})`;
     if (datePreset === 'YESTERDAY') return `ម្សិលមិញ (${formatKhmerDate(yesterdayStr)})`;
+    if (datePreset === 'WEEK') return `៧ ថ្ងៃចុងក្រោយ (${formatKhmerDate(sevenDaysAgoStr)} ដល់ ${formatKhmerDate(todayStr)})`;
     if (datePreset === 'THIS_MONTH') return `ខែនេះ (${formatKhmerMonthYear(thisMonthStr)})`;
     if (datePreset === 'LAST_MONTH') return `ខែមុន (${formatKhmerMonthYear(lastMonthStr)})`;
     if (datePreset === 'SPECIFIC_MONTH') return `ខែ ${formatKhmerMonthYear(selectedMonth)}`;
-    return `ថ្ងៃទី ${formatKhmerDate(customDate)}`;
-  }, [datePreset, todayStr, yesterdayStr, thisMonthStr, lastMonthStr, selectedMonth, customDate]);
+    return `ចន្លោះពីថ្ងៃ ${formatKhmerDate(customStartDate)} ដល់ ${formatKhmerDate(customEndDate)}`;
+  }, [datePreset, todayStr, yesterdayStr, sevenDaysAgoStr, thisMonthStr, lastMonthStr, selectedMonth, customStartDate, customEndDate]);
 
 
   // Export CSV
@@ -505,7 +521,7 @@ export const ExpenseManagement: React.FC<ExpenseManagementProps> = ({
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    const dateLabel = datePreset !== 'ALL' ? (datePreset === 'CUSTOM' ? customDate : datePreset.toLowerCase()) : 'all';
+    const dateLabel = datePreset !== 'ALL' ? (datePreset === 'CUSTOM_RANGE' ? `${customStartDate}_to_${customEndDate}` : datePreset.toLowerCase()) : 'all';
     a.download = `bakery-expenses-${mainTypeFilter.toLowerCase()}-${dateLabel}-${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
   };
@@ -1111,6 +1127,28 @@ export const ExpenseManagement: React.FC<ExpenseManagementProps> = ({
                 </button>
               )}
 
+              {/* 7 Days */}
+              <button
+                type="button"
+                onClick={() => {
+                  soundFx.playPop();
+                  setDatePreset('WEEK');
+                }}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                  datePreset === 'WEEK'
+                    ? 'bg-rose-600 text-white shadow-xs'
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                }`}
+              >
+                <span>📆 ៧ ថ្ងៃចុងក្រោយ</span>
+                <span className="text-[10px] opacity-80">
+                  ({expenses.filter((e) => {
+                    const norm = normalizeDateToYMD(e.date || e.createdAt);
+                    return norm >= sevenDaysAgoStr && norm <= todayStr;
+                  }).length})
+                </span>
+              </button>
+
               {/* Today */}
               <button
                 type="button"
@@ -1148,10 +1186,26 @@ export const ExpenseManagement: React.FC<ExpenseManagementProps> = ({
                   ({expenses.filter((e) => normalizeDateToYMD(e.date || e.createdAt) === yesterdayStr).length})
                 </span>
               </button>
+
+              {/* Date Range Preset Button */}
+              <button
+                type="button"
+                onClick={() => {
+                  soundFx.playPop();
+                  setDatePreset('CUSTOM_RANGE');
+                }}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                  datePreset === 'CUSTOM_RANGE'
+                    ? 'bg-gradient-to-r from-pink-600 to-rose-600 text-white shadow-sm ring-2 ring-rose-400/40'
+                    : 'bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200/80'
+                }`}
+              >
+                <span>🎯 ចន្លោះកាលបរិច្ឆេទ (Range)</span>
+              </button>
             </div>
           </div>
 
-          {/* Custom Month & Date Pickers */}
+          {/* Custom Month & Date Range Pickers */}
           <div className="flex items-center gap-2 flex-wrap">
             {/* Specific Month Picker */}
             <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-2xl transition-all shadow-2xs border ${
@@ -1188,27 +1242,48 @@ export const ExpenseManagement: React.FC<ExpenseManagementProps> = ({
               )}
             </div>
 
-            {/* Specific Day Picker */}
-            <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-2xl transition-all shadow-2xs border ${
-              datePreset === 'CUSTOM'
+            {/* Date Range Inputs (ចាប់ពីថ្ងៃទី ... ដល់ថ្ងៃទី ...) */}
+            <div className={`flex items-center gap-2 px-3 py-1.5 rounded-2xl transition-all shadow-2xs border flex-wrap ${
+              datePreset === 'CUSTOM_RANGE'
                 ? 'bg-rose-50 border-rose-300 ring-2 ring-rose-400/30'
                 : 'bg-slate-50 hover:bg-rose-50/50 border-slate-200 hover:border-rose-300'
             }`}>
               <Calendar className="w-3.5 h-3.5 text-rose-500 shrink-0" />
-              <span className="text-[11px] font-bold text-slate-600 hidden sm:inline">រើសថ្ងៃ៖</span>
-              <input
-                type="date"
-                value={customDate}
-                onChange={(e) => {
-                  if (e.target.value) {
-                    soundFx.playPop();
-                    setCustomDate(e.target.value);
-                    setDatePreset('CUSTOM');
-                  }
-                }}
-                className="text-xs font-black text-slate-800 bg-transparent focus:outline-none cursor-pointer"
-              />
-              {datePreset === 'CUSTOM' && (
+              <div className="flex items-center gap-1">
+                <span className="text-[11px] font-bold text-slate-600">ចាប់ពីថ្ងៃទី៖</span>
+                <input
+                  type="date"
+                  value={customStartDate}
+                  onChange={(e) => {
+                    if (e.target.value) {
+                      soundFx.playPop();
+                      setCustomStartDate(e.target.value);
+                      setDatePreset('CUSTOM_RANGE');
+                    }
+                  }}
+                  className="text-xs font-black text-slate-800 bg-transparent focus:outline-none cursor-pointer"
+                />
+              </div>
+
+              <span className="text-slate-300 text-xs hidden sm:inline">➔</span>
+
+              <div className="flex items-center gap-1">
+                <span className="text-[11px] font-bold text-slate-600">ដល់ថ្ងៃទី៖</span>
+                <input
+                  type="date"
+                  value={customEndDate}
+                  onChange={(e) => {
+                    if (e.target.value) {
+                      soundFx.playPop();
+                      setCustomEndDate(e.target.value);
+                      setDatePreset('CUSTOM_RANGE');
+                    }
+                  }}
+                  className="text-xs font-black text-slate-800 bg-transparent focus:outline-none cursor-pointer"
+                />
+              </div>
+
+              {datePreset === 'CUSTOM_RANGE' && (
                 <button
                   type="button"
                   onClick={() => {
@@ -1586,8 +1661,10 @@ export const ExpenseManagement: React.FC<ExpenseManagementProps> = ({
                         type="button"
                         onClick={() => {
                           soundFx.playPop();
-                          setCustomDate((expense.date || expense.createdAt || '').slice(0, 10));
-                          setDatePreset('CUSTOM');
+                          const expD = (expense.date || expense.createdAt || '').slice(0, 10);
+                          setCustomStartDate(expD);
+                          setCustomEndDate(expD);
+                          setDatePreset('CUSTOM_RANGE');
                         }}
                         className="inline-flex items-center gap-1 text-[11px] font-bold text-slate-600 bg-slate-50 hover:bg-rose-50 px-2 py-0.5 rounded-lg border border-slate-200 cursor-pointer"
                         title="ចុចដើម្បីមើលចំណាយក្នុងថ្ងៃនេះ"

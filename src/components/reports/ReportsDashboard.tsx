@@ -384,32 +384,51 @@ export const ReportsDashboard: React.FC = () => {
 
         {/* Custom Date Range Inputs */}
         {dateFilter === 'custom' && (
-          <div className="p-3 bg-pink-50/50 border border-pink-200 rounded-2xl flex items-center gap-3 flex-wrap animate-in fade-in duration-200">
-            <span className="text-xs font-bold text-pink-900">ចន្លោះកាលបរិច្ឆេទ៖</span>
-            <div className="flex items-center gap-2">
-              <label className="text-[11px] font-semibold text-slate-600">ពីថ្ងៃ៖</label>
-              <input
-                type="date"
-                value={customStartDate}
-                onChange={(e) => {
-                  soundFx.playPop();
-                  setCustomStartDate(e.target.value);
-                }}
-                className="px-2.5 py-1 text-xs border border-pink-300 rounded-xl bg-white font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-pink-500/20"
-              />
+          <div className="p-3 bg-pink-50/70 border border-pink-200 rounded-2xl flex items-center justify-between gap-3 flex-wrap animate-in fade-in duration-200 shadow-2xs">
+            <div className="flex items-center gap-3 flex-wrap">
+              <span className="text-xs font-black text-pink-900 flex items-center gap-1.5">
+                <Calendar className="w-4 h-4 text-pink-600" />
+                <span>ចន្លោះកាលបរិច្ឆេទ៖</span>
+              </span>
+              <div className="flex items-center gap-1.5">
+                <label className="text-[11px] font-bold text-slate-700">ចាប់ពីថ្ងៃទី៖</label>
+                <input
+                  type="date"
+                  value={customStartDate}
+                  onChange={(e) => {
+                    soundFx.playPop();
+                    setCustomStartDate(e.target.value);
+                  }}
+                  className="px-2.5 py-1 text-xs border border-pink-300 rounded-xl bg-white font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-pink-500/20 cursor-pointer"
+                />
+              </div>
+
+              <span className="text-slate-400 text-xs hidden sm:inline">➔</span>
+
+              <div className="flex items-center gap-1.5">
+                <label className="text-[11px] font-bold text-slate-700">ដល់ថ្ងៃទី៖</label>
+                <input
+                  type="date"
+                  value={customEndDate}
+                  onChange={(e) => {
+                    soundFx.playPop();
+                    setCustomEndDate(e.target.value);
+                  }}
+                  className="px-2.5 py-1 text-xs border border-pink-300 rounded-xl bg-white font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-pink-500/20 cursor-pointer"
+                />
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <label className="text-[11px] font-semibold text-slate-600">ដល់ថ្ងៃ៖</label>
-              <input
-                type="date"
-                value={customEndDate}
-                onChange={(e) => {
-                  soundFx.playPop();
-                  setCustomEndDate(e.target.value);
-                }}
-                className="px-2.5 py-1 text-xs border border-pink-300 rounded-xl bg-white font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-pink-500/20"
-              />
-            </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                soundFx.playPop();
+                setDateFilter('this_month');
+              }}
+              className="px-2.5 py-1 rounded-xl bg-white hover:bg-rose-100 text-rose-600 text-xs font-bold border border-rose-200 cursor-pointer transition-colors shadow-2xs"
+            >
+              ✕ បង្ហាញខែនេះវិញ
+            </button>
           </div>
         )}
       </div>

@@ -26,8 +26,22 @@ export const SalesHistory: React.FC = () => {
 
   const [searchQuery, setSearchQuery] = useState('');
   // Always default to current month (ខែជាក់ស្តែងជាប្រចាំ)
-  const [dateFilter, setDateFilter] = useState<'all' | 'today' | 'yesterday' | 'month' | 'custom'>('month');
-  const [customDate, setCustomDate] = useState<string>('');
+  const [dateFilter, setDateFilter] = useState<'all' | 'today' | 'yesterday' | 'week' | 'month' | 'custom'>('month');
+  const [customStartDate, setCustomStartDate] = useState<string>(() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 30);
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  });
+  const [customEndDate, setCustomEndDate] = useState<string>(() => {
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  });
 
   // Modals state
   const [isAddPastOpen, setIsAddPastOpen] = useState(false);
@@ -55,19 +69,27 @@ export const SalesHistory: React.FC = () => {
   const yesterday = new Date();
   yesterday.setDate(yesterday.getDate() - 1);
   const yesterdayStr = getLocalDateStr(yesterday);
+  const sevenDaysAgo = new Date();
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+  const sevenDaysAgoStr = getLocalDateStr(sevenDaysAgo);
   const currentMonthStr = todayStr.slice(0, 7);
 
-  // Date-filtered sales (strictly updates summary cards according to selected date/month)
+  // Date-filtered sales (strictly updates summary cards according to selected date/month/range)
   const dateFilteredSales = useMemo(() => {
     return sales.filter((s) => {
       const saleDate = getLocalDateStr(s.createdAt);
       if (dateFilter === 'today') return saleDate === todayStr;
       if (dateFilter === 'yesterday') return saleDate === yesterdayStr;
+      if (dateFilter === 'week') return saleDate >= sevenDaysAgoStr && saleDate <= todayStr;
       if (dateFilter === 'month') return saleDate.slice(0, 7) === currentMonthStr;
-      if (dateFilter === 'custom' && customDate) return saleDate === customDate;
+      if (dateFilter === 'custom') {
+        const start = customStartDate || '1970-01-01';
+        const end = customEndDate || '2099-12-31';
+        return saleDate >= start && saleDate <= end;
+      }
       return true;
     });
-  }, [sales, dateFilter, customDate, todayStr, yesterdayStr, currentMonthStr]);
+  }, [sales, dateFilter, customStartDate, customEndDate, todayStr, yesterdayStr, sevenDaysAgoStr, currentMonthStr]);
 
   // Date-filtered expenses (for net profit calculation of that specific period)
   const dateFilteredExpenses = useMemo(() => {
@@ -75,11 +97,16 @@ export const SalesHistory: React.FC = () => {
       const expDate = getLocalDateStr(e.date || e.createdAt);
       if (dateFilter === 'today') return expDate === todayStr;
       if (dateFilter === 'yesterday') return expDate === yesterdayStr;
+      if (dateFilter === 'week') return expDate >= sevenDaysAgoStr && expDate <= todayStr;
       if (dateFilter === 'month') return expDate.slice(0, 7) === currentMonthStr;
-      if (dateFilter === 'custom' && customDate) return expDate === customDate;
+      if (dateFilter === 'custom') {
+        const start = customStartDate || '1970-01-01';
+        const end = customEndDate || '2099-12-31';
+        return expDate >= start && expDate <= end;
+      }
       return true;
     });
-  }, [expenses, dateFilter, customDate, todayStr, yesterdayStr, currentMonthStr]);
+  }, [expenses, dateFilter, customStartDate, customEndDate, todayStr, yesterdayStr, sevenDaysAgoStr, currentMonthStr]);
 
   // Financial totals calculated strictly according to selected date period
   const totalSalesKhr = useMemo(
@@ -110,10 +137,16 @@ export const SalesHistory: React.FC = () => {
   const periodLabelKh = useMemo(() => {
     if (dateFilter === 'today') return 'ថ្ងៃនេះ';
     if (dateFilter === 'yesterday') return 'ម្សិលមិញ';
+    if (dateFilter === 'week') return '៧ ថ្ងៃចុងក្រោយ';
     if (dateFilter === 'month') return 'ខែនេះ';
-    if (dateFilter === 'custom' && customDate) return `ថ្ងៃទី ${customDate}`;
+    if (dateFilter === 'custom') {
+      if (customStartDate && customEndDate) {
+        return `${formatDateDMY(customStartDate)} ដល់ ${formatDateDMY(customEndDate)}`;
+      }
+      return 'ចន្លោះកាលបរិច្ឆេទ';
+    }
     return 'សរុបទាំងអស់';
-  }, [dateFilter, customDate]);
+  }, [dateFilter, customStartDate, customEndDate]);
 
   const filteredSales = useMemo(() => {
     return dateFilteredSales.filter((s) => {
@@ -271,17 +304,18 @@ export const SalesHistory: React.FC = () => {
             { id: 'month', label: '🗓️ ខែនេះ' },
             { id: 'today', label: '☀️ ថ្ងៃនេះ' },
             { id: 'yesterday', label: '⏪ ម្សិលមិញ' },
+            { id: 'week', label: '📆 ៧ ថ្ងៃចុងក្រោយ' },
             { id: 'all', label: `🌐 ទាំងអស់ (${sales.length})` },
+            { id: 'custom', label: '🎯 ចន្លោះកាលបរិច្ឆេទ' },
           ].map((tab) => (
             <button
               key={tab.id}
               onClick={() => {
                 soundFx.playPop();
                 setDateFilter(tab.id as any);
-                setCustomDate('');
               }}
               className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                dateFilter === tab.id && !customDate
+                dateFilter === tab.id
                   ? 'bg-gradient-to-r from-pink-600 to-rose-500 text-white shadow-xs'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
@@ -290,41 +324,60 @@ export const SalesHistory: React.FC = () => {
             </button>
           ))}
 
-          {/* Custom Date Picker */}
-          <div className="flex items-center gap-1 pl-1.5 border-l border-slate-200">
-            <Calendar className="w-3.5 h-3.5 text-slate-400" />
-            <input
-              type="date"
-              value={customDate}
-              onChange={(e) => {
-                const val = e.target.value;
-                setCustomDate(val);
-                if (val) {
-                  soundFx.playPop();
-                  setDateFilter('custom');
-                } else {
-                  setDateFilter('all');
-                }
-              }}
-              className={`px-2 py-1 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
-                dateFilter === 'custom' && customDate
-                  ? 'bg-pink-50 border-pink-400 text-pink-700 font-black'
-                  : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300'
-              }`}
-              title="ជ្រើសរើសថ្ងៃជាក់លាក់"
-            />
-            {customDate && (
+          {/* Custom Date Range Picker (ចាប់ពីថ្ងៃទី ... ដល់ថ្ងៃទី ...) */}
+          <div className={`flex items-center gap-2 pl-2 border-l border-slate-200 flex-wrap py-0.5 ${
+            dateFilter === 'custom' ? 'bg-pink-50/60 rounded-xl px-2 py-1' : ''
+          }`}>
+            <Calendar className="w-3.5 h-3.5 text-pink-500 shrink-0" />
+            <div className="flex items-center gap-1">
+              <span className="text-[11px] font-bold text-slate-600">ចាប់ពីថ្ងៃទី៖</span>
+              <input
+                type="date"
+                value={customStartDate}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setCustomStartDate(val);
+                  if (val) {
+                    soundFx.playPop();
+                    setDateFilter('custom');
+                  }
+                }}
+                className="px-2 py-1 rounded-xl text-xs font-bold border border-slate-200 bg-white text-slate-800 hover:border-pink-300 focus:outline-none focus:ring-2 focus:ring-pink-500/20 cursor-pointer"
+                title="ចាប់ពីថ្ងៃទី"
+              />
+            </div>
+
+            <span className="text-slate-300 text-xs hidden sm:inline">➔</span>
+
+            <div className="flex items-center gap-1">
+              <span className="text-[11px] font-bold text-slate-600">ដល់ថ្ងៃទី៖</span>
+              <input
+                type="date"
+                value={customEndDate}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setCustomEndDate(val);
+                  if (val) {
+                    soundFx.playPop();
+                    setDateFilter('custom');
+                  }
+                }}
+                className="px-2 py-1 rounded-xl text-xs font-bold border border-slate-200 bg-white text-slate-800 hover:border-pink-300 focus:outline-none focus:ring-2 focus:ring-pink-500/20 cursor-pointer"
+                title="ដល់ថ្ងៃទី"
+              />
+            </div>
+
+            {dateFilter === 'custom' && (
               <button
                 type="button"
                 onClick={() => {
                   soundFx.playPop();
-                  setCustomDate('');
                   setDateFilter('all');
                 }}
-                className="text-xs text-rose-500 hover:text-rose-700 font-bold px-1 cursor-pointer"
-                title="លុបការជ្រើសរើសថ្ងៃ"
+                className="text-xs text-rose-500 hover:text-rose-700 font-bold px-1.5 py-0.5 hover:bg-rose-100 rounded-md cursor-pointer transition-colors"
+                title="បង្ហាញទាំងអស់"
               >
-                ✕
+                ✕ ទាំងអស់
               </button>
             )}
           </div>

@@ -22,7 +22,23 @@ export const CustomOrderPipeline: React.FC = () => {
   const [stageToDelete, setStageToDelete] = useState<{ status: OrderStatus; title: string; count: number } | null>(null);
   const [isConfirmClearAll, setIsConfirmClearAll] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [dateFilter, setDateFilter] = useState<'all' | 'today' | 'upcoming'>('all');
+  const [dateFilter, setDateFilter] = useState<'all' | 'today' | 'upcoming' | 'custom'>('all');
+  const [customStartDate, setCustomStartDate] = useState<string>(() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 30);
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  });
+  const [customEndDate, setCustomEndDate] = useState<string>(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 30);
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  });
   const [typeFilter, setTypeFilter] = useState<'ALL' | 'CAKE' | 'BREAD'>('ALL');
 
   const todayStr = new Date().toISOString().slice(0, 10);
@@ -46,6 +62,10 @@ export const CustomOrderPipeline: React.FC = () => {
         matchesDate = order.pickupDate === todayStr;
       } else if (dateFilter === 'upcoming') {
         matchesDate = order.pickupDate > todayStr;
+      } else if (dateFilter === 'custom') {
+        const start = customStartDate || '1970-01-01';
+        const end = customEndDate || '2099-12-31';
+        matchesDate = order.pickupDate >= start && order.pickupDate <= end;
       }
 
       let matchesType = true;
@@ -57,7 +77,7 @@ export const CustomOrderPipeline: React.FC = () => {
 
       return matchesSearch && matchesDate && matchesType;
     });
-  }, [customOrders, searchQuery, dateFilter, typeFilter, todayStr]);
+  }, [customOrders, searchQuery, dateFilter, customStartDate, customEndDate, typeFilter, todayStr]);
 
   const columns: {
     status: OrderStatus;
@@ -282,13 +302,13 @@ export const CustomOrderPipeline: React.FC = () => {
           </div>
 
           {/* Date Filter Pills */}
-          <div className="flex items-center bg-white/90 p-1 rounded-2xl border border-rose-100 shadow-2xs">
+          <div className="flex items-center bg-white/90 p-1 rounded-2xl border border-rose-100 shadow-2xs flex-wrap gap-1">
             <button
               onClick={() => {
                 soundFx.playPop();
                 setDateFilter('all');
               }}
-              className={`px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+              className={`px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                 dateFilter === 'all'
                   ? 'bg-gradient-to-r from-pink-600 to-rose-500 text-white shadow-xs'
                   : 'text-slate-600 hover:text-slate-900'
@@ -301,7 +321,7 @@ export const CustomOrderPipeline: React.FC = () => {
                 soundFx.playPop();
                 setDateFilter('today');
               }}
-              className={`px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+              className={`px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                 dateFilter === 'today'
                   ? 'bg-gradient-to-r from-pink-600 to-rose-500 text-white shadow-xs'
                   : 'text-slate-600 hover:text-slate-900'
@@ -314,7 +334,7 @@ export const CustomOrderPipeline: React.FC = () => {
                 soundFx.playPop();
                 setDateFilter('upcoming');
               }}
-              className={`px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+              className={`px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                 dateFilter === 'upcoming'
                   ? 'bg-gradient-to-r from-pink-600 to-rose-500 text-white shadow-xs'
                   : 'text-slate-600 hover:text-slate-900'
@@ -322,6 +342,58 @@ export const CustomOrderPipeline: React.FC = () => {
             >
               ថ្ងៃខាងមុខ
             </button>
+            <button
+              onClick={() => {
+                soundFx.playPop();
+                setDateFilter('custom');
+              }}
+              className={`px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                dateFilter === 'custom'
+                  ? 'bg-gradient-to-r from-pink-600 to-rose-500 text-white shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              🎯 ចន្លោះកាលបរិច្ឆេទ
+            </button>
+
+            {/* Custom Date Range Picker (ចាប់ពីថ្ងៃទី ... ដល់ថ្ងៃទី ...) */}
+            {dateFilter === 'custom' && (
+              <div className="flex items-center gap-1.5 pl-2 border-l border-slate-200 flex-wrap py-0.5">
+                <div className="flex items-center gap-1">
+                  <span className="text-[10px] font-bold text-slate-600">ចាប់ពីថ្ងៃទី៖</span>
+                  <input
+                    type="date"
+                    value={customStartDate}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setCustomStartDate(val);
+                      if (val) {
+                        soundFx.playPop();
+                        setDateFilter('custom');
+                      }
+                    }}
+                    className="px-2 py-0.5 rounded-lg text-xs font-bold border border-slate-200 bg-white text-slate-800 focus:outline-none focus:ring-1 focus:ring-pink-500 cursor-pointer"
+                  />
+                </div>
+                <span className="text-slate-300 text-xs hidden sm:inline">➔</span>
+                <div className="flex items-center gap-1">
+                  <span className="text-[10px] font-bold text-slate-600">ដល់ថ្ងៃទី៖</span>
+                  <input
+                    type="date"
+                    value={customEndDate}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setCustomEndDate(val);
+                      if (val) {
+                        soundFx.playPop();
+                        setDateFilter('custom');
+                      }
+                    }}
+                    className="px-2 py-0.5 rounded-lg text-xs font-bold border border-slate-200 bg-white text-slate-800 focus:outline-none focus:ring-1 focus:ring-pink-500 cursor-pointer"
+                  />
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Clear All Test Orders Button */}
