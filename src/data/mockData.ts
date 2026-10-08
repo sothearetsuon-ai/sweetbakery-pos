@@ -858,6 +858,43 @@ export const demoExpenses: Expense[] = [
 ];
 
 export const initialExpenses: Expense[] = [
+  // Utility & Operational Expenses
+  {
+    id: 'exp-edc-monthly',
+    title: 'ថ្លៃអគ្គិសនីដំណើរការឡដុតនំ & ទូក្លាសេ (EDC)',
+    expenseType: 'GENERAL',
+    category: 'UTILITIES',
+    quantity: 1,
+    unit: 'ខែ (month)',
+    unitPriceUsd: 85.0,
+    unitPriceKhr: 348500,
+    amountUsd: 85.0,
+    amountKhr: 348500,
+    paidBy: 'គណនេយ្យ (Admin)',
+    paymentMethod: 'BANK_TRANSFER',
+    paymentStatus: 'PAID',
+    notes: 'វិក្កយបត្រអគ្គិសនី EDC ប្រចាំខែ',
+    date: '2026-10-05',
+    createdAt: '2026-10-05T14:30:00.000Z',
+  },
+  {
+    id: 'exp-gas-48kg',
+    title: 'ប្តូរកំប៉ុងហ្គាសឡដុតនំធំ (Gas Refill 48kg)',
+    expenseType: 'GENERAL',
+    category: 'UTILITIES',
+    quantity: 1,
+    unit: 'ធុង (48kg)',
+    unitPriceUsd: 28.0,
+    unitPriceKhr: 114800,
+    amountUsd: 28.0,
+    amountKhr: 114800,
+    paidBy: 'ចុងភៅដុតនំ (Chef)',
+    paymentMethod: 'CASH_USD',
+    paymentStatus: 'PAID',
+    notes: 'ហ្គាស 48kg សម្រាប់ឡដុតនំ',
+    date: '2026-10-04',
+    createdAt: '2026-10-04T09:15:00.000Z',
+  },
   {
     id: 'exp-swan-8003609',
     title: 'Mousse cake Plastic Rim/Hard/8003609 (ខ្សែរុំនំ Mousse រឹង)',
