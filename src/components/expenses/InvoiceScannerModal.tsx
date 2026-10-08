@@ -27,6 +27,7 @@ import { ExpenseCategory, ExpenseType } from '../../types';
 import { soundFx } from '../../utils/audio';
 import {
   getGeminiApiKey,
+  getGeminiApiKeyAsync,
   setGeminiApiKey,
   compressImage,
   scanInvoiceWithGemini,
@@ -77,14 +78,35 @@ export const InvoiceScannerModal: React.FC<InvoiceScannerModalProps> = ({
   const cameraInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
+    const handleKeyChange = (e: any) => {
+      const newKey = e.detail?.apiKey || getGeminiApiKey();
+      if (newKey) {
+        setApiKeyState(newKey);
+        setKeyInput(newKey);
+      }
+    };
+    window.addEventListener('sweetbakery_gemini_api_key_changed', handleKeyChange);
+
     if (isOpen) {
       const savedKey = getGeminiApiKey();
       setApiKeyState(savedKey);
       setKeyInput(savedKey);
       if (!savedKey) {
-        setIsKeyConfigOpen(true);
+        // Fallback asynchronously check IndexedDB (for mobile devices)
+        getGeminiApiKeyAsync().then((asyncKey) => {
+          if (asyncKey) {
+            setApiKeyState(asyncKey);
+            setKeyInput(asyncKey);
+          } else {
+            setIsKeyConfigOpen(true);
+          }
+        });
       }
     }
+
+    return () => {
+      window.removeEventListener('sweetbakery_gemini_api_key_changed', handleKeyChange);
+    };
   }, [isOpen]);
 
   if (!isOpen) return null;
@@ -92,7 +114,7 @@ export const InvoiceScannerModal: React.FC<InvoiceScannerModalProps> = ({
   // Handle Save API Key
   const handleSaveApiKey = () => {
     const trimmed = keyInput.trim();
-    setGeminiApiKey(trimmed);
+    setGeminiApiKey(trimmed, true);
     setApiKeyState(trimmed);
     soundFx.playSuccess();
     setIsKeyConfigOpen(false);

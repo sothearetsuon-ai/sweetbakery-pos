@@ -55,7 +55,9 @@ import {
   notifyTelegramShiftClose as rawNotifyTelegramShiftClose,
   getStoredTelegramConfig,
   saveStoredTelegramConfig,
+  TelegramConfig,
 } from '../services/telegram';
+import { setGeminiApiKeyLocally } from '../services/geminiInvoiceService';
 import { offlineSyncService, SyncState } from '../services/offlineSyncService';
 import { soundFx } from '../utils/audio';
 import { formatDateDMY, formatDateTimeDMY } from '../utils/dateUtils';
@@ -2161,6 +2163,18 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       }
     });
 
+    // Subscribe to shared Gemini AI Key across all devices (PC & Phone sync automatically)
+    const unsubGemini = subscribeToFirestoreDoc<{ apiKey?: string }>('settings', 'geminiApiKey', (cloudGemini) => {
+      if (globalIsDemoMode || !cloudGemini?.apiKey) return;
+      setGeminiApiKeyLocally(cloudGemini.apiKey);
+    });
+
+    // Subscribe to shared Telegram config across all devices (PC & Phone sync automatically)
+    const unsubTelegram = subscribeToFirestoreDoc<TelegramConfig>('settings', 'telegram', (cloudTelegram) => {
+      if (globalIsDemoMode || !cloudTelegram?.botToken) return;
+      saveStoredTelegramConfig(cloudTelegram);
+    });
+
     return () => {
       unsubProducts();
       unsubSales();
@@ -2172,6 +2186,8 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       unsubStoreInfo();
       unsubDeletedRecords();
       unsubReserveFund();
+      unsubGemini();
+      unsubTelegram();
     };
   }, [currentStoreTenantId]);
 

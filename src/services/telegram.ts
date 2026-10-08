@@ -1,5 +1,7 @@
 import { CompletedSale, CustomCakeOrder, Expense, Shift, StoreInfo } from '../types';
 import { formatDateDMY, formatDateTimeDMY } from '../utils/dateUtils';
+import { idbGet, idbSet } from '../utils/idbStorage';
+import { saveFirestoreDoc } from './firebase';
 
 export interface TelegramConfig {
   botToken: string;
@@ -60,16 +62,19 @@ export const getStoredTelegramConfig = (): TelegramConfig => {
 };
 
 /**
- * Save Telegram config to localStorage and server LAN sync
+ * Save Telegram config to localStorage, IndexedDB, server LAN sync, and Firestore Cloud
  */
-export const saveStoredTelegramConfig = (config: TelegramConfig): void => {
-  if (isDemoModeActive()) {
-    console.warn('[Telegram] Blocked config saving in Demo mode');
-    return;
-  }
+export const saveStoredTelegramConfig = (config: TelegramConfig, syncToCloud = true): void => {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
-    // Also push to server LAN sync if available so other devices (phones) get it
+    idbSet(STORAGE_KEY, JSON.stringify(config)).catch(() => {});
+
+    // Sync to Firestore Cloud so mobile phones automatically inherit store Telegram credentials
+    if (syncToCloud) {
+      saveFirestoreDoc('settings', 'telegram', config).catch(() => {});
+    }
+
+    // Also push to server LAN sync if available so local network devices get it
     fetch('/api/lan-sync')
       .then((res) => res.json())
       .then((data) => {

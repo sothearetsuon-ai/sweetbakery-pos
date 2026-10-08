@@ -22,7 +22,7 @@ import {
   FirebaseStorage,
 } from 'firebase/storage';
 import { BakeryBackupData, CompletedSale, CustomCakeOrder, Expense, Ingredient, Product, StaffMember, StoreInfo } from '../types';
-import { idbGet, idbSet } from '../utils/idbStorage';
+import { idbGet, idbSet, idbDel } from '../utils/idbStorage';
 
 export interface FirebaseConfig {
   apiKey: string;
@@ -142,6 +142,22 @@ export const getStoredFirebaseConfig = (): FirebaseConfig => {
   return DEFAULT_FIREBASE_CONFIG;
 };
 
+// Immediate background attempt to restore Firebase config from IndexedDB if localStorage was purged
+if (typeof window !== 'undefined') {
+  idbGet(STORAGE_KEY)
+    .then((idbSaved) => {
+      if (idbSaved && !localStorage.getItem(STORAGE_KEY)) {
+        try {
+          const parsed = JSON.parse(idbSaved);
+          if (parsed?.apiKey && parsed?.projectId) {
+            localStorage.setItem(STORAGE_KEY, idbSaved);
+          }
+        } catch (e) {}
+      }
+    })
+    .catch(() => {});
+}
+
 export const isDemoModeActive = (): boolean => {
   if (typeof window === 'undefined') return false;
   const params = new URLSearchParams(window.location.search);
@@ -150,29 +166,25 @@ export const isDemoModeActive = (): boolean => {
 };
 
 /**
- * Save Firebase config to localStorage
+ * Save Firebase config to localStorage and durable IndexedDB (protects mobile devices)
  */
 export const saveStoredFirebaseConfig = (config: FirebaseConfig): void => {
-  if (isDemoModeActive()) {
-    console.warn('[Firebase] Config saving blocked in Demo mode');
-    return;
-  }
   try {
     localStorage.removeItem(DISABLED_KEY);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
+    idbSet(STORAGE_KEY, JSON.stringify(config)).catch(() => {});
   } catch (e) {}
 };
 
 /**
- * Clear Firebase config from localStorage (Disconnect)
+ * Clear Firebase config from localStorage and IndexedDB (Disconnect)
  */
 export const clearStoredFirebaseConfig = (): void => {
-  if (isDemoModeActive()) {
-    console.warn('[Firebase] Disconnect blocked in Demo mode');
-    return;
-  }
-  localStorage.removeItem(STORAGE_KEY);
-  localStorage.setItem(DISABLED_KEY, 'true');
+  try {
+    localStorage.removeItem(STORAGE_KEY);
+    localStorage.setItem(DISABLED_KEY, 'true');
+    idbDel(STORAGE_KEY).catch(() => {});
+  } catch (e) {}
 };
 
 /**

@@ -1,4 +1,6 @@
 import { ExpenseCategory, ExpenseType } from '../types';
+import { idbGet, idbSet, idbDel } from '../utils/idbStorage';
+import { saveFirestoreDoc } from './firebase';
 
 export interface ExtractedInvoiceItem {
   id: string;
@@ -32,20 +34,87 @@ export interface ExtractedInvoice {
 }
 
 const STORAGE_KEY = 'sweetbakery_gemini_api_key';
+let inMemoryApiKey: string = '';
 
 export const getGeminiApiKey = (): string => {
-  return (
-    localStorage.getItem(STORAGE_KEY) ||
-    ((import.meta as any).env?.VITE_GEMINI_API_KEY as string) ||
-    ''
-  );
+  if (inMemoryApiKey) return inMemoryApiKey;
+
+  let key = '';
+  try {
+    key = localStorage.getItem(STORAGE_KEY) || sessionStorage.getItem(STORAGE_KEY) || '';
+  } catch (e) {}
+
+  if (!key) {
+    key = ((import.meta as any).env?.VITE_GEMINI_API_KEY as string) || '';
+  }
+
+  if (key) {
+    inMemoryApiKey = key;
+  }
+  return key;
 };
 
-export const setGeminiApiKey = (key: string): void => {
-  if (!key) {
-    localStorage.removeItem(STORAGE_KEY);
-  } else {
-    localStorage.setItem(STORAGE_KEY, key.trim());
+/**
+ * Asynchronous retrieval ensuring IndexedDB fallback (prevents key loss on iOS Safari / mobile PWA)
+ */
+export const getGeminiApiKeyAsync = async (): Promise<string> => {
+  const current = getGeminiApiKey();
+  if (current) return current;
+
+  try {
+    const idbKey = await idbGet(STORAGE_KEY);
+    if (idbKey && idbKey.trim()) {
+      setGeminiApiKeyLocally(idbKey.trim());
+      return idbKey.trim();
+    }
+  } catch (e) {}
+
+  return '';
+};
+
+// Immediate background attempt to restore from IndexedDB if localStorage was wiped on phone
+if (typeof window !== 'undefined') {
+  getGeminiApiKeyAsync().catch(() => {});
+}
+
+/**
+ * Persist Gemini API Key to local multi-layer storage (Memory + LocalStorage + SessionStorage + IndexedDB)
+ */
+export const setGeminiApiKeyLocally = (key: string): void => {
+  const cleanKey = (key || '').trim();
+  inMemoryApiKey = cleanKey;
+
+  try {
+    if (!cleanKey) {
+      localStorage.removeItem(STORAGE_KEY);
+      sessionStorage.removeItem(STORAGE_KEY);
+      idbDel(STORAGE_KEY).catch(() => {});
+    } else {
+      localStorage.setItem(STORAGE_KEY, cleanKey);
+      sessionStorage.setItem(STORAGE_KEY, cleanKey);
+      idbSet(STORAGE_KEY, cleanKey).catch(() => {});
+    }
+
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(
+        new CustomEvent('sweetbakery_gemini_api_key_changed', { detail: { apiKey: cleanKey } })
+      );
+    }
+  } catch (e) {}
+};
+
+/**
+ * Save Gemini API Key locally AND sync to Firestore Cloud so ALL devices (Computers & Phones) share it!
+ */
+export const setGeminiApiKey = (key: string, syncToCloud = true): void => {
+  const cleanKey = (key || '').trim();
+  setGeminiApiKeyLocally(cleanKey);
+
+  if (syncToCloud) {
+    saveFirestoreDoc('settings', 'geminiApiKey', {
+      apiKey: cleanKey,
+      updatedAt: new Date().toISOString(),
+    }).catch(() => {});
   }
 };
 
