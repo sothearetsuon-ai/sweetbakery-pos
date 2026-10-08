@@ -305,37 +305,23 @@ Return ONLY a valid JSON object matching this schema without any markdown format
   "rawNotes": "ចំណាំបន្ថែម"
 }`;
 
-  // 1. Dynamic model discovery directly from Google ModelService
-  let validModels: string[] = [];
-  try {
-    const listRes = await fetch('https://generativelanguage.googleapis.com/v1beta/models', {
-      headers: { 'x-goog-api-key': apiKey },
-    });
-    if (listRes.ok) {
-      const data = await listRes.json();
-      const rawList: any[] = data.models || [];
-      validModels = rawList
-        .filter((m: any) => m.supportedGenerationMethods?.includes('generateContent'))
-        .map((m: any) => m.name?.replace('models/', ''))
-        .filter((name: string) => name && !name.includes('embedding') && !name.includes('aqa') && !name.includes('imagen'));
-    }
-  } catch (e) {}
-
-  // Prioritize high-quota stable models (1,500 req/day: gemini-1.5-flash, gemini-2.0-flash, gemini-1.5-pro)
-  const prioritizedCandidates = [
-    ...validModels.filter((m) => m === 'gemini-1.5-flash' || m === 'gemini-1.5-flash-latest'),
-    ...validModels.filter((m) => m.includes('2.0-flash')),
-    ...validModels.filter((m) => m.includes('1.5-flash') && !m.includes('8b')),
-    ...validModels.filter((m) => m.includes('1.5-pro')),
+  // 1. Prioritized modern, ultra-fast vision models
+  const defaultFastModels = [
+    'gemini-2.5-flash',
+    'gemini-2.0-flash',
     'gemini-1.5-flash',
     'gemini-1.5-flash-latest',
-    'gemini-2.0-flash',
     'gemini-2.0-flash-exp',
     'gemini-1.5-pro',
-    ...validModels,
-  ].filter(Boolean) as string[];
+  ];
 
-  const models = Array.from(new Set(prioritizedCandidates));
+  // Try cached model first, otherwise use default list immediately without blocking
+  let models = defaultFastModels;
+  const savedActiveModel = localStorage.getItem('sweetbakery_gemini_active_model');
+  if (savedActiveModel && defaultFastModels.includes(savedActiveModel)) {
+    models = [savedActiveModel, ...defaultFastModels.filter((m) => m !== savedActiveModel)];
+  }
+
   let lastError: any = null;
 
   const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
