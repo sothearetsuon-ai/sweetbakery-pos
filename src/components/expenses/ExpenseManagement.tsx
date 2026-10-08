@@ -1475,7 +1475,7 @@ export const ExpenseManagement: React.FC<ExpenseManagementProps> = ({
               </span>
             </div>
             <p className="text-[11px] text-slate-400 mt-0.5">
-              {viewMode === 'table' ? 'ទិដ្ឋភាពតារាងពេញលេញ (អាចអូសឆ្វេង-ស្តាំលើទូរស័ព្ទ)' : 'ទិដ្ឋភាពកាតសង្ខេប'}
+              {viewMode === 'table' ? 'ទិដ្ឋភាពតារាង (Table View)' : 'ទិដ្ឋភាពកាត (Cards View)'}
             </p>
           </div>
         </div>
