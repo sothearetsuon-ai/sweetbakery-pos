@@ -199,13 +199,16 @@ export const testGeminiApiKey = async (apiKey: string): Promise<ApiKeyTestResult
         .filter((m: any) => m.supportedGenerationMethods?.includes('generateContent'))
         .map((m: any) => m.name?.replace('models/', ''));
 
-      // Find the best flash model available for this account (prioritize gemini-3.8-flash)
+      // Find the best flash model available for this account (prioritize high-quota stable models)
       const bestModel =
-        usableModels.find((m: string) => m === 'gemini-3.8-flash') ||
-        usableModels.find((m: string) => m.includes('3.8-flash')) ||
-        usableModels.find((m: string) => m.includes('3.')) ||
+        usableModels.find((m: string) => m === 'gemini-2.5-flash') ||
+        usableModels.find((m: string) => m === 'gemini-2.0-flash') ||
+        usableModels.find((m: string) => m === 'gemini-1.5-flash') ||
+        usableModels.find((m: string) => m.includes('2.5-flash')) ||
+        usableModels.find((m: string) => m.includes('2.0-flash')) ||
+        usableModels.find((m: string) => m.includes('1.5-flash')) ||
         usableModels.find((m: string) => m.includes('flash')) ||
-        'gemini-3.8-flash';
+        'gemini-2.5-flash';
 
       localStorage.setItem('sweetbakery_gemini_active_model', bestModel);
 
@@ -299,20 +302,24 @@ Return ONLY a valid JSON object matching this schema without any markdown format
   "rawNotes": "ចំណាំបន្ថែម"
 }`;
 
-  // 1. Purge obsolete models and prioritize gemini-3.8-flash
+  // 1. Purge obsolete or low-quota preview models from cache
   let activeModel = typeof localStorage !== 'undefined' ? localStorage.getItem('sweetbakery_gemini_active_model') : null;
-  if (!activeModel || activeModel.includes('2.') || activeModel.includes('1.')) {
-    activeModel = 'gemini-3.8-flash';
+  if (!activeModel || activeModel.includes('3.') || activeModel.includes('preview')) {
+    activeModel = 'gemini-2.5-flash';
     if (typeof localStorage !== 'undefined') {
-      localStorage.setItem('sweetbakery_gemini_active_model', 'gemini-3.8-flash');
+      localStorage.setItem('sweetbakery_gemini_active_model', 'gemini-2.5-flash');
     }
   }
 
-  // Candidates list: gemini-3.8-flash with fallback to gemini-3.7-flash
+  // Candidates list: High-quota stable models (1,500 requests/day) with automatic fallback
   const candidateModels = [
     activeModel,
-    'gemini-3.8-flash',
-    'gemini-3.7-flash',
+    'gemini-2.5-flash',
+    'gemini-2.0-flash',
+    'gemini-1.5-flash',
+    'gemini-2.5-pro',
+    'gemini-1.5-pro',
+    'gemini-1.5-flash-8b',
   ].filter(Boolean) as string[];
 
   const models = Array.from(new Set(candidateModels));
@@ -321,7 +328,7 @@ Return ONLY a valid JSON object matching this schema without any markdown format
   const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
   for (const model of models) {
-    let retries = 2; // Auto-retry up to 2 times for transient high demand spikes
+    let retries = 1; // Auto-retry for transient network hiccups
     while (retries >= 0) {
       try {
         const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
@@ -356,12 +363,23 @@ Return ONLY a valid JSON object matching this schema without any markdown format
           const errorData = await response.json().catch(() => ({}));
           const errMsg = errorData.error?.message || `HTTP ${response.status}: ${response.statusText}`;
 
-          // If high demand or rate limit spike, wait and auto-retry
+          // If Quota exceeded on this model, or model 404, or high demand:
+          // Immediately try the next candidate model in the list!
           if (
-            (response.status === 503 ||
-              response.status === 429 ||
-              errMsg.toLowerCase().includes('high demand') ||
-              errMsg.toLowerCase().includes('overloaded')) &&
+            response.status === 404 ||
+            response.status === 429 ||
+            response.status === 503 ||
+            errMsg.toLowerCase().includes('quota') ||
+            errMsg.toLowerCase().includes('exceeded') ||
+            errMsg.toLowerCase().includes('rate limit')
+          ) {
+            lastError = new Error(errMsg);
+            break; // Break retry loop and try NEXT model
+          }
+
+          // If transient high demand on server, wait and retry once
+          if (
+            (errMsg.toLowerCase().includes('high demand') || errMsg.toLowerCase().includes('overloaded')) &&
             retries > 0
           ) {
             retries--;
@@ -369,16 +387,12 @@ Return ONLY a valid JSON object matching this schema without any markdown format
             continue;
           }
 
-          if (response.status === 404) {
-            lastError = new Error(errMsg);
-            break; // Try next model
-          }
-
           let friendlyMsg = errMsg;
           if (errMsg.toLowerCase().includes('high demand') || errMsg.toLowerCase().includes('overloaded')) {
             friendlyMsg = 'ម៉ាស៊ីនមេ Google កំពុងមានអ្នកប្រើប្រាស់កកកុញច្រើន (High Demand)។ សូមរង់ចាំប្រហែល ៥ ទៅ ១០ វិនាទី រួចចុចស្កេនម្តងទៀត!';
           }
-          throw new Error(friendlyMsg);
+          lastError = new Error(friendlyMsg);
+          break; // Try next candidate model
         }
 
       const data = await response.json();
