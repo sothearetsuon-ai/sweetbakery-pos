@@ -463,6 +463,7 @@ interface BakeryContextType {
   addExpense: (expense: Omit<Expense, 'id' | 'createdAt'>) => void;
   updateExpense: (id: string, updatedData: Partial<Expense>) => void;
   deleteExpense: (id: string) => void;
+  deleteExpensesByDateRange: (startDate?: string, endDate?: string, targetIds?: string[]) => number;
   clearAllExpenses: () => void;
   updateExpenseDatesFrom2024To2026: () => number;
   totalExpensesUsd: number;
@@ -484,6 +485,7 @@ interface BakeryContextType {
   addPastSale: (sale: Omit<CompletedSale, 'id'>) => void;
   updateSale: (sale: CompletedSale) => void;
   deleteSale: (id: string, restoreStock?: boolean) => void;
+  deleteSalesByDateRange: (startDate?: string, endDate?: string, targetIds?: string[], restoreStock?: boolean) => number;
   clearAllSales: () => void;
 
   activeReceipt: CompletedSale | null;
@@ -2714,6 +2716,58 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     syncDeleteDoc('expenses', id);
   };
 
+  const deleteExpensesByDateRange = (startDate?: string, endDate?: string, targetIds?: string[]): number => {
+    isUpdatingFromLan.current = false;
+    if (lanSyncTimer.current) clearTimeout(lanSyncTimer.current);
+
+    let toDelete: Expense[] = [];
+    if (targetIds && targetIds.length > 0) {
+      const idSet = new Set(targetIds);
+      toDelete = expenses.filter((e) => idSet.has(e.id));
+    } else if (startDate || endDate) {
+      toDelete = expenses.filter((e) => {
+        const itemDate = (e.date || e.createdAt || '').split('T')[0];
+        if (startDate && itemDate < startDate) return false;
+        if (endDate && itemDate > endDate) return false;
+        return true;
+      });
+    }
+
+    if (toDelete.length === 0) return 0;
+
+    const toDeleteIds = new Set(toDelete.map((e) => e.id));
+
+    // Register deleted IDs and sync delete to Firebase & backend
+    toDelete.forEach((e) => {
+      recordDeletedId('expenses', e.id, deletedExpenseIds);
+      syncDeleteDoc('expenses', e.id);
+      fetch('/api/delete-expense', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: e.id }),
+      }).catch(() => {});
+    });
+
+    let updatedExpenses: Expense[] = [];
+    setExpenses((prev) => {
+      updatedExpenses = prev.filter((e) => !toDeleteIds.has(e.id));
+      safeSetStorage('bakery_expenses', JSON.stringify(updatedExpenses));
+      saveToLanSync({
+        products,
+        sales,
+        customOrders,
+        expenses: updatedExpenses,
+        storeInfo,
+        flavors,
+        reserveFund: reserveFundRef.current,
+        telegramConfig: getStoredTelegramConfig(),
+      }, true);
+      return updatedExpenses;
+    });
+
+    return toDelete.length;
+  };
+
   const clearAllExpenses = () => {
     isUpdatingFromLan.current = false;
     if (lanSyncTimer.current) clearTimeout(lanSyncTimer.current);
@@ -3393,6 +3447,92 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         });
       }
     }
+  };
+
+  const deleteSalesByDateRange = (startDate?: string, endDate?: string, targetIds?: string[], restoreStock: boolean = true): number => {
+    isUpdatingFromLan.current = false;
+    if (lanSyncTimer.current) clearTimeout(lanSyncTimer.current);
+
+    let toDelete: CompletedSale[] = [];
+    if (targetIds && targetIds.length > 0) {
+      const idSet = new Set(targetIds);
+      toDelete = sales.filter((s) => idSet.has(s.id));
+    } else if (startDate || endDate) {
+      toDelete = sales.filter((s) => {
+        const itemDate = (s.createdAt || '').split('T')[0];
+        if (startDate && itemDate < startDate) return false;
+        if (endDate && itemDate > endDate) return false;
+        return true;
+      });
+    }
+
+    if (toDelete.length === 0) return 0;
+
+    const toDeleteIds = new Set(toDelete.map((s) => s.id));
+
+    // Restore stock if requested
+    let updatedProducts = products;
+    if (restoreStock) {
+      const stockRestoreMap: Record<string, number> = {};
+      toDelete.forEach((sale) => {
+        if (sale.items && Array.isArray(sale.items)) {
+          sale.items.forEach((item) => {
+            if (item.productId && item.quantity > 0) {
+              stockRestoreMap[item.productId] = (stockRestoreMap[item.productId] || 0) + item.quantity;
+            }
+          });
+        }
+      });
+
+      if (Object.keys(stockRestoreMap).length > 0) {
+        updatedProducts = products.map((p) => {
+          if (stockRestoreMap[p.id]) {
+            const restored = { ...p, stockQty: (p.stockQty || 0) + stockRestoreMap[p.id] };
+            syncSaveDoc('products', p.id, restored);
+            return restored;
+          }
+          return p;
+        });
+        setProducts(updatedProducts);
+        safeSetStorage('bakery_products', JSON.stringify(updatedProducts));
+        fetch('/api/save-products', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ products: updatedProducts }),
+        }).catch(() => {});
+      }
+    }
+
+    toDelete.forEach((s) => {
+      recordDeletedId('sales', s.id, deletedSaleIds);
+      if (s.id.startsWith('sale-custom-')) {
+        const orderId = s.id.replace('sale-custom-', '');
+        recordDeletedId('orders', orderId, deletedOrderIds);
+      }
+      syncDeleteDoc('sales', s.id);
+      fetch('/api/delete-sale', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: s.id }),
+      }).catch(() => {});
+    });
+
+    setSales((prev) => {
+      const updated = prev.filter((s) => !toDeleteIds.has(s.id));
+      safeSetStorage('bakery_sales', JSON.stringify(updated));
+      saveToLanSync({
+        products: updatedProducts,
+        sales: updated,
+        customOrders,
+        expenses,
+        storeInfo,
+        flavors,
+        telegramConfig: getStoredTelegramConfig(),
+      }, true);
+      return updated;
+    });
+
+    return toDelete.length;
   };
 
   const clearAllSales = () => {
@@ -4402,6 +4542,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         addExpense,
         updateExpense,
         deleteExpense,
+        deleteExpensesByDateRange,
         clearAllExpenses,
         updateExpenseDatesFrom2024To2026,
         totalExpensesUsd,
@@ -4420,6 +4561,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         addPastSale,
         updateSale,
         deleteSale,
+        deleteSalesByDateRange,
         clearAllSales,
         activeReceipt,
         setActiveReceipt,

@@ -86,6 +86,7 @@ export const ExpenseManagement: React.FC<ExpenseManagementProps> = ({
     addExpense,
     updateExpense,
     deleteExpense,
+    deleteExpensesByDateRange,
     clearAllExpenses,
     updateExpenseDatesFrom2024To2026,
     sales,
@@ -107,7 +108,23 @@ export const ExpenseManagement: React.FC<ExpenseManagementProps> = ({
   const [receiptFilter, setReceiptFilter] = useState<'ALL' | 'WITH_RECEIPT' | 'WITHOUT_RECEIPT'>('ALL');
   const [previewReceiptImage, setPreviewReceiptImage] = useState<string | null>(null);
   const [expenseToDelete, setExpenseToDelete] = useState<Expense | null>(null);
-  const [isConfirmClearAll, setIsConfirmClearAll] = useState(false);
+  const [isConfirmClearModalOpen, setIsConfirmClearModalOpen] = useState(false);
+  const [cleanupMode, setCleanupMode] = useState<'CURRENT_FILTER' | 'CUSTOM_RANGE' | 'OLDER_THAN' | 'ALL'>('CURRENT_FILTER');
+  const [cleanupStartDate, setCleanupStartDate] = useState<string>(() => {
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  });
+  const [cleanupEndDate, setCleanupEndDate] = useState<string>(() => {
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  });
+  const [cleanupOlderDays, setCleanupOlderDays] = useState<number>(30);
 
   // Local calendar date helpers (accurate for Cambodia timezone)
   const getLocalDateStr = (d: Date = new Date()) => {
@@ -514,6 +531,49 @@ export const ExpenseManagement: React.FC<ExpenseManagementProps> = ({
     return `ចន្លោះពីថ្ងៃ ${formatKhmerDate(customStartDate)} ដល់ ${formatKhmerDate(customEndDate)}`;
   }, [datePreset, todayStr, yesterdayStr, sevenDaysAgoStr, thisMonthStr, lastMonthStr, selectedMonth, customStartDate, customEndDate]);
 
+  // Expenses that will be cleaned based on chosen cleanup mode in the modal
+  const targetExpensesToClean = useMemo(() => {
+    if (cleanupMode === 'CURRENT_FILTER') {
+      return filteredExpenses;
+    }
+    if (cleanupMode === 'CUSTOM_RANGE') {
+      return expenses.filter((e) => {
+        const d = normalizeDateToYMD(e.date || e.createdAt || '');
+        if (cleanupStartDate && d < cleanupStartDate) return false;
+        if (cleanupEndDate && d > cleanupEndDate) return false;
+        return true;
+      });
+    }
+    if (cleanupMode === 'OLDER_THAN') {
+      const cutoff = new Date();
+      cutoff.setDate(cutoff.getDate() - cleanupOlderDays);
+      const cutoffStr = getLocalDateStr(cutoff);
+      return expenses.filter((e) => {
+        const d = normalizeDateToYMD(e.date || e.createdAt || '');
+        return d < cutoffStr;
+      });
+    }
+    return expenses;
+  }, [cleanupMode, filteredExpenses, expenses, cleanupStartDate, cleanupEndDate, cleanupOlderDays]);
+
+  const cleanupTotalKhr = useMemo(() => {
+    return targetExpensesToClean.reduce((sum, e) => sum + (e.amountKhr || Math.round(e.amountUsd * exchangeRate)), 0);
+  }, [targetExpensesToClean, exchangeRate]);
+
+  const cleanupTotalUsd = useMemo(() => {
+    return targetExpensesToClean.reduce((sum, e) => sum + e.amountUsd, 0);
+  }, [targetExpensesToClean]);
+
+  const handleExecuteCleanup = () => {
+    if (targetExpensesToClean.length === 0) return;
+    soundFx.playSuccess();
+    if (cleanupMode === 'ALL') {
+      clearAllExpenses();
+    } else {
+      deleteExpensesByDateRange(undefined, undefined, targetExpensesToClean.map((e) => e.id));
+    }
+    setIsConfirmClearModalOpen(false);
+  };
 
   // Export CSV
   const handleExportCsv = () => {
@@ -613,13 +673,13 @@ export const ExpenseManagement: React.FC<ExpenseManagementProps> = ({
               type="button"
               onClick={() => {
                 soundFx.playPop();
-                setIsConfirmClearAll(true);
+                setIsConfirmClearModalOpen(true);
               }}
               className="px-3 py-2 bg-white hover:bg-rose-50 text-rose-600 border border-rose-200 rounded-2xl text-xs font-bold transition-all shadow-2xs flex items-center gap-1.5 cursor-pointer"
-              title="លុបកំណត់ត្រាចំណាយទាំងអស់ (Clear All Expenses)"
+              title="សម្អាតកំណត់ត្រាចំណាយតាមថ្ងៃខែ ឬទាំងអស់ (Clean Expenses by Date/All)"
             >
               <Trash2 className="w-3.5 h-3.5 text-rose-500" />
-              <span>សម្អាតទាំងអស់</span>
+              <span>សម្អាតទិន្នន័យ</span>
             </button>
           )}
 
@@ -2325,40 +2385,297 @@ export const ExpenseManagement: React.FC<ExpenseManagementProps> = ({
         document.body
       )}
 
-      {/* Clear All Expenses Confirmation Modal (Portal to Body) */}
-      {isConfirmClearAll && typeof document !== 'undefined' && createPortal(
+      {/* Clear Expenses Manager Modal with Date Filtering (Portal to Body) */}
+      {isConfirmClearModalOpen && typeof document !== 'undefined' && createPortal(
         <div className="fixed inset-0 z-[99999] bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-150">
-          <div className="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl border border-rose-100 flex flex-col items-center text-center space-y-4 animate-in zoom-in-95 duration-150">
-            <div className="w-14 h-14 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center shadow-sm">
-              <AlertTriangle className="w-7 h-7" />
-            </div>
-            <div>
-              <h3 className="text-base font-black text-slate-800">
-                សម្អាតកំណត់ត្រាចំណាយទាំងអស់?
-              </h3>
-              <p className="text-xs text-slate-500 mt-1">
-                ការចំណាយទាំងអស់ចំនួន {expenses.length} ប្រតិបត្តិការ នឹងត្រូវលុបចេញទាំងស្រុងពីប្រព័ន្ធ។
-              </p>
-            </div>
-            <div className="flex items-center gap-3 w-full pt-2">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-rose-100 flex flex-col space-y-4 animate-in zoom-in-95 duration-150 max-h-[90vh] overflow-y-auto">
+            {/* Header */}
+            <div className="flex items-start justify-between gap-3 border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-3">
+                <div className="w-11 h-11 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center shadow-xs shrink-0">
+                  <Trash2 className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-black text-slate-800">
+                    សម្អាតទិន្នន័យចំណាយ (Expense Cleanup)
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    ជ្រើសរើសជម្រើសសម្អាតតាមថ្ងៃខែ តាមការច្រោះ ឬទាំងអស់
+                  </p>
+                </div>
+              </div>
               <button
                 type="button"
-                onClick={() => setIsConfirmClearAll(false)}
+                onClick={() => setIsConfirmClearModalOpen(false)}
+                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center transition-colors cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Mode Tabs */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 p-1 bg-slate-100 rounded-2xl text-xs font-bold">
+              <button
+                type="button"
+                onClick={() => setCleanupMode('CURRENT_FILTER')}
+                className={`py-2 px-2 rounded-xl transition-all flex flex-col items-center gap-0.5 cursor-pointer ${
+                  cleanupMode === 'CURRENT_FILTER'
+                    ? 'bg-white text-rose-600 shadow-xs'
+                    : 'text-slate-600 hover:text-slate-800'
+                }`}
+              >
+                <span>🎯 តាមការច្រោះ</span>
+                <span className="text-[10px] opacity-75">({filteredExpenses.length})</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setCleanupMode('CUSTOM_RANGE')}
+                className={`py-2 px-2 rounded-xl transition-all flex flex-col items-center gap-0.5 cursor-pointer ${
+                  cleanupMode === 'CUSTOM_RANGE'
+                    ? 'bg-white text-rose-600 shadow-xs'
+                    : 'text-slate-600 hover:text-slate-800'
+                }`}
+              >
+                <span>📅 តាមចន្លោះថ្ងៃ</span>
+                <span className="text-[10px] opacity-75">ជ្រើសរើស</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setCleanupMode('OLDER_THAN')}
+                className={`py-2 px-2 rounded-xl transition-all flex flex-col items-center gap-0.5 cursor-pointer ${
+                  cleanupMode === 'OLDER_THAN'
+                    ? 'bg-white text-rose-600 shadow-xs'
+                    : 'text-slate-600 hover:text-slate-800'
+                }`}
+              >
+                <span>⏳ ចាស់ជាង</span>
+                <span className="text-[10px] opacity-75">{cleanupOlderDays} ថ្ងៃ</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setCleanupMode('ALL')}
+                className={`py-2 px-2 rounded-xl transition-all flex flex-col items-center gap-0.5 cursor-pointer ${
+                  cleanupMode === 'ALL'
+                    ? 'bg-white text-rose-600 shadow-xs'
+                    : 'text-slate-600 hover:text-slate-800'
+                }`}
+              >
+                <span>⚠️ ទាំងអស់</span>
+                <span className="text-[10px] opacity-75">({expenses.length})</span>
+              </button>
+            </div>
+
+            {/* Mode-specific configuration body */}
+            {cleanupMode === 'CURRENT_FILTER' && (
+              <div className="p-3.5 bg-rose-50/70 border border-rose-100 rounded-2xl space-y-2">
+                <div className="flex items-center gap-2 text-rose-800 text-xs font-black">
+                  <Filter className="w-3.5 h-3.5" />
+                  <span>លក្ខខណ្ឌកំពុងច្រោះលើតារាងបច្ចុប្បន្ន</span>
+                </div>
+                <div className="text-xs text-slate-600 space-y-1 bg-white/80 p-2.5 rounded-xl border border-rose-100">
+                  <p>• <strong>កាលបរិច្ឆេទ:</strong> {activeDateLabel}</p>
+                  {selectedCategory !== 'ALL' && (
+                    <p>• <strong>ប្រភេទចំណាយ:</strong> {categoryLabels[selectedCategory as ExpenseCategory]?.labelKh || selectedCategory}</p>
+                  )}
+                  {statusFilter !== 'ALL' && (
+                    <p>• <strong>ស្ថានភាព:</strong> {statusFilter === 'PAID' ? 'បានទូទាត់រួច' : 'ជំពាក់/មិនទាន់ទូទាត់'}</p>
+                  )}
+                  {searchQuery && (
+                    <p>• <strong>ពាក្យស្វែងរក:</strong> "{searchQuery}"</p>
+                  )}
+                </div>
+                <p className="text-[11px] text-slate-500">
+                  💡 នឹងសម្អាតតែទិន្នន័យចំនួន <strong>{filteredExpenses.length}</strong> ប្រតិបត្តិការ ដែលត្រូវគ្នានឹងការច្រោះខាងលើប៉ុណ្ណោះ។
+                </p>
+              </div>
+            )}
+
+            {cleanupMode === 'CUSTOM_RANGE' && (
+              <div className="space-y-3 p-3.5 bg-slate-50 rounded-2xl border border-slate-200">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-black text-slate-700">ជ្រើសរើសចន្លោះថ្ងៃ (Date Range)</span>
+                  <div className="flex items-center gap-1 flex-wrap">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCleanupStartDate(todayStr);
+                        setCleanupEndDate(todayStr);
+                      }}
+                      className="px-2 py-1 bg-white hover:bg-slate-200 border border-slate-200 rounded-lg text-[10px] font-bold text-slate-700 cursor-pointer"
+                    >
+                      ថ្ងៃនេះ
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCleanupStartDate(yesterdayStr);
+                        setCleanupEndDate(yesterdayStr);
+                      }}
+                      className="px-2 py-1 bg-white hover:bg-slate-200 border border-slate-200 rounded-lg text-[10px] font-bold text-slate-700 cursor-pointer"
+                    >
+                      ម្សិលមិញ
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCleanupStartDate(sevenDaysAgoStr);
+                        setCleanupEndDate(todayStr);
+                      }}
+                      className="px-2 py-1 bg-white hover:bg-slate-200 border border-slate-200 rounded-lg text-[10px] font-bold text-slate-700 cursor-pointer"
+                    >
+                      ៧ ថ្ងៃ
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCleanupStartDate(`${thisMonthStr}-01`);
+                        setCleanupEndDate(todayStr);
+                      }}
+                      className="px-2 py-1 bg-white hover:bg-slate-200 border border-slate-200 rounded-lg text-[10px] font-bold text-slate-700 cursor-pointer"
+                    >
+                      ខែនេះ
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const d = new Date();
+                        d.setDate(1);
+                        d.setMonth(d.getMonth() - 1);
+                        const y = d.getFullYear();
+                        const m = String(d.getMonth() + 1).padStart(2, '0');
+                        const lastDay = new Date(y, d.getMonth() + 1, 0).getDate();
+                        setCleanupStartDate(`${y}-${m}-01`);
+                        setCleanupEndDate(`${y}-${m}-${String(lastDay).padStart(2, '0')}`);
+                      }}
+                      className="px-2 py-1 bg-white hover:bg-slate-200 border border-slate-200 rounded-lg text-[10px] font-bold text-slate-700 cursor-pointer"
+                    >
+                      ខែមុន
+                    </button>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-600 mb-1">
+                      ចាប់ពីថ្ងៃ (Start Date)
+                    </label>
+                    <input
+                      type="date"
+                      value={cleanupStartDate}
+                      onChange={(e) => setCleanupStartDate(e.target.value)}
+                      className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs font-bold text-slate-800 focus:ring-2 focus:ring-rose-500 focus:outline-hidden"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-600 mb-1">
+                      ដល់ថ្ងៃ (End Date)
+                    </label>
+                    <input
+                      type="date"
+                      value={cleanupEndDate}
+                      onChange={(e) => setCleanupEndDate(e.target.value)}
+                      className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs font-bold text-slate-800 focus:ring-2 focus:ring-rose-500 focus:outline-hidden"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {cleanupMode === 'OLDER_THAN' && (
+              <div className="space-y-2.5 p-3.5 bg-slate-50 rounded-2xl border border-slate-200">
+                <span className="text-xs font-black text-slate-700 block">
+                  លុបតែទិន្នន័យចំណាយដែលចាស់ជាង៖
+                </span>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {[
+                    { days: 30, label: '៣០ ថ្ងៃ' },
+                    { days: 60, label: '៦០ ថ្ងៃ' },
+                    { days: 90, label: '៩០ ថ្ងៃ' },
+                    { days: 365, label: '១ ឆ្នាំ' },
+                  ].map((preset) => (
+                    <button
+                      key={preset.days}
+                      type="button"
+                      onClick={() => setCleanupOlderDays(preset.days)}
+                      className={`py-2 px-3 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+                        cleanupOlderDays === preset.days
+                          ? 'bg-rose-600 text-white border-rose-600 shadow-sm'
+                          : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
+                      }`}
+                    >
+                      {preset.label}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-[11px] text-slate-500">
+                  💡 នឹងលុបចំណាយទាំងអស់ដែលបានកត់ត្រាចាស់ជាង {cleanupOlderDays} ថ្ងៃមុន។
+                </p>
+              </div>
+            )}
+
+            {cleanupMode === 'ALL' && (
+              <div className="p-3.5 bg-amber-50 border border-amber-200 rounded-2xl space-y-1.5 text-center">
+                <div className="flex items-center justify-center gap-1.5 text-amber-800 text-xs font-black">
+                  <AlertTriangle className="w-4 h-4 text-amber-600" />
+                  <span>ប្រុងប្រយ័ត្ន៖ សម្អាតទិន្នន័យចំណាយទាំងអស់</span>
+                </div>
+                <p className="text-xs text-slate-600">
+                  រាល់កំណត់ត្រាចំណាយទាំងអស់ចំនួន <strong>{expenses.length}</strong> ប្រតិបត្តិការ នឹងត្រូវលុបចេញទាំងស្រុង។
+                </p>
+              </div>
+            )}
+
+            {/* Live Impact Preview Card */}
+            <div className="p-3.5 rounded-2xl bg-gradient-to-r from-slate-900 to-slate-800 text-white shadow-md flex items-center justify-between">
+              <div>
+                <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block">
+                  ទិន្នន័យដែលនឹងត្រូវសម្អាត
+                </span>
+                <span className="text-base font-black text-rose-400">
+                  {targetExpensesToClean.length} ប្រតិបត្តិការ
+                </span>
+              </div>
+              <div className="text-right">
+                <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block">
+                  ទឹកប្រាក់សរុប
+                </span>
+                <span className="text-sm font-black text-amber-300">
+                  {cleanupTotalKhr.toLocaleString()} ៛
+                </span>
+                <span className="text-[10px] text-slate-300 ml-1.5 font-bold">
+                  (${cleanupTotalUsd.toFixed(2)})
+                </span>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex items-center gap-2.5 pt-1">
+              <button
+                type="button"
+                onClick={() => setIsConfirmClearModalOpen(false)}
                 className="flex-1 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-2xl text-xs transition-colors cursor-pointer"
               >
-                ថយក្រោយ
+                បោះបង់
               </button>
               <button
                 type="button"
-                onClick={() => {
-                  soundFx.playSuccess();
-                  clearAllExpenses();
-                  setIsConfirmClearAll(false);
-                }}
-                className="flex-1 py-3 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-2xl text-xs shadow-md shadow-rose-500/25 transition-all cursor-pointer active:scale-95 flex items-center justify-center gap-1.5"
+                disabled={targetExpensesToClean.length === 0}
+                onClick={handleExecuteCleanup}
+                className={`flex-1 py-3 font-bold rounded-2xl text-xs shadow-md transition-all flex items-center justify-center gap-1.5 ${
+                  targetExpensesToClean.length === 0
+                    ? 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none'
+                    : 'bg-rose-600 hover:bg-rose-700 text-white shadow-rose-500/25 cursor-pointer active:scale-95'
+                }`}
               >
                 <Trash2 className="w-4 h-4" />
-                <span>យល់ព្រមសម្អាត</span>
+                <span>
+                  {targetExpensesToClean.length === 0
+                    ? 'គ្មានទិន្នន័យត្រូវលុប'
+                    : `យល់ព្រមសម្អាត (${targetExpensesToClean.length})`}
+                </span>
               </button>
             </div>
           </div>
