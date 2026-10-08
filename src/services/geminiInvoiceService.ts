@@ -1,6 +1,7 @@
 import { ExpenseCategory, ExpenseType } from '../types';
 import { idbGet, idbSet, idbDel } from '../utils/idbStorage';
 import { saveFirestoreDoc } from './firebase';
+import { normalizeDateToYMD } from '../utils/dateUtils';
 
 export interface ExtractedInvoiceItem {
   id: string;
@@ -257,9 +258,11 @@ Carefully read every line item, table row, quantity, price, and supplier header.
 
 Rules:
 1. supplier: Extract store / supplier / vendor name.
-2. date: Format as YYYY-MM-DD. If year is missing, assume current year. If date is not found, use today's date.
-3. currency: 'KHR' or 'USD'.
-4. items: Array of purchased items:
+2. date: Extract the EXACT date and year printed on the invoice (e.g. if the invoice says "ថ្ងៃលក់: 07-10-2026 13:12" or "07-10-2026", convert it to "2026-10-07").
+   CRITICAL: You MUST preserve the exact year printed on the invoice (e.g. 2026, 2025, 2024). NEVER change 2026 to 2024. Look for labels like "ថ្ងៃលក់", "កាលបរិច្ឆេទ", "Date", "Date/Time".
+3. invoiceNumber: Extract the invoice number (e.g. "Invoice No: B0208720" -> "B0208720").
+4. currency: 'KHR' or 'USD'.
+5. items: Array of purchased items:
    - name: Clear product name in Khmer or English.
    - category: One of: 'INGREDIENTS' (flour, sugar, butter, yeast, milk, eggs, chocolate, matcha, cheese, cream, fruit), 'PACKAGING' (cake boxes, bread bags, cupcake cups, ribbons, cake boards, plastic bags), 'SUPPLIES' (candles, toppers, knives, baking paper, piping bags, molds, cutlery), 'UTILITIES' (gas, electricity, water, ice), 'MAINTENANCE' (oven repair, cleaning agents), 'OTHER'.
    - mainType: 'INGREDIENT' (for baking ingredients), 'SUPPLY' (for packaging, decorations, tools), or 'GENERAL' (utilities, maintenance, general).
@@ -270,7 +273,7 @@ Rules:
    - isWholesale: true if the unit or name represents a bulk package (e.g. 'កេស', 'បាវ', 'ឡូ', 'ប្រអប់ធំ', 'box', 'sack', 'carton').
    - wholesalePackQty: If wholesale, how many retail units are inside (e.g. 12 for ឡូ, 24 for carton/កេស, 25 for 25kg sack, 50 for box of candles). If unknown, estimate or leave null.
    - retailUnit: Suggested retail selling unit (e.g. 'ដុំ', 'គីឡូ', 'កញ្ចប់', 'ដើម').
-5. totalAmountKhr: Sum of all item totals in KHR.
+6. totalAmountKhr: Sum of all item totals in KHR.
 
 Return ONLY a valid JSON object matching this schema without any markdown formatting or extra text:
 {
@@ -438,10 +441,11 @@ Return ONLY a valid JSON object matching this schema without any markdown format
       });
 
       const todayStr = new Date().toISOString().split('T')[0];
+      const extractedDate = normalizeDateToYMD(parsed.date) || todayStr;
 
       return {
         supplier: parsed.supplier || 'អ្នកផ្គត់ផ្គង់ទូទៅ',
-        date: parsed.date && /^\d{4}-\d{2}-\d{2}$/.test(parsed.date) ? parsed.date : todayStr,
+        date: extractedDate,
         invoiceNumber: parsed.invoiceNumber || undefined,
         currency: parsed.currency === 'USD' ? 'USD' : 'KHR',
         totalAmountKhr: Number(parsed.totalAmountKhr) || items.reduce((sum, item) => sum + item.totalKhr, 0),
