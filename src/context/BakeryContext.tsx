@@ -861,10 +861,16 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             const combined = [...missingItems, ...base];
             setExpenses(combined);
             safeSetStorage('bakery_expenses', JSON.stringify(combined));
+            initialExpenses.forEach((exp) => {
+              saveFirestoreDoc('expenses', exp.id, exp);
+            });
           }
         }
       } else if (initialExpenses.length > 0) {
         safeSetStorage('bakery_expenses', JSON.stringify(initialExpenses));
+        initialExpenses.forEach((exp) => {
+          saveFirestoreDoc('expenses', exp.id, exp);
+        });
       }
     } catch (e) {}
   }, []);
@@ -2057,14 +2063,41 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     // Subscribe to expenses
     const unsubExpenses = subscribeToFirestoreCollection<Expense>('expenses', (cloudExpenses) => {
       if (globalIsDemoMode) return;
-      if (Array.isArray(cloudExpenses) && cloudExpenses.length > 0) {
+      if (Array.isArray(cloudExpenses)) {
         const mockExpenseIds = new Set(['exp-1', 'exp-2', 'exp-3', 'exp-4', 'exp-5', 'exp-6', 'exp-7']);
-        const sorted = cloudExpenses
-          .filter((e) => e && e.id && !deletedExpenseIds.current.has(e.id) && !mockExpenseIds.has(e.id))
-          .sort(
-            (a, b) =>
-              new Date(b.createdAt || b.date).getTime() - new Date(a.createdAt || a.date).getTime()
-          );
+        const filtered = cloudExpenses.filter(
+          (e) => e && e.id && !deletedExpenseIds.current.has(e.id) && !mockExpenseIds.has(e.id)
+        );
+
+        const isCakeSupplyExp = (e: Expense) =>
+          e.id?.startsWith('exp-cake-') ||
+          (e.date === '2026-10-07' && (e.supplier?.includes('Cake Supply') || e.title?.includes('Coal Black') || e.title?.includes('ទៀនលេខមាស')));
+
+        const existingCakeCount = filtered.filter(isCakeSupplyExp).length;
+        let base = filtered;
+        let needsCloudUpload = false;
+        if (existingCakeCount < 26) {
+          base = filtered.filter((e) => !isCakeSupplyExp(e));
+          needsCloudUpload = true;
+        }
+
+        const existingIds = new Set(base.map((e) => e.id));
+        const missingInitials = initialExpenses.filter((ie) => !existingIds.has(ie.id) && !deletedExpenseIds.current.has(ie.id));
+        if (missingInitials.length > 0) {
+          needsCloudUpload = true;
+        }
+
+        const combined = [...base, ...missingInitials];
+        const sorted = combined.sort(
+          (a, b) =>
+            new Date(b.createdAt || b.date).getTime() - new Date(a.createdAt || a.date).getTime()
+        );
+
+        if (needsCloudUpload) {
+          initialExpenses.forEach((exp) => {
+            saveFirestoreDoc('expenses', exp.id, exp);
+          });
+        }
 
         if (sorted.length > 0) {
           setExpenses((prev) => {
