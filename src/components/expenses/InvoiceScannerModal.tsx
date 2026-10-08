@@ -315,6 +315,7 @@ export const InvoiceScannerModal: React.FC<InvoiceScannerModalProps> = ({
           notes: extractedData?.invoiceNumber
             ? `វិក្កយបត្រ៖ ${extractedData.invoiceNumber} (ស្កេនដោយ AI)`
             : 'ស្កេនវិក្កយបត្រដោយ AI',
+          receiptImage: selectedImage || undefined,
           // Wholesale & Retail Selling Price metadata
           wholesalePackQty: item.isWholesale ? item.wholesalePackQty : undefined,
           wholesalePackUnit: item.isWholesale ? item.wholesalePackUnit || item.unit : undefined,

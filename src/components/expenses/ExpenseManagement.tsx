@@ -26,6 +26,9 @@ import {
   Zap,
   Camera,
   Sparkles,
+  Table,
+  LayoutGrid,
+  Image,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { useBakery } from '../../context/BakeryContext';
@@ -92,6 +95,7 @@ export const ExpenseManagement: React.FC<ExpenseManagementProps> = ({
     reconcileReserveFundWithExpenses,
   } = useBakery();
 
+  const [viewMode, setViewMode] = useState<'TABLE' | 'CARDS'>('TABLE');
   const [isAddExpenseOpen, setIsAddExpenseOpen] = useState(false);
   const [isInvoiceScannerOpen, setIsInvoiceScannerOpen] = useState(false);
   const [isReserveFundOpen, setIsReserveFundOpen] = useState(false);
@@ -1542,26 +1546,75 @@ export const ExpenseManagement: React.FC<ExpenseManagementProps> = ({
               </span>
             </div>
             <p className="text-[11px] text-slate-400 mt-0.5">
-              បង្ហាញព័ត៌មានលម្អិត តម្លៃ ចំនួន និងស្ថានភាពទូទាត់ជាក់ស្តែង
+              បង្ហាញព័ត៌មានលម្អិត តម្លៃ ចំនួន ស្ថានភាពទូទាត់ និងវិក្កយបត្រភ្ជាប់
             </p>
           </div>
         </div>
 
-        <button
-          type="button"
-          onClick={() => {
-            soundFx.playPop();
-            setEditingExpense(null);
-            setIsAddExpenseOpen(true);
-          }}
-          className="px-4 py-2 bg-gradient-to-r from-rose-600 to-pink-600 hover:from-rose-700 hover:to-pink-700 text-white rounded-2xl text-xs font-bold transition-all shadow-xs cursor-pointer flex items-center gap-1.5 active:scale-95 self-stretch sm:self-auto justify-center"
-        >
-          <Plus className="w-3.5 h-3.5 stroke-[3]" />
-          <span>+ បញ្ចូលចំណាយថ្មី</span>
-        </button>
+        <div className="flex items-center gap-2 flex-wrap self-stretch sm:self-auto">
+          {/* View Mode Toggle Switch (Table vs Cards) */}
+          <div className="flex items-center bg-slate-100/80 p-1 rounded-2xl border border-slate-200/80 shadow-2xs">
+            <button
+              type="button"
+              onClick={() => {
+                soundFx.playPop();
+                setViewMode('TABLE');
+              }}
+              className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${
+                viewMode === 'TABLE'
+                  ? 'bg-white text-slate-900 shadow-xs'
+                  : 'text-slate-500 hover:text-slate-800'
+              }`}
+            >
+              <Table className="w-3.5 h-3.5" />
+              <span>📋 តារាង (Table)</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                soundFx.playPop();
+                setViewMode('CARDS');
+              }}
+              className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${
+                viewMode === 'CARDS'
+                  ? 'bg-white text-slate-900 shadow-xs'
+                  : 'text-slate-500 hover:text-slate-800'
+              }`}
+            >
+              <LayoutGrid className="w-3.5 h-3.5" />
+              <span>🗂️ កាត (Cards)</span>
+            </button>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => {
+              soundFx.playPop();
+              setIsInvoiceScannerOpen(true);
+            }}
+            className="px-3.5 py-2 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white rounded-2xl text-xs font-black transition-all shadow-xs cursor-pointer flex items-center gap-1.5 active:scale-95"
+            title="ស្កេនរូបភាពវិក្កយបត្រដោយ AI"
+          >
+            <Sparkles className="w-3.5 h-3.5 text-amber-300 animate-pulse" />
+            <span>📷 ស្កេនវិក្កយបត្រ (AI)</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              soundFx.playPop();
+              setEditingExpense(null);
+              setIsAddExpenseOpen(true);
+            }}
+            className="px-4 py-2 bg-gradient-to-r from-rose-600 to-pink-600 hover:from-rose-700 hover:to-pink-700 text-white rounded-2xl text-xs font-black transition-all shadow-xs cursor-pointer flex items-center gap-1.5 active:scale-95"
+          >
+            <Plus className="w-3.5 h-3.5 stroke-[3]" />
+            <span>+ បញ្ចូលចំណាយ</span>
+          </button>
+        </div>
       </div>
 
-      {/* Expenses Cards View */}
+      {/* Main Expenses View: Table vs Cards */}
       <div className="space-y-3 animate-in fade-in duration-200">
         {filteredExpenses.length === 0 ? (
           <div className="bg-white rounded-3xl border border-rose-100 p-8 text-center text-slate-400 space-y-3">
@@ -1604,7 +1657,264 @@ export const ExpenseManagement: React.FC<ExpenseManagementProps> = ({
               )}
             </div>
           </div>
+        ) : viewMode === 'TABLE' ? (
+          /* Table View */
+          <div className="bg-white rounded-3xl border border-rose-100 shadow-2xs overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead>
+                  <tr className="bg-gradient-to-r from-slate-900 to-slate-800 text-white text-[11px] uppercase tracking-wider font-bold">
+                    <th className="py-3 px-3">#</th>
+                    <th className="py-3 px-3">📅 កាលបរិច្ឆេទ</th>
+                    <th className="py-3 px-3">📝 ឈ្មោះចំណាយ / មុខទំនិញ</th>
+                    <th className="py-3 px-3">🏷️ ប្រភេទ</th>
+                    <th className="py-3 px-3 text-right">📦 ចំនួន</th>
+                    <th className="py-3 px-3 text-right">💵 តម្លៃរាយ</th>
+                    <th className="py-3 px-3 text-right">💰 សរុប (៛ KHR)</th>
+                    <th className="py-3 px-3">👤 អ្នកចំណាយ</th>
+                    <th className="py-3 px-3">🏦 វិធីទូទាត់</th>
+                    <th className="py-3 px-3">⏰ ស្ថានភាព</th>
+                    <th className="py-3 px-3 text-center">🧾 វិក្កយបត្រ</th>
+                    <th className="py-3 px-3 text-center">⚙️ សកម្មភាព</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {filteredExpenses.map((expense, idx) => {
+                    const catInfo = categoryLabels[expense.category] || {
+                      labelKh: expense.category,
+                      color: 'bg-slate-100 text-slate-700 border-slate-200',
+                    };
+                    const displayQty = expense.quantity ?? 1;
+                    const displayUnitPriceKhr =
+                      expense.unitPriceKhr ?? Math.round(expense.amountKhr / displayQty);
+
+                    return (
+                      <tr
+                        key={expense.id}
+                        className="hover:bg-rose-50/40 transition-colors"
+                      >
+                        {/* Index */}
+                        <td className="py-3 px-3 text-slate-400 font-mono text-[11px]">
+                          {idx + 1}
+                        </td>
+
+                        {/* Date */}
+                        <td className="py-3 px-3 whitespace-nowrap">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              soundFx.playPop();
+                              const expD = (expense.date || expense.createdAt || '').slice(0, 10);
+                              setCustomStartDate(expD);
+                              setCustomEndDate(expD);
+                              setDatePreset('CUSTOM_RANGE');
+                            }}
+                            className="font-bold text-slate-700 hover:text-rose-600 flex items-center gap-1 cursor-pointer"
+                            title="ចុចដើម្បីមើលតែថ្ងៃនេះ"
+                          >
+                            <Calendar className="w-3 h-3 text-rose-500 shrink-0" />
+                            <span>{formatDateDMY(expense.date)}</span>
+                          </button>
+                        </td>
+
+                        {/* Title & Notes */}
+                        <td className="py-3 px-3 min-w-[180px]">
+                          <div className="font-black text-slate-900 text-xs">{expense.title}</div>
+                          {expense.supplier && (
+                            <div className="text-[10px] text-slate-500 font-semibold mt-0.5">
+                              🏪 {expense.supplier}
+                            </div>
+                          )}
+                          {expense.notes && (
+                            <div className="text-[10px] text-slate-400 mt-0.5 truncate max-w-[200px]" title={expense.notes}>
+                              📝 {expense.notes}
+                            </div>
+                          )}
+                        </td>
+
+                        {/* Category */}
+                        <td className="py-3 px-3 whitespace-nowrap">
+                          <div className="flex flex-col gap-1 items-start">
+                            <span
+                              className={`inline-flex items-center px-2 py-0.5 rounded-lg text-[10px] font-black border ${
+                                getExpenseMainType(expense) === 'INGREDIENT'
+                                  ? 'bg-amber-100 text-amber-900 border-amber-300'
+                                  : getExpenseMainType(expense) === 'SUPPLY'
+                                  ? 'bg-purple-100 text-purple-900 border-purple-300'
+                                  : 'bg-sky-100 text-sky-900 border-sky-300'
+                              }`}
+                            >
+                              {getExpenseMainType(expense) === 'INGREDIENT'
+                                ? '🌾 គ្រឿងផ្សំ'
+                                : getExpenseMainType(expense) === 'SUPPLY'
+                                ? '📦 សម្ភារៈ'
+                                : '🏢 ទូទៅ'}
+                            </span>
+                            <span className={`inline-flex items-center px-1.5 py-0.2 rounded text-[9px] font-bold border ${catInfo.color}`}>
+                              {catInfo.labelKh}
+                            </span>
+                          </div>
+                        </td>
+
+                        {/* Quantity */}
+                        <td className="py-3 px-3 text-right whitespace-nowrap font-bold text-slate-800">
+                          {displayQty} <span className="text-slate-500 text-[10px]">{expense.unit || 'ដុំ'}</span>
+                        </td>
+
+                        {/* Unit Price */}
+                        <td className="py-3 px-3 text-right whitespace-nowrap font-semibold text-slate-600">
+                          {displayUnitPriceKhr.toLocaleString()} ៛
+                        </td>
+
+                        {/* Total Amount */}
+                        <td className="py-3 px-3 text-right whitespace-nowrap">
+                          <div className="font-black text-rose-600 text-xs">
+                            {expense.amountKhr.toLocaleString()} ៛
+                          </div>
+                          <div className="text-[10px] text-slate-400 font-semibold">
+                            ~ ${expense.amountUsd.toFixed(2)} USD
+                          </div>
+                        </td>
+
+                        {/* Paid By */}
+                        <td className="py-3 px-3 whitespace-nowrap text-slate-700 font-bold text-xs">
+                          {expense.paidBy}
+                        </td>
+
+                        {/* Payment Method */}
+                        <td className="py-3 px-3 whitespace-nowrap">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (expense.paymentMethod === 'RESERVE_FUND') {
+                                soundFx.playPop();
+                                updateExpense(expense.id, { paymentMethod: 'CASH_KHR' });
+                              } else {
+                                soundFx.playSuccess();
+                                updateExpense(expense.id, { paymentMethod: 'RESERVE_FUND' });
+                              }
+                            }}
+                            className={`text-[10px] px-2 py-0.5 rounded-lg font-bold transition-all cursor-pointer border flex items-center gap-1 ${
+                              expense.paymentMethod === 'RESERVE_FUND'
+                                ? 'bg-emerald-100 text-emerald-900 border-emerald-300'
+                                : 'bg-amber-50 text-amber-900 border-amber-300 hover:bg-emerald-50'
+                            }`}
+                            title={
+                              expense.paymentMethod === 'RESERVE_FUND'
+                                ? 'បានកាត់ពីទុនបម្រុងរួច (ចុចដើម្បីបង្វិលសងទុនវិញ)'
+                                : 'ចុចដើម្បីកាត់ចំណាយនេះចេញពីទុនបម្រុងភ្លាមៗ'
+                            }
+                          >
+                            {expense.paymentMethod === 'RESERVE_FUND' ? (
+                              <>
+                                <span className="text-emerald-700 font-black">✓</span>
+                                <span>🏦 ទុនបម្រុង</span>
+                              </>
+                            ) : (
+                              <>
+                                <span>+ 🏦 កាត់ទុន</span>
+                                <span className="text-[9px] text-amber-700">
+                                  ({expense.paymentMethod === 'CASH_KHR' ? '៛' : expense.paymentMethod === 'BANK_TRANSFER' ? 'ABA' : '$'})
+                                </span>
+                              </>
+                            )}
+                          </button>
+                        </td>
+
+                        {/* Payment Status */}
+                        <td className="py-3 px-3 whitespace-nowrap">
+                          {expense.paymentStatus === 'UNPAID' ? (
+                            <button
+                              type="button"
+                              onClick={() => handleMarkAsPaid(expense)}
+                              className="px-2 py-0.5 bg-amber-500 hover:bg-emerald-600 text-white rounded-lg text-[10px] font-black shadow-2xs transition-all flex items-center gap-1 cursor-pointer"
+                              title="ចុចដើម្បីកំណត់ថាបានបង់ប្រាក់រួច"
+                            >
+                              <Clock className="w-3 h-3" />
+                              <span>ជំពាក់ (បង់ឥឡូវ)</span>
+                            </button>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                              <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                              <span>បង់រួច</span>
+                            </span>
+                          )}
+                        </td>
+
+                        {/* Invoice / Receipt Photo Column */}
+                        <td className="py-3 px-3 text-center whitespace-nowrap">
+                          {expense.receiptImage ? (
+                            <div className="flex items-center justify-center gap-1.5">
+                              <img
+                                src={expense.receiptImage}
+                                alt="Thumbnail"
+                                onClick={() => setPreviewReceiptImage(expense.receiptImage || null)}
+                                className="w-8 h-8 rounded-lg object-cover border border-rose-200 cursor-pointer shadow-2xs hover:scale-110 transition-transform"
+                                title="ចុចដើម្បីពង្រីករូបវិក្កយបត្រ"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => setPreviewReceiptImage(expense.receiptImage || null)}
+                                className="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg transition-colors cursor-pointer"
+                                title="មើលរូបភាពវិក្កយបត្រធំ"
+                              >
+                                <Eye className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                soundFx.playPop();
+                                setEditingExpense(expense);
+                                setIsAddExpenseOpen(true);
+                              }}
+                              className="px-2 py-1 bg-slate-50 hover:bg-rose-50 text-slate-500 hover:text-rose-600 rounded-lg border border-slate-200 text-[10px] font-bold flex items-center gap-1 mx-auto cursor-pointer transition-colors"
+                              title="ចុចដើម្បីភ្ជាប់រូបភាពវិក្កយបត្រ"
+                            >
+                              <Camera className="w-3 h-3" />
+                              <span>+ ដាក់រូប</span>
+                            </button>
+                          )}
+                        </td>
+
+                        {/* Actions */}
+                        <td className="py-3 px-3 text-center whitespace-nowrap">
+                          <div className="flex items-center justify-center gap-1">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                soundFx.playPop();
+                                setEditingExpense(expense);
+                                setIsAddExpenseOpen(true);
+                              }}
+                              className="p-1.5 bg-slate-100 hover:bg-pink-50 text-slate-600 hover:text-pink-600 rounded-lg transition-colors cursor-pointer"
+                              title="កែប្រែ"
+                            >
+                              <Edit2 className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                soundFx.playPop();
+                                setExpenseToDelete(expense);
+                              }}
+                              className="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg transition-colors cursor-pointer"
+                              title="លុប"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
         ) : (
+          /* Cards View */
           filteredExpenses.map((expense) => {
             const catInfo = categoryLabels[expense.category] || {
               labelKh: expense.category,
@@ -1825,16 +2135,35 @@ export const ExpenseManagement: React.FC<ExpenseManagementProps> = ({
                 {/* Footer: Receipt & Actions */}
                 <div className="flex items-center justify-between pt-1 border-t border-slate-100">
                   {expense.receiptImage ? (
+                    <div className="flex items-center gap-2">
+                      <img
+                        src={expense.receiptImage}
+                        alt="Receipt"
+                        onClick={() => setPreviewReceiptImage(expense.receiptImage || null)}
+                        className="w-8 h-8 rounded-lg object-cover border border-rose-200 cursor-pointer shadow-2xs hover:scale-105 transition-transform"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setPreviewReceiptImage(expense.receiptImage || null)}
+                        className="px-2.5 py-1 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-xl transition-all inline-flex items-center gap-1 text-[11px] font-bold cursor-pointer"
+                      >
+                        <Eye className="w-3.5 h-3.5" />
+                        <span>មើលរូបវិក្កយបត្រ</span>
+                      </button>
+                    </div>
+                  ) : (
                     <button
                       type="button"
-                      onClick={() => setPreviewReceiptImage(expense.receiptImage || null)}
-                      className="px-2.5 py-1 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-xl transition-all inline-flex items-center gap-1 text-[11px] font-bold cursor-pointer"
+                      onClick={() => {
+                        soundFx.playPop();
+                        setEditingExpense(expense);
+                        setIsAddExpenseOpen(true);
+                      }}
+                      className="px-2.5 py-1 bg-slate-50 hover:bg-rose-50 text-slate-500 hover:text-rose-600 rounded-xl border border-slate-200 transition-all inline-flex items-center gap-1 text-[11px] font-bold cursor-pointer"
                     >
-                      <Eye className="w-3.5 h-3.5" />
-                      <span>មើលរូបវិក្កយបត្រ</span>
+                      <Camera className="w-3.5 h-3.5" />
+                      <span>+ ភ្ជាប់វិក្កយបត្រ</span>
                     </button>
-                  ) : (
-                    <span className="text-[11px] text-slate-400">គ្មានរូបវិក្កយបត្រ</span>
                   )}
 
                   <div className="flex items-center gap-1.5">
