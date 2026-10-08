@@ -461,6 +461,7 @@ interface BakeryContextType {
 
   expenses: Expense[];
   addExpense: (expense: Omit<Expense, 'id' | 'createdAt'>) => void;
+  batchAddExpenses: (expensesData: Array<Omit<Expense, 'id' | 'createdAt'>>) => Expense[];
   updateExpense: (id: string, updatedData: Partial<Expense>) => void;
   deleteExpense: (id: string) => void;
   deleteExpensesByDateRange: (startDate?: string, endDate?: string, targetIds?: string[]) => number;
@@ -2556,6 +2557,79 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     notifyTelegramExpense(newExpense, storeInfo, exchangeRate);
   };
 
+  const batchAddExpenses = (expensesData: Array<Omit<Expense, 'id' | 'createdAt'>>): Expense[] => {
+    if (!expensesData || expensesData.length === 0) return [];
+    isUpdatingFromLan.current = false;
+    if (lanSyncTimer.current) clearTimeout(lanSyncTimer.current);
+
+    const now = Date.now();
+    const newExpenses: Expense[] = expensesData.map((data, idx) => ({
+      ...data,
+      id: `exp-${now}-${idx}-${Math.random().toString(36).slice(2, 6)}`,
+      createdAt: new Date(now + idx * 10).toISOString(),
+    }));
+
+    // Calculate total Reserve Fund deduction for all items that are paid from reserve in one batch
+    let totalRfKhr = 0;
+    let totalRfUsd = 0;
+    const rfItems: Expense[] = [];
+
+    newExpenses.forEach((exp) => {
+      const isPaid = !exp.paymentStatus || exp.paymentStatus === 'PAID';
+      if (isExpensePaidFromReserve(exp) && isPaid) {
+        totalRfKhr += exp.amountKhr || 0;
+        totalRfUsd += exp.amountUsd || 0;
+        rfItems.push(exp);
+      }
+    });
+
+    let nextRf: ReserveFund | undefined = undefined;
+    if (rfItems.length > 0 && totalRfKhr > 0) {
+      nextRf = withdrawReserveFund(
+        totalRfKhr,
+        totalRfUsd,
+        `ដកចំណាយ (${rfItems.length} មុខទំនិញស្កេន AI)៖ ${rfItems[0].title}${rfItems.length > 1 ? ` និង ${rfItems.length - 1} មុខទៀត` : ''}`,
+        rfItems[0].id
+      );
+    }
+
+    // 1. Update React state & LocalStorage in a single pass
+    setExpenses((prev) => {
+      const updated = [...newExpenses, ...prev];
+      safeSetStorage('bakery_expenses', JSON.stringify(updated));
+      saveToLanSync({
+        products,
+        sales,
+        customOrders,
+        expenses: updated,
+        storeInfo,
+        flavors,
+        reserveFund: nextRf || reserveFundRef.current,
+        telegramConfig: getStoredTelegramConfig(),
+      }, true);
+      return updated;
+    });
+
+    // 2. Asynchronous background sync to Firebase & server (non-blocking)
+    setTimeout(() => {
+      newExpenses.forEach((exp) => {
+        syncSaveDoc('expenses', exp.id, exp);
+        fetch('/api/save-expense', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ expense: exp, reserveFund: nextRf }),
+        }).catch(() => {});
+      });
+
+      // Send single Telegram notification for batch
+      if (newExpenses.length > 0) {
+        notifyTelegramExpense(newExpenses[0], storeInfo, exchangeRate);
+      }
+    }, 50);
+
+    return newExpenses;
+  };
+
   const updateExpense = (id: string, updatedData: Partial<Expense>) => {
     isUpdatingFromLan.current = false;
     if (lanSyncTimer.current) clearTimeout(lanSyncTimer.current);
@@ -4540,6 +4614,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         deleteRecipe,
         expenses,
         addExpense,
+        batchAddExpenses,
         updateExpense,
         deleteExpense,
         deleteExpensesByDateRange,

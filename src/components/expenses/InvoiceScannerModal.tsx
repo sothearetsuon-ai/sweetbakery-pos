@@ -50,8 +50,15 @@ export const InvoiceScannerModal: React.FC<InvoiceScannerModalProps> = ({
   onClose,
   onSuccess,
 }) => {
-  const { addExpense, ingredients, addIngredient, restockIngredient, exchangeRate, reserveFund } =
-    useBakery();
+  const {
+    addExpense,
+    batchAddExpenses,
+    ingredients,
+    addIngredient,
+    restockIngredient,
+    exchangeRate,
+    reserveFund,
+  } = useBakery();
 
   // API Key State
   const [apiKey, setApiKeyState] = useState<string>(getGeminiApiKey());
@@ -296,65 +303,67 @@ export const InvoiceScannerModal: React.FC<InvoiceScannerModalProps> = ({
       setIsImporting(true);
       soundFx.playPop();
 
-      for (const item of selectedItems) {
-        // 1. Save as Expense
-        const expensePayload = {
-          title: item.name.trim(),
-          itemCode: item.itemCode?.trim() || undefined,
-          expenseType: item.mainType,
-          category: item.category,
-          supplier: supplier.trim(),
-          quantity: item.quantity,
-          unit: item.unit.trim(),
-          unitPriceKhr: item.unitPriceKhr,
-          unitPriceUsd: Number((item.unitPriceKhr / exchangeRate).toFixed(2)),
-          amountKhr: item.totalKhr,
-          amountUsd: Number((item.totalKhr / exchangeRate).toFixed(2)),
-          paidBy: paidBy.trim() || 'Admin',
-          paymentMethod: paymentMethod,
-          paymentStatus: 'PAID' as const,
-          date: invoiceDate || new Date().toISOString().split('T')[0],
-          notes: extractedData?.invoiceNumber
-            ? `វិក្កយបត្រ៖ ${extractedData.invoiceNumber} (ស្កេនដោយ AI)`
-            : 'ស្កេនវិក្កយបត្រដោយ AI',
-          receiptImage: selectedImage || undefined,
-          // Wholesale & Retail Selling Price metadata
-          wholesalePackQty: item.isWholesale ? item.wholesalePackQty : undefined,
-          wholesalePackUnit: item.isWholesale ? item.wholesalePackUnit || item.unit : undefined,
-          retailUnit: item.retailUnit,
-          retailUnitCostKhr: item.retailUnitCostKhr,
-          retailProfitMarginPct: item.retailProfitMarginPct,
-          retailSellingPriceKhr: item.retailSellingPriceKhr,
-          retailSellingPriceUsd: item.retailSellingPriceKhr
-            ? Number((item.retailSellingPriceKhr / exchangeRate).toFixed(2))
-            : undefined,
-        };
+      // 1. Prepare all expense payloads
+      const expensePayloads = selectedItems.map((item) => ({
+        title: item.name.trim(),
+        itemCode: item.itemCode?.trim() || undefined,
+        expenseType: item.mainType,
+        category: item.category,
+        supplier: supplier.trim(),
+        quantity: item.quantity,
+        unit: item.unit.trim(),
+        unitPriceKhr: item.unitPriceKhr,
+        unitPriceUsd: Number((item.unitPriceKhr / exchangeRate).toFixed(2)),
+        amountKhr: item.totalKhr,
+        amountUsd: Number((item.totalKhr / exchangeRate).toFixed(2)),
+        paidBy: paidBy.trim() || 'Admin',
+        paymentMethod: paymentMethod,
+        paymentStatus: 'PAID' as const,
+        date: invoiceDate || new Date().toISOString().split('T')[0],
+        notes: extractedData?.invoiceNumber
+          ? `វិក្កយបត្រ៖ ${extractedData.invoiceNumber} (ស្កេនដោយ AI)`
+          : 'ស្កេនវិក្កយបត្រដោយ AI',
+        receiptImage: selectedImage || undefined,
+        wholesalePackQty: item.isWholesale ? item.wholesalePackQty : undefined,
+        wholesalePackUnit: item.isWholesale ? item.wholesalePackUnit || item.unit : undefined,
+        retailUnit: item.retailUnit,
+        retailUnitCostKhr: item.retailUnitCostKhr,
+        retailProfitMarginPct: item.retailProfitMarginPct,
+        retailSellingPriceKhr: item.retailSellingPriceKhr,
+        retailSellingPriceUsd: item.retailSellingPriceKhr
+          ? Number((item.retailSellingPriceKhr / exchangeRate).toFixed(2))
+          : undefined,
+      }));
 
-        addExpense(expensePayload);
+      // 2. Perform lightning-fast batch addition
+      batchAddExpenses(expensePayloads);
 
-        // 2. Add to Stock / Inventory if checked
-        if (item.addToStock && item.mainType === 'INGREDIENT') {
-          const trimmedName = item.name.trim().toLowerCase();
-          const existing = ingredients.find(
-            (ing) => ing.nameKh.toLowerCase() === trimmedName || ing.nameEn?.toLowerCase() === trimmedName
-          );
+      // 3. Stock updates deferred to keep UI instantly fluid
+      setTimeout(() => {
+        selectedItems.forEach((item) => {
+          if (item.addToStock && item.mainType === 'INGREDIENT') {
+            const trimmedName = item.name.trim().toLowerCase();
+            const existing = ingredients.find(
+              (ing) => ing.nameKh.toLowerCase() === trimmedName || ing.nameEn?.toLowerCase() === trimmedName
+            );
 
-          if (existing) {
-            restockIngredient(existing.id, item.quantity);
-          } else {
-            addIngredient({
-              nameKh: item.name.trim(),
-              nameEn: item.name.trim(),
-              currentStock: item.quantity,
-              unit: item.unit.trim() || 'ដុំ',
-              minAlertStock: 5,
-              costPerUnitKhr: item.unitPriceKhr,
-              costPerUnitUsd: Number((item.unitPriceKhr / exchangeRate).toFixed(2)),
-              supplier: supplier.trim(),
-            });
+            if (existing) {
+              restockIngredient(existing.id, item.quantity);
+            } else {
+              addIngredient({
+                nameKh: item.name.trim(),
+                nameEn: item.name.trim(),
+                currentStock: item.quantity,
+                unit: item.unit.trim() || 'ដុំ',
+                minAlertStock: 5,
+                costPerUnitKhr: item.unitPriceKhr,
+                costPerUnitUsd: Number((item.unitPriceKhr / exchangeRate).toFixed(2)),
+                supplier: supplier.trim(),
+              });
+            }
           }
-        }
-      }
+        });
+      }, 50);
 
       soundFx.playSuccess();
       confetti({ particleCount: 70, spread: 80, origin: { y: 0.5 } });
