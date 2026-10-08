@@ -835,6 +835,28 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     } catch (e) {}
   }, []);
 
+  // Auto-heal expenses in localStorage on mount
+  useEffect(() => {
+    if (globalIsDemoMode) return;
+    try {
+      const saved = localStorage.getItem('bakery_expenses');
+      if (saved) {
+        const parsed: Expense[] = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          const existingIds = new Set(parsed.map((e) => e.id));
+          const missingItems = initialExpenses.filter((ie) => !existingIds.has(ie.id));
+          if (missingItems.length > 0) {
+            const combined = [...missingItems, ...parsed];
+            setExpenses(combined);
+            safeSetStorage('bakery_expenses', JSON.stringify(combined));
+          }
+        }
+      } else if (initialExpenses.length > 0) {
+        safeSetStorage('bakery_expenses', JSON.stringify(initialExpenses));
+      }
+    } catch (e) {}
+  }, []);
+
   // Dynamic Flavors list
   const [flavors, setFlavors] = useState<string[]>(() => {
     if (globalIsDemoMode) {
@@ -1056,11 +1078,14 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         if (Array.isArray(parsed)) {
           const mockExpenseIds = new Set(['exp-1', 'exp-2', 'exp-3', 'exp-4', 'exp-5', 'exp-6', 'exp-7']);
           const active = parsed.filter((e) => e && e.id && !mockExpenseIds.has(e.id));
-          return autoMigrateExpenseDates(active);
+          const existingIds = new Set(active.map((e) => e.id));
+          const missingInitials = initialExpenses.filter((ie) => !existingIds.has(ie.id));
+          const combined = [...active, ...missingInitials];
+          return autoMigrateExpenseDates(combined);
         }
       } catch (e) {}
     }
-    return [];
+    return initialExpenses;
   });
 
   // Reserve Fund (ទុនបម្រុងហាង & Petty Cash) state
