@@ -22,6 +22,11 @@ import {
   ArrowDownRight,
   Receipt,
   FileSpreadsheet,
+  RefreshCw,
+  Eye,
+  EyeOff,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { useBakery } from '../../context/BakeryContext';
@@ -47,11 +52,14 @@ export const ReserveFundDashboard: React.FC<ReserveFundDashboardProps> = ({
     batchDeductExpensesToReserveFund,
     deleteReserveFundTransaction,
     clearReserveFundHistory,
+    triggerAutoCloudSync,
   } = useBakery();
 
   // Modal / Action states
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [activeActionTab, setActiveActionTab] = useState<'quick-replenish' | 'target-setting' | 'balance-adjust' | null>(null);
+  const [isUndeductedListOpen, setIsUndeductedListOpen] = useState(false);
+  const [isSyncingCloud, setIsSyncingCloud] = useState(false);
 
   // Quick replenish inline form state
   const deficitKhr = Math.max(0, reserveFund.targetAmountKhr - reserveFund.currentBalanceKhr);
@@ -85,6 +93,21 @@ export const ReserveFundDashboard: React.FC<ReserveFundDashboardProps> = ({
     setStatusFeedback({ message: msg, type });
     setTimeout(() => setStatusFeedback(null), 4000);
   };
+
+  const handleSyncCloud = async () => {
+    try {
+      soundFx.playPop();
+      setIsSyncingCloud(true);
+      await triggerAutoCloudSync();
+      soundFx.playSuccess();
+      showFeedback('បានធ្វើសមកាលកម្មទិន្នន័យ (Cloud Sync) ទៅកាន់ទូរស័ព្ទដោយជោគជ័យ!');
+    } catch (err) {
+      console.error('Manual sync error:', err);
+    } finally {
+      setIsSyncingCloud(false);
+    }
+  };
+
 
   // Undeducted cash expenses
   const undeductedCashExpenses = useMemo(() => {
@@ -361,41 +384,131 @@ export const ReserveFundDashboard: React.FC<ReserveFundDashboardProps> = ({
 
       {/* Undeducted Cash Expenses Alert Banner */}
       {undeductedCashExpenses.length > 0 && (
-        <div className="bg-amber-50 border-2 border-amber-400 rounded-3xl p-4 sm:p-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-3 shadow-xs">
-          <div className="flex items-start gap-3">
-            <div className="p-2.5 bg-amber-100 text-amber-800 rounded-2xl flex-shrink-0">
-              <Zap className="w-6 h-6 fill-amber-500 text-amber-600" />
+        <div className="bg-amber-50 border-2 border-amber-400 rounded-3xl p-4 sm:p-5 shadow-xs space-y-3">
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
+            <div className="flex items-start gap-3">
+              <div className="p-2.5 bg-amber-100 text-amber-800 rounded-2xl flex-shrink-0">
+                <Zap className="w-6 h-6 fill-amber-500 text-amber-600" />
+              </div>
+              <div>
+                <h3 className="font-black text-amber-950 text-sm sm:text-base flex items-center gap-1.5 flex-wrap">
+                  <span>⚡ មានចំណាយសាច់ប្រាក់ {undeductedCashExpenses.length} ប្រតិបត្តិការមិនទាន់កាត់ចេញពីទុនបម្រុង</span>
+                </h3>
+                <p className="text-xs text-amber-800 mt-0.5">
+                  ទឹកប្រាក់ចំណាយសរុប៖ <strong className="font-sans font-black text-rose-600">{undeductedCashTotalKhr.toLocaleString()} ៛</strong> (~${(undeductedCashTotalKhr / exchangeRate).toFixed(2)})
+                </p>
+              </div>
             </div>
-            <div>
-              <h3 className="font-black text-amber-950 text-sm sm:text-base flex items-center gap-1.5">
-                <span>⚡ មានចំណាយសាច់ប្រាក់ {undeductedCashExpenses.length} ប្រតិបត្តិការមិនទាន់កាត់ចេញពីទុនបម្រុង</span>
-              </h3>
-              <p className="text-xs text-amber-800 mt-0.5">
-                ទឹកប្រាក់ចំណាយសរុប៖ <strong className="font-sans font-black text-rose-600">{undeductedCashTotalKhr.toLocaleString()} ៛</strong> (~${(undeductedCashTotalKhr / exchangeRate).toFixed(2)})
-              </p>
+
+            <div className="flex items-center gap-2 flex-wrap w-full md:w-auto">
+              <button
+                type="button"
+                onClick={handleSyncCloud}
+                disabled={isSyncingCloud}
+                className="flex-1 md:flex-initial px-3.5 py-2.5 bg-white hover:bg-slate-50 border border-amber-300 text-amber-900 rounded-2xl text-xs font-bold transition shadow-xs flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+                title="រុញទិន្នន័យចំណាយទាំងអស់ឡើងទៅ Cloud ដើម្បីឱ្យទូរស័ព្ទ sync ស្មើគ្នា"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${isSyncingCloud ? 'animate-spin text-amber-600' : 'text-slate-600'}`} />
+                <span>{isSyncingCloud ? 'កំពុង Sync...' : 'Sync Cloud ទៅទូរស័ព្ទ'}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  soundFx.playPop();
+                  setIsUndeductedListOpen(!isUndeductedListOpen);
+                }}
+                className="flex-1 md:flex-initial px-3.5 py-2.5 bg-amber-100 hover:bg-amber-200 text-amber-900 rounded-2xl text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer"
+              >
+                {isUndeductedListOpen ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                <span>{isUndeductedListOpen ? 'លាក់បញ្ជី' : `ពិនិត្យ ${undeductedCashExpenses.length} មុខ`}</span>
+                {isUndeductedListOpen ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  soundFx.playPop();
+                  if (
+                    confirm(
+                      `តើអ្នកចង់កាត់ចំណាយសាច់ប្រាក់ចំនួន ${undeductedCashExpenses.length} ប្រតិបត្តិការ (សរុប ${undeductedCashTotalKhr.toLocaleString()} ៛) ចេញពីទុនបម្រុងឥឡូវនេះមែនទេ?`
+                    )
+                  ) {
+                    soundFx.playSuccess();
+                    batchDeductExpensesToReserveFund(undeductedCashExpenses.map((e) => e.id));
+                    showFeedback(`បានកាត់ចំណាយសាច់ប្រាក់ចំនួន ${undeductedCashExpenses.length} មុខចេញពីទុនបម្រុងដោយជោគជ័យ!`);
+                  }
+                }}
+                className="w-full md:w-auto px-4 py-2.5 bg-amber-600 hover:bg-amber-700 text-white rounded-2xl text-xs font-black shadow-md shadow-amber-600/30 flex items-center justify-center gap-1.5 cursor-pointer active:scale-95"
+              >
+                <Zap className="w-4 h-4 fill-current" />
+                <span>កាត់ចំណាយទាំងអស់ ({undeductedCashExpenses.length}) ភ្លាម</span>
+              </button>
             </div>
           </div>
 
-          <button
-            onClick={() => {
-              soundFx.playPop();
-              if (
-                confirm(
-                  `តើអ្នកចង់កាត់ចំណាយសាច់ប្រាក់ចំនួន ${undeductedCashExpenses.length} ប្រតិបត្តិការ (សរុប ${undeductedCashTotalKhr.toLocaleString()} ៛) ចេញពីទុនបម្រុងឥឡូវនេះមែនទេ?`
-                )
-              ) {
-                soundFx.playSuccess();
-                batchDeductExpensesToReserveFund(undeductedCashExpenses.map((e) => e.id));
-                showFeedback(`បានកាត់ចំណាយសាច់ប្រាក់ចំនួន ${undeductedCashExpenses.length} មុខចេញពីទុនបម្រុងដោយជោគជ័យ!`);
-              }
-            }}
-            className="px-4 py-2.5 bg-amber-600 hover:bg-amber-700 text-white rounded-2xl text-xs font-black shadow-md shadow-amber-600/30 flex items-center gap-1.5 cursor-pointer active:scale-95 flex-shrink-0"
-          >
-            <Zap className="w-4 h-4 fill-current" />
-            <span>កាត់ចំណាយ {undeductedCashExpenses.length} មុខនេះចេញពីទុនភ្លាម</span>
-          </button>
+          {/* Expandable Table for undeducted cash expenses */}
+          {isUndeductedListOpen && (
+            <div className="mt-3 pt-3 border-t border-amber-200 animate-in fade-in duration-200">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-black text-amber-950">
+                  📋 បញ្ជីមុខចំណាយសាច់ប្រាក់ទាំង {undeductedCashExpenses.length} មិនទាន់កាត់ចេញពីទុន៖
+                </span>
+                <span className="text-[11px] text-amber-800">
+                  (ចុច "កាត់ទុន" លើមុខនីមួយៗ ឬកាត់ទាំងអស់ខាងលើ)
+                </span>
+              </div>
+              <div className="max-h-72 overflow-y-auto space-y-1.5 pr-1 text-xs">
+                {undeductedCashExpenses.map((exp, idx) => (
+                  <div
+                    key={exp.id}
+                    className="p-2.5 bg-white/90 rounded-xl border border-amber-200/80 flex items-center justify-between gap-2 shadow-xs hover:bg-white transition"
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <span className="w-6 h-6 rounded-full bg-amber-100 text-amber-900 font-bold font-sans text-[11px] flex items-center justify-center shrink-0">
+                        {idx + 1}
+                      </span>
+                      <div className="min-w-0">
+                        <div className="font-bold text-slate-800 truncate text-xs">
+                          {exp.title}
+                        </div>
+                        <div className="text-[10px] text-slate-500 flex items-center gap-2">
+                          <span>📅 {exp.date}</span>
+                          <span>• {exp.category}</span>
+                          <span>• ដោយ៖ {exp.paidBy || 'Admin'}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-3 shrink-0">
+                      <div className="text-right">
+                        <div className="font-sans font-black text-rose-600 text-xs">
+                          {exp.amountKhr.toLocaleString()} ៛
+                        </div>
+                        <div className="text-[10px] text-slate-400 font-sans">
+                          ${(exp.amountKhr / exchangeRate).toFixed(2)}
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          soundFx.playPop();
+                          batchDeductExpensesToReserveFund([exp.id]);
+                          showFeedback(`បានកាត់ចំណាយ "${exp.title}" ចេញពីទុនបម្រុង!`);
+                        }}
+                        className="px-2 py-1 bg-amber-100 hover:bg-amber-200 text-amber-900 rounded-lg text-[10px] font-bold cursor-pointer transition"
+                      >
+                        កាត់ទុន
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
+
 
       {/* 4 Core Financial Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
