@@ -20,7 +20,9 @@ import {
   ArrowRight,
   ExternalLink,
   ShieldCheck,
+  Zap,
 } from 'lucide-react';
+
 import confetti from 'canvas-confetti';
 import { useBakery } from '../../context/BakeryContext';
 import { ExpenseCategory, ExpenseType } from '../../types';
@@ -57,6 +59,7 @@ export const InvoiceScannerModal: React.FC<InvoiceScannerModalProps> = ({
   const [showKey, setShowKey] = useState(false);
   const [keyTestStatus, setKeyTestStatus] = useState<'IDLE' | 'TESTING' | 'VALID' | 'INVALID'>('IDLE');
   const [keyTestMessage, setKeyTestMessage] = useState<string>('');
+  const [saveSuccessMsg, setSaveSuccessMsg] = useState(false);
 
   // Scanning State
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
@@ -111,14 +114,36 @@ export const InvoiceScannerModal: React.FC<InvoiceScannerModalProps> = ({
 
   if (!isOpen) return null;
 
+
+  // Handle Clipboard Paste
+  const handlePasteFromClipboard = async () => {
+    try {
+      if (navigator.clipboard && navigator.clipboard.readText) {
+        const text = await navigator.clipboard.readText();
+        if (text && text.trim()) {
+          setKeyInput(text.trim());
+          setKeyTestStatus('IDLE');
+          soundFx.playPop();
+        }
+      }
+    } catch (e) {
+      console.warn('Clipboard read failed:', e);
+    }
+  };
+
   // Handle Save API Key
   const handleSaveApiKey = () => {
     const trimmed = keyInput.trim();
     setGeminiApiKey(trimmed, true);
     setApiKeyState(trimmed);
     soundFx.playSuccess();
-    setIsKeyConfigOpen(false);
+    setSaveSuccessMsg(true);
+    setTimeout(() => {
+      setSaveSuccessMsg(false);
+      setIsKeyConfigOpen(false);
+    }, 1000);
   };
+
 
   // Test API Key
   const handleTestApiKey = async () => {
@@ -340,29 +365,32 @@ export const InvoiceScannerModal: React.FC<InvoiceScannerModalProps> = ({
     }
   };
 
+
   const modalContent = (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-md overflow-y-auto animate-fade-in">
       <div className="relative w-full max-w-4xl bg-white rounded-3xl shadow-2xl border border-rose-100 overflow-hidden flex flex-col max-h-[92vh]">
         {/* Header */}
-        <div className="bg-gradient-to-r from-violet-600 via-indigo-600 to-rose-600 p-4 sm:p-5 text-white flex items-center justify-between shadow-md">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-white/20 backdrop-blur-md rounded-2xl border border-white/30 text-white">
-              <Sparkles className="w-6 h-6 animate-pulse" />
+        <div className="bg-gradient-to-r from-violet-600 via-indigo-600 to-rose-600 p-3 sm:p-5 text-white flex items-center justify-between shadow-md">
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 pr-2">
+            <div className="p-2 sm:p-2.5 bg-white/20 backdrop-blur-md rounded-2xl border border-white/30 text-white shrink-0">
+              <Sparkles className="w-5 h-5 sm:w-6 sm:h-6 animate-pulse" />
             </div>
-            <div>
-              <h2 className="text-lg sm:text-xl font-black flex items-center gap-2">
-                <span>ស្កេនវិក្កយបត្រដោយ AI</span>
-                <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-400 text-slate-900 shadow-xs">
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                <h2 className="text-base sm:text-xl font-black truncate">
+                  ស្កេនវិក្កយបត្រដោយ AI
+                </h2>
+                <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-400 text-slate-900 shadow-xs shrink-0">
                   Gemini Flash Vision
                 </span>
-              </h2>
-              <p className="text-xs text-rose-100 mt-0.5">
-                ថតរូប ឬ Upload វិក្កយបត្រដើម្បីបំបែកមុខទំនិញ គណនាតម្លៃដើម និងបញ្ចូលស្វ័យប្រវត្តិ
+              </div>
+              <p className="text-[11px] sm:text-xs text-rose-100 mt-0.5 line-clamp-1 sm:line-clamp-none">
+                ថតរូប ឬ Upload វិក្កយបត្រដើម្បីបំបែកមុខទំនិញស្វ័យប្រវត្តិ
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             <button
               type="button"
               onClick={() => {
@@ -395,24 +423,34 @@ export const InvoiceScannerModal: React.FC<InvoiceScannerModalProps> = ({
 
         {/* API Key Drawer / Configuration Modal */}
         {isKeyConfigOpen && (
-          <div className="bg-amber-50/95 border-b border-amber-200 p-4 sm:p-5 space-y-3">
-            <div className="flex items-start justify-between gap-3">
+          <div className="bg-amber-50/95 border-b border-amber-200 p-3 sm:p-5 space-y-3">
+            <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-2">
-                <Key className="w-5 h-5 text-amber-600" />
-                <h3 className="font-black text-amber-950 text-sm">កំណត់ Google Gemini API Key (ឥតគិតថ្លៃ ១០០%)</h3>
+                <Key className="w-4 h-4 sm:w-5 sm:h-5 text-amber-600 shrink-0" />
+                <h3 className="font-black text-amber-950 text-xs sm:text-sm">កំណត់ Google Gemini API Key (ឥតគិតថ្លៃ ១០០%)</h3>
               </div>
-              <a
-                href="https://aistudio.google.com/app/apikey"
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center gap-1 text-xs font-bold text-indigo-700 hover:text-indigo-900 underline"
-              >
-                <span>យក API Key ឥតគិតថ្លៃនៅទីនេះ</span>
-                <ExternalLink className="w-3 h-3" />
-              </a>
+              <div className="flex items-center gap-2">
+                <a
+                  href="https://aistudio.google.com/app/apikey"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1 text-[11px] sm:text-xs font-bold text-indigo-700 hover:text-indigo-900 underline"
+                >
+                  <span>យក Key ឥតគិតថ្លៃ</span>
+                  <ExternalLink className="w-3 h-3" />
+                </a>
+                <button
+                  type="button"
+                  onClick={() => setIsKeyConfigOpen(false)}
+                  className="p-1 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-amber-100/60"
+                  title="បង្រួម"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
             </div>
 
-            <p className="text-xs text-amber-800 leading-relaxed">
+            <p className="text-[11px] sm:text-xs text-amber-800 leading-relaxed">
               Google Gemini Vision ផ្តល់ការប្រើប្រាស់ Free Tier ដ៏ច្រើនសន្ធឹកសន្ធាប់ជារៀងរាល់ថ្ងៃ។
               សូមចូលទៅកាន់ Google AI Studio ចុច <strong>"Create API Key"</strong> រួចចម្លងមកបិទភ្ជាប់ (Paste) ក្នុងប្រអប់ខាងក្រោម៖
             </p>
@@ -427,16 +465,26 @@ export const InvoiceScannerModal: React.FC<InvoiceScannerModalProps> = ({
                     setKeyTestStatus('IDLE');
                   }}
                   placeholder="បិទភ្ជាប់ (Paste) API Key របស់អ្នកនៅទីនេះ..."
-                  className="w-full pl-3.5 pr-10 py-2.5 rounded-xl border border-amber-300 bg-white text-slate-800 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  className="w-full pl-3.5 pr-20 py-2.5 rounded-xl border border-amber-300 bg-white text-slate-800 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-amber-500"
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowKey(!showKey)}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer p-1"
-                  title={showKey ? 'លាក់ Key' : 'បង្ហាញ Key'}
-                >
-                  {showKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
+                <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={handlePasteFromClipboard}
+                    className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 hover:bg-amber-200 transition-all cursor-pointer"
+                    title="បិទភ្ជាប់ពី Clipboard"
+                  >
+                    Paste
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowKey(!showKey)}
+                    className="text-slate-400 hover:text-slate-600 cursor-pointer p-1"
+                    title={showKey ? 'លាក់ Key' : 'បង្ហាញ Key'}
+                  >
+                    {showKey ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                  </button>
+                </div>
               </div>
 
               <div className="flex items-center gap-2">
@@ -444,20 +492,20 @@ export const InvoiceScannerModal: React.FC<InvoiceScannerModalProps> = ({
                   type="button"
                   onClick={handleTestApiKey}
                   disabled={!keyInput.trim() || keyTestStatus === 'TESTING'}
-                  className="px-3.5 py-2.5 bg-slate-200 hover:bg-slate-300 disabled:opacity-50 text-slate-800 text-xs font-bold rounded-xl transition-all cursor-pointer flex items-center gap-1"
+                  className="flex-1 sm:flex-initial px-3.5 py-2.5 bg-slate-200 hover:bg-slate-300 disabled:opacity-50 text-slate-800 text-xs font-bold rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1"
                 >
                   {keyTestStatus === 'TESTING' ? (
                     <RefreshCw className="w-3.5 h-3.5 animate-spin" />
                   ) : keyTestStatus === 'VALID' ? (
                     <Check className="w-3.5 h-3.5 text-emerald-600" />
                   ) : (
-                    'តេស្ត'
+                    <Zap className="w-3.5 h-3.5 text-amber-600" />
                   )}
                   <span>
                     {keyTestStatus === 'VALID'
                       ? 'ជោគជ័យ ✓'
                       : keyTestStatus === 'INVALID'
-                      ? 'មិនត្រឹមត្រូវ ✗'
+                      ? 'មិនត្រូវ ✗'
                       : 'តេស្ត Key'}
                   </span>
                 </button>
@@ -466,9 +514,16 @@ export const InvoiceScannerModal: React.FC<InvoiceScannerModalProps> = ({
                   type="button"
                   onClick={handleSaveApiKey}
                   disabled={!keyInput.trim()}
-                  className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-xs font-black rounded-xl transition-all cursor-pointer shadow-sm"
+                  className="flex-1 sm:flex-initial px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-xs font-black rounded-xl transition-all cursor-pointer shadow-sm flex items-center justify-center gap-1"
                 >
-                  រក្សាទុក Key
+                  {saveSuccessMsg ? (
+                    <>
+                      <Check className="w-3.5 h-3.5" />
+                      <span>បានរក្សាទុក ✓</span>
+                    </>
+                  ) : (
+                    <span>រក្សាទុក Key</span>
+                  )}
                 </button>
               </div>
             </div>
