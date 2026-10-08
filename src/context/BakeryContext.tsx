@@ -2015,7 +2015,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       offlineSyncService.processQueue().catch(() => {});
     }
 
-    // Subscribe to products (High-speed, zero-loop read sync)
+    // Subscribe to products (High-speed real-time sync)
     const unsubProducts = subscribeToFirestoreCollection<Product>('products', (cloudProducts) => {
       if (globalIsDemoMode) return;
       if (Array.isArray(cloudProducts) && cloudProducts.length > 0) {
@@ -2024,8 +2024,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         );
         if (filtered.length > 0) {
           setProducts((prev) => {
-            // Skip re-render if identical length and top product ID
-            if (prev.length === filtered.length && prev[0]?.id === filtered[0]?.id) {
+            if (JSON.stringify(prev) === JSON.stringify(filtered)) {
               return prev;
             }
             safeSetStorage('bakery_products', JSON.stringify(filtered));
@@ -2035,7 +2034,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       }
     });
 
-    // Subscribe to sales (Preserves real-time cloud sales without feedback loop)
+    // Subscribe to sales (Preserves real-time cloud sales)
     const unsubSales = subscribeToFirestoreCollection<CompletedSale>('sales', (cloudSales) => {
       if (globalIsDemoMode) return;
       if (Array.isArray(cloudSales) && cloudSales.length > 0) {
@@ -2045,7 +2044,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
         if (filtered.length > 0) {
           setSales((prev) => {
-            if (prev.length === filtered.length && prev[0]?.id === filtered[0]?.id) {
+            if (JSON.stringify(prev) === JSON.stringify(filtered)) {
               return prev;
             }
             safeSetStorage('bakery_sales', JSON.stringify(filtered));
@@ -2062,7 +2061,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         const filtered = cloudOrders.filter((o) => o && o.id && !deletedOrderIds.current.has(o.id));
         if (filtered.length > 0) {
           setCustomOrders((prev) => {
-            if (prev.length === filtered.length && prev[0]?.id === filtered[0]?.id) {
+            if (JSON.stringify(prev) === JSON.stringify(filtered)) {
               return prev;
             }
             safeSetStorage('bakery_custom_orders', JSON.stringify(filtered));
@@ -2072,21 +2071,15 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       }
     });
 
-    // Subscribe to expenses
+    // Subscribe to expenses (Instantly syncs edits, payment methods, reserve fund changes across all devices)
     const unsubExpenses = subscribeToFirestoreCollection<Expense>('expenses', (cloudExpenses) => {
       if (globalIsDemoMode) return;
-      if (Array.isArray(cloudExpenses)) {
+      if (Array.isArray(cloudExpenses) && cloudExpenses.length > 0) {
         const deduped = cleanDeduplicateExpenses(cloudExpenses);
-        const deletedIds = loadDeletedIds('expenses');
-        initialExpenses.forEach((exp) => {
-          if (!deletedIds.has(exp.id)) {
-            saveFirestoreDoc('expenses', exp.id, exp);
-          }
-        });
 
         if (deduped.length > 0) {
           setExpenses((prev) => {
-            if (prev.length === deduped.length && prev[0]?.id === deduped[0]?.id) {
+            if (JSON.stringify(prev) === JSON.stringify(deduped)) {
               return prev;
             }
             safeSetStorage('bakery_expenses', JSON.stringify(deduped));
@@ -2134,7 +2127,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       if (globalIsDemoMode) return;
       if (Array.isArray(cloudIngredients) && cloudIngredients.length > 0) {
         setIngredients((prev) => {
-          if (prev.length === cloudIngredients.length && prev[0]?.id === cloudIngredients[0]?.id) {
+          if (JSON.stringify(prev) === JSON.stringify(cloudIngredients)) {
             return prev;
           }
           safeSetStorage('bakery_ingredients', JSON.stringify(cloudIngredients));
@@ -2148,7 +2141,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       if (globalIsDemoMode) return;
       if (Array.isArray(cloudRecipes) && cloudRecipes.length > 0) {
         setRecipes((prev) => {
-          if (prev.length === cloudRecipes.length && prev[0]?.id === cloudRecipes[0]?.id) {
+          if (JSON.stringify(prev) === JSON.stringify(cloudRecipes)) {
             return prev;
           }
           safeSetStorage('bakery_recipes', JSON.stringify(cloudRecipes));
@@ -2579,11 +2572,13 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     if (lanSyncTimer.current) clearTimeout(lanSyncTimer.current);
 
     let nextRf: ReserveFund | undefined = undefined;
+    let fullTarget: Expense | undefined = undefined;
 
     setExpenses((prev) => {
       const oldExpense = prev.find((e) => e.id === id);
       const updated = prev.map((exp) => (exp.id === id ? { ...exp, ...updatedData } : exp));
       const target = updated.find((e) => e.id === id);
+      fullTarget = target;
 
       if (target && oldExpense) {
         const oldWasRfPaid = isExpensePaidFromReserve(oldExpense);
@@ -2634,7 +2629,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       return updated;
     });
 
-    syncSaveDoc('expenses', id, updatedData);
+    syncSaveDoc('expenses', id, fullTarget || updatedData);
   };
 
   const batchDeductExpensesToReserveFund = (expenseIds: string[]) => {
@@ -2670,7 +2665,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         telegramConfig: getStoredTelegramConfig(),
       }, true);
 
-      // Save each updated expense to disk
+      // Save each updated expense to disk & cloud
       targets.forEach((t) => {
         const updatedTarget = { ...t, paymentMethod: 'RESERVE_FUND' as const };
         fetch('/api/save-expense', {
@@ -2678,7 +2673,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ expense: updatedTarget, reserveFund: nextRf }),
         }).catch(() => {});
-        syncSaveDoc('expenses', t.id, { paymentMethod: 'RESERVE_FUND' });
+        syncSaveDoc('expenses', t.id, updatedTarget);
       });
 
       return updated;
