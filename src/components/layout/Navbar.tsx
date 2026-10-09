@@ -228,47 +228,11 @@ export const Navbar: React.FC<NavbarProps> = ({
               </p>
             </div>
           </div>
-
-          {/* Festival Season Pill */}
-          {currentTheme?.category === 'festival' && currentTheme.seasonTagKh && (
-            <div
-              onClick={onOpenThemePicker}
-              className={`hidden 2xl:flex items-center gap-1.5 px-3 py-1 rounded-2xl text-xs font-bold border shadow-2xs cursor-pointer transition-all hover:scale-105 font-battambang ${currentTheme.badgeClass}`}
-              title="ចុចដើម្បីប្តូរ Theme រដូវកាលពិធីបុណ្យ"
-            >
-              <span className="text-sm animate-bounce">{currentTheme.ambientMotif || currentTheme.emoji}</span>
-              <span>{currentTheme.seasonTagKh}</span>
-            </div>
-          )}
-
-          {/* Low Stock Badge (Compact) */}
-          {lowStockCount > 0 && (
-            <div className="hidden lg:flex items-center gap-1 bg-rose-50 border border-rose-200 text-rose-700 px-2.5 py-1 rounded-2xl text-[11px] font-bold shadow-2xs animate-bounce">
-              <AlertTriangle className="w-3.5 h-3.5 text-rose-500" />
-              <span>{lowStockCount} អស់ស្តុក!</span>
-            </div>
-          )}
         </div>
 
-        {/* Right Side: Live Clock & Actions */}
+        {/* Right Side: Clean & Consolidated Actions */}
         <div className="flex items-center gap-1 sm:gap-1.5 shrink-0 justify-end">
-          {/* Live Digital Clock (Large screens only) */}
-          <div className="hidden 2xl:flex items-center gap-1.5 bg-slate-50 border border-slate-200/90 px-2.5 py-1 rounded-2xl text-xs shadow-2xs font-mono font-bold text-slate-700">
-            <Clock className="w-3.5 h-3.5 text-rose-500 animate-spin-slow" />
-            <span>{timeString}</span>
-          </div>
-
-          {/* Exchange Rate Badge (Compact - Large screens only) */}
-          <div
-            onClick={() => onOpenSettingsModal('store')}
-            title="អត្រាប្តូរប្រាក់ (ចុចដើម្បីកែប្រែ)"
-            className="hidden xl:flex items-center gap-1 bg-amber-50/80 border border-amber-200 px-2 py-1 rounded-2xl text-xs shadow-2xs text-amber-900 font-black cursor-pointer hover:bg-amber-100 transition-all active:scale-95"
-          >
-            <span className="text-amber-700 text-[11px]">$1 =</span>
-            <span>{exchangeRate.toLocaleString()}៛</span>
-          </div>
-
-          {/* Unified Cloud Auto-Sync & Status Indicator (Single Pill) */}
+          {/* 1. Unified Cloud Auto-Sync & Status Indicator (Single Clean Pill) */}
           <button
             type="button"
             onClick={() => {
@@ -291,7 +255,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 ? 'កំពុងធ្វើសមកាលកម្មទិន្នន័យទៅ Cloud...'
                 : pendingSyncCount > 0
                 ? `${pendingSyncCount} ទិន្នន័យរង់ចាំ Sync (ចុចដើម្បី Sync)`
-                : 'Google Cloud Live (ចុចដើម្បី Re-Sync / Settings)'
+                : 'Google Cloud Live (ចុចដើម្បី Sync)'
             }
           >
             {!isOnline ? (
@@ -313,141 +277,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             )}
           </button>
 
-          {/* Demo Sandbox Mode Quick Toggle */}
-          <button
-            type="button"
-            onClick={() => {
-              soundFx.playPop();
-              if (isDemoMode) {
-                requestExitDemoMode();
-              } else {
-                enterDemoMode();
-              }
-            }}
-            title={
-              isDemoMode
-                ? `🧪 កំពុងស្ថិតក្នុង Demo Sandbox Mode (ឧបករណ៍សាកល្បងសរុប៖ ${demoDevicesCount} គ្រឿង - ចុចដើម្បីចាកចេញ)`
-                : `🧪 បើករបៀបសាកល្បង Demo (ឧបករណ៍បានចូលសាកល្បងសរុប៖ ${demoDevicesCount} គ្រឿង)`
-            }
-            className={`flex items-center gap-1 sm:gap-1.5 p-1.5 sm:px-2.5 sm:py-1.5 rounded-2xl text-xs font-black transition-all border shadow-2xs cursor-pointer active:scale-95 ${
-              isDemoMode
-                ? 'bg-gradient-to-r from-amber-500 to-rose-500 text-white border-amber-300 animate-pulse'
-                : 'bg-amber-50/90 text-amber-900 border-amber-200 hover:bg-amber-100 hover:border-amber-300'
-            }`}
-          >
-            <FlaskConical className={`w-3.5 h-3.5 ${isDemoMode ? 'text-white' : 'text-amber-600'}`} />
-            <span className="hidden sm:inline">{isDemoMode ? 'Demo សកម្ម' : '🧪 Demo'}</span>
-            {demoDevicesCount > 0 && (
-              <span className={`text-[10px] px-1 sm:px-1.5 py-0.2 rounded-full font-mono font-bold ${
-                isDemoMode ? 'bg-white/30 text-white' : 'bg-amber-200/80 text-amber-950'
-              }`}>
-                {demoDevicesCount}
-              </span>
-            )}
-          </button>
-
-          {/* Quick Counter KHQR Standee Button (Tablet & Desktop only) */}
-          <button
-            onClick={() => {
-              soundFx.playPop();
-              setIsStandeeOpen(true);
-            }}
-            title="បង្ហាញផ្ទាំង KHQR លើតុគិតប្រាក់ (Counter Standee)"
-            className="hidden sm:flex items-center gap-1 px-2.5 py-1.5 rounded-2xl bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 text-white text-xs font-black shadow-xs transition-all active:scale-95 cursor-pointer"
-          >
-            <QrCode className="w-3.5 h-3.5" />
-            <span>KHQR</span>
-          </button>
-
-          {/* Flying Butterflies Effect Toggle Button */}
-          {onToggleButterfly && (
-            <button
-              type="button"
-              onClick={() => {
-                soundFx.playPop();
-                onToggleButterfly();
-              }}
-              title={
-                isButterflyEnabled
-                  ? 'បិទសត្វមេអំបៅហើរលើអេក្រង់ (Butterflies: ON)'
-                  : 'បើកសត្វមេអំបៅហើរលើអេក្រង់ (Butterflies: OFF)'
-              }
-              className={`flex items-center gap-1 sm:gap-1.5 p-1.5 sm:px-2.5 sm:py-1.5 rounded-2xl text-xs font-black transition-all border shadow-2xs cursor-pointer active:scale-95 ${
-                isButterflyEnabled
-                  ? 'bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 text-white border-pink-300 shadow-pink-500/25 ring-1 ring-pink-300'
-                  : 'bg-white text-slate-600 hover:text-pink-600 hover:bg-pink-50 border-slate-200'
-              }`}
-            >
-              <span className="text-sm">🦋</span>
-              <span className="hidden xl:inline font-battambang">
-                {isButterflyEnabled ? 'មេអំបៅ ON' : 'មេអំបៅ'}
-              </span>
-            </button>
-          )}
-
-          {/* Customer Order Link & QR Button (Visible on all devices) */}
-          {onOpenCustomerOrderLinkModal && (
-            <button
-              type="button"
-              onClick={() => {
-                soundFx.playPop();
-                onOpenCustomerOrderLinkModal();
-              }}
-              title="លីងកុម្ម៉ង់សម្រាប់ភ្ញៀវ (Customer Self-Ordering Link & QR)"
-              className="flex items-center gap-1 px-2 py-1.5 sm:px-2.5 sm:py-1.5 rounded-2xl bg-gradient-to-r from-pink-600 to-rose-500 hover:from-pink-700 hover:to-rose-600 text-white text-xs font-black shadow-xs transition-all active:scale-95 cursor-pointer shrink-0"
-            >
-              <LinkIcon className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">លីងភ្ញៀវ</span>
-            </button>
-          )}
-
-          {/* Contact System Button (Only in Demo Mode) */}
-          {onOpenContact && isDemoMode && (
-            <>
-              {/* Desktop / Tablet Contact Button */}
-              <button
-                type="button"
-                onClick={() => {
-                  soundFx.playPop();
-                  onOpenContact();
-                }}
-                title="ទំនាក់ទំនងទិញ ឬប្រើប្រាស់ប្រព័ន្ធ (012 629 160)"
-                className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white text-xs font-black shadow-xs transition-all active:scale-95 cursor-pointer border border-emerald-400/40 shrink-0"
-              >
-                <Phone className="w-3.5 h-3.5 text-emerald-200" />
-                <span>Contact</span>
-                <span className="hidden xl:inline text-[11px] font-mono text-emerald-200">012 629 160</span>
-              </button>
-
-              {/* Mobile Phone Quick Action Icon */}
-              <button
-                type="button"
-                onClick={() => {
-                  soundFx.playPop();
-                  onOpenContact();
-                }}
-                title="ទំនាក់ទំនងទិញ ឬប្រើប្រាស់ប្រព័ន្ធ (012 629 160)"
-                className="flex sm:hidden p-1.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-2xs items-center justify-center cursor-pointer border border-emerald-500/40 active:scale-95 shrink-0"
-              >
-                <Phone className="w-3.5 h-3.5" />
-              </button>
-            </>
-          )}
-
-          {/* Direct Settings Shortcut (Laptop/Desktop) */}
-          <button
-            type="button"
-            onClick={() => {
-              soundFx.playPop();
-              onOpenSettingsModal();
-            }}
-            title="ការកំណត់ហាង (Store Settings)"
-            className="hidden xl:flex w-8 h-8 rounded-xl items-center justify-center text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-all cursor-pointer border border-slate-200/80 shadow-2xs"
-          >
-            <Settings className="w-4 h-4" />
-          </button>
-
-          {/* Quick Tools Dropdown (Consolidated Tools Menu - ALWAYS VISIBLE TO PREVENT OVERFLOW) */}
+          {/* 2. Unified Quick Tools & Features Menu Dropdown (All Small Buttons Grouped Here) */}
           <div className="relative" ref={quickToolsRef}>
             <button
               type="button"
@@ -455,205 +285,461 @@ export const Navbar: React.FC<NavbarProps> = ({
                 soundFx.playPop();
                 setIsQuickToolsOpen((prev) => !prev);
               }}
-              title="ឧបករណ៍បន្ថែម (More Tools)"
-              className={`flex items-center gap-1 p-1.5 sm:px-2.5 sm:py-1.5 rounded-2xl border text-xs font-bold transition-all shadow-2xs cursor-pointer active:scale-95 ${
+              title="ឧបករណ៍ និងមុខងារបន្ថែមទាំងអស់ (All Tools & Features)"
+              className={`relative flex items-center gap-1.5 p-1.5 sm:px-2.5 sm:py-1.5 rounded-2xl border text-xs font-black transition-all shadow-2xs cursor-pointer active:scale-95 ${
                 isQuickToolsOpen
-                  ? 'bg-pink-100 border-pink-400 text-pink-900'
+                  ? 'bg-pink-600 text-white border-pink-700 shadow-md shadow-pink-600/20 ring-2 ring-pink-300'
+                  : isDemoMode
+                  ? 'bg-amber-50 text-amber-900 border-amber-300 hover:bg-amber-100'
                   : 'bg-white border-slate-200/90 text-slate-700 hover:bg-slate-50'
               }`}
             >
-              <Sparkles className="w-3.5 h-3.5 text-pink-500" />
-              <span className="hidden sm:inline">ឧបករណ៍</span>
-              <ChevronDown className={`w-3 h-3 text-slate-500 transition-transform hidden sm:inline ${isQuickToolsOpen ? 'rotate-180' : ''}`} />
+              <Sparkles className={`w-3.5 h-3.5 ${isQuickToolsOpen ? 'text-white' : 'text-pink-600'} animate-pulse`} />
+              <span className="hidden sm:inline font-battambang">ឧបករណ៍</span>
+              <ChevronDown
+                className={`w-3.5 h-3.5 transition-transform duration-200 ${
+                  isQuickToolsOpen ? 'rotate-180 text-white' : 'text-slate-400'
+                }`}
+              />
+
+              {/* Notification Badge if low stock or demo active */}
+              {(lowStockCount > 0 || isDemoMode) && (
+                <span
+                  className={`absolute -top-1 -right-1 px-1.5 py-0.2 rounded-full text-[9px] font-mono font-black border border-white shadow-xs ${
+                    lowStockCount > 0 ? 'bg-rose-500 text-white animate-bounce' : 'bg-amber-500 text-white'
+                  }`}
+                >
+                  {lowStockCount > 0 ? lowStockCount : 'Demo'}
+                </span>
+              )}
             </button>
 
+            {/* Comprehensive Quick Tools Dropdown */}
             {isQuickToolsOpen && (
-              <div className="absolute right-0 top-full mt-2 w-56 bg-white rounded-2xl shadow-xl border border-slate-100 p-2 z-50 animate-in fade-in zoom-in-95 space-y-1">
-                {/* Music */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsQuickToolsOpen(false);
-                    setIsMusicPlayerOpen(true);
-                  }}
-                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-slate-700 hover:bg-pink-50 hover:text-pink-600 transition-colors text-left cursor-pointer"
-                >
-                  <Music className="w-4 h-4 text-pink-500" />
-                  <span>ម៉ាស៊ីនចាក់ភ្លេងហាងនំ {isMusicPlaying ? '🎵' : ''}</span>
-                </button>
-
-                {/* Customer Self-Ordering Link & QR */}
-                {onOpenCustomerOrderLinkModal && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsQuickToolsOpen(false);
-                      onOpenCustomerOrderLinkModal();
-                    }}
-                    className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold text-pink-700 hover:bg-pink-50 transition-colors text-left cursor-pointer"
-                  >
-                    <div className="flex items-center gap-2.5">
-                      <LinkIcon className="w-4 h-4 text-pink-600" />
-                      <span>លីងកុម្ម៉ង់សម្រាប់ភ្ញៀវ & QR</span>
+              <div className="absolute right-0 top-full mt-2 w-72 sm:w-80 bg-white rounded-3xl shadow-2xl border border-rose-100 p-2.5 z-50 animate-in fade-in zoom-in-95 duration-200 max-h-[85vh] overflow-y-auto space-y-2">
+                {/* Header: Live Clock & Exchange Rate */}
+                <div className="p-2.5 rounded-2xl bg-gradient-to-r from-slate-900 via-slate-800 to-pink-950 text-white space-y-2 shadow-sm">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5 text-xs font-mono font-bold text-slate-200">
+                      <Clock className="w-3.5 h-3.5 text-rose-400 animate-spin-slow" />
+                      <span>{timeString}</span>
                     </div>
-                    <span className="text-[10px] text-white font-bold bg-pink-500 px-2 py-0.5 rounded-full">
-                      QR
-                    </span>
-                  </button>
-                )}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsQuickToolsOpen(false);
+                        onOpenSettingsModal('store');
+                      }}
+                      className="px-2 py-0.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-400/40 text-[11px] font-bold text-amber-300 transition-colors flex items-center gap-1 cursor-pointer"
+                      title="អត្រាប្តូរប្រាក់ (ចុចដើម្បីកែប្រែ)"
+                    >
+                      <span>$1 =</span>
+                      <span>{exchangeRate.toLocaleString()}៛</span>
+                    </button>
+                  </div>
 
-                {/* Theme */}
-                {onOpenThemePicker && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsQuickToolsOpen(false);
-                      onOpenThemePicker();
-                    }}
-                    className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold text-slate-700 hover:bg-pink-50 hover:text-pink-600 transition-colors text-left cursor-pointer font-battambang"
-                  >
-                    <div className="flex items-center gap-2.5">
-                      <span className="text-base">{currentTheme?.emoji || '🎨'}</span>
-                      <span>ពណ៌ផ្ទៃ & Theme</span>
+                  {/* Low Stock Notification in Dropdown Header */}
+                  {lowStockCount > 0 && (
+                    <div
+                      onClick={() => {
+                        setIsQuickToolsOpen(false);
+                        onOpenSettingsModal();
+                      }}
+                      className="p-2 rounded-xl bg-rose-500/20 border border-rose-500/40 text-rose-200 text-xs font-bold flex items-center justify-between cursor-pointer hover:bg-rose-500/30 transition-colors"
+                    >
+                      <div className="flex items-center gap-1.5">
+                        <AlertTriangle className="w-3.5 h-3.5 text-rose-400 animate-bounce" />
+                        <span>ទំនិញជិតអស់ស្តុក៖</span>
+                      </div>
+                      <span className="px-2 py-0.5 rounded-full bg-rose-600 text-white text-[10px] font-mono font-black">
+                        {lowStockCount} មុខ
+                      </span>
                     </div>
-                    <span className="text-[10px] text-pink-600 font-bold bg-pink-50 px-2 py-0.5 rounded-full border border-pink-100">
-                      {currentTheme?.nameKh?.split(' ')[0] || 'Theme'}
-                    </span>
-                  </button>
-                )}
+                  )}
+                </div>
 
-                {/* Mobile Connect */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsQuickToolsOpen(false);
-                    setIsMobileConnectOpen(true);
-                  }}
-                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-purple-700 hover:bg-purple-50 transition-colors text-left cursor-pointer"
-                >
-                  <Smartphone className="w-4 h-4 text-purple-600" />
-                  <span>ទូរស័ព្ទបុគ្គលិក / Demo QR 📱</span>
-                </button>
-
-                {/* Sound */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    toggleSound();
-                  }}
-                  className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors text-left cursor-pointer"
-                >
-                  <span className="flex items-center gap-2.5">
-                    {soundEnabled ? <Volume2 className="w-4 h-4 text-pink-500" /> : <VolumeX className="w-4 h-4 text-slate-400" />}
-                    <span>សំឡេងកម្មវិធី</span>
-                  </span>
-                  <span className={`text-[10px] px-1.5 py-0.5 rounded-md ${soundEnabled ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-500'}`}>
-                    {soundEnabled ? 'បើក' : 'បិទ'}
-                  </span>
-                </button>
-
-                {/* Notifications */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsQuickToolsOpen(false);
-                    onOpenSettingsModal('notifications');
-                  }}
-                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors text-left cursor-pointer"
-                >
-                  <Bell className="w-4 h-4 text-pink-500" />
-                  <span>ការដាស់តឿនលើទូរសព្ទ 🔔</span>
-                </button>
-
-                {/* Settings */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsQuickToolsOpen(false);
-                    onOpenSettingsModal();
-                  }}
-                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors text-left cursor-pointer"
-                >
-                  <Settings className="w-4 h-4 text-slate-500" />
-                  <span>ការកំណត់ហាង ⚙️</span>
-                </button>
-
-                {/* Flying Butterflies Animation Toggle */}
-                {onToggleButterfly && (
+                {/* Main Tools & Quick Action Items */}
+                <div className="space-y-1">
+                  {/* 1. KHQR Counter Standee */}
                   <button
                     type="button"
                     onClick={() => {
                       soundFx.playPop();
-                      onToggleButterfly();
                       setIsQuickToolsOpen(false);
+                      setIsStandeeOpen(true);
                     }}
-                    className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors text-left cursor-pointer"
+                    className="w-full flex items-center justify-between p-2.5 rounded-2xl hover:bg-red-50 text-slate-800 transition-colors cursor-pointer group text-left border border-transparent hover:border-red-100"
                   >
-                    <div className="flex items-center gap-2.5">
-                      <span className="text-base">🦋</span>
-                      <span>មេអំបៅហើរលើអេក្រង់</span>
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-xl bg-red-600 text-white flex items-center justify-center shadow-xs group-hover:scale-105 transition-transform shrink-0">
+                        <QrCode className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <div className="text-xs font-black text-slate-800 group-hover:text-red-600">
+                          ផ្ទាំង KHQR លើតុគិតប្រាក់
+                        </div>
+                        <div className="text-[10px] text-slate-400">
+                          បង្ហាញ QR ធំជូនភ្ញៀវ Scan បង់ប្រាក់
+                        </div>
+                      </div>
+                    </div>
+                    <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-red-100 text-red-700">
+                      KHQR
+                    </span>
+                  </button>
+
+                  {/* 2. Customer Self-Ordering Link & QR */}
+                  {onOpenCustomerOrderLinkModal && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        soundFx.playPop();
+                        setIsQuickToolsOpen(false);
+                        onOpenCustomerOrderLinkModal();
+                      }}
+                      className="w-full flex items-center justify-between p-2.5 rounded-2xl hover:bg-pink-50 text-slate-800 transition-colors cursor-pointer group text-left border border-transparent hover:border-pink-100"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-pink-600 to-rose-500 text-white flex items-center justify-center shadow-xs group-hover:scale-105 transition-transform shrink-0">
+                          <LinkIcon className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <div className="text-xs font-black text-slate-800 group-hover:text-pink-600">
+                            លីងកុម្ម៉ង់សម្រាប់ភ្ញៀវ & QR
+                          </div>
+                          <div className="text-[10px] text-slate-400">
+                            ភ្ញៀវស្កេនមើលមុខម្ហូប & កុម្ម៉ង់ខ្លួនឯង
+                          </div>
+                        </div>
+                      </div>
+                      <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-pink-100 text-pink-700">
+                        Self-Order
+                      </span>
+                    </button>
+                  )}
+
+                  {/* 3. Demo Sandbox Mode Toggle */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      soundFx.playPop();
+                      setIsQuickToolsOpen(false);
+                      if (isDemoMode) {
+                        requestExitDemoMode();
+                      } else {
+                        enterDemoMode();
+                      }
+                    }}
+                    className={`w-full flex items-center justify-between p-2.5 rounded-2xl transition-colors cursor-pointer group text-left border ${
+                      isDemoMode
+                        ? 'bg-amber-50/80 border-amber-200 text-amber-900'
+                        : 'hover:bg-amber-50/50 border-transparent hover:border-amber-100 text-slate-800'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div
+                        className={`w-8 h-8 rounded-xl flex items-center justify-center shadow-xs group-hover:scale-105 transition-transform shrink-0 ${
+                          isDemoMode ? 'bg-amber-600 text-white' : 'bg-amber-100 text-amber-800'
+                        }`}
+                      >
+                        <FlaskConical className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <div className="text-xs font-black group-hover:text-amber-700">
+                          របៀបសាកល្បង (Demo Sandbox)
+                        </div>
+                        <div className="text-[10px] text-slate-400">
+                          {isDemoMode ? 'កំពុងស្ថិតក្នុងរបៀបសាកល្បង' : 'សាកល្បងលក់ដោយមិនប៉ះពាល់ទិន្នន័យពិត'}
+                        </div>
+                      </div>
                     </div>
                     <span
-                      className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                        isButterflyEnabled
-                          ? 'bg-pink-100 text-pink-700 border border-pink-200'
-                          : 'bg-slate-100 text-slate-500 border border-slate-200'
+                      className={`text-[10px] font-black px-2 py-0.5 rounded-full ${
+                        isDemoMode
+                          ? 'bg-amber-600 text-white animate-pulse'
+                          : 'bg-slate-100 text-slate-600'
                       }`}
                     >
-                      {isButterflyEnabled ? 'បើក (ON)' : 'បិទ (OFF)'}
+                      {isDemoMode ? 'កំពុងបើក' : 'បិទ'}
                     </span>
                   </button>
-                )}
 
-                {/* Super Admin */}
-                {isSuperAdmin && onOpenSuperAdminPortal && (
+                  {/* 4. Flying Butterflies Effect Toggle */}
+                  {onToggleButterfly && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        soundFx.playPop();
+                        onToggleButterfly();
+                      }}
+                      className="w-full flex items-center justify-between p-2.5 rounded-2xl hover:bg-purple-50 text-slate-800 transition-colors cursor-pointer group text-left border border-transparent hover:border-purple-100"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-pink-500 via-purple-500 to-indigo-500 text-white flex items-center justify-center shadow-xs group-hover:scale-105 transition-transform shrink-0 text-base">
+                          🦋
+                        </div>
+                        <div>
+                          <div className="text-xs font-black text-slate-800 group-hover:text-purple-700">
+                            សត្វមេអំបៅហើរលើអេក្រង់
+                          </div>
+                          <div className="text-[10px] text-slate-400">
+                            Animation មេអំបៅហើរលើផ្ទាំង POS
+                          </div>
+                        </div>
+                      </div>
+                      <span
+                        className={`text-[10px] font-black px-2 py-0.5 rounded-full ${
+                          isButterflyEnabled
+                            ? 'bg-purple-100 text-purple-700 border border-purple-200'
+                            : 'bg-slate-100 text-slate-500'
+                        }`}
+                      >
+                        {isButterflyEnabled ? 'បើក (ON)' : 'បិទ (OFF)'}
+                      </span>
+                    </button>
+                  )}
+
+                  {/* 5. Music Player / Bakery Jukebox */}
                   <button
                     type="button"
                     onClick={() => {
                       setIsQuickToolsOpen(false);
-                      onOpenSuperAdminPortal();
+                      setIsMusicPlayerOpen(true);
                     }}
-                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-black text-amber-900 bg-amber-50 hover:bg-amber-100 transition-colors text-left cursor-pointer"
+                    className="w-full flex items-center justify-between p-2.5 rounded-2xl hover:bg-pink-50 text-slate-800 transition-colors cursor-pointer group text-left border border-transparent hover:border-pink-100"
                   >
-                    <Key className="w-4 h-4 text-amber-600" />
-                    <span>Super Admin 👑</span>
-                  </button>
-                )}
-
-                {/* System Contact Button (Only in Demo Mode) */}
-                {onOpenContact && isDemoMode && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsQuickToolsOpen(false);
-                      onOpenContact();
-                    }}
-                    className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 transition-colors text-left cursor-pointer border border-emerald-200/80"
-                  >
-                    <div className="flex items-center gap-2.5">
-                      <Phone className="w-4 h-4 text-emerald-600" />
-                      <span>ទំនាក់ទំនងប្រព័ន្ធ</span>
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-xl bg-pink-600 text-white flex items-center justify-center shadow-xs group-hover:scale-105 transition-transform shrink-0">
+                        <Music className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <div className="text-xs font-black text-slate-800 group-hover:text-pink-600 flex items-center gap-1">
+                          <span>ម៉ាស៊ីនចាក់ភ្លេងហាងនំ</span>
+                          {isMusicPlaying && <span className="animate-spin text-xs">🎵</span>}
+                        </div>
+                        <div className="text-[10px] text-slate-400">
+                          ចាក់ចម្រៀងកំដរហាង, បទខួបកំណើត & URL
+                        </div>
+                      </div>
                     </div>
-                    <span className="text-[10px] font-mono font-bold text-emerald-700 bg-white px-1.5 py-0.5 rounded-md border border-emerald-200">
-                      012 629 160
+                    <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-pink-100 text-pink-700">
+                      Jukebox
                     </span>
                   </button>
-                )}
 
-                {/* Logout Button */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsQuickToolsOpen(false);
-                    if (window.confirm(`តើអ្នកពិតជាចង់ចាកចេញពីគណនី «${currentStaff.name}» និងចាក់សោប្រព័ន្ធមែនទេ?`)) {
-                      logoutAndLock();
-                    }
-                  }}
-                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-black text-rose-700 bg-rose-50 hover:bg-rose-100 transition-colors text-left cursor-pointer border-t border-rose-100 mt-1"
-                >
-                  <LogOut className="w-4 h-4 text-rose-600" />
-                  <span>ចាកចេញពីគណនី (Logout) 🚪</span>
-                </button>
+                  {/* 6. Theme Picker */}
+                  {onOpenThemePicker && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsQuickToolsOpen(false);
+                        onOpenThemePicker();
+                      }}
+                      className="w-full flex items-center justify-between p-2.5 rounded-2xl hover:bg-pink-50 text-slate-800 transition-colors cursor-pointer group text-left border border-transparent hover:border-pink-100"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-amber-400 to-rose-400 text-white flex items-center justify-center shadow-xs group-hover:scale-105 transition-transform shrink-0 text-base">
+                          {currentTheme?.emoji || '🎨'}
+                        </div>
+                        <div>
+                          <div className="text-xs font-black text-slate-800 group-hover:text-pink-600">
+                            ពណ៌ផ្ទៃ & Theme រដូវកាល
+                          </div>
+                          <div className="text-[10px] text-slate-400">
+                            ប្ដូររូបរាង & ពណ៌កម្មវិធី
+                          </div>
+                        </div>
+                      </div>
+                      <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-pink-100 text-pink-700 font-battambang">
+                        {currentTheme?.nameKh?.split(' ')[0] || 'Theme'}
+                      </span>
+                    </button>
+                  )}
+
+                  {/* 7. Mobile Staff Connect */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsQuickToolsOpen(false);
+                      setIsMobileConnectOpen(true);
+                    }}
+                    className="w-full flex items-center justify-between p-2.5 rounded-2xl hover:bg-purple-50 text-slate-800 transition-colors cursor-pointer group text-left border border-transparent hover:border-purple-100"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-xl bg-purple-600 text-white flex items-center justify-center shadow-xs group-hover:scale-105 transition-transform shrink-0">
+                        <Smartphone className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <div className="text-xs font-black text-slate-800 group-hover:text-purple-600">
+                          ទូរស័ព្ទបុគ្គលិក / QR Connect
+                        </div>
+                        <div className="text-[10px] text-slate-400">
+                          ភ្ជាប់ទូរស័ព្ទប្រើជាម៉ាស៊ីន POS
+                        </div>
+                      </div>
+                    </div>
+                    <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-purple-100 text-purple-700">
+                      Mobile
+                    </span>
+                  </button>
+
+                  {/* 8. Notifications */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsQuickToolsOpen(false);
+                      onOpenSettingsModal('notifications');
+                    }}
+                    className="w-full flex items-center justify-between p-2.5 rounded-2xl hover:bg-slate-50 text-slate-800 transition-colors cursor-pointer group text-left border border-transparent"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-xl bg-amber-500 text-white flex items-center justify-center shadow-xs group-hover:scale-105 transition-transform shrink-0">
+                        <Bell className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <div className="text-xs font-bold text-slate-800">
+                          ការដាស់តឿនលើទូរសព្ទ
+                        </div>
+                        <div className="text-[10px] text-slate-400">
+                          កំណត់ម៉ោងរំលឹកចំណាយ & នំកុម្ម៉ង់
+                        </div>
+                      </div>
+                    </div>
+                    <span className="text-slate-400 text-xs">🔔</span>
+                  </button>
+
+                  {/* 9. Sound FX Toggle */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      toggleSound();
+                    }}
+                    className="w-full flex items-center justify-between p-2.5 rounded-2xl hover:bg-slate-50 text-slate-800 transition-colors cursor-pointer group text-left border border-transparent"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-xl bg-slate-700 text-white flex items-center justify-center shadow-xs group-hover:scale-105 transition-transform shrink-0">
+                        {soundEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
+                      </div>
+                      <div>
+                        <div className="text-xs font-bold text-slate-800">
+                          សំឡេងកម្មវិធី (Sound FX)
+                        </div>
+                        <div className="text-[10px] text-slate-400">
+                          សម្លេងចុចប៊ូតុង & គិតប្រាក់
+                        </div>
+                      </div>
+                    </div>
+                    <span
+                      className={`text-[10px] font-black px-2 py-0.5 rounded-full ${
+                        soundEnabled ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-500'
+                      }`}
+                    >
+                      {soundEnabled ? 'បើក' : 'បិទ'}
+                    </span>
+                  </button>
+
+                  {/* 10. Store Settings */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsQuickToolsOpen(false);
+                      onOpenSettingsModal();
+                    }}
+                    className="w-full flex items-center justify-between p-2.5 rounded-2xl hover:bg-slate-50 text-slate-800 transition-colors cursor-pointer group text-left border border-transparent"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-xl bg-slate-800 text-white flex items-center justify-center shadow-xs group-hover:scale-105 transition-transform shrink-0">
+                        <Settings className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <div className="text-xs font-bold text-slate-800">
+                          ការកំណត់ហាង (Settings)
+                        </div>
+                        <div className="text-[10px] text-slate-400">
+                          ឈ្មោះហាង, វិក្កយបត្រ, Cloud & ស្តុក
+                        </div>
+                      </div>
+                    </div>
+                    <span className="text-slate-400 text-xs">⚙️</span>
+                  </button>
+
+                  {/* 11. System Contact in Demo */}
+                  {onOpenContact && isDemoMode && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsQuickToolsOpen(false);
+                        onOpenContact();
+                      }}
+                      className="w-full flex items-center justify-between p-2.5 rounded-2xl bg-emerald-50 hover:bg-emerald-100 text-emerald-900 transition-colors cursor-pointer group text-left border border-emerald-200"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center shadow-xs group-hover:scale-105 transition-transform shrink-0">
+                          <Phone className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <div className="text-xs font-black text-emerald-900">
+                            ទំនាក់ទំនងប្រព័ន្ធ
+                          </div>
+                          <div className="text-[10px] text-emerald-700">
+                            លេខទូរស័ព្ទ៖ 012 629 160
+                          </div>
+                        </div>
+                      </div>
+                      <span className="text-[10px] font-mono font-bold bg-white px-2 py-0.5 rounded-lg border border-emerald-300">
+                        012 629 160
+                      </span>
+                    </button>
+                  )}
+
+                  {/* 12. Super Admin Portal */}
+                  {isSuperAdmin && onOpenSuperAdminPortal && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsQuickToolsOpen(false);
+                        onOpenSuperAdminPortal();
+                      }}
+                      className="w-full flex items-center gap-3 p-2.5 rounded-2xl bg-amber-50 hover:bg-amber-100 text-amber-900 transition-colors cursor-pointer text-left border border-amber-200"
+                    >
+                      <div className="w-8 h-8 rounded-xl bg-amber-600 text-white flex items-center justify-center shadow-xs shrink-0">
+                        <Key className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <div className="text-xs font-black text-amber-900">
+                          Super Admin Portal 👑
+                        </div>
+                        <div className="text-[10px] text-amber-700">
+                          គ្រប់គ្រង License & សោប្រព័ន្ធ
+                        </div>
+                      </div>
+                    </button>
+                  )}
+
+                  {/* 13. Logout */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsQuickToolsOpen(false);
+                      if (window.confirm(`តើអ្នកពិតជាចង់ចាកចេញពីគណនី «${currentStaff.name}» និងចាក់សោប្រព័ន្ធមែនទេ?`)) {
+                        logoutAndLock();
+                      }
+                    }}
+                    className="w-full flex items-center gap-3 p-2.5 rounded-2xl bg-rose-50 hover:bg-rose-100 text-rose-700 transition-colors cursor-pointer text-left border border-rose-100 mt-2"
+                  >
+                    <div className="w-8 h-8 rounded-xl bg-rose-600 text-white flex items-center justify-center shadow-xs shrink-0">
+                      <LogOut className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <div className="text-xs font-black text-rose-800">
+                        ចាកចេញពីគណនី (Logout) 🚪
+                      </div>
+                      <div className="text-[10px] text-rose-600">
+                        ចាក់សោប្រព័ន្ធ & ប្ដូរបុគ្គលិក
+                      </div>
+                    </div>
+                  </button>
+                </div>
               </div>
             )}
           </div>
