@@ -7,7 +7,9 @@ export interface StoredAudioTrack {
   id: string;
   title: string;
   artist?: string;
-  blob: Blob;
+  blob?: Blob;
+  url?: string;
+  isUrlOnly?: boolean;
   dateAdded: string;
   duration?: number;
 }

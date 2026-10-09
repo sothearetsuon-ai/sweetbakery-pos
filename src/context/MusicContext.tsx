@@ -87,6 +87,7 @@ interface MusicContextType {
   toggleShuffle: () => void;
   playTrackById: (id: string) => void;
   uploadTracks: (files: FileList | File[]) => Promise<void>;
+  addTrackByUrl: (url: string, title?: string, artist?: string) => Promise<{ success: boolean; error?: string }>;
   deleteTrack: (id: string) => Promise<void>;
   clearCustomTracks: () => Promise<void>;
   playBirthdayCelebration: () => void;
@@ -118,6 +119,49 @@ const getAudioDuration = (file: File): Promise<number> => {
       resolve(180);
     }
   });
+};
+
+// Helper to normalize and convert popular cloud/streaming audio URLs
+export const normalizeAudioUrl = (inputUrl: string): { url: string; fallbackTitle: string } => {
+  let url = inputUrl.trim();
+  let fallbackTitle = 'Online Track 🎵';
+
+  // 1. Google Drive direct link conversion
+  // e.g. https://drive.google.com/file/d/FILE_ID/view?usp=sharing
+  const gdriveMatch =
+    url.match(/drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/i) ||
+    url.match(/drive\.google\.com\/open\?id=([a-zA-Z0-9_-]+)/i);
+  if (gdriveMatch && gdriveMatch[1]) {
+    url = `https://docs.google.com/uc?export=download&id=${gdriveMatch[1]}`;
+    fallbackTitle = 'Google Drive Audio 🎧';
+  }
+
+  // 2. Dropbox direct link conversion
+  // e.g. https://www.dropbox.com/s/xyz/song.mp3?dl=0
+  if (url.includes('dropbox.com')) {
+    url = url.replace('?dl=0', '?raw=1').replace('&dl=0', '&raw=1');
+    if (!url.includes('raw=1') && !url.includes('dl=1')) {
+      url += (url.includes('?') ? '&' : '?') + 'raw=1';
+    }
+    fallbackTitle = 'Dropbox Audio 📦';
+  }
+
+  // 3. Try to extract clean filename from URL pathname if applicable
+  try {
+    const parsed = new URL(url);
+    const pathname = parsed.pathname;
+    const segment = pathname.split('/').filter(Boolean).pop();
+    if (segment && segment.includes('.')) {
+      const clean = decodeURIComponent(segment.replace(/\.[^/.]+$/, '').replace(/[-_+]/g, ' '));
+      if (clean && clean.length > 1) {
+        fallbackTitle = clean;
+      }
+    }
+  } catch (e) {
+    // ignore
+  }
+
+  return { url, fallbackTitle };
 };
 
 export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -304,16 +348,30 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     try {
       const stored = await getAllTracksFromDB();
       if (stored && stored.length > 0) {
-        const loadedTracks: AudioTrack[] = stored.map((item) => ({
-          id: item.id,
-          title: item.title,
-          artist: item.artist || 'Uploaded Track',
-          url: URL.createObjectURL(item.blob),
-          duration: item.duration,
-          isCustom: true,
-          category: 'custom',
-          dateAdded: item.dateAdded,
-        }));
+        const loadedTracks: AudioTrack[] = stored
+          .map((item) => {
+            let trackUrl = item.url || '';
+            if (item.blob) {
+              try {
+                trackUrl = URL.createObjectURL(item.blob);
+              } catch (e) {
+                // ignore
+              }
+            }
+            if (!trackUrl) return null;
+            return {
+              id: item.id,
+              title: item.title,
+              artist: item.artist || (item.url ? 'Online Audio Link 🌐' : 'Uploaded Track'),
+              url: trackUrl,
+              duration: item.duration,
+              isCustom: true,
+              category: 'custom' as const,
+              dateAdded: item.dateAdded,
+            };
+          })
+          .filter(Boolean) as AudioTrack[];
+
         setPlaylist((prev) => {
           const defaults = prev.filter((t) => !t.isCustom);
           return [...defaults, ...loadedTracks];
@@ -633,6 +691,96 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   };
 
+  // Add custom song from direct Web URL / Stream / Cloud Link
+  const addTrackByUrl = async (
+    rawUrl: string,
+    customTitle?: string,
+    customArtist?: string
+  ): Promise<{ success: boolean; error?: string }> => {
+    if (!rawUrl || !rawUrl.trim()) {
+      return { success: false, error: 'សូមបញ្ចូលលីង URL បទចម្រៀង' };
+    }
+
+    const { url, fallbackTitle } = normalizeAudioUrl(rawUrl);
+    const title = (customTitle && customTitle.trim()) || fallbackTitle;
+    const artist = (customArtist && customArtist.trim()) || 'Online Web Stream 🌐';
+    const trackId = 'url-' + Date.now() + '-' + Math.random().toString(36).substring(2, 7);
+
+    // Try to detect duration from audio URL metadata
+    const trackDuration = await new Promise<number>((resolve) => {
+      try {
+        const tempAudio = new Audio();
+        tempAudio.src = url;
+        const done = (dur: number) => {
+          resolve(dur || 180);
+        };
+        tempAudio.addEventListener('loadedmetadata', () => {
+          done(Math.round(tempAudio.duration || 0));
+        });
+        tempAudio.addEventListener('error', () => {
+          done(180);
+        });
+        setTimeout(() => done(180), 3000);
+      } catch {
+        resolve(180);
+      }
+    });
+
+    const newTrack: AudioTrack = {
+      id: trackId,
+      title,
+      artist,
+      url,
+      isCustom: true,
+      category: 'custom',
+      duration: trackDuration,
+      dateAdded: new Date().toISOString().slice(0, 10),
+    };
+
+    // 1. Save to local IndexedDB for permanence
+    await saveTrackToDB({
+      id: trackId,
+      title,
+      artist,
+      url,
+      isUrlOnly: true,
+      duration: trackDuration,
+      dateAdded: newTrack.dateAdded!,
+    }).catch(() => {});
+
+    // 2. Sync to Firebase Cloud so other devices (PC, Phone) receive it in real-time!
+    try {
+      await saveFirestoreDoc('musicTracks', trackId, {
+        ...newTrack,
+        isCloudSynced: true,
+      });
+    } catch {
+      // ignore
+    }
+
+    // 3. Update active playlist state
+    setPlaylist((prev) => {
+      const updated = [...prev, newTrack];
+      playlistRef.current = updated;
+      return updated;
+    });
+
+    soundFx.playSuccess();
+    confetti({
+      particleCount: 65,
+      spread: 65,
+      origin: { y: 0.6 },
+    });
+
+    // Auto-play newly added track
+    setTimeout(() => {
+      const list = playlistRef.current;
+      playTrackAtIndex(Math.max(0, list.length - 1));
+    }, 100);
+
+    return { success: true };
+  };
+
   const deleteTrack = async (id: string) => {
     const trackToDelete = playlistRef.current.find((t) => t.id === id);
 
@@ -724,6 +872,7 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         toggleShuffle,
         playTrackById,
         uploadTracks,
+        addTrackByUrl,
         deleteTrack,
         clearCustomTracks,
         playBirthdayCelebration,

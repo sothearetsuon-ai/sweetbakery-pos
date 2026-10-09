@@ -19,6 +19,11 @@ import {
   ListMusic,
   Radio,
   Loader2,
+  Link2,
+  Globe,
+  Plus,
+  AlertCircle,
+  Check,
 } from 'lucide-react';
 import { useMusic } from '../../context/MusicContext';
 import { soundFx } from '../../utils/audio';
@@ -49,6 +54,7 @@ export const MusicPlayerModal: React.FC = () => {
     toggleShuffle,
     playTrackById,
     uploadTracks,
+    addTrackByUrl,
     deleteTrack,
     clearCustomTracks,
     playBirthdayCelebration,
@@ -56,6 +62,12 @@ export const MusicPlayerModal: React.FC = () => {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [isAddUrlOpen, setIsAddUrlOpen] = useState(false);
+  const [urlInput, setUrlInput] = useState('');
+  const [titleInput, setTitleInput] = useState('');
+  const [artistInput, setArtistInput] = useState('');
+  const [isSubmittingUrl, setIsSubmittingUrl] = useState(false);
+  const [urlError, setUrlError] = useState<string | null>(null);
 
   if (!isPlayerOpen) return null;
 
@@ -103,6 +115,41 @@ export const MusicPlayerModal: React.FC = () => {
     if (loopMode === 'all') setLoopMode('one');
     else if (loopMode === 'one') setLoopMode('none');
     else setLoopMode('all');
+  };
+
+  const handleAddUrl = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    setUrlError(null);
+
+    if (!urlInput || !urlInput.trim()) {
+      setUrlError('សូមបញ្ចូលលីង URL បទចម្រៀង');
+      return;
+    }
+
+    setIsSubmittingUrl(true);
+    try {
+      const res = await addTrackByUrl(urlInput.trim(), titleInput.trim(), artistInput.trim());
+      if (res.success) {
+        setUrlInput('');
+        setTitleInput('');
+        setArtistInput('');
+        setIsAddUrlOpen(false);
+      } else {
+        setUrlError(res.error || 'មិនអាចបញ្ចូលបទនេះបានទេ');
+      }
+    } catch (err: any) {
+      setUrlError(err?.message || 'មានបញ្ហាក្នុងការទាញយកបទ');
+    } finally {
+      setIsSubmittingUrl(false);
+    }
+  };
+
+  const applyPresetUrl = (presetUrl: string, presetTitle: string, presetArtist: string) => {
+    soundFx.playPop();
+    setUrlInput(presetUrl);
+    setTitleInput(presetTitle);
+    setArtistInput(presetArtist);
+    setUrlError(null);
   };
 
   return (
@@ -351,15 +398,15 @@ export const MusicPlayerModal: React.FC = () => {
             </div>
           )}
 
-          {/* Quick Actions: Upload Audio Files & Birthday Celebration Special */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {/* 1. Upload Custom Songs from PC / Phone (Supports Multi-Select & Drag-Drop) */}
+          {/* Quick Actions: 1. Upload MP3 | 2. Add Song by URL | 3. Birthday Celebration */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+            {/* 1. Upload Custom Song Files from PC / Phone */}
             <div
               onClick={() => fileInputRef.current?.click()}
               onDragOver={handleDragOver}
               onDragLeave={handleDragLeave}
               onDrop={handleDrop}
-              className={`p-4 rounded-2xl border-2 border-dashed transition-all cursor-pointer flex items-center gap-3.5 group shadow-2xs hover:shadow-sm ${
+              className={`p-3.5 rounded-2xl border-2 border-dashed transition-all cursor-pointer flex items-center gap-3 group shadow-2xs hover:shadow-sm ${
                 isDragging
                   ? 'bg-pink-100/80 border-pink-500 scale-[1.02]'
                   : 'bg-gradient-to-br from-pink-50 to-rose-50 border-pink-200 hover:border-pink-400'
@@ -373,46 +420,268 @@ export const MusicPlayerModal: React.FC = () => {
                 onChange={handleFileChange}
                 className="hidden"
               />
-              <div className="w-11 h-11 rounded-2xl bg-pink-600 text-white flex items-center justify-center shadow-md shadow-pink-500/25 group-hover:scale-105 transition-transform shrink-0">
+              <div className="w-9 h-9 rounded-xl bg-pink-600 text-white flex items-center justify-center shadow-md shadow-pink-500/25 group-hover:scale-105 transition-transform shrink-0">
                 {isUploading ? (
-                  <Loader2 className="w-5 h-5 animate-spin" />
+                  <Loader2 className="w-4 h-4 animate-spin" />
                 ) : (
-                  <Upload className="w-5 h-5 stroke-[2.5]" />
+                  <Upload className="w-4 h-4 stroke-[2.5]" />
                 )}
               </div>
               <div className="min-w-0">
-                <div className="text-xs font-black text-slate-800 group-hover:text-pink-600 transition-colors flex items-center gap-1.5 flex-wrap">
-                  <span>+ Upload បទចម្រៀង</span>
-                  <span className="px-1.5 py-0.2 rounded-md bg-pink-100 text-pink-700 text-[9px] font-black border border-pink-200">
-                    រើសបានច្រើនបទក្នុងពេលតែមួយ
-                  </span>
+                <div className="text-xs font-black text-slate-800 group-hover:text-pink-600 transition-colors truncate">
+                  + Upload MP3 / File
                 </div>
-                <p className="text-[10px] text-slate-500 mt-0.5 leading-relaxed">
-                  ចុចដើម្បីជ្រើសរើស ឬអូសទម្លាក់ (Drag & Drop) បទចម្រៀងជាច្រើនបទ
+                <p className="text-[10px] text-slate-500 truncate mt-0.5">
+                  ជ្រើសរើសពី PC / Phone
                 </p>
               </div>
             </div>
 
-            {/* 2. Instant Birthday Celebration Button */}
+            {/* 2. Add by URL / Online Stream */}
+            <button
+              type="button"
+              onClick={() => {
+                soundFx.playPop();
+                setIsAddUrlOpen((prev) => !prev);
+              }}
+              className={`p-3.5 rounded-2xl border transition-all cursor-pointer flex items-center gap-3 group shadow-2xs hover:shadow-sm text-left ${
+                isAddUrlOpen
+                  ? 'bg-blue-600 text-white border-blue-500 shadow-md shadow-blue-600/20'
+                  : 'bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200 hover:border-blue-400 text-slate-800'
+              }`}
+            >
+              <div
+                className={`w-9 h-9 rounded-xl flex items-center justify-center shadow-md transition-transform shrink-0 ${
+                  isAddUrlOpen
+                    ? 'bg-white/20 text-white'
+                    : 'bg-blue-600 text-white shadow-blue-500/25 group-hover:scale-105'
+                }`}
+              >
+                <Link2 className="w-4 h-4 stroke-[2.5]" />
+              </div>
+              <div className="min-w-0">
+                <div className="text-xs font-black truncate flex items-center gap-1">
+                  <span>+ ដាក់លីងចម្រៀង</span>
+                  <span
+                    className={`text-[9px] px-1 py-0.2 rounded font-mono ${
+                      isAddUrlOpen ? 'bg-white/20 text-white' : 'bg-blue-100 text-blue-700'
+                    }`}
+                  >
+                    URL
+                  </span>
+                </div>
+                <p
+                  className={`text-[10px] truncate mt-0.5 ${
+                    isAddUrlOpen ? 'text-blue-100' : 'text-slate-500'
+                  }`}
+                >
+                  Direct MP3 / Stream Link
+                </p>
+              </div>
+            </button>
+
+            {/* 3. Instant Birthday Celebration Button */}
             <button
               type="button"
               onClick={playBirthdayCelebration}
-              className="p-4 rounded-2xl bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500 text-white shadow-lg shadow-orange-500/20 hover:shadow-orange-500/30 transition-all flex items-center gap-3.5 group cursor-pointer active:scale-95 text-left"
+              className="p-3.5 rounded-2xl bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500 text-white shadow-lg shadow-orange-500/20 hover:shadow-orange-500/30 transition-all flex items-center gap-3 group cursor-pointer active:scale-95 text-left sm:col-span-1"
             >
-              <div className="w-11 h-11 rounded-2xl bg-white/20 flex items-center justify-center group-hover:scale-110 transition-transform shrink-0">
-                <Cake className="w-6 h-6 animate-bounce" />
+              <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center group-hover:scale-110 transition-transform shrink-0">
+                <Cake className="w-5 h-5 animate-bounce" />
               </div>
-              <div>
-                <div className="text-xs font-black flex items-center gap-1.5">
-                  <span>🎉 ចាក់បទ Happy Birthday 🎂</span>
-                  <Sparkles className="w-3.5 h-3.5 text-yellow-200 animate-pulse" />
+              <div className="min-w-0">
+                <div className="text-xs font-black flex items-center gap-1 truncate">
+                  <span>🎉 បទ Birthday 🎂</span>
                 </div>
-                <p className="text-[10px] text-orange-100 mt-0.5">
-                  ចាក់ភ្លេងខួបកំណើតភ្លាមៗជូនភ្ញៀវពេលកាត់នំ + បាញ់ Confetti!
+                <p className="text-[10px] text-orange-100 truncate mt-0.5">
+                  ចាក់ពេលកាត់នំ + Confetti
                 </p>
               </div>
             </button>
           </div>
+
+          {/* Expandable Add Song by URL Section */}
+          {isAddUrlOpen && (
+            <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-blue-50/70 via-indigo-50/50 to-pink-50/60 border-2 border-blue-200/80 shadow-md animate-in slide-in-from-top duration-300 space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-lg bg-blue-600 text-white flex items-center justify-center text-xs">
+                    <Globe className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-black text-slate-800">
+                      បញ្ចូលបទចម្រៀងតាមរយៈលីង URL (Direct Web Audio / Cloud Link)
+                    </h4>
+                    <p className="text-[10px] text-slate-500">
+                      មិនបាច់ Upload ចំណាយទំហំម៉ាស៊ីន ចាក់អនឡាញភ្លាមៗ
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsAddUrlOpen(false)}
+                  className="text-xs text-slate-400 hover:text-slate-700 p-1 hover:bg-slate-200/60 rounded-lg transition-colors cursor-pointer"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <form onSubmit={handleAddUrl} className="space-y-3">
+                {/* Audio URL Input */}
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                    🔗 លីងចម្រៀង (Audio URL / Direct MP3 Link) <span className="text-rose-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="url"
+                      value={urlInput}
+                      onChange={(e) => {
+                        setUrlInput(e.target.value);
+                        setUrlError(null);
+                      }}
+                      placeholder="https://example.com/song.mp3 ឬ Google Drive / Dropbox / Stream URL"
+                      className="w-full text-xs px-3 py-2.5 rounded-xl border border-blue-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 bg-white shadow-2xs font-mono text-slate-800 placeholder:text-slate-400"
+                      required
+                    />
+                    {urlInput && (
+                      <button
+                        type="button"
+                        onClick={() => setUrlInput('')}
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs px-1 py-0.5 rounded cursor-pointer"
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Optional Title & Artist Inputs */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                      🏷️ ចំណងជើងបទចម្រៀង (Title)
+                    </label>
+                    <input
+                      type="text"
+                      value={titleInput}
+                      onChange={(e) => setTitleInput(e.target.value)}
+                      placeholder="ទុកចោលដើម្បីដាក់ឈ្មោះស្វ័យប្រវត្តិ"
+                      className="w-full text-xs px-3 py-2 rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 bg-white text-slate-800 placeholder:text-slate-400"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                      🎤 ឈ្មោះអ្នកច្រៀង / ប្រភព (Artist)
+                    </label>
+                    <input
+                      type="text"
+                      value={artistInput}
+                      onChange={(e) => setArtistInput(e.target.value)}
+                      placeholder="ឧ. Bakery Jazz, Radio Stream"
+                      className="w-full text-xs px-3 py-2 rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 bg-white text-slate-800 placeholder:text-slate-400"
+                    />
+                  </div>
+                </div>
+
+                {/* Error Message */}
+                {urlError && (
+                  <div className="flex items-center gap-1.5 p-2 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs">
+                    <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
+                    <span>{urlError}</span>
+                  </div>
+                )}
+
+                {/* Sample Presets for Fast Testing */}
+                <div className="space-y-1.5 pt-1">
+                  <div className="text-[10px] font-bold text-slate-500 flex items-center gap-1">
+                    <Sparkles className="w-3 h-3 text-amber-500" />
+                    <span>លីងគំរូសម្រាប់សាកល្បងចុចភ្លាមៗ (Quick Sample Links)៖</span>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        applyPresetUrl(
+                          'https://assets.mixkit.co/music/preview/mixkit-coffee-chill-out-1094.mp3',
+                          'Sweet Morning Cafe ☕',
+                          'Acoustic Ambiance'
+                        )
+                      }
+                      className="text-[10px] font-bold px-2 py-1 rounded-lg bg-white border border-blue-200 hover:border-blue-400 hover:bg-blue-50 text-slate-700 transition-colors cursor-pointer"
+                    >
+                      ☕ Cafe Chill Out
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        applyPresetUrl(
+                          'https://assets.mixkit.co/music/preview/mixkit-sweet-melody-789.mp3',
+                          'Pastry Shop Sweet Melody 🍰',
+                          'Chillout Vibes'
+                        )
+                      }
+                      className="text-[10px] font-bold px-2 py-1 rounded-lg bg-white border border-blue-200 hover:border-blue-400 hover:bg-blue-50 text-slate-700 transition-colors cursor-pointer"
+                    >
+                      🍰 Sweet Pastry Melody
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        applyPresetUrl(
+                          'https://assets.mixkit.co/music/preview/mixkit-relaxing-in-nature-522.mp3',
+                          'Acoustic Bakery Guitar 🥐',
+                          'Bakery Acoustic'
+                        )
+                      }
+                      className="text-[10px] font-bold px-2 py-1 rounded-lg bg-white border border-blue-200 hover:border-blue-400 hover:bg-blue-50 text-slate-700 transition-colors cursor-pointer"
+                    >
+                      🥐 Acoustic Guitar
+                    </button>
+                  </div>
+                </div>
+
+                {/* Audiomack & Cloud Link Tips */}
+                <div className="p-2.5 rounded-xl bg-blue-100/60 border border-blue-200/80 text-[10px] text-slate-600 leading-relaxed">
+                  <div className="font-bold text-blue-900 flex items-center gap-1 mb-0.5">
+                    <span>💡 ព័ត៌មានបន្ថែម៖</span>
+                  </div>
+                  <span>
+                    • <strong>Google Drive / Dropbox</strong>: អាចដាក់ Link ចែករំលែកបាន ប្រព័ន្ធនឹងបំលែងជា Direct Stream ដោយស្វ័យប្រវត្តិ។<br />
+                    • <strong>Audiomack / YouTube</strong>: សូមចុច Download ជា File MP3 ពីលើវេបសាយនោះ រួច Upload ចូលប្រព័ន្ធតាមប៊ូតុង <strong>+ Upload MP3</strong>។
+                  </span>
+                </div>
+
+                {/* Submit / Add Button */}
+                <div className="flex items-center justify-end gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => setIsAddUrlOpen(false)}
+                    className="px-3 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-200/70 transition-colors cursor-pointer"
+                  >
+                    បោះបង់
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isSubmittingUrl || !urlInput.trim()}
+                    className="px-4 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-bold shadow-md shadow-blue-600/20 flex items-center gap-1.5 cursor-pointer disabled:opacity-50 active:scale-95 transition-all"
+                  >
+                    {isSubmittingUrl ? (
+                      <>
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        <span>កំពុងបញ្ចូល...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>បញ្ចូល & ចាក់ភ្លាមៗ 🎶</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
 
           {/* Playlist Table */}
           <div className="space-y-3">
@@ -450,6 +719,10 @@ export const MusicPlayerModal: React.FC = () => {
             <div className="bg-slate-50 rounded-2xl border border-slate-200/80 overflow-hidden divide-y divide-slate-200/60">
               {playlist.map((track, index) => {
                 const isCurrent = currentTrackIndex === index;
+                const isUrlTrack =
+                  track.id.startsWith('url-') ||
+                  (!track.storagePath && typeof track.url === 'string' && track.url.startsWith('http') && track.isCustom);
+
                 return (
                   <div
                     key={track.id}
@@ -488,9 +761,17 @@ export const MusicPlayerModal: React.FC = () => {
                         <div className="text-[10px] text-slate-400 truncate flex items-center gap-1.5 mt-0.5">
                           <span>{track.artist || 'SweetBakery'}</span>
                           {track.isCustom && (
-                            <span className="px-1.5 py-0.2 rounded-md bg-purple-100 text-purple-700 text-[9px] font-bold flex items-center gap-0.5">
-                              {track.isCloudSynced ? '☁️ Cloud' : '📱 ក្នុងម៉ាស៊ីន'}
-                            </span>
+                            <>
+                              {isUrlTrack ? (
+                                <span className="px-1.5 py-0.2 rounded-md bg-blue-100 text-blue-700 text-[9px] font-bold flex items-center gap-0.5">
+                                  🌐 លីង Web
+                                </span>
+                              ) : (
+                                <span className="px-1.5 py-0.2 rounded-md bg-purple-100 text-purple-700 text-[9px] font-bold flex items-center gap-0.5">
+                                  {track.isCloudSynced ? '☁️ Cloud' : '📱 ក្នុងម៉ាស៊ីន'}
+                                </span>
+                              )}
+                            </>
                           )}
                           {track.category === 'birthday' && (
                             <span className="px-1.5 py-0.2 rounded-md bg-amber-100 text-amber-800 text-[9px] font-bold">
