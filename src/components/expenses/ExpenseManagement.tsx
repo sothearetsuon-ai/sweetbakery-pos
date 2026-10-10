@@ -543,6 +543,24 @@ export const ExpenseManagement: React.FC<ExpenseManagementProps> = ({
     return `ចន្លោះពីថ្ងៃ ${formatKhmerDate(customStartDate)} ដល់ ${formatKhmerDate(customEndDate)}`;
   }, [datePreset, todayStr, yesterdayStr, sevenDaysAgoStr, thisMonthStr, lastMonthStr, selectedMonth, customStartDate, customEndDate]);
 
+  // Undeducted expenses matching the current date/month filter
+  const undeductedInActiveDate = useMemo(() => {
+    return filteredExpenses.filter(
+      (e) => e.paymentMethod !== 'RESERVE_FUND' && (!e.paymentStatus || e.paymentStatus === 'PAID')
+    );
+  }, [filteredExpenses]);
+
+  const undeductedInActiveDateTotalKhr = useMemo(() => {
+    return undeductedInActiveDate.reduce(
+      (sum, e) => sum + (e.amountKhr || Math.round(e.amountUsd * exchangeRate)),
+      0
+    );
+  }, [undeductedInActiveDate, exchangeRate]);
+
+  const undeductedInActiveDateTotalUsd = useMemo(() => {
+    return Number((undeductedInActiveDateTotalKhr / exchangeRate).toFixed(2));
+  }, [undeductedInActiveDateTotalKhr, exchangeRate]);
+
   // Expenses that will be cleaned based on chosen cleanup mode in the modal
   const targetExpensesToClean = useMemo(() => {
     if (cleanupMode === 'CURRENT_FILTER') {
@@ -1039,18 +1057,27 @@ export const ExpenseManagement: React.FC<ExpenseManagementProps> = ({
             </div>
             <div>
               <h4 className="font-black text-xs sm:text-sm text-amber-950 flex items-center gap-2 flex-wrap">
-                <span>ចំណាយមិនទាន់កាត់ចេញពីទុនបម្រុង៖</span>
-                <span className="px-2 py-0.5 rounded-full bg-amber-200 text-amber-900 text-xs font-black">
-                  {undeductedCashExpenses.length} ប្រតិបត្តិការ
+                <span>
+                  {datePreset !== 'ALL'
+                    ? `ចំណាយមិនទាន់កាត់ពីទុន (${activeDateLabel})៖`
+                    : 'ចំណាយមិនទាន់កាត់ចេញពីទុនបម្រុង៖'}
                 </span>
+                <span className="px-2 py-0.5 rounded-full bg-amber-200 text-amber-900 text-xs font-black">
+                  {datePreset !== 'ALL' ? undeductedInActiveDate.length : undeductedCashExpenses.length} ប្រតិបត្តិការ
+                </span>
+                {datePreset !== 'ALL' && (
+                  <span className="text-[11px] text-amber-800 font-normal">
+                    (សរុបគ្រប់ខែ៖ {undeductedCashExpenses.length} មុខ)
+                  </span>
+                )}
               </h4>
               <p className="text-xs text-amber-900/90 mt-0.5 font-medium">
                 ទឹកប្រាក់ចំណាយសរុប៖{' '}
                 <strong className="font-sans font-black text-rose-600 text-sm">
-                  {undeductedCashTotalKhr.toLocaleString()} ៛
+                  {(datePreset !== 'ALL' ? undeductedInActiveDateTotalKhr : undeductedCashTotalKhr).toLocaleString()} ៛
                 </strong>{' '}
                 <span className="text-slate-500 font-sans font-bold">
-                  (~${undeductedCashTotalUsd.toFixed(2)} USD)
+                  (~${(datePreset !== 'ALL' ? undeductedInActiveDateTotalUsd : undeductedCashTotalUsd).toFixed(2)} USD)
                 </span>
               </p>
             </div>
@@ -1071,7 +1098,9 @@ export const ExpenseManagement: React.FC<ExpenseManagementProps> = ({
             >
               <Filter className="w-3.5 h-3.5" />
               <span>
-                {statusFilter === 'UNDEDUCTED_RESERVE' ? 'បង្ហាញទាំងអស់' : `មើលបញ្ជី ${undeductedCashExpenses.length} មុខ`}
+                {statusFilter === 'UNDEDUCTED_RESERVE'
+                  ? 'បង្ហាញទាំងអស់'
+                  : `មើលបញ្ជី ${datePreset !== 'ALL' ? undeductedInActiveDate.length : undeductedCashExpenses.length} មុខ`}
               </span>
             </button>
 
@@ -1079,20 +1108,28 @@ export const ExpenseManagement: React.FC<ExpenseManagementProps> = ({
               type="button"
               onClick={() => {
                 soundFx.playPop();
+                const listToDeduct = datePreset !== 'ALL' ? undeductedInActiveDate : undeductedCashExpenses;
+                if (listToDeduct.length === 0) {
+                  alert('មិនមានមុខចំណាយដែលមិនទាន់កាត់នៅក្នុងកាលបរិច្ឆេទដែលបានរើសនេះទេ!');
+                  return;
+                }
+                const label = datePreset !== 'ALL' ? ` (${activeDateLabel})` : '';
                 if (
                   confirm(
-                    `តើអ្នកចង់កាត់ចំណាយសាច់ប្រាក់ចំនួន ${undeductedCashExpenses.length} មុខ (សរុប ${undeductedCashTotalKhr.toLocaleString()} ៛) ចេញពីទុនបម្រុងហាងភ្លាមៗមែនទេ?`
+                    `តើអ្នកចង់កាត់ចំណាយសាច់ប្រាក់ចំនួន ${listToDeduct.length} មុខ${label} (សរុប ${(datePreset !== 'ALL' ? undeductedInActiveDateTotalKhr : undeductedCashTotalKhr).toLocaleString()} ៛) ចេញពីទុនបម្រុងហាងភ្លាមៗមែនទេ?`
                   )
                 ) {
                   soundFx.playSuccess();
                   confetti({ particleCount: 70, spread: 70, origin: { y: 0.6 } });
-                  batchDeductExpensesToReserveFund(undeductedCashExpenses.map((e) => e.id));
+                  batchDeductExpensesToReserveFund(listToDeduct.map((e) => e.id));
                 }
               }}
               className="flex-1 md:flex-initial px-4 py-2.5 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white font-black text-xs rounded-2xl shadow-md shadow-amber-600/25 transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-1.5"
             >
               <Zap className="w-4 h-4 fill-current" />
-              <span>កាត់ទុនទាំងអស់ ({undeductedCashExpenses.length}) ភ្លាម</span>
+              <span>
+                កាត់ទុន ({datePreset !== 'ALL' ? undeductedInActiveDate.length : undeductedCashExpenses.length}) ភ្លាម
+              </span>
             </button>
 
             {onNavigateToReserveFund && (
@@ -1555,7 +1592,7 @@ export const ExpenseManagement: React.FC<ExpenseManagementProps> = ({
                 }`}
               >
                 <span>⚡ មិនទាន់កាត់ពីទុន</span>
-                {undeductedCashExpenses.length > 0 && (
+                {(datePreset !== 'ALL' ? undeductedInActiveDate.length : undeductedCashExpenses.length) > 0 && (
                   <span
                     className={`text-[10px] px-1.5 py-0.2 rounded-full font-black ${
                       statusFilter === 'UNDEDUCTED_RESERVE'
@@ -1563,7 +1600,7 @@ export const ExpenseManagement: React.FC<ExpenseManagementProps> = ({
                         : 'bg-amber-200 text-amber-900'
                     }`}
                   >
-                    {undeductedCashExpenses.length}
+                    {datePreset !== 'ALL' ? undeductedInActiveDate.length : undeductedCashExpenses.length}
                   </span>
                 )}
               </button>

@@ -27,11 +27,12 @@ import {
   EyeOff,
   ChevronDown,
   ChevronUp,
+  X,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { useBakery } from '../../context/BakeryContext';
 import { soundFx } from '../../utils/audio';
-import { formatDateDMY } from '../../utils/dateUtils';
+import { formatDateDMY, normalizeDateToYMD } from '../../utils/dateUtils';
 import { ReserveFundModal } from '../expenses/ReserveFundModal';
 
 interface ReserveFundDashboardProps {
@@ -109,7 +110,41 @@ export const ReserveFundDashboard: React.FC<ReserveFundDashboardProps> = ({
   };
 
 
-  // Undeducted cash expenses
+  // Month filtering state for undeducted expenses
+  const [selectedMonthPreset, setSelectedMonthPreset] = useState<'ALL' | 'THIS_MONTH' | 'LAST_MONTH' | 'SPECIFIC_MONTH'>('ALL');
+  const [customMonthInput, setCustomMonthInput] = useState<string>(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  });
+
+  const now = new Date();
+  const thisMonthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  const lastMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const lastMonthStr = `${lastMonthDate.getFullYear()}-${String(lastMonthDate.getMonth() + 1).padStart(2, '0')}`;
+
+  const formatKhmerMonthYear = (monthStr: string) => {
+    try {
+      const [y, m] = monthStr.split('-');
+      if (!y || !m) return monthStr;
+      const monthNamesKh = [
+        'មករា', 'កុម្ភៈ', 'មីនា', 'មេសា', 'ឧសភា', 'មិថុនា',
+        'កក្កដា', 'សីហា', 'កញ្ញា', 'តុលា', 'វិច្ឆិកា', 'ធ្នូ'
+      ];
+      const mIdx = parseInt(m, 10) - 1;
+      return `${monthNamesKh[mIdx] || m} ${y}`;
+    } catch {
+      return monthStr;
+    }
+  };
+
+  const activeMonthLabel = useMemo(() => {
+    if (selectedMonthPreset === 'ALL') return 'គ្រប់ខែទាំងអស់ (All Time)';
+    if (selectedMonthPreset === 'THIS_MONTH') return `ខែនេះ (${formatKhmerMonthYear(thisMonthStr)})`;
+    if (selectedMonthPreset === 'LAST_MONTH') return `ខែមុន (${formatKhmerMonthYear(lastMonthStr)})`;
+    return `ខែ ${formatKhmerMonthYear(customMonthInput)}`;
+  }, [selectedMonthPreset, thisMonthStr, lastMonthStr, customMonthInput]);
+
+  // Undeducted cash expenses (all-time)
   const undeductedCashExpenses = useMemo(() => {
     return expenses.filter(
       (e) =>
@@ -124,6 +159,26 @@ export const ReserveFundDashboard: React.FC<ReserveFundDashboardProps> = ({
       0
     );
   }, [undeductedCashExpenses, exchangeRate]);
+
+  // Filtered undeducted cash expenses by selected month
+  const filteredUndeductedExpenses = useMemo(() => {
+    if (selectedMonthPreset === 'ALL') return undeductedCashExpenses;
+    return undeductedCashExpenses.filter((e) => {
+      const d = normalizeDateToYMD(e.date || e.createdAt || '');
+      const ym = d.slice(0, 7);
+      if (selectedMonthPreset === 'THIS_MONTH') return ym === thisMonthStr;
+      if (selectedMonthPreset === 'LAST_MONTH') return ym === lastMonthStr;
+      if (selectedMonthPreset === 'SPECIFIC_MONTH') return ym === customMonthInput;
+      return true;
+    });
+  }, [undeductedCashExpenses, selectedMonthPreset, thisMonthStr, lastMonthStr, customMonthInput]);
+
+  const filteredUndeductedTotalKhr = useMemo(() => {
+    return filteredUndeductedExpenses.reduce(
+      (sum, e) => sum + (e.amountKhr || Math.round(e.amountUsd * exchangeRate)),
+      0
+    );
+  }, [filteredUndeductedExpenses, exchangeRate]);
 
   // Total withdrawn from reserve fund
   const totalWithdrawnKhr = useMemo(() => {
@@ -392,10 +447,24 @@ export const ReserveFundDashboard: React.FC<ReserveFundDashboardProps> = ({
               </div>
               <div>
                 <h3 className="font-black text-amber-950 text-sm sm:text-base flex items-center gap-1.5 flex-wrap">
-                  <span>⚡ មានចំណាយសាច់ប្រាក់ {undeductedCashExpenses.length} ប្រតិបត្តិការមិនទាន់កាត់ចេញពីទុនបម្រុង</span>
+                  <span>⚡ មានចំណាយសាច់ប្រាក់ {filteredUndeductedExpenses.length} ប្រតិបត្តិការមិនទាន់កាត់ចេញពីទុនបម្រុង</span>
+                  {selectedMonthPreset !== 'ALL' && (
+                    <span className="text-xs bg-amber-200 text-amber-900 px-2 py-0.5 rounded-full font-bold">
+                      {activeMonthLabel}
+                    </span>
+                  )}
                 </h3>
                 <p className="text-xs text-amber-800 mt-0.5">
-                  ទឹកប្រាក់ចំណាយសរុប៖ <strong className="font-sans font-black text-rose-600">{undeductedCashTotalKhr.toLocaleString()} ៛</strong> (~${(undeductedCashTotalKhr / exchangeRate).toFixed(2)})
+                  ទឹកប្រាក់ចំណាយសរុប៖{' '}
+                  <strong className="font-sans font-black text-rose-600">
+                    {filteredUndeductedTotalKhr.toLocaleString()} ៛
+                  </strong>{' '}
+                  (~${(filteredUndeductedTotalKhr / exchangeRate).toFixed(2)})
+                  {selectedMonthPreset !== 'ALL' && (
+                    <span className="text-slate-500 ml-2 font-normal">
+                      (សរុបគ្រប់ខែ៖ {undeductedCashTotalKhr.toLocaleString()} ៛)
+                    </span>
+                  )}
                 </p>
               </div>
             </div>
@@ -421,7 +490,7 @@ export const ReserveFundDashboard: React.FC<ReserveFundDashboardProps> = ({
                 className="flex-1 md:flex-initial px-3.5 py-2.5 bg-amber-100 hover:bg-amber-200 text-amber-900 rounded-2xl text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer"
               >
                 {isUndeductedListOpen ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                <span>{isUndeductedListOpen ? 'លាក់បញ្ជី' : `ពិនិត្យ ${undeductedCashExpenses.length} មុខ`}</span>
+                <span>{isUndeductedListOpen ? 'លាក់បញ្ជី' : `ពិនិត្យ ${filteredUndeductedExpenses.length} មុខ`}</span>
                 {isUndeductedListOpen ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
               </button>
 
@@ -429,21 +498,97 @@ export const ReserveFundDashboard: React.FC<ReserveFundDashboardProps> = ({
                 type="button"
                 onClick={() => {
                   soundFx.playPop();
+                  const targetList = filteredUndeductedExpenses;
+                  if (targetList.length === 0) return;
                   if (
                     confirm(
-                      `តើអ្នកចង់កាត់ចំណាយសាច់ប្រាក់ចំនួន ${undeductedCashExpenses.length} ប្រតិបត្តិការ (សរុប ${undeductedCashTotalKhr.toLocaleString()} ៛) ចេញពីទុនបម្រុងឥឡូវនេះមែនទេ?`
+                      `តើអ្នកចង់កាត់ចំណាយសាច់ប្រាក់ចំនួន ${targetList.length} ប្រតិបត្តិការ (${activeMonthLabel} សរុប ${filteredUndeductedTotalKhr.toLocaleString()} ៛) ចេញពីទុនបម្រុងឥឡូវនេះមែនទេ?`
                     )
                   ) {
                     soundFx.playSuccess();
-                    batchDeductExpensesToReserveFund(undeductedCashExpenses.map((e) => e.id));
-                    showFeedback(`បានកាត់ចំណាយសាច់ប្រាក់ចំនួន ${undeductedCashExpenses.length} មុខចេញពីទុនបម្រុងដោយជោគជ័យ!`);
+                    batchDeductExpensesToReserveFund(targetList.map((e) => e.id));
+                    showFeedback(`បានកាត់ចំណាយសាច់ប្រាក់ចំនួន ${targetList.length} មុខចេញពីទុនបម្រុងដោយជោគជ័យ!`);
                   }
                 }}
                 className="w-full md:w-auto px-4 py-2.5 bg-amber-600 hover:bg-amber-700 text-white rounded-2xl text-xs font-black shadow-md shadow-amber-600/30 flex items-center justify-center gap-1.5 cursor-pointer active:scale-95"
               >
                 <Zap className="w-4 h-4 fill-current" />
-                <span>កាត់ចំណាយទាំងអស់ ({undeductedCashExpenses.length}) ភ្លាម</span>
+                <span>កាត់ចំណាយ ({filteredUndeductedExpenses.length}) ភ្លាម</span>
               </button>
+            </div>
+          </div>
+
+          {/* Month Filter Selector Pills */}
+          <div className="flex items-center gap-1.5 flex-wrap pt-2 border-t border-amber-200/80">
+            <span className="text-[11px] font-bold text-amber-900 flex items-center gap-1">
+              <Calendar className="w-3.5 h-3.5 text-amber-700" />
+              <span>មើលតាមខែ៖</span>
+            </span>
+            <button
+              type="button"
+              onClick={() => {
+                soundFx.playPop();
+                setSelectedMonthPreset('ALL');
+              }}
+              className={`px-2.5 py-1 rounded-xl text-xs font-bold transition cursor-pointer ${
+                selectedMonthPreset === 'ALL'
+                  ? 'bg-amber-600 text-white shadow-2xs font-black'
+                  : 'bg-white hover:bg-amber-100 text-amber-900 border border-amber-200'
+              }`}
+            >
+              គ្រប់ខែទាំងអស់ ({undeductedCashExpenses.length})
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                soundFx.playPop();
+                setSelectedMonthPreset('THIS_MONTH');
+              }}
+              className={`px-2.5 py-1 rounded-xl text-xs font-bold transition cursor-pointer ${
+                selectedMonthPreset === 'THIS_MONTH'
+                  ? 'bg-amber-600 text-white shadow-2xs font-black'
+                  : 'bg-white hover:bg-amber-100 text-amber-900 border border-amber-200'
+              }`}
+            >
+              ខែនេះ ({undeductedCashExpenses.filter((e) => normalizeDateToYMD(e.date || e.createdAt || '').slice(0, 7) === thisMonthStr).length})
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                soundFx.playPop();
+                setSelectedMonthPreset('LAST_MONTH');
+              }}
+              className={`px-2.5 py-1 rounded-xl text-xs font-bold transition cursor-pointer ${
+                selectedMonthPreset === 'LAST_MONTH'
+                  ? 'bg-amber-600 text-white shadow-2xs font-black'
+                  : 'bg-white hover:bg-amber-100 text-amber-900 border border-amber-200'
+              }`}
+            >
+              ខែមុន ({undeductedCashExpenses.filter((e) => normalizeDateToYMD(e.date || e.createdAt || '').slice(0, 7) === lastMonthStr).length})
+            </button>
+
+            <div
+              className={`flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-bold border transition ${
+                selectedMonthPreset === 'SPECIFIC_MONTH'
+                  ? 'bg-amber-600 text-white border-amber-600 shadow-2xs'
+                  : 'bg-white text-amber-900 border-amber-200 hover:border-amber-400'
+              }`}
+            >
+              <span className="text-[11px]">រើសខែ៖</span>
+              <input
+                type="month"
+                value={customMonthInput}
+                onChange={(e) => {
+                  if (e.target.value) {
+                    soundFx.playPop();
+                    setCustomMonthInput(e.target.value);
+                    setSelectedMonthPreset('SPECIFIC_MONTH');
+                  }
+                }}
+                className={`bg-transparent focus:outline-none font-bold cursor-pointer text-xs ${
+                  selectedMonthPreset === 'SPECIFIC_MONTH' ? 'text-white' : 'text-slate-800'
+                }`}
+              />
             </div>
           </div>
 
@@ -452,14 +597,14 @@ export const ReserveFundDashboard: React.FC<ReserveFundDashboardProps> = ({
             <div className="mt-3 pt-3 border-t border-amber-200 animate-in fade-in duration-200">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs font-black text-amber-950">
-                  📋 បញ្ជីមុខចំណាយសាច់ប្រាក់ទាំង {undeductedCashExpenses.length} មិនទាន់កាត់ចេញពីទុន៖
+                  📋 បញ្ជីមុខចំណាយសាច់ប្រាក់ទាំង {filteredUndeductedExpenses.length} មិនទាន់កាត់ចេញពីទុន ({activeMonthLabel})៖
                 </span>
                 <span className="text-[11px] text-amber-800">
                   (ចុច "កាត់ទុន" លើមុខនីមួយៗ ឬកាត់ទាំងអស់ខាងលើ)
                 </span>
               </div>
               <div className="max-h-72 overflow-y-auto space-y-1.5 pr-1 text-xs">
-                {undeductedCashExpenses.map((exp, idx) => (
+                {filteredUndeductedExpenses.map((exp, idx) => (
                   <div
                     key={exp.id}
                     className="p-2.5 bg-white/90 rounded-xl border border-amber-200/80 flex items-center justify-between gap-2 shadow-xs hover:bg-white transition"
