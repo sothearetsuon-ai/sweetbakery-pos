@@ -16,6 +16,8 @@ import {
   ArrowDownRight,
   Clock,
   Sparkles,
+  ShieldCheck,
+  Zap,
 } from 'lucide-react';
 import { useBakery } from '../../context/BakeryContext';
 import { t } from '../../utils/translations';
@@ -178,6 +180,33 @@ export const ReportsDashboard: React.FC = () => {
 
   const totalCustomOrdersValue = filteredCustomOrders.reduce((acc, o) => acc + o.totalUsd, 0);
   const totalDepositsCollected = filteredCustomOrders.reduce((acc, o) => acc + o.depositUsd, 0);
+
+  // Expenses funding breakdown (Reserve Fund vs Undeducted from Reserve Fund)
+  const reserveFundExpenses = useMemo(
+    () => filteredExpenses.filter((e) => e.paymentMethod === 'RESERVE_FUND'),
+    [filteredExpenses]
+  );
+  const totalReserveFundExpKhr = useMemo(
+    () => reserveFundExpenses.reduce((s, e) => s + (e.amountKhr || Math.round(e.amountUsd * exchangeRate)), 0),
+    [reserveFundExpenses, exchangeRate]
+  );
+  const totalReserveFundExpUsd = useMemo(
+    () => reserveFundExpenses.reduce((s, e) => s + e.amountUsd, 0),
+    [reserveFundExpenses]
+  );
+
+  const undeductedReserveExpenses = useMemo(
+    () => filteredExpenses.filter((e) => e.paymentMethod !== 'RESERVE_FUND' && (!e.paymentStatus || e.paymentStatus === 'PAID')),
+    [filteredExpenses]
+  );
+  const totalUndeductedReserveExpKhr = useMemo(
+    () => undeductedReserveExpenses.reduce((s, e) => s + (e.amountKhr || Math.round(e.amountUsd * exchangeRate)), 0),
+    [undeductedReserveExpenses, exchangeRate]
+  );
+  const totalUndeductedReserveExpUsd = useMemo(
+    () => undeductedReserveExpenses.reduce((s, e) => s + e.amountUsd, 0),
+    [undeductedReserveExpenses]
+  );
 
   // Expense breakdown by category
   const expenseCategoryNames: Record<ExpenseCategory, string> = {
@@ -722,6 +751,69 @@ export const ReportsDashboard: React.FC = () => {
               </tr>
             </tbody>
           </table>
+        </div>
+      </div>
+
+      {/* Reserve Fund & Cash Expenses Breakdown Card */}
+      <div className="bg-gradient-to-r from-emerald-50/70 via-teal-50/50 to-amber-50/70 rounded-3xl border border-emerald-200/80 p-5 shadow-sm space-y-3">
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <div className="flex items-center gap-2.5">
+            <div className="p-2 bg-emerald-600 text-white rounded-2xl shadow-xs">
+              <ShieldCheck className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="font-black text-slate-800 text-sm flex items-center gap-2">
+                <span>🏦</span>
+                <span>ការវិភាគប្រភពសាច់ប្រាក់ចំណាយ (Expense Funding Sources)</span>
+              </h3>
+              <p className="text-xs text-slate-500">
+                បែងចែករវាងចំណាយដែលបានដកពីទុនបម្រុងហាង និងចំណាយដែលមិនទាន់បានកាត់ពីទុន (អំឡុងពេល៖ {getFilterDescription()})
+              </p>
+            </div>
+          </div>
+          <span className="text-[11px] font-bold text-slate-500 bg-white px-2.5 py-1 rounded-xl border border-slate-200">
+            {filteredExpenses.length} ប្រតិបត្តិការចំណាយ
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+          {/* Deducted from Reserve Fund */}
+          <div className="bg-white/90 p-4 rounded-2xl border border-emerald-200 shadow-2xs space-y-1">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-black text-emerald-800 flex items-center gap-1.5">
+                <span>✅</span>
+                <span>កាត់ចេញពីទុនបម្រុងរួច (Deducted from Reserve)</span>
+              </span>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-mono">
+                {reserveFundExpenses.length} ប្រតិបត្តិការ
+              </span>
+            </div>
+            <div className="text-lg font-black font-sans text-emerald-700">
+              {totalReserveFundExpKhr.toLocaleString()} ៛
+            </div>
+            <div className="text-xs text-slate-500 font-sans font-bold">
+              ~${totalReserveFundExpUsd.toFixed(2)} USD
+            </div>
+          </div>
+
+          {/* Not Deducted from Reserve Fund */}
+          <div className="bg-white/90 p-4 rounded-2xl border border-amber-300 shadow-2xs space-y-1">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-black text-amber-900 flex items-center gap-1.5">
+                <span>⚡</span>
+                <span>មិនទាន់កាត់ពីទុនបម្រុង (Undeducted Expenses)</span>
+              </span>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 font-mono">
+                {undeductedReserveExpenses.length} ប្រតិបត្តិការ
+              </span>
+            </div>
+            <div className="text-lg font-black font-sans text-rose-600">
+              {totalUndeductedReserveExpKhr.toLocaleString()} ៛
+            </div>
+            <div className="text-xs text-slate-500 font-sans font-bold">
+              ~${totalUndeductedReserveExpUsd.toFixed(2)} USD
+            </div>
+          </div>
         </div>
       </div>
 

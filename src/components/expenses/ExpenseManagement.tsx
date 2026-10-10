@@ -29,6 +29,7 @@ import {
   Table,
   LayoutGrid,
   Image,
+  ArrowRight,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { useBakery } from '../../context/BakeryContext';
@@ -103,7 +104,7 @@ export const ExpenseManagement: React.FC<ExpenseManagementProps> = ({
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [mainTypeFilter, setMainTypeFilter] = useState<'ALL' | 'INGREDIENTS' | 'SUPPLIES' | 'GENERAL'>('ALL');
-  const [statusFilter, setStatusFilter] = useState<'ALL' | 'UNPAID' | 'PAID'>('ALL');
+  const [statusFilter, setStatusFilter] = useState<'ALL' | 'UNPAID' | 'PAID' | 'UNDEDUCTED_RESERVE'>('ALL');
   const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
   const [receiptFilter, setReceiptFilter] = useState<'ALL' | 'WITH_RECEIPT' | 'WITHOUT_RECEIPT'>('ALL');
   const [previewReceiptImage, setPreviewReceiptImage] = useState<string | null>(null);
@@ -298,8 +299,14 @@ export const ExpenseManagement: React.FC<ExpenseManagementProps> = ({
     );
   }, [expenses]);
   const undeductedCashTotalKhr = useMemo(() => {
-    return undeductedCashExpenses.reduce((sum, e) => sum + e.amountKhr, 0);
-  }, [undeductedCashExpenses]);
+    return undeductedCashExpenses.reduce(
+      (sum, e) => sum + (e.amountKhr || Math.round(e.amountUsd * exchangeRate)),
+      0
+    );
+  }, [undeductedCashExpenses, exchangeRate]);
+  const undeductedCashTotalUsd = useMemo(() => {
+    return Number((undeductedCashTotalKhr / exchangeRate).toFixed(2));
+  }, [undeductedCashTotalKhr, exchangeRate]);
 
   // Helper to distinguish: INGREDIENTS (ទិញគ្រឿងផ្សំ) vs SUPPLIES (ទិញសម្ភារៈ) vs GENERAL (ចំណាយទូទៅ)
   const getExpenseMainType = (e: Expense): 'INGREDIENT' | 'SUPPLY' | 'GENERAL' => {
@@ -435,9 +442,14 @@ export const ExpenseManagement: React.FC<ExpenseManagementProps> = ({
       if (mainTypeFilter === 'SUPPLIES' && !isSupplyExpense(e)) return false;
       if (mainTypeFilter === 'GENERAL' && !isGeneralExpense(e)) return false;
 
-      // Status filter (All vs Unpaid vs Paid)
+      // Status filter (All vs Unpaid vs Paid vs Undeducted Reserve)
       if (statusFilter === 'UNPAID' && e.paymentStatus !== 'UNPAID') return false;
       if (statusFilter === 'PAID' && e.paymentStatus === 'UNPAID') return false;
+      if (
+        statusFilter === 'UNDEDUCTED_RESERVE' &&
+        (e.paymentMethod === 'RESERVE_FUND' || e.paymentStatus === 'UNPAID')
+      )
+        return false;
 
       const matchCat = selectedCategory === 'ALL' || e.category === selectedCategory;
       const matchReceipt =
@@ -1018,6 +1030,88 @@ export const ExpenseManagement: React.FC<ExpenseManagementProps> = ({
         </div>
       )}
 
+      {/* Undeducted Cash Expenses Alert Banner */}
+      {undeductedCashExpenses.length > 0 && (
+        <div className="bg-gradient-to-r from-amber-50 via-orange-50 to-amber-100/60 border-2 border-amber-400 rounded-3xl p-4 sm:p-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-sm animate-in fade-in duration-300">
+          <div className="flex items-start sm:items-center gap-3.5">
+            <div className="w-11 h-11 rounded-2xl bg-amber-500 text-white flex items-center justify-center font-black text-lg shadow-md shadow-amber-500/25 shrink-0">
+              ⚡
+            </div>
+            <div>
+              <h4 className="font-black text-xs sm:text-sm text-amber-950 flex items-center gap-2 flex-wrap">
+                <span>ចំណាយមិនទាន់កាត់ចេញពីទុនបម្រុង៖</span>
+                <span className="px-2 py-0.5 rounded-full bg-amber-200 text-amber-900 text-xs font-black">
+                  {undeductedCashExpenses.length} ប្រតិបត្តិការ
+                </span>
+              </h4>
+              <p className="text-xs text-amber-900/90 mt-0.5 font-medium">
+                ទឹកប្រាក់ចំណាយសរុប៖{' '}
+                <strong className="font-sans font-black text-rose-600 text-sm">
+                  {undeductedCashTotalKhr.toLocaleString()} ៛
+                </strong>{' '}
+                <span className="text-slate-500 font-sans font-bold">
+                  (~${undeductedCashTotalUsd.toFixed(2)} USD)
+                </span>
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 flex-wrap w-full md:w-auto">
+            <button
+              type="button"
+              onClick={() => {
+                soundFx.playPop();
+                setStatusFilter(statusFilter === 'UNDEDUCTED_RESERVE' ? 'ALL' : 'UNDEDUCTED_RESERVE');
+              }}
+              className={`flex-1 md:flex-initial px-4 py-2.5 rounded-2xl text-xs font-black shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                statusFilter === 'UNDEDUCTED_RESERVE'
+                  ? 'bg-slate-900 text-white'
+                  : 'bg-white hover:bg-amber-100 text-amber-950 border border-amber-300'
+              }`}
+            >
+              <Filter className="w-3.5 h-3.5" />
+              <span>
+                {statusFilter === 'UNDEDUCTED_RESERVE' ? 'បង្ហាញទាំងអស់' : `មើលបញ្ជី ${undeductedCashExpenses.length} មុខ`}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                soundFx.playPop();
+                if (
+                  confirm(
+                    `តើអ្នកចង់កាត់ចំណាយសាច់ប្រាក់ចំនួន ${undeductedCashExpenses.length} មុខ (សរុប ${undeductedCashTotalKhr.toLocaleString()} ៛) ចេញពីទុនបម្រុងហាងភ្លាមៗមែនទេ?`
+                  )
+                ) {
+                  soundFx.playSuccess();
+                  confetti({ particleCount: 70, spread: 70, origin: { y: 0.6 } });
+                  batchDeductExpensesToReserveFund(undeductedCashExpenses.map((e) => e.id));
+                }
+              }}
+              className="flex-1 md:flex-initial px-4 py-2.5 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white font-black text-xs rounded-2xl shadow-md shadow-amber-600/25 transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-1.5"
+            >
+              <Zap className="w-4 h-4 fill-current" />
+              <span>កាត់ទុនទាំងអស់ ({undeductedCashExpenses.length}) ភ្លាម</span>
+            </button>
+
+            {onNavigateToReserveFund && (
+              <button
+                type="button"
+                onClick={() => {
+                  soundFx.playPop();
+                  onNavigateToReserveFund();
+                }}
+                className="p-2.5 bg-white hover:bg-slate-50 border border-amber-300 text-amber-900 rounded-2xl transition shadow-2xs cursor-pointer"
+                title="ទៅកាន់ទំព័រគ្រប់គ្រងទុនបម្រុង"
+              >
+                <ArrowRight className="w-4 h-4 text-amber-800" />
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Main Expense Type Tabs (បែងចែកដាច់ស្រឡះរវាង គ្រឿងផ្សំ សម្ភារៈ និង ទូទៅ) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 p-1.5 bg-white rounded-3xl border border-rose-100/90 shadow-2xs gap-1.5">
         <button
@@ -1445,6 +1539,31 @@ export const ExpenseManagement: React.FC<ExpenseManagementProps> = ({
                     }`}
                   >
                     {unpaidExpenses.length}
+                  </span>
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  soundFx.playPop();
+                  setStatusFilter(statusFilter === 'UNDEDUCTED_RESERVE' ? 'ALL' : 'UNDEDUCTED_RESERVE');
+                }}
+                className={`px-3 py-1.5 rounded-xl font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                  statusFilter === 'UNDEDUCTED_RESERVE'
+                    ? 'bg-amber-600 text-white shadow-xs font-black'
+                    : 'text-amber-900 hover:text-amber-950 bg-amber-50 hover:bg-amber-100/80 border border-amber-300'
+                }`}
+              >
+                <span>⚡ មិនទាន់កាត់ពីទុន</span>
+                {undeductedCashExpenses.length > 0 && (
+                  <span
+                    className={`text-[10px] px-1.5 py-0.2 rounded-full font-black ${
+                      statusFilter === 'UNDEDUCTED_RESERVE'
+                        ? 'bg-white/25 text-white'
+                        : 'bg-amber-200 text-amber-900'
+                    }`}
+                  >
+                    {undeductedCashExpenses.length}
                   </span>
                 )}
               </button>
