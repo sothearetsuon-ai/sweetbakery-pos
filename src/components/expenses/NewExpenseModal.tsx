@@ -1286,17 +1286,25 @@ export const NewExpenseModal: React.FC<NewExpenseModalProps> = ({
                 onChange={(e) => setPaidBy(e.target.value)}
                 className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 font-bold"
               />
-              <div className="flex gap-1 mt-1 overflow-x-auto">
-                {staffMembers.slice(0, 4).map((staff) => (
-                  <button
-                    key={staff.id}
-                    type="button"
-                    onClick={() => setPaidBy(`${staff.name} (${staff.role})`)}
-                    className="px-1.5 py-0.5 text-[9px] font-bold bg-slate-50 hover:bg-rose-50 text-slate-600 rounded border border-slate-200 whitespace-nowrap cursor-pointer"
-                  >
-                    {staff.avatar} {staff.name}
-                  </button>
-                ))}
+              <div className="flex gap-1.5 mt-1.5 overflow-x-auto pb-0.5">
+                {staffMembers.map((staff) => {
+                  const isSelected = paidBy === staff.name || paidBy.startsWith(staff.name);
+                  return (
+                    <button
+                      key={staff.id}
+                      type="button"
+                      onClick={() => setPaidBy(staff.name)}
+                      className={`px-2 py-1 text-[10px] font-bold rounded-lg border whitespace-nowrap cursor-pointer transition-all flex items-center gap-1 ${
+                        isSelected
+                          ? 'bg-rose-600 text-white border-rose-600 shadow-xs ring-1 ring-rose-400'
+                          : 'bg-slate-50 hover:bg-rose-50 text-slate-700 border-slate-200'
+                      }`}
+                    >
+                      <span>{staff.avatar}</span>
+                      <span>{staff.name}</span>
+                    </button>
+                  );
+                })}
               </div>
             </div>
           </div>

@@ -58,6 +58,8 @@ export const InvoiceScannerModal: React.FC<InvoiceScannerModalProps> = ({
     restockIngredient,
     exchangeRate,
     reserveFund,
+    currentStaff,
+    staffMembers,
   } = useBakery();
 
   // API Key State
@@ -79,7 +81,7 @@ export const InvoiceScannerModal: React.FC<InvoiceScannerModalProps> = ({
   const [supplier, setSupplier] = useState('');
   const [invoiceDate, setInvoiceDate] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<'CASH_KHR' | 'CASH_USD' | 'BANK_TRANSFER' | 'RESERVE_FUND'>('CASH_KHR');
-  const [paidBy, setPaidBy] = useState('Admin');
+  const [paidBy, setPaidBy] = useState(() => currentStaff?.name || 'Admin');
   const [items, setItems] = useState<ExtractedInvoiceItem[]>([]);
   const [selectedItemIds, setSelectedItemIds] = useState<Set<string>>(new Set());
   const [isImporting, setIsImporting] = useState(false);
@@ -774,6 +776,26 @@ export const InvoiceScannerModal: React.FC<InvoiceScannerModalProps> = ({
                       placeholder="ឧ. Admin / Cashier"
                       className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     />
+                    <div className="flex gap-1.5 mt-1.5 overflow-x-auto pb-0.5">
+                      {staffMembers.map((staff) => {
+                        const isSelected = paidBy === staff.name || paidBy.startsWith(staff.name);
+                        return (
+                          <button
+                            key={staff.id}
+                            type="button"
+                            onClick={() => setPaidBy(staff.name)}
+                            className={`px-2 py-1 text-[10px] font-bold rounded-lg border whitespace-nowrap cursor-pointer transition-all flex items-center gap-1 ${
+                              isSelected
+                                ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs'
+                                : 'bg-slate-50 hover:bg-indigo-50 text-slate-700 border-slate-200'
+                            }`}
+                          >
+                            <span>{staff.avatar}</span>
+                            <span>{staff.name}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
                 </div>
               </div>
