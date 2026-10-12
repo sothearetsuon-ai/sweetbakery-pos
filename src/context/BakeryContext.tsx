@@ -315,15 +315,25 @@ export const autoMigrateExpenseDates = (items: Expense[]): Expense[] => {
 export const cleanDeduplicateExpenses = (items: Expense[]): Expense[] => {
   const deletedIds = loadDeletedIds('expenses');
   const mockExpenseIds = new Set(['exp-1', 'exp-2', 'exp-4', 'exp-5', 'exp-6', 'exp-7']);
-  const nonMock = (Array.isArray(items) ? items : []).filter(
-    (e) => e && e.id && !mockExpenseIds.has(e.id) && !deletedIds.has(e.id)
+  const initialExpenseIdSet = new Set(initialExpenses.map((e) => e.id));
+
+  // Check if dataset contains real user-recorded expenses (e.g. exp-17..., or items not in demo/initial mocks)
+  const hasRealUserExpenses = (Array.isArray(items) ? items : []).some(
+    (e) => e && e.id && !mockExpenseIds.has(e.id) && !initialExpenseIdSet.has(e.id)
   );
+
+  const nonMock = (Array.isArray(items) ? items : []).filter((e) => {
+    if (!e || !e.id || mockExpenseIds.has(e.id) || deletedIds.has(e.id)) return false;
+    // When real store expenses exist, purge old mock/demo initial items from the dataset
+    if (hasRealUserExpenses && initialExpenseIdSet.has(e.id)) return false;
+    return true;
+  });
 
   const seenIds = new Set<string>();
   const seenSignatures = new Set<string>();
   const result: Expense[] = [];
 
-  // 1. First, prioritize user-provided items (which include their edits, paymentMethod updates, and reserve fund allocations)
+  // 1. Prioritize user-provided items (which include their edits, paymentMethod updates, and reserve fund allocations)
   for (const exp of nonMock) {
     if (!exp || !exp.id || seenIds.has(exp.id) || deletedIds.has(exp.id)) continue;
     seenIds.add(exp.id);
@@ -339,19 +349,21 @@ export const cleanDeduplicateExpenses = (items: Expense[]): Expense[] => {
     result.push(exp);
   }
 
-  // 2. Only add initialExpenses if the item is not already present or deleted
-  const officialInitials = initialExpenses.filter((e) => e && e.id && !deletedIds.has(e.id) && !seenIds.has(e.id));
-  for (const exp of officialInitials) {
-    const d = normalizeDateToYMD(exp.date || exp.createdAt || '');
-    const cleanTitle = (exp.title || '').replace(/\s+/g, ' ').trim().toLowerCase();
-    const amt = Number(exp.amountUsd || 0).toFixed(2);
-    const sig = `${d}|${cleanTitle}|${amt}`;
+  // 2. Only inject initialExpenses if the store dataset is COMPLETELY EMPTY (initial first-time setup with zero records)
+  if (result.length === 0 && (!items || items.length === 0)) {
+    const officialInitials = initialExpenses.filter((e) => e && e.id && !deletedIds.has(e.id) && !seenIds.has(e.id));
+    for (const exp of officialInitials) {
+      const d = normalizeDateToYMD(exp.date || exp.createdAt || '');
+      const cleanTitle = (exp.title || '').replace(/\s+/g, ' ').trim().toLowerCase();
+      const amt = Number(exp.amountUsd || 0).toFixed(2);
+      const sig = `${d}|${cleanTitle}|${amt}`;
 
-    if (seenSignatures.has(sig) || seenIds.has(exp.id)) continue;
-    seenIds.add(exp.id);
-    seenSignatures.add(sig);
+      if (seenSignatures.has(sig) || seenIds.has(exp.id)) continue;
+      seenIds.add(exp.id);
+      seenSignatures.add(sig);
 
-    result.push(exp);
+      result.push(exp);
+    }
   }
 
   return autoMigrateExpenseDates(
