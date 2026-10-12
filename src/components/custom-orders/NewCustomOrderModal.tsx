@@ -18,6 +18,7 @@ import {
   Layers,
   ShoppingBag,
   Info,
+  Settings,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { useBakery } from '../../context/BakeryContext';
@@ -25,6 +26,7 @@ import { t } from '../../utils/translations';
 import { soundFx } from '../../utils/audio';
 import { PartyAddon } from '../../types';
 import { CameraCaptureModal } from '../common/CameraCaptureModal';
+import { PartyAccessoriesModal } from '../pos/PartyAccessoriesModal';
 import { formatDateDMY } from '../../utils/dateUtils';
 
 interface NewCustomOrderModalProps {
@@ -140,6 +142,7 @@ export const NewCustomOrderModal: React.FC<NewCustomOrderModalProps> = ({ isOpen
   }, [isOpen, initialData]);
 
   // Party Add-on custom addition / edit state
+  const [isPartyModalOpen, setIsPartyModalOpen] = useState(false);
   const [isAddingNewAddon, setIsAddingNewAddon] = useState(false);
   const [newAddonName, setNewAddonName] = useState('');
   const [newAddonPriceKhr, setNewAddonPriceKhr] = useState('5000');
@@ -182,21 +185,39 @@ export const NewCustomOrderModal: React.FC<NewCustomOrderModalProps> = ({ isOpen
     });
   };
 
-  const handleAddNewAddon = () => {
-    if (!newAddonName.trim()) return;
+  const handleAddNewAddon = (e?: React.MouseEvent | React.KeyboardEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    const trimmed = newAddonName.trim();
+    if (!trimmed) return;
     soundFx.playSuccess();
     const priceKhr = parseInt(newAddonPriceKhr, 10) || 0;
-    addPartyAddon(newAddonName.trim(), priceKhr);
+    const created = addPartyAddon(trimmed, priceKhr);
+    if (created && created.id) {
+      // Auto-select newly created addon for this order
+      setSelectedAddonQuantities((prev) => ({
+        ...prev,
+        [created.id]: (prev[created.id] || 0) + 1,
+      }));
+    }
     setNewAddonName('');
     setNewAddonPriceKhr('5000');
     setIsAddingNewAddon(false);
   };
 
-  const handleSaveEditAddon = () => {
+  const handleSaveEditAddon = (e?: React.MouseEvent | React.KeyboardEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
     if (!editingAddon) return;
+    const trimmed = editAddonName.trim();
+    if (!trimmed) return;
     soundFx.playSuccess();
     const priceKhr = parseInt(editAddonPriceKhr, 10) || 0;
-    updatePartyAddon(editingAddon.id, editAddonName.trim(), priceKhr);
+    updatePartyAddon(editingAddon.id, trimmed, priceKhr);
     setEditingAddon(null);
   };
 
@@ -283,7 +304,11 @@ export const NewCustomOrderModal: React.FC<NewCustomOrderModalProps> = ({ isOpen
     }
   };
 
-  const handleAddNewFlavor = () => {
+  const handleAddNewFlavor = (e?: React.MouseEvent | React.KeyboardEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
     if (newFlavorInput.trim()) {
       soundFx.playSuccess();
       addFlavor(newFlavorInput.trim());
@@ -862,11 +887,18 @@ export const NewCustomOrderModal: React.FC<NewCustomOrderModalProps> = ({ isOpen
                         placeholder="ឧ. ធុរេន, ពងទាប្រៃ..."
                         value={newFlavorInput}
                         onChange={(e) => setNewFlavorInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            handleAddNewFlavor(e);
+                          }
+                        }}
                         className="w-full px-2.5 py-1.5 text-xs border border-pink-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500/20 font-medium"
                       />
                       <button
                         type="button"
-                        onClick={handleAddNewFlavor}
+                        onClick={(e) => handleAddNewFlavor(e)}
                         className="px-2.5 py-1.5 bg-pink-600 hover:bg-pink-700 text-white rounded-xl text-xs font-bold shrink-0 cursor-pointer"
                       >
                         រក្សាទុក
@@ -911,7 +943,19 @@ export const NewCustomOrderModal: React.FC<NewCustomOrderModalProps> = ({ isOpen
                       className="px-2.5 py-1 bg-white hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-xl text-[11px] font-bold transition-all flex items-center gap-1 shadow-2xs active:scale-95 cursor-pointer"
                     >
                       <Plus className="w-3.5 h-3.5 text-amber-600" />
-                      <span>{isAddingNewAddon ? 'បិទ' : '+ បង្កើតឥវ៉ាន់ថ្មី'}</span>
+                      <span>{isAddingNewAddon ? 'បិទ' : 'បង្កើតឥវ៉ាន់ថ្មី'}</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        soundFx.playPop();
+                        setIsPartyModalOpen(true);
+                      }}
+                      title="គ្រប់គ្រងបញ្ជី និងកែតម្លៃឥវ៉ាន់ពិធី"
+                      className="px-2 py-1 bg-white hover:bg-amber-100 text-amber-800 border border-amber-300 rounded-xl text-[11px] font-bold transition-all flex items-center gap-1 shadow-2xs active:scale-95 cursor-pointer"
+                    >
+                      <Settings className="w-3.5 h-3.5 text-amber-700" />
+                      <span className="hidden sm:inline">គ្រប់គ្រងឥវ៉ាន់</span>
                     </button>
                   </div>
                 </div>
@@ -932,9 +976,17 @@ export const NewCustomOrderModal: React.FC<NewCustomOrderModalProps> = ({ isOpen
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       <input
                         type="text"
+                        autoFocus
                         placeholder="ឈ្មោះទំនិញ (ឧ. ផ្កាភ្លើង Sparkler...)"
                         value={newAddonName}
                         onChange={(e) => setNewAddonName(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            handleAddNewAddon(e);
+                          }
+                        }}
                         className="px-3 py-1.5 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500/20 font-medium"
                       />
                       <div className="relative">
@@ -945,6 +997,13 @@ export const NewCustomOrderModal: React.FC<NewCustomOrderModalProps> = ({ isOpen
                           placeholder="តម្លៃជាលុយរៀល (៛)"
                           value={newAddonPriceKhr}
                           onChange={(e) => setNewAddonPriceKhr(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              handleAddNewAddon(e);
+                            }
+                          }}
                           className="w-full px-3 py-1.5 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500/20 font-bold"
                         />
                         <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-[10px]">
@@ -962,7 +1021,7 @@ export const NewCustomOrderModal: React.FC<NewCustomOrderModalProps> = ({ isOpen
                       </button>
                       <button
                         type="button"
-                        onClick={handleAddNewAddon}
+                        onClick={(e) => handleAddNewAddon(e)}
                         className="px-3 py-1 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-xs font-bold shadow-xs cursor-pointer"
                       >
                         រក្សាទុក
@@ -990,6 +1049,13 @@ export const NewCustomOrderModal: React.FC<NewCustomOrderModalProps> = ({ isOpen
                         placeholder="ឈ្មោះទំនិញ"
                         value={editAddonName}
                         onChange={(e) => setEditAddonName(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            handleSaveEditAddon(e);
+                          }
+                        }}
                         className="px-3 py-1.5 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500 font-medium"
                       />
                       <div className="relative">
@@ -1000,6 +1066,13 @@ export const NewCustomOrderModal: React.FC<NewCustomOrderModalProps> = ({ isOpen
                           placeholder="តម្លៃ (៛ KHR)"
                           value={editAddonPriceKhr}
                           onChange={(e) => setEditAddonPriceKhr(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              handleSaveEditAddon(e);
+                            }
+                          }}
                           className="w-full px-3 py-1.5 pr-7 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500 font-bold text-pink-600"
                         />
                         <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 font-bold">
@@ -1026,7 +1099,7 @@ export const NewCustomOrderModal: React.FC<NewCustomOrderModalProps> = ({ isOpen
                         </button>
                         <button
                           type="button"
-                          onClick={handleSaveEditAddon}
+                          onClick={(e) => handleSaveEditAddon(e)}
                           className="px-3 py-1 bg-pink-600 hover:bg-pink-700 text-white text-xs font-bold rounded-lg cursor-pointer transition-colors shadow-xs"
                         >
                           រក្សាទុក
@@ -1340,6 +1413,12 @@ export const NewCustomOrderModal: React.FC<NewCustomOrderModalProps> = ({ isOpen
         }}
         title={orderType === 'CAKE' ? 'ថតរូបគំរូនំខួបកំណើត (Cake Reference)' : 'ថតរូបគំរូនំបុ័ង (Bread Reference)'}
         subtitle="ថតរូបភាពគំរូពីកាម៉េរ៉ាដើម្បីឱ្យជាងដុតនំមើលតាម"
+      />
+
+      {/* Full Party Accessories Management Modal */}
+      <PartyAccessoriesModal
+        isOpen={isPartyModalOpen}
+        onClose={() => setIsPartyModalOpen(false)}
       />
     </div>
   );

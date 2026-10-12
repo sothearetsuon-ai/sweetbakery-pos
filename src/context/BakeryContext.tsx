@@ -420,7 +420,7 @@ interface BakeryContextType {
   deleteFlavor: (flavorName: string) => void;
 
   partyAddons: PartyAddon[];
-  addPartyAddon: (nameKh: string, priceKhr: number, priceUsd?: number) => void;
+  addPartyAddon: (nameKh: string, priceKhr: number, priceUsd?: number) => PartyAddon;
   updatePartyAddon: (id: string, nameKh: string, priceKhr: number, priceUsd?: number) => void;
   deletePartyAddon: (id: string) => void;
 
@@ -2284,9 +2284,14 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       const items = cloudData.items;
       if (Array.isArray(items) && items.length > 0) {
         setPartyAddons((prev) => {
+          // Keep any locally created items that haven't arrived in cloud yet
+          const cloudIds = new Set(items.map((i) => i.id));
+          const localPending = prev.filter((p) => !cloudIds.has(p.id) && p.id.startsWith('addon-'));
+          const merged = [...items, ...localPending];
+
           if (
-            items.length === prev.length &&
-            items.every(
+            merged.length === prev.length &&
+            merged.every(
               (a, idx) =>
                 a.id === prev[idx]?.id &&
                 a.nameKh === prev[idx]?.nameKh &&
@@ -2296,8 +2301,8 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           ) {
             return prev;
           }
-          safeSetStorage('bakery_party_addons', JSON.stringify(items));
-          return items;
+          safeSetStorage('bakery_party_addons', JSON.stringify(merged));
+          return merged;
         });
       }
     });
@@ -3030,11 +3035,12 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     };
     setPartyAddons((prev) => {
       const updated = [...prev, newAddon];
-      try { localStorage.setItem('bakery_party_addons', JSON.stringify(updated)); } catch (e) {}
+      safeSetStorage('bakery_party_addons', JSON.stringify(updated));
       saveToLanSync({ partyAddons: updated });
       syncSaveDoc('settings', 'partyAddons', { items: updated });
       return updated;
     });
+    return newAddon;
   };
 
   const updatePartyAddon = (id: string, nameKh: string, priceKhr: number, priceUsd?: number) => {
@@ -3051,7 +3057,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             }
           : a
       );
-      try { localStorage.setItem('bakery_party_addons', JSON.stringify(updated)); } catch (e) {}
+      safeSetStorage('bakery_party_addons', JSON.stringify(updated));
       saveToLanSync({ partyAddons: updated });
       syncSaveDoc('settings', 'partyAddons', { items: updated });
       return updated;
@@ -3061,7 +3067,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const deletePartyAddon = (id: string) => {
     setPartyAddons((prev) => {
       const updated = prev.filter((a) => a.id !== id);
-      try { localStorage.setItem('bakery_party_addons', JSON.stringify(updated)); } catch (e) {}
+      safeSetStorage('bakery_party_addons', JSON.stringify(updated));
       saveToLanSync({ partyAddons: updated });
       syncSaveDoc('settings', 'partyAddons', { items: updated });
       return updated;
