@@ -3,6 +3,7 @@ import { X, Clock, ShieldCheck, DollarSign, Banknote, AlertCircle, CheckCircle }
 import { useBakery } from '../../context/BakeryContext';
 import { t } from '../../utils/translations';
 import { formatDateTimeDMY } from '../../utils/dateUtils';
+import { roundKhr } from '../../utils/currencyUtils';
 
 interface ShiftModalProps {
   isOpen: boolean;
@@ -30,12 +31,12 @@ export const ShiftModal: React.FC<ShiftModalProps> = ({ isOpen, onClose }) => {
 
   const handleStartShift = (e: React.FormEvent) => {
     e.preventDefault();
-    openShift(cashierName, parseFloat(openingUsd) || 0, parseFloat(openingKhr) || 0);
+    openShift(cashierName, parseFloat(openingUsd) || 0, roundKhr(parseFloat(openingKhr) || 0));
   };
 
   const handleCloseShift = (e: React.FormEvent) => {
     e.preventDefault();
-    closeShift(parseFloat(closingUsd) || 0, parseFloat(closingKhr) || 0);
+    closeShift(parseFloat(closingUsd) || 0, roundKhr(parseFloat(closingKhr) || 0));
   };
 
   return (
@@ -88,7 +89,7 @@ export const ShiftModal: React.FC<ShiftModalProps> = ({ isOpen, onClose }) => {
                   <div className="flex justify-between border-t border-emerald-200/60 pt-1 font-bold">
                     <span>ចំណូលលក់ក្នុងវេននេះ៖</span>
                     <span className="text-pink-600">
-                      {Math.round(currentShift.totalSalesUsd * exchangeRate).toLocaleString()} ៛ (~${currentShift.totalSalesUsd.toFixed(2)})
+                      {roundKhr(currentShift.totalSalesUsd * exchangeRate).toLocaleString()} ៛ (~${currentShift.totalSalesUsd.toFixed(2)})
                     </span>
                   </div>
                 </div>

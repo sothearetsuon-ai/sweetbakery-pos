@@ -25,6 +25,7 @@ import { ReceiptModal } from '../pos/ReceiptModal';
 import { CompletedSale, ExpenseCategory } from '../../types';
 import { soundFx } from '../../utils/audio';
 import { formatDateDMY, formatDateTimeDMY, formatTime } from '../../utils/dateUtils';
+import { roundKhr } from '../../utils/currencyUtils';
 
 type DateFilterType =
   | 'this_month'
@@ -147,19 +148,23 @@ export const ReportsDashboard: React.FC = () => {
 
   // Financial calculations
   const totalSalesUsd = filteredSales.reduce((acc, sale) => acc + sale.totalUsd, 0);
-  const totalSalesKhr = filteredSales.reduce(
-    (acc, sale) => acc + (sale.totalKhr || Math.round(sale.totalUsd * exchangeRate)),
-    0
+  const totalSalesKhr = roundKhr(
+    filteredSales.reduce(
+      (acc, sale) => acc + (sale.totalKhr || roundKhr(sale.totalUsd * exchangeRate)),
+      0
+    )
   );
 
   const totalExpensesUsd = filteredExpenses.reduce((acc, exp) => acc + exp.amountUsd, 0);
-  const totalExpensesKhr = filteredExpenses.reduce(
-    (acc, exp) => acc + (exp.amountKhr || Math.round(exp.amountUsd * exchangeRate)),
-    0
+  const totalExpensesKhr = roundKhr(
+    filteredExpenses.reduce(
+      (acc, exp) => acc + (exp.amountKhr || roundKhr(exp.amountUsd * exchangeRate)),
+      0
+    )
   );
 
   const netProfitUsd = totalSalesUsd - totalExpensesUsd;
-  const netProfitKhr = totalSalesKhr - totalExpensesKhr;
+  const netProfitKhr = roundKhr(totalSalesKhr - totalExpensesKhr);
   const profitMarginPercent =
     totalSalesUsd > 0 ? ((netProfitUsd / totalSalesUsd) * 100).toFixed(1) : '0';
 
@@ -169,13 +174,17 @@ export const ReportsDashboard: React.FC = () => {
   const filteredGenExpenses = filteredExpenses.filter((e) => !isIngExpense(e));
 
   const totalIngCostUsd = filteredIngExpenses.reduce((s, e) => s + e.amountUsd, 0);
-  const totalIngCostKhr = filteredIngExpenses.reduce((s, e) => s + (e.amountKhr || Math.round(e.amountUsd * exchangeRate)), 0);
+  const totalIngCostKhr = roundKhr(
+    filteredIngExpenses.reduce((s, e) => s + (e.amountKhr || roundKhr(e.amountUsd * exchangeRate)), 0)
+  );
 
   const totalGenCostUsd = filteredGenExpenses.reduce((s, e) => s + e.amountUsd, 0);
-  const totalGenCostKhr = filteredGenExpenses.reduce((s, e) => s + (e.amountKhr || Math.round(e.amountUsd * exchangeRate)), 0);
+  const totalGenCostKhr = roundKhr(
+    filteredGenExpenses.reduce((s, e) => s + (e.amountKhr || roundKhr(e.amountUsd * exchangeRate)), 0)
+  );
 
   const grossProfitUsd = totalSalesUsd - totalIngCostUsd;
-  const grossProfitKhr = totalSalesKhr - totalIngCostKhr;
+  const grossProfitKhr = roundKhr(totalSalesKhr - totalIngCostKhr);
   const grossMarginPercent = totalSalesUsd > 0 ? ((grossProfitUsd / totalSalesUsd) * 100).toFixed(1) : '0';
 
   const totalCustomOrdersValue = filteredCustomOrders.reduce((acc, o) => acc + o.totalUsd, 0);
@@ -199,7 +208,7 @@ export const ReportsDashboard: React.FC = () => {
     [filteredExpenses]
   );
   const totalReserveFundExpKhr = useMemo(
-    () => reserveFundExpenses.reduce((s, e) => s + (e.amountKhr || Math.round(e.amountUsd * exchangeRate)), 0),
+    () => roundKhr(reserveFundExpenses.reduce((s, e) => s + (e.amountKhr || roundKhr(e.amountUsd * exchangeRate)), 0)),
     [reserveFundExpenses, exchangeRate]
   );
   const totalReserveFundExpUsd = useMemo(
@@ -212,7 +221,7 @@ export const ReportsDashboard: React.FC = () => {
     [filteredExpenses]
   );
   const totalUndeductedReserveExpKhr = useMemo(
-    () => undeductedReserveExpenses.reduce((s, e) => s + (e.amountKhr || Math.round(e.amountUsd * exchangeRate)), 0),
+    () => roundKhr(undeductedReserveExpenses.reduce((s, e) => s + (e.amountKhr || roundKhr(e.amountUsd * exchangeRate)), 0)),
     [undeductedReserveExpenses, exchangeRate]
   );
   const totalUndeductedReserveExpUsd = useMemo(
@@ -237,7 +246,7 @@ export const ReportsDashboard: React.FC = () => {
   const expenseCategoryBreakdown = filteredExpenses.reduce(
     (acc, exp) => {
       const cat = exp.category || 'OTHER';
-      const khr = exp.amountKhr ?? Math.round(exp.amountUsd * exchangeRate);
+      const khr = roundKhr(exp.amountKhr ?? (exp.amountUsd * exchangeRate));
       if (!acc[cat]) {
         acc[cat] = { usd: 0, khr: 0, count: 0 };
       }
@@ -1084,7 +1093,7 @@ export const ReportsDashboard: React.FC = () => {
                       {expense.paymentMethod === 'RESERVE_FUND' ? '🏦 ទុនបម្រុង' : expense.paymentMethod || 'CASH'}
                     </td>
                     <td className="p-3 text-right font-black text-rose-600">
-                      {(expense.amountKhr || Math.round(expense.amountUsd * exchangeRate)).toLocaleString()} ៛
+                      {(roundKhr(expense.amountKhr || (expense.amountUsd * exchangeRate))).toLocaleString()} ៛
                     </td>
                     <td className="p-3 text-right text-slate-600 font-bold">
                       ${expense.amountUsd.toFixed(2)}

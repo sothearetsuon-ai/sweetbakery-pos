@@ -33,6 +33,7 @@ import confetti from 'canvas-confetti';
 import { useBakery } from '../../context/BakeryContext';
 import { soundFx } from '../../utils/audio';
 import { formatDateDMY, normalizeDateToYMD } from '../../utils/dateUtils';
+import { roundKhr } from '../../utils/currencyUtils';
 import { ReserveFundModal } from '../expenses/ReserveFundModal';
 
 interface ReserveFundDashboardProps {
@@ -154,9 +155,11 @@ export const ReserveFundDashboard: React.FC<ReserveFundDashboardProps> = ({
   }, [expenses]);
 
   const undeductedCashTotalKhr = useMemo(() => {
-    return undeductedCashExpenses.reduce(
-      (sum, e) => sum + (e.amountKhr || Math.round(e.amountUsd * exchangeRate)),
-      0
+    return roundKhr(
+      undeductedCashExpenses.reduce(
+        (sum, e) => sum + (e.amountKhr || roundKhr(e.amountUsd * exchangeRate)),
+        0
+      )
     );
   }, [undeductedCashExpenses, exchangeRate]);
 
@@ -174,9 +177,11 @@ export const ReserveFundDashboard: React.FC<ReserveFundDashboardProps> = ({
   }, [undeductedCashExpenses, selectedMonthPreset, thisMonthStr, lastMonthStr, customMonthInput]);
 
   const filteredUndeductedTotalKhr = useMemo(() => {
-    return filteredUndeductedExpenses.reduce(
-      (sum, e) => sum + (e.amountKhr || Math.round(e.amountUsd * exchangeRate)),
-      0
+    return roundKhr(
+      filteredUndeductedExpenses.reduce(
+        (sum, e) => sum + (e.amountKhr || roundKhr(e.amountUsd * exchangeRate)),
+        0
+      )
     );
   }, [filteredUndeductedExpenses, exchangeRate]);
 
@@ -244,7 +249,7 @@ export const ReserveFundDashboard: React.FC<ReserveFundDashboardProps> = ({
       finalUsd = Number((finalKhr / exchangeRate).toFixed(2));
     } else {
       finalUsd = parseFloat(customUsdAmount) || 0;
-      finalKhr = Math.round(finalUsd * exchangeRate);
+      finalKhr = roundKhr(finalUsd * exchangeRate);
     }
 
     if (finalKhr <= 0) {

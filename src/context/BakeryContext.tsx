@@ -37,6 +37,7 @@ import {
   initialRecipes,
 } from '../data/mockData';
 import { sortProductsNewestFirst } from '../utils/productUtils';
+import { roundKhr, usdToKhr, formatKhr } from '../utils/currencyUtils';
 import { idbGet, idbSet } from '../utils/idbStorage';
 import {
   getStoredFirebaseConfig,
@@ -343,7 +344,7 @@ export const cleanDeduplicateExpenses = (items: Expense[]): Expense[] => {
 
   // 2. Only inject initialExpenses if the store dataset is COMPLETELY EMPTY (initial first-time setup with zero records)
   if (result.length === 0 && (!items || items.length === 0)) {
-    const officialInitials = initialExpenses.filter((e) => e && e.id && !deletedIds.has(e.id) && !seenIds.has(e.id));
+    const officialInitials = (initialExpenses as any[]).filter((e: any) => e && e.id && !deletedIds.has(e.id) && !seenIds.has(e.id));
     for (const exp of officialInitials) {
       const d = normalizeDateToYMD(exp.date || exp.createdAt || '');
       const cleanTitle = (exp.title || '').replace(/\s+/g, ' ').trim().toLowerCase();
@@ -515,6 +516,10 @@ interface BakeryContextType {
   };
   exportSalesCsv: () => void;
   exportExpensesCsv: () => void;
+
+  roundKhr: (amount: number | string | undefined | null) => number;
+  usdToKhr: (usd: number | string | undefined | null, rate?: number) => number;
+  formatKhr: (amount: number | string | undefined | null) => string;
 }
 
 const BakeryContext = createContext<BakeryContextType | undefined>(undefined);
@@ -817,7 +822,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   // Helper to repair missing images or convert base64/broken images to official upload paths
   const healProductItem = (p: Product): { product: Product; changed: boolean } => {
-    const match = initialProducts.find((ip) => ip.id === p.id);
+    const match = initialProducts.find((ip: Product) => ip.id === p.id);
     if (!match) return { product: p, changed: false };
 
     const currentImg = (p.imageUrl || '').trim();
@@ -874,7 +879,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         if (Array.isArray(parsed) && parsed.length > 0) {
           const healed = parsed.map((p) => healProductItem(p).product);
           const missingItems = initialProducts.filter(
-            (ip) => !healed.some((existing) => existing.id === ip.id)
+            (ip: Product) => !healed.some((existing) => existing.id === ip.id)
           );
           return sortProductsNewestFirst([...healed, ...missingItems]);
         }
@@ -916,7 +921,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           return res.product;
         });
         const missingItems = initialProducts.filter(
-          (ip) => !healed.some((existing) => existing.id === ip.id)
+          (ip: Product) => !healed.some((existing) => existing.id === ip.id)
         );
         if (missingItems.length > 0) changed = true;
 
@@ -1235,13 +1240,34 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   // Sales management (including past sales)
   const [sales, setSales] = useState<CompletedSale[]>(() => {
+    let saved: string | null = null;
     if (globalIsDemoMode) {
       seedDemoDataIfMissing();
-      const saved = localStorage.getItem('demo_bakery_sales');
-      return saved ? JSON.parse(saved) : initialSales;
+      saved = localStorage.getItem('demo_bakery_sales');
+    } else {
+      saved = localStorage.getItem('bakery_sales');
     }
-    const saved = localStorage.getItem('bakery_sales');
-    return saved ? JSON.parse(saved) : initialSales;
+    const rawList: CompletedSale[] = saved ? JSON.parse(saved) : initialSales;
+    return (Array.isArray(rawList) ? rawList : []).map((s) => {
+      if (!s) return s;
+      const cleanTotal = s.totalKhr !== undefined ? roundKhr(s.totalKhr) : usdToKhr(s.totalUsd, 4000);
+      const cleanPaid = s.paidKhr !== undefined ? roundKhr(s.paidKhr) : (s.paidUsd !== undefined ? usdToKhr(s.paidUsd, 4000) : undefined);
+      const cleanChange = s.changeKhr !== undefined ? roundKhr(s.changeKhr) : (s.changeUsd !== undefined ? usdToKhr(s.changeUsd, 4000) : undefined);
+      const cleanDeposit = s.depositKhr !== undefined ? roundKhr(s.depositKhr) : (s.depositUsd !== undefined ? usdToKhr(s.depositUsd, 4000) : undefined);
+      const cleanRemaining = s.remainingKhr !== undefined ? roundKhr(s.remainingKhr) : (s.remainingUsd !== undefined ? usdToKhr(s.remainingUsd, 4000) : undefined);
+      return {
+        ...s,
+        totalKhr: cleanTotal,
+        paidKhr: cleanPaid,
+        changeKhr: cleanChange,
+        depositKhr: cleanDeposit,
+        remainingKhr: cleanRemaining,
+        items: (s.items || []).map((it) => ({
+          ...it,
+          priceKhr: it.priceKhr !== undefined ? roundKhr(it.priceKhr) : usdToKhr(it.priceUsd, 4000),
+        })),
+      };
+    });
   });
 
   const [activeReceipt, setActiveReceipt] = useState<CompletedSale | null>(null);
@@ -3235,7 +3261,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           product: {
             ...next[index].product,
             priceUsd: validUsd,
-            priceKhr: Math.round(validUsd * exchangeRate),
+            priceKhr: roundKhr(validUsd * exchangeRate),
           },
         };
       }
@@ -3251,7 +3277,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       nameEn: 'Custom Cake / Item',
       categoryId: 'custom',
       priceUsd: validUsd,
-      priceKhr: Math.round(validUsd * exchangeRate),
+      priceKhr: roundKhr(validUsd * exchangeRate),
       costPriceUsd: 0,
       imageUrl: 'https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=400',
       stockQty: 999,
@@ -3269,12 +3295,14 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setCart([]);
   };
 
-  const cartTotalKhr = cart.reduce(
-    (total, item) =>
-      total +
-      (item.product.priceKhr ?? Math.round(item.product.priceUsd * exchangeRate)) *
-        item.quantity,
-    0
+  const cartTotalKhr = roundKhr(
+    cart.reduce(
+      (total, item) =>
+        total +
+        (item.product.priceKhr ? roundKhr(item.product.priceKhr) : roundKhr(item.product.priceUsd * exchangeRate)) *
+          item.quantity,
+      0
+    )
   );
   const cartTotalUsd = Number((cartTotalKhr / exchangeRate).toFixed(2));
 
@@ -3400,6 +3428,24 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     deleteFirestoreDoc('recipes', id);
   };
 
+  // Helper to ensure all KHR currency fields in a sale are strictly rounded to 100 Riel
+  const sanitizeSaleKhr = (sale: CompletedSale): CompletedSale => {
+    return {
+      ...sale,
+      items: (sale.items || []).map((it) => ({
+        ...it,
+        priceKhr: roundKhr(it.priceKhr ?? (it.priceUsd * exchangeRate)),
+      })),
+      totalKhr: roundKhr(sale.totalKhr ?? (sale.totalUsd * exchangeRate)),
+      paidKhr: sale.paidKhr !== undefined
+        ? roundKhr(sale.paidKhr)
+        : (sale.paidUsd !== undefined ? roundKhr(sale.paidUsd * exchangeRate) : undefined),
+      changeKhr: roundKhr(sale.changeKhr ?? 0),
+      depositKhr: sale.depositKhr !== undefined ? roundKhr(sale.depositKhr) : undefined,
+      remainingKhr: sale.remainingKhr !== undefined ? roundKhr(sale.remainingKhr) : undefined,
+    };
+  };
+
   // Complete Live Sale
   const completeSale = (saleData: Omit<CompletedSale, 'id' | 'orderNumber' | 'createdAt'>): CompletedSale => {
     isUpdatingFromLan.current = false;
@@ -3407,12 +3453,13 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
     const randomSuffix = String(sales.length + 1).padStart(3, '0');
     const orderNumber = `POS-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${randomSuffix}`;
-    const newSale: CompletedSale = {
+    const rawSale: CompletedSale = {
       ...saleData,
       id: `sale-${Date.now()}`,
       orderNumber,
       createdAt: new Date().toISOString(),
     };
+    const newSale = sanitizeSaleKhr(rawSale);
 
     // Deduct stock for products sold
     const updatedProducts = products.map((p) => {
@@ -3472,10 +3519,11 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     isUpdatingFromLan.current = false;
     if (lanSyncTimer.current) clearTimeout(lanSyncTimer.current);
 
-    const newSale: CompletedSale = {
+    const rawSale: CompletedSale = {
       ...saleData,
       id: `sale-past-${Date.now()}`,
     };
+    const newSale = sanitizeSaleKhr(rawSale);
 
     fetch('/api/save-sale', {
       method: 'POST',
@@ -3505,14 +3553,16 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     isUpdatingFromLan.current = false;
     if (lanSyncTimer.current) clearTimeout(lanSyncTimer.current);
 
+    const cleanSale = sanitizeSaleKhr(updatedSale);
+
     fetch('/api/save-sale', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ sale: updatedSale }),
+      body: JSON.stringify({ sale: cleanSale }),
     }).catch(() => {});
 
     setSales((prev) => {
-      const updated = prev.map((s) => (s.id === updatedSale.id ? updatedSale : s));
+      const updated = prev.map((s) => (s.id === cleanSale.id ? cleanSale : s));
       safeSetStorage('bakery_sales', JSON.stringify(updated));
       saveToLanSync({
         products,
@@ -3525,7 +3575,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       }, true);
       return updated;
     });
-    syncSaveDoc('sales', updatedSale.id, updatedSale);
+    syncSaveDoc('sales', cleanSale.id, cleanSale);
   };
 
   // Delete Sale with stock restoration support
@@ -3773,7 +3823,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   // Helper to construct a completed sale record from a custom cake/bread order
   const buildSaleFromCustomOrder = (order: CustomCakeOrder): CompletedSale => {
-    const orderTotalKhr = order.totalKhr ?? Math.round(order.totalUsd * exchangeRate);
+    const orderTotalKhr = roundKhr(order.totalKhr ?? (order.totalUsd * exchangeRate));
     const receiptItems =
       order.orderType === 'BREAD' && order.breadItems && order.breadItems.length > 0
         ? order.breadItems.map((it, idx) => ({
@@ -3782,7 +3832,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             nameEn: `${it.nameEn || it.nameKh} (${it.unit})`,
             quantity: it.quantity,
             priceUsd: it.pricePerUnitUsd,
-            priceKhr: it.pricePerUnitKhr,
+            priceKhr: roundKhr(it.pricePerUnitKhr ?? (it.pricePerUnitUsd * exchangeRate)),
           }))
         : [
             {
@@ -3819,7 +3869,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       customerName: order.customerName,
       customerPhone: order.phone,
       isDeposit: false,
-      depositKhr: order.depositKhr,
+      depositKhr: order.depositKhr !== undefined ? roundKhr(order.depositKhr) : undefined,
       depositUsd: order.depositUsd,
       remainingKhr: 0,
       remainingUsd: 0,
@@ -3965,15 +4015,24 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   };
 
   const updateCustomOrder = (orderId: string, updates: Partial<CustomCakeOrder>) => {
-    if (updates.status) {
-      updateOrderStatus(orderId, updates.status);
+    const cleanUpdates = { ...updates };
+    if (cleanUpdates.totalKhr !== undefined) cleanUpdates.totalKhr = roundKhr(cleanUpdates.totalKhr);
+    if (cleanUpdates.depositKhr !== undefined) cleanUpdates.depositKhr = roundKhr(cleanUpdates.depositKhr);
+    if (cleanUpdates.breadItems) {
+      cleanUpdates.breadItems = cleanUpdates.breadItems.map((b) => ({
+        ...b,
+        pricePerUnitKhr: roundKhr(b.pricePerUnitKhr ?? (b.pricePerUnitUsd * exchangeRate)),
+      }));
+    }
+    if (cleanUpdates.status) {
+      updateOrderStatus(orderId, cleanUpdates.status);
     }
     setCustomOrders((prev) => {
-      const updated = prev.map((o) => (o.id === orderId ? { ...o, ...updates } : o));
+      const updated = prev.map((o) => (o.id === orderId ? { ...o, ...cleanUpdates } : o));
       safeSetStorage('bakery_custom_orders', JSON.stringify(updated));
       return updated;
     });
-    syncSaveDoc('customOrders', orderId, updates);
+    syncSaveDoc('customOrders', orderId, cleanUpdates);
   };
 
   const addCustomOrderDeposit = (
@@ -3985,9 +4044,9 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setCustomOrders((prev) => {
       const updated = prev.map((o) => {
         if (o.id !== orderId) return o;
-        const currentDepKhr = o.depositKhr ?? Math.round(o.depositUsd * exchangeRate);
-        const orderTotalKhr = o.totalKhr ?? Math.round(o.totalUsd * exchangeRate);
-        const newDepKhr = Math.min(orderTotalKhr, currentDepKhr + additionalDepositKhr);
+        const currentDepKhr = roundKhr(o.depositKhr ?? (o.depositUsd * exchangeRate));
+        const orderTotalKhr = roundKhr(o.totalKhr ?? (o.totalUsd * exchangeRate));
+        const newDepKhr = roundKhr(Math.min(orderTotalKhr, currentDepKhr + additionalDepositKhr));
         const newDepUsd = Number((newDepKhr / exchangeRate).toFixed(2));
         const res: CustomCakeOrder = {
           ...o,
@@ -4762,6 +4821,9 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           });
           setFirebaseSyncStatus('connected');
         },
+        roundKhr,
+        usdToKhr: (usd, rate) => usdToKhr(usd, rate || exchangeRate),
+        formatKhr,
       }}
     >
       {children}

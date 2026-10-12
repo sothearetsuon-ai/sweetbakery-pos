@@ -23,6 +23,7 @@ import { useBakery } from '../../context/BakeryContext';
 import { CompletedSale } from '../../types';
 import { soundFx } from '../../utils/audio';
 import { formatDateDMY } from '../../utils/dateUtils';
+import { roundKhr } from '../../utils/currencyUtils';
 
 interface AddPastSaleModalProps {
   isOpen: boolean;
@@ -77,12 +78,14 @@ export const AddPastSaleModal: React.FC<AddPastSaleModalProps> = ({ isOpen, onCl
   if (!isOpen) return null;
 
   // Calculate Party Add-ons Total
-  const addonsTotalKhr = Object.entries(addonQuantities).reduce((sum, [id, qty]) => {
-    if (!qty || qty <= 0) return sum;
-    const addon = partyAddons.find((a) => a.id === id);
-    const price = addon ? addon.priceKhr ?? Math.round(addon.priceUsd * exchangeRate) : 0;
-    return sum + price * qty;
-  }, 0);
+  const addonsTotalKhr = roundKhr(
+    Object.entries(addonQuantities).reduce((sum, [id, qty]) => {
+      if (!qty || qty <= 0) return sum;
+      const addon = partyAddons.find((a) => a.id === id);
+      const price = addon ? roundKhr(addon.priceKhr ?? (addon.priceUsd * exchangeRate)) : 0;
+      return sum + price * qty;
+    }, 0)
+  );
   const addonsTotalUsd = Number((addonsTotalKhr / exchangeRate).toFixed(2));
 
   // Increment Addon Quantity (or add first one, clicking card or clicking +)
@@ -90,7 +93,7 @@ export const AddPastSaleModal: React.FC<AddPastSaleModalProps> = ({ isOpen, onCl
     if (e) e.stopPropagation();
     soundFx.playPop();
     const addon = partyAddons.find((a) => a.id === id);
-    const addonPrice = addon ? addon.priceKhr ?? Math.round(addon.priceUsd * exchangeRate) : 0;
+    const addonPrice = addon ? roundKhr(addon.priceKhr ?? (addon.priceUsd * exchangeRate)) : 0;
 
     setAddonQuantities((prev) => {
       const currentQty = prev[id] || 0;
@@ -100,7 +103,7 @@ export const AddPastSaleModal: React.FC<AddPastSaleModalProps> = ({ isOpen, onCl
     // Auto-update amountKhr by adding 1 unit price
     setAmountKhr((prevAmt) => {
       const current = parseFloat(prevAmt) || 0;
-      return String(current + addonPrice);
+      return String(roundKhr(current + addonPrice));
     });
   };
 
@@ -112,7 +115,7 @@ export const AddPastSaleModal: React.FC<AddPastSaleModalProps> = ({ isOpen, onCl
     if (currentQty <= 0) return;
 
     const addon = partyAddons.find((a) => a.id === id);
-    const addonPrice = addon ? addon.priceKhr ?? Math.round(addon.priceUsd * exchangeRate) : 0;
+    const addonPrice = addon ? roundKhr(addon.priceKhr ?? (addon.priceUsd * exchangeRate)) : 0;
 
     setAddonQuantities((prev) => {
       const nextQty = currentQty - 1;
@@ -194,7 +197,7 @@ export const AddPastSaleModal: React.FC<AddPastSaleModalProps> = ({ isOpen, onCl
         priceKhr: cakePortionKhr,
       },
       ...selectedAddonsList.map((addon) => {
-        const khr = addon.priceKhr ?? Math.round(addon.priceUsd * exchangeRate);
+        const khr = roundKhr(addon.priceKhr ?? (addon.priceUsd * exchangeRate));
         return {
           productId: `addon-${addon.id}`,
           nameKh: `🎉 ${addon.nameKh}${addon.quantity > 1 ? ` (x${addon.quantity})` : ''}`,
@@ -619,7 +622,7 @@ export const AddPastSaleModal: React.FC<AddPastSaleModalProps> = ({ isOpen, onCl
               {partyAddons.map((addon) => {
                 const qty = addonQuantities[addon.id] || 0;
                 const isSelected = qty > 0;
-                const addonKhr = addon.priceKhr ?? Math.round(addon.priceUsd * exchangeRate);
+                const addonKhr = roundKhr(addon.priceKhr ?? (addon.priceUsd * exchangeRate));
                 return (
                   <div
                     key={addon.id}
@@ -652,7 +655,7 @@ export const AddPastSaleModal: React.FC<AddPastSaleModalProps> = ({ isOpen, onCl
                             soundFx.playPop();
                             setEditingAddon(addon);
                             setEditAddonName(addon.nameKh);
-                            const khr = addon.priceKhr ?? Math.round(addon.priceUsd * exchangeRate);
+                            const khr = roundKhr(addon.priceKhr ?? (addon.priceUsd * exchangeRate));
                             setEditAddonPriceKhr(String(khr));
                             setIsAddingNewAddon(false);
                           }}

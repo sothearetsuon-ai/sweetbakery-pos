@@ -40,6 +40,7 @@ import { sortProductsNewestFirst } from '../../utils/productUtils';
 import { getProductImageUrl } from '../../utils/imagePath';
 import { StoreLocationModal } from '../common/StoreLocationModal';
 import { ContactModal } from '../common/ContactModal';
+import { roundKhr } from '../../utils/currencyUtils';
 
 // Iconic Chef Hat SVG matching the bakery logo aesthetic
 export const ChefHatIcon: React.FC<{ className?: string }> = ({ className = 'w-6 h-6' }) => (
@@ -121,8 +122,8 @@ const ShowcaseCard: React.FC<ShowcaseCardProps> = ({
   }, [isInView, images.length]);
 
   const name = lang === 'km' ? product.nameKh : product.nameEn;
-  const priceKhr = product.priceKhr ?? Math.round(product.priceUsd * exchangeRate);
-  const priceUsd = product.priceKhr ? Number((product.priceKhr / exchangeRate).toFixed(2)) : product.priceUsd;
+  const priceKhr = roundKhr(product.priceKhr ?? (product.priceUsd * exchangeRate));
+  const priceUsd = product.priceKhr ? Number((priceKhr / exchangeRate).toFixed(2)) : product.priceUsd;
 
   return (
     <div
@@ -481,7 +482,7 @@ export const CustomerShowcase: React.FC = () => {
                       </h3>
                       <div className="flex items-center gap-2 text-xs text-rose-100 font-semibold mt-0.5 flex-wrap">
                         <span className="font-black text-white text-xs sm:text-sm">
-                          {(featuredProduct.priceKhr ?? Math.round(featuredProduct.priceUsd * exchangeRate)).toLocaleString()} ៛
+                          {(roundKhr(featuredProduct.priceKhr ?? (featuredProduct.priceUsd * exchangeRate))).toLocaleString()} ៛
                         </span>
                         <span className="text-[11px] sm:text-xs">(~${featuredProduct.priceUsd.toFixed(2)})</span>
                         <span className="text-[10px] bg-white/20 px-2 py-0.2 rounded-md text-amber-200 ml-auto hidden sm:inline-block">

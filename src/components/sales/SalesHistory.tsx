@@ -25,6 +25,7 @@ import { EditSaleModal } from './EditSaleModal';
 import { AddPartyAddonsToSaleModal } from '../pos/AddPartyAddonsToSaleModal';
 import { soundFx } from '../../utils/audio';
 import { formatDateTimeDMY, formatDateDMY } from '../../utils/dateUtils';
+import { roundKhr } from '../../utils/currencyUtils';
 
 export const SalesHistory: React.FC = () => {
   const { sales, expenses, deleteSale, deleteSalesByDateRange, clearAllSales, exchangeRate } = useBakery();
@@ -133,7 +134,7 @@ export const SalesHistory: React.FC = () => {
 
   // Financial totals calculated strictly according to selected date period
   const totalSalesKhr = useMemo(
-    () => dateFilteredSales.reduce((sum, s) => sum + s.totalKhr, 0),
+    () => roundKhr(dateFilteredSales.reduce((sum, s) => sum + roundKhr(s.totalKhr), 0)),
     [dateFilteredSales]
   );
   const totalSalesUsd = useMemo(
@@ -143,9 +144,11 @@ export const SalesHistory: React.FC = () => {
 
   const totalExpensesKhr = useMemo(
     () =>
-      dateFilteredExpenses.reduce(
-        (sum, exp) => sum + (exp.amountKhr ?? Math.round(exp.amountUsd * exchangeRate)),
-        0
+      roundKhr(
+        dateFilteredExpenses.reduce(
+          (sum, exp) => sum + (exp.amountKhr ? roundKhr(exp.amountKhr) : roundKhr(exp.amountUsd * exchangeRate)),
+          0
+        )
       ),
     [dateFilteredExpenses, exchangeRate]
   );
@@ -154,7 +157,7 @@ export const SalesHistory: React.FC = () => {
     [dateFilteredExpenses]
   );
 
-  const netProfitKhr = totalSalesKhr - totalExpensesKhr;
+  const netProfitKhr = roundKhr(totalSalesKhr - totalExpensesKhr);
   const netProfitUsd = totalSalesUsd - totalExpensesUsd;
 
   const periodLabelKh = useMemo(() => {
@@ -209,7 +212,7 @@ export const SalesHistory: React.FC = () => {
   }, [cleanupMode, filteredSales, sales, cleanupStartDate, cleanupEndDate, cleanupOlderDays]);
 
   const cleanupTotalKhr = useMemo(() => {
-    return targetSalesToClean.reduce((sum, s) => sum + (s.totalKhr || Math.round(s.totalUsd * exchangeRate)), 0);
+    return roundKhr(targetSalesToClean.reduce((sum, s) => sum + (s.totalKhr || roundKhr(s.totalUsd * exchangeRate)), 0));
   }, [targetSalesToClean, exchangeRate]);
 
   const cleanupTotalUsd = useMemo(() => {

@@ -28,6 +28,7 @@ import { PartyAddon } from '../../types';
 import { CameraCaptureModal } from '../common/CameraCaptureModal';
 import { PartyAccessoriesModal } from '../pos/PartyAccessoriesModal';
 import { formatDateDMY } from '../../utils/dateUtils';
+import { roundKhr } from '../../utils/currencyUtils';
 
 interface NewCustomOrderModalProps {
   isOpen: boolean;
@@ -233,26 +234,31 @@ export const NewCustomOrderModal: React.FC<NewCustomOrderModalProps> = ({ isOpen
   };
 
   // Calculations for Cake
-  const addonsTotalKhr = Object.entries(selectedAddonQuantities).reduce((sum, [id, qty]) => {
-    if (!qty || qty <= 0) return sum;
-    const addon = partyAddons.find((a) => a.id === id);
-    return sum + (addon ? (addon.priceKhr ?? Math.round(addon.priceUsd * exchangeRate)) * qty : 0);
-  }, 0);
+  const addonsTotalKhr = roundKhr(
+    Object.entries(selectedAddonQuantities).reduce((sum, [id, qty]) => {
+      if (!qty || qty <= 0) return sum;
+      const addon = partyAddons.find((a) => a.id === id);
+      return sum + (addon ? roundKhr(addon.priceKhr ?? (addon.priceUsd * exchangeRate)) * qty : 0);
+    }, 0)
+  );
   const addonsTotalUsd = Number((addonsTotalKhr / exchangeRate).toFixed(2));
 
-  const numBaseCakeKhr = parseInt(baseCakePriceKhr, 10) || 0;
-  const cakeTotalCalculatedKhr = numBaseCakeKhr + addonsTotalKhr;
+  const numBaseCakeKhr = roundKhr(parseInt(baseCakePriceKhr, 10) || 0);
+  const cakeTotalCalculatedKhr = roundKhr(numBaseCakeKhr + addonsTotalKhr);
   const cakeTotalCalculatedUsd = Number((cakeTotalCalculatedKhr / exchangeRate).toFixed(2));
 
-  const numCakeDepositKhr = parseInt(depositKhr, 10) || 0;
+  const numCakeDepositKhr = roundKhr(parseInt(depositKhr, 10) || 0);
   const cakeDepositUsd = Number((numCakeDepositKhr / exchangeRate).toFixed(2));
 
   // Calculations for Bread Pre-orders
-  const breadTotalKhr = breadItems.reduce((sum, item) => sum + item.quantity * item.pricePerUnitKhr, 0);
+  const breadTotalKhr = roundKhr(
+    breadItems.reduce((sum, item) => sum + item.quantity * roundKhr(item.pricePerUnitKhr), 0)
+  );
   const breadTotalUsd = Number((breadTotalKhr / exchangeRate).toFixed(2));
 
-  const numBreadDepositKhr =
-    breadDepositKhr !== '' ? parseInt(breadDepositKhr, 10) || 0 : Math.round(breadTotalKhr * 0.5);
+  const numBreadDepositKhr = roundKhr(
+    breadDepositKhr !== '' ? parseInt(breadDepositKhr, 10) || 0 : roundKhr(breadTotalKhr * 0.5)
+  );
   const breadDepositUsd = Number((numBreadDepositKhr / exchangeRate).toFixed(2));
 
   // Active totals depending on Order Type
@@ -1114,7 +1120,7 @@ export const NewCustomOrderModal: React.FC<NewCustomOrderModalProps> = ({ isOpen
                   {partyAddons.map((addon) => {
                     const qty = selectedAddonQuantities[addon.id] || 0;
                     const isSelected = qty > 0;
-                    const addonKhr = addon.priceKhr ?? Math.round(addon.priceUsd * exchangeRate);
+                    const addonKhr = roundKhr(addon.priceKhr ?? (addon.priceUsd * exchangeRate));
                     return (
                       <div
                         key={addon.id}

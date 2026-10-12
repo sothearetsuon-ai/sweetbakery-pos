@@ -13,6 +13,7 @@ import {
 import { useBakery } from '../../context/BakeryContext';
 import { PartyAddon, Product } from '../../types';
 import { soundFx } from '../../utils/audio';
+import { roundKhr } from '../../utils/currencyUtils';
 
 interface PartyAccessoriesModalProps {
   isOpen: boolean;
@@ -55,7 +56,7 @@ export const PartyAccessoriesModal: React.FC<PartyAccessoriesModalProps> = ({
     setNewPriceUsd(val);
     const num = parseFloat(val);
     if (!isNaN(num)) {
-      setNewPriceKhr(String(Math.round(num * exchangeRate)));
+      setNewPriceKhr(String(roundKhr(num * exchangeRate)));
     }
   };
 
@@ -72,7 +73,7 @@ export const PartyAccessoriesModal: React.FC<PartyAccessoriesModalProps> = ({
     setEditPriceUsd(val);
     const num = parseFloat(val);
     if (!isNaN(num)) {
-      setEditPriceKhr(String(Math.round(num * exchangeRate)));
+      setEditPriceKhr(String(roundKhr(num * exchangeRate)));
     }
   };
 
@@ -91,7 +92,7 @@ export const PartyAccessoriesModal: React.FC<PartyAccessoriesModalProps> = ({
 
     soundFx.playSuccess();
     const usd = parseFloat(newPriceUsd) || 0;
-    const khr = parseInt(newPriceKhr, 10) || Math.round(usd * exchangeRate);
+    const khr = roundKhr(parseInt(newPriceKhr, 10) || (usd * exchangeRate));
 
     addPartyAddon(newNameKh.trim(), khr, usd);
     setNewNameKh('');
@@ -106,7 +107,7 @@ export const PartyAccessoriesModal: React.FC<PartyAccessoriesModalProps> = ({
     setEditingId(addon.id);
     setEditNameKh(addon.nameKh);
     const usd = addon.priceUsd;
-    const khr = addon.priceKhr ?? Math.round(usd * exchangeRate);
+    const khr = roundKhr(addon.priceKhr ?? (usd * exchangeRate));
     setEditPriceUsd(usd.toString());
     setEditPriceKhr(khr.toString());
   };
@@ -117,7 +118,7 @@ export const PartyAccessoriesModal: React.FC<PartyAccessoriesModalProps> = ({
 
     soundFx.playSuccess();
     const usd = parseFloat(editPriceUsd) || 0;
-    const khr = parseInt(editPriceKhr, 10) || Math.round(usd * exchangeRate);
+    const khr = roundKhr(parseInt(editPriceKhr, 10) || (usd * exchangeRate));
 
     updatePartyAddon(id, editNameKh.trim(), khr, usd);
     setEditingId(null);
@@ -135,7 +136,7 @@ export const PartyAccessoriesModal: React.FC<PartyAccessoriesModalProps> = ({
   const handleAddDirectToCart = (addon: PartyAddon) => {
     soundFx.playPop();
     const addonProductId = `addon-${addon.id}`;
-    const addonKhr = addon.priceKhr ?? Math.round(addon.priceUsd * exchangeRate);
+    const addonKhr = roundKhr(addon.priceKhr ?? (addon.priceUsd * exchangeRate));
 
     const partyProduct: Product = {
       id: addonProductId,
@@ -305,7 +306,7 @@ export const PartyAccessoriesModal: React.FC<PartyAccessoriesModalProps> = ({
               const addonProductId = `addon-${addon.id}`;
               const cartItem = cart.find((i) => i.product.id === addonProductId);
               const qtyInCart = cartItem ? cartItem.quantity : 0;
-              const displayKhr = addon.priceKhr ?? Math.round(addon.priceUsd * exchangeRate);
+              const displayKhr = roundKhr(addon.priceKhr ?? (addon.priceUsd * exchangeRate));
 
               if (isEditing) {
                 return (

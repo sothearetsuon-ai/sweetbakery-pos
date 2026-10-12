@@ -5,6 +5,7 @@ import { useBakery } from '../../context/BakeryContext';
 import { t } from '../../utils/translations';
 import { getProductImageUrl } from '../../utils/imagePath';
 import { formatDateTimeDMY, formatDateDMY } from '../../utils/dateUtils';
+import { roundKhr } from '../../utils/currencyUtils';
 import { AddPartyAddonsToSaleModal } from './AddPartyAddonsToSaleModal';
 
 interface ReceiptModalProps {
@@ -132,13 +133,14 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({ sale, isOpen, onClos
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {currentSale.items.map((item, idx) => {
-                    const itemKhr = Math.round(item.priceUsd * exchangeRate * item.quantity);
+                    const unitKhr = item.priceKhr !== undefined ? roundKhr(item.priceKhr) : roundKhr(item.priceUsd * exchangeRate);
+                    const itemKhr = roundKhr(unitKhr * item.quantity);
                     return (
                       <tr key={idx} className="text-[11px]">
                         <td className="py-1.5 font-sans">
                           <div className="font-semibold text-slate-800">{item.nameKh}</div>
                           <div className="text-[9px] text-slate-400 font-mono">
-                            {Math.round(item.priceUsd * exchangeRate).toLocaleString()} ៛ (~${item.priceUsd.toFixed(2)}) / នំ
+                            {unitKhr.toLocaleString()} ៛ (~${item.priceUsd.toFixed(2)}) / នំ
                           </div>
                         </td>
                         <td className="text-center py-1.5 font-bold">{item.quantity}</td>
@@ -157,7 +159,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({ sale, isOpen, onClos
               {/* Grand Total KHR First in Large Font */}
               <div className="flex justify-between font-black text-sm pt-1 text-slate-900">
                 <span>{currentSale.isDeposit ? 'តម្លៃទំនិញសរុប (Total):' : 'សរុបត្រូវបង់ (KHR ៛):'}</span>
-                <span>{currentSale.totalKhr.toLocaleString()} ៛</span>
+                <span>{roundKhr(currentSale.totalKhr).toLocaleString()} ៛</span>
               </div>
               {/* Secondary USD */}
               <div className="flex justify-between font-bold text-xs text-slate-500">
@@ -170,11 +172,15 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({ sale, isOpen, onClos
                 <div className="mt-2 p-2 bg-amber-50 rounded-xl border border-amber-200 text-xs space-y-1">
                   <div className="flex justify-between font-bold text-amber-900">
                     <span>ប្រាក់បានកក់ (Deposit Paid):</span>
-                    <span className="font-black">{currentSale.depositKhr?.toLocaleString()} ៛ (~${currentSale.depositUsd?.toFixed(2)})</span>
+                    <span className="font-black">
+                      {currentSale.depositKhr !== undefined ? roundKhr(currentSale.depositKhr).toLocaleString() : '0'} ៛ (~${currentSale.depositUsd?.toFixed(2)})
+                    </span>
                   </div>
                   <div className="flex justify-between font-black text-rose-600">
                     <span>នៅខ្វះពេលមកយក (Remaining):</span>
-                    <span>{currentSale.remainingKhr?.toLocaleString()} ៛ (~${currentSale.remainingUsd?.toFixed(2)})</span>
+                    <span>
+                      {currentSale.remainingKhr !== undefined ? roundKhr(currentSale.remainingKhr).toLocaleString() : '0'} ៛ (~${currentSale.remainingUsd?.toFixed(2)})
+                    </span>
                   </div>
                 </div>
               )}
@@ -182,7 +188,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({ sale, isOpen, onClos
               {currentSale.paidKhr !== undefined && (
                 <div className="flex justify-between text-[11px] pt-1">
                   <span>ប្រាក់ទទួលបាន (៛):</span>
-                  <span>{currentSale.paidKhr.toLocaleString()} ៛</span>
+                  <span>{roundKhr(currentSale.paidKhr).toLocaleString()} ៛</span>
                 </div>
               )}
               {currentSale.paidUsd !== undefined && (
@@ -194,7 +200,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({ sale, isOpen, onClos
               {currentSale.changeKhr !== undefined && currentSale.changeKhr > 0 && (
                 <div className="flex justify-between text-[11px] text-emerald-700 font-bold">
                   <span>ប្រាក់អាប់ជូន (៛ / $):</span>
-                  <span>{currentSale.changeKhr.toLocaleString()} ៛ (~${currentSale.changeUsd?.toFixed(2)})</span>
+                  <span>{roundKhr(currentSale.changeKhr).toLocaleString()} ៛ (~${currentSale.changeUsd?.toFixed(2)})</span>
                 </div>
               )}
             </div>

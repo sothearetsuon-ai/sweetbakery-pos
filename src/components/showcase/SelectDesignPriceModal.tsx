@@ -17,6 +17,7 @@ import { Product } from '../../types';
 import { useBakery } from '../../context/BakeryContext';
 import { soundFx } from '../../utils/audio';
 import { getProductImageUrl } from '../../utils/imagePath';
+import { roundKhr } from '../../utils/currencyUtils';
 
 interface SelectDesignPriceModalProps {
   isOpen: boolean;
@@ -80,7 +81,7 @@ export const SelectDesignPriceModal: React.FC<SelectDesignPriceModalProps> = ({
   // Sync default price and details when product changes
   useEffect(() => {
     if (product) {
-      const baseKhr = product.priceKhr ?? Math.round(product.priceUsd * exchangeRate);
+      const baseKhr = roundKhr(product.priceKhr ?? (product.priceUsd * exchangeRate));
       setPriceKhrStr(baseKhr > 0 ? baseKhr.toString() : '60000');
       setSelectedSize('2 ទឹក (~20cm)');
       setCustomSize('');
@@ -104,9 +105,9 @@ export const SelectDesignPriceModal: React.FC<SelectDesignPriceModalProps> = ({
 
   const finalSize = customSize.trim() || selectedSize;
   const finalFlavor = customFlavor.trim() || selectedFlavor;
-  const finalPriceKhr = Number(priceKhrStr.replace(/[^0-9]/g, '')) || 0;
+  const finalPriceKhr = roundKhr(Number(priceKhrStr.replace(/[^0-9]/g, '')) || 0);
   const finalPriceUsd = Number((finalPriceKhr / exchangeRate).toFixed(2));
-  const basePriceKhr = product.priceKhr ?? Math.round(product.priceUsd * exchangeRate);
+  const basePriceKhr = roundKhr(product.priceKhr ?? (product.priceUsd * exchangeRate));
 
   const handleAddToCartClick = () => {
     soundFx.playSuccess();
@@ -130,7 +131,7 @@ export const SelectDesignPriceModal: React.FC<SelectDesignPriceModalProps> = ({
 
   const handleCustomOrderClick = () => {
     soundFx.playPop();
-    const depositSuggested = Math.round(finalPriceKhr * 0.5);
+    const depositSuggested = roundKhr(finalPriceKhr * 0.5);
 
     onOpenCustomOrder({
       cakeName: `${product.nameKh} (${product.nameEn || ''})`,

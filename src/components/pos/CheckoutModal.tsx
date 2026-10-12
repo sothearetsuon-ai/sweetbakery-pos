@@ -22,6 +22,7 @@ import { CompletedSale } from '../../types';
 import { soundFx } from '../../utils/audio';
 import { KhqrStandeeModal } from './KhqrStandeeModal';
 import { formatDateDMY } from '../../utils/dateUtils';
+import { roundKhr } from '../../utils/currencyUtils';
 
 interface CheckoutModalProps {
   isOpen: boolean;
@@ -62,7 +63,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
   } = useBakery();
   const text = t[lang];
 
-  const defaultDeposit50Pct = Math.round((cartTotalKhr * 0.5) / 1000) * 1000;
+  const defaultDeposit50Pct = roundKhr(cartTotalKhr * 0.5);
 
   // Deposit mode toggle
   const [isDeposit, setIsDeposit] = useState(initialIsDeposit);
@@ -124,10 +125,10 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
 
   // Deposit & Due calculations
   const numDepositKhr = isDeposit
-    ? Math.min(cartTotalKhr, Math.max(0, parseInt(depositAmountKhr, 10) || 0))
+    ? roundKhr(Math.min(cartTotalKhr, Math.max(0, parseInt(depositAmountKhr, 10) || 0)))
     : cartTotalKhr;
   const numDepositUsd = Number((numDepositKhr / exchangeRate).toFixed(2));
-  const remainingKhr = Math.max(0, cartTotalKhr - numDepositKhr);
+  const remainingKhr = roundKhr(Math.max(0, cartTotalKhr - numDepositKhr));
   const remainingUsd = Number((remainingKhr / exchangeRate).toFixed(2));
 
   // The actual money being paid in THIS checkout step
@@ -143,10 +144,10 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
   if (paymentMethod === 'CASH_KHR') {
     const paidInUsd = numReceivedKhr / exchangeRate;
     changeUsd = Math.max(0, paidInUsd - dueNowUsd);
-    changeKhr = Math.max(0, numReceivedKhr - dueNowKhr);
+    changeKhr = roundKhr(Math.max(0, numReceivedKhr - dueNowKhr));
   } else if (paymentMethod === 'CASH_USD') {
     changeUsd = Math.max(0, numReceivedUsd - dueNowUsd);
-    changeKhr = Math.round(changeUsd * exchangeRate);
+    changeKhr = roundKhr(changeUsd * exchangeRate);
   }
 
   const handleToggleDeposit = (depositActive: boolean) => {
@@ -175,7 +176,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
     });
 
     const saleItems = cart.map((item) => {
-      const itemKhr = item.product.priceKhr ?? Math.round(item.product.priceUsd * exchangeRate);
+      const itemKhr = roundKhr(item.product.priceKhr ?? (item.product.priceUsd * exchangeRate));
       const itemUsd = Number((itemKhr / exchangeRate).toFixed(2));
       return {
         productId: item.product.id,
@@ -383,7 +384,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                       type="button"
                       onClick={() => {
                         soundFx.playPop();
-                        const amt = Math.round((cartTotalKhr * pct) / 100 / 1000) * 1000;
+                        const amt = roundKhr((cartTotalKhr * pct) / 100);
                         handleDepositAmountChange(amt.toString());
                       }}
                       className="px-2.5 py-1 bg-white hover:bg-amber-100 border border-amber-200 rounded-lg text-[10px] font-bold text-amber-800 transition-colors cursor-pointer"

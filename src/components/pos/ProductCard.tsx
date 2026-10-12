@@ -5,6 +5,7 @@ import { useBakery } from '../../context/BakeryContext';
 import { t } from '../../utils/translations';
 import { soundFx } from '../../utils/audio';
 import { getProductImageUrl } from '../../utils/imagePath';
+import { roundKhr } from '../../utils/currencyUtils';
 
 interface ProductCardProps {
   product: Product;
@@ -33,8 +34,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart }
   };
 
   const name = lang === 'km' ? product.nameKh : product.nameEn;
-  const priceKhr = product.priceKhr ?? Math.round(product.priceUsd * exchangeRate);
-  const priceUsd = product.priceKhr ? Number((product.priceKhr / exchangeRate).toFixed(2)) : product.priceUsd;
+  const priceKhr = roundKhr(product.priceKhr ?? (product.priceUsd * exchangeRate));
+  const priceUsd = product.priceKhr ? Number((priceKhr / exchangeRate).toFixed(2)) : product.priceUsd;
 
   const isBestSeller = product.id === 'p1' || product.id === 'p5';
   const isFresh = product.id === 'p2' || product.id === 'p6';

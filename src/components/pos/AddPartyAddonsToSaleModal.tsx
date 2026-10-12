@@ -17,6 +17,7 @@ import confetti from 'canvas-confetti';
 import { useBakery } from '../../context/BakeryContext';
 import { CompletedSale, PartyAddon } from '../../types';
 import { soundFx } from '../../utils/audio';
+import { roundKhr } from '../../utils/currencyUtils';
 
 interface AddPartyAddonsToSaleModalProps {
   isOpen: boolean;
@@ -74,19 +75,19 @@ export const AddPartyAddonsToSaleModal: React.FC<AddPartyAddonsToSaleModalProps>
     if (!qty || qty <= 0) return sum;
     const addon = partyAddons.find((a) => a.id === id);
     if (!addon) return sum;
-    const itemKhr = addon.priceKhr ?? Math.round(addon.priceUsd * exchangeRate);
+    const itemKhr = roundKhr(addon.priceKhr ?? (addon.priceUsd * exchangeRate));
     return sum + itemKhr * qty;
   }, 0);
 
   const customAddedKhr =
     isCustomOpen && customName.trim()
-      ? (parseInt(customPriceKhr, 10) || 0) * Math.max(1, customQty)
+      ? roundKhr((parseInt(customPriceKhr, 10) || 0) * Math.max(1, customQty))
       : 0;
 
-  const totalAddedKhr = standardAddedKhr + customAddedKhr;
+  const totalAddedKhr = roundKhr(standardAddedKhr + customAddedKhr);
   const totalAddedUsd = Number((totalAddedKhr / exchangeRate).toFixed(2));
 
-  const newTotalKhr = sale.totalKhr + totalAddedKhr;
+  const newTotalKhr = roundKhr(sale.totalKhr + totalAddedKhr);
   const newTotalUsd = Number((newTotalKhr / exchangeRate).toFixed(2));
 
   const totalAddedItemsCount =
@@ -115,7 +116,7 @@ export const AddPartyAddonsToSaleModal: React.FC<AddPartyAddonsToSaleModalProps>
       const addon = partyAddons.find((a) => a.id === id);
       if (!addon) return;
 
-      const itemKhr = addon.priceKhr ?? Math.round(addon.priceUsd * exchangeRate);
+      const itemKhr = roundKhr(addon.priceKhr ?? (addon.priceUsd * exchangeRate));
       const itemUsd = addon.priceUsd;
       const productId = `addon-${addon.id}`;
       const nameKh = `🎉 ${addon.nameKh}`;
@@ -145,7 +146,7 @@ export const AddPartyAddonsToSaleModal: React.FC<AddPartyAddonsToSaleModalProps>
     // Add custom item if specified
     if (isCustomOpen && customName.trim()) {
       const cQty = Math.max(1, customQty);
-      const cKhr = parseInt(customPriceKhr, 10) || 0;
+      const cKhr = roundKhr(parseInt(customPriceKhr, 10) || 0);
       const cUsd = Number((cKhr / exchangeRate).toFixed(2));
       addedDescriptions.push(`${customName.trim()} (x${cQty})`);
 
@@ -173,14 +174,14 @@ export const AddPartyAddonsToSaleModal: React.FC<AddPartyAddonsToSaleModalProps>
       totalKhr: newTotalKhr,
       // If it is deposit sale, adjust remaining balance
       remainingKhr: sale.isDeposit
-        ? (sale.remainingKhr || 0) + totalAddedKhr
+        ? roundKhr((sale.remainingKhr || 0) + totalAddedKhr)
         : undefined,
       remainingUsd: sale.isDeposit
         ? Number(((sale.remainingUsd || 0) + totalAddedUsd).toFixed(2))
         : undefined,
       // If full sale, adjust paid amount
       paidKhr: !sale.isDeposit
-        ? (sale.paidKhr || sale.totalKhr) + totalAddedKhr
+        ? roundKhr((sale.paidKhr || sale.totalKhr) + totalAddedKhr)
         : sale.paidKhr,
       paidUsd: !sale.isDeposit
         ? Number(((sale.paidUsd || sale.totalUsd) + totalAddedUsd).toFixed(2))

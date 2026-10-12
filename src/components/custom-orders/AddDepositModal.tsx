@@ -18,6 +18,7 @@ import { CustomCakeOrder } from '../../types';
 import { useBakery } from '../../context/BakeryContext';
 import { soundFx } from '../../utils/audio';
 import { KhqrStandeeModal } from '../pos/KhqrStandeeModal';
+import { roundKhr } from '../../utils/currencyUtils';
 
 interface AddDepositModalProps {
   isOpen: boolean;
@@ -38,12 +39,12 @@ export const AddDepositModal: React.FC<AddDepositModalProps> = ({
 
   // Calculate order metrics
   const totalKhr = order
-    ? (order.totalKhr ?? Math.round(order.totalUsd * exchangeRate))
+    ? roundKhr(order.totalKhr ?? (order.totalUsd * exchangeRate))
     : 0;
   const currentDepositKhr = order
-    ? (order.depositKhr ?? Math.round(order.depositUsd * exchangeRate))
+    ? roundKhr(order.depositKhr ?? (order.depositUsd * exchangeRate))
     : 0;
-  const remainingKhr = Math.max(0, totalKhr - currentDepositKhr);
+  const remainingKhr = roundKhr(Math.max(0, totalKhr - currentDepositKhr));
   const remainingUsd = Number((remainingKhr / exchangeRate).toFixed(2));
 
   // Default additional amount to remaining balance when opened
@@ -59,12 +60,12 @@ export const AddDepositModal: React.FC<AddDepositModalProps> = ({
 
   if (!isOpen || !order) return null;
 
-  const numAdditionalKhr = Math.max(0, parseInt(additionalAmountKhr, 10) || 0);
+  const numAdditionalKhr = roundKhr(Math.max(0, parseInt(additionalAmountKhr, 10) || 0));
   const numAdditionalUsd = Number((numAdditionalKhr / exchangeRate).toFixed(2));
 
-  const newTotalDepositKhr = Math.min(totalKhr, currentDepositKhr + numAdditionalKhr);
+  const newTotalDepositKhr = roundKhr(Math.min(totalKhr, currentDepositKhr + numAdditionalKhr));
   const newTotalDepositUsd = Number((newTotalDepositKhr / exchangeRate).toFixed(2));
-  const newRemainingKhr = Math.max(0, totalKhr - newTotalDepositKhr);
+  const newRemainingKhr = roundKhr(Math.max(0, totalKhr - newTotalDepositKhr));
   const newRemainingUsd = Number((newRemainingKhr / exchangeRate).toFixed(2));
   const isWillBeFullyPaid = newRemainingKhr === 0 && numAdditionalKhr > 0;
 

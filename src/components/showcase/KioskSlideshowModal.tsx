@@ -4,6 +4,7 @@ import { Product } from '../../types';
 import { useBakery } from '../../context/BakeryContext';
 import { soundFx } from '../../utils/audio';
 import { getProductImageUrl } from '../../utils/imagePath';
+import { roundKhr } from '../../utils/currencyUtils';
 
 interface KioskSlideshowModalProps {
   isOpen: boolean;
@@ -76,7 +77,7 @@ export const KioskSlideshowModal: React.FC<KioskSlideshowModalProps> = ({
     }
   };
 
-  const priceKhr = activeProduct.priceKhr ?? Math.round(activeProduct.priceUsd * exchangeRate);
+  const priceKhr = roundKhr(activeProduct.priceKhr ?? (activeProduct.priceUsd * exchangeRate));
   const name = lang === 'km' ? activeProduct.nameKh : activeProduct.nameEn;
 
   return (
