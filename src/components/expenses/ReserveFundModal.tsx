@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { useBakery } from '../../context/BakeryContext';
 import { soundFx } from '../../utils/audio';
+import { roundKhr } from '../../utils/currencyUtils';
 
 interface ReserveFundModalProps {
   isOpen: boolean;
@@ -39,7 +40,7 @@ export const ReserveFundModal: React.FC<ReserveFundModalProps> = ({ isOpen, onCl
   const [activeTab, setActiveTab] = useState<'overview' | 'replenish' | 'target' | 'history'>('overview');
   
   // Replenish form state
-  const deficitKhr = Math.max(0, reserveFund.targetAmountKhr - reserveFund.currentBalanceKhr);
+  const deficitKhr = roundKhr(Math.max(0, reserveFund.targetAmountKhr - reserveFund.currentBalanceKhr));
   const deficitUsd = Number((deficitKhr / exchangeRate).toFixed(2));
   
   const [replenishAmountKhr, setReplenishAmountKhr] = useState<number>(deficitKhr);
@@ -62,11 +63,11 @@ export const ReserveFundModal: React.FC<ReserveFundModalProps> = ({ isOpen, onCl
   // Keep form fields synced whenever reserveFund or modal opens
   useEffect(() => {
     if (isOpen) {
-      setEditTargetKhr(reserveFund.targetAmountKhr);
+      setEditTargetKhr(roundKhr(reserveFund.targetAmountKhr));
       setEditTargetUsd(reserveFund.targetAmountUsd.toString());
-      setEditBalanceKhr(reserveFund.currentBalanceKhr);
+      setEditBalanceKhr(roundKhr(reserveFund.currentBalanceKhr));
       setEditBalanceUsd(reserveFund.currentBalanceUsd.toString());
-      const curDeficit = Math.max(0, reserveFund.targetAmountKhr - reserveFund.currentBalanceKhr);
+      const curDeficit = roundKhr(Math.max(0, reserveFund.targetAmountKhr - reserveFund.currentBalanceKhr));
       setReplenishAmountKhr(curDeficit);
       const curDeficitUsd = Number((curDeficit / exchangeRate).toFixed(2));
       setCustomUsdAmount(curDeficitUsd > 0 ? curDeficitUsd.toString() : '');
@@ -108,11 +109,11 @@ export const ReserveFundModal: React.FC<ReserveFundModalProps> = ({ isOpen, onCl
     let finalUsd = 0;
 
     if (replenishCurrency === 'KHR') {
-      finalKhr = Number(replenishAmountKhr) || 0;
+      finalKhr = roundKhr(Number(replenishAmountKhr) || 0);
       finalUsd = Number((finalKhr / exchangeRate).toFixed(2));
     } else {
       finalUsd = parseFloat(customUsdAmount) || 0;
-      finalKhr = Math.round(finalUsd * exchangeRate);
+      finalKhr = roundKhr(finalUsd * exchangeRate);
     }
 
     if (finalKhr <= 0) {
@@ -137,7 +138,7 @@ export const ReserveFundModal: React.FC<ReserveFundModalProps> = ({ isOpen, onCl
     e.preventDefault();
     soundFx.playPop();
 
-    const targetKhr = Number(editTargetKhr);
+    const targetKhr = roundKhr(Number(editTargetKhr));
     const targetUsd = parseFloat(editTargetUsd) || Number((targetKhr / exchangeRate).toFixed(2));
 
     if (targetKhr <= 0) {
@@ -156,7 +157,7 @@ export const ReserveFundModal: React.FC<ReserveFundModalProps> = ({ isOpen, onCl
     e.preventDefault();
     soundFx.playPop();
 
-    const balKhr = Number(editBalanceKhr);
+    const balKhr = roundKhr(Number(editBalanceKhr));
     const balUsd = parseFloat(editBalanceUsd) || Number((balKhr / exchangeRate).toFixed(2));
 
     if (balKhr < 0) {
@@ -289,7 +290,7 @@ export const ReserveFundModal: React.FC<ReserveFundModalProps> = ({ isOpen, onCl
                     </span>
                     <div className="flex items-baseline gap-3 mt-1.5">
                       <span className="text-3xl sm:text-4xl font-black text-slate-950 dark:text-white tracking-tight font-sans">
-                        {reserveFund.currentBalanceKhr.toLocaleString()} <span className="text-2xl font-bold text-emerald-700 dark:text-emerald-400">៛</span>
+                        {roundKhr(reserveFund.currentBalanceKhr).toLocaleString()} <span className="text-2xl font-bold text-emerald-700 dark:text-emerald-400">៛</span>
                       </span>
                       <span className="text-base text-slate-700 dark:text-slate-300 font-sans font-bold">
                         ≈ ${reserveFund.currentBalanceUsd.toFixed(2)}
@@ -300,7 +301,7 @@ export const ReserveFundModal: React.FC<ReserveFundModalProps> = ({ isOpen, onCl
                   <div className="text-left sm:text-right">
                     <span className="text-xs text-slate-700 dark:text-slate-300 font-bold">ទុនគោលដៅកំណត់ (Target)</span>
                     <div className="text-xl font-black text-slate-900 dark:text-white font-sans">
-                      {reserveFund.targetAmountKhr.toLocaleString()} ៛ <span className="text-sm font-bold text-slate-600 dark:text-slate-400">(${reserveFund.targetAmountUsd.toFixed(2)})</span>
+                      {roundKhr(reserveFund.targetAmountKhr).toLocaleString()} ៛ <span className="text-sm font-bold text-slate-600 dark:text-slate-400">(${reserveFund.targetAmountUsd.toFixed(2)})</span>
                     </div>
                   </div>
                 </div>
@@ -334,10 +335,10 @@ export const ReserveFundModal: React.FC<ReserveFundModalProps> = ({ isOpen, onCl
                       <AlertCircle className="w-6 h-6 text-amber-700 dark:text-amber-400 flex-shrink-0" />
                       <div>
                         <div className="font-black text-sm text-amber-950 dark:text-amber-100">
-                          ខ្វះទុនបម្រុងត្រូវបូកបង្គ្រប់៖ {deficitKhr.toLocaleString()} ៛ (${deficitUsd.toFixed(2)})
+                          ខ្វះទុនបម្រុងត្រូវបូកបង្គ្រប់៖ {roundKhr(deficitKhr).toLocaleString()} ៛ (${deficitUsd.toFixed(2)})
                         </div>
                         <div className="text-xs text-slate-800 dark:text-slate-200 font-medium mt-0.5">
-                          សូមបូកបង្គ្រប់ពីចំណូលលក់ ឬម្ចាស់ហាង ដើម្បីឲ្យទុនបម្រុងគ្រប់ {reserveFund.targetAmountKhr.toLocaleString()} ៛
+                          សូមបូកបង្គ្រប់ពីចំណូលលក់ ឬម្ចាស់ហាង ដើម្បីឲ្យទុនបម្រុងគ្រប់ {roundKhr(reserveFund.targetAmountKhr).toLocaleString()} ៛
                         </div>
                       </div>
                     </div>
@@ -421,7 +422,7 @@ export const ReserveFundModal: React.FC<ReserveFundModalProps> = ({ isOpen, onCl
                       គណនាកាត់ចេញពីទុនបម្រុងស្វ័យប្រវត្តិតាមចំណាយ (Auto-Reconcile)
                     </h4>
                     <p className="text-[11px] text-slate-600 dark:text-slate-300">
-                      កាត់រាល់ចំណាយសាច់ប្រាក់ទាំងអស់ចេញពីទុនគោលដៅ ({reserveFund.targetAmountKhr.toLocaleString()} ៛) ដើម្បីឱ្យសមតុល្យជាក់ស្តែងត្រូវគ្នានឹងការចំណាយ
+                      កាត់រាល់ចំណាយសាច់ប្រាក់ទាំងអស់ចេញពីទុនគោលដៅ ({roundKhr(reserveFund.targetAmountKhr).toLocaleString()} ៛) ដើម្បីឱ្យសមតុល្យជាក់ស្តែងត្រូវគ្នានឹងការចំណាយ
                     </p>
                   </div>
                 </div>
@@ -430,7 +431,7 @@ export const ReserveFundModal: React.FC<ReserveFundModalProps> = ({ isOpen, onCl
                   onClick={() => {
                     soundFx.playSuccess();
                     const updated = reconcileReserveFundWithExpenses();
-                    setSuccessMessage(`បានគណនាកាត់ចំណាយចេញពីទុនបម្រុងរួចរាល់! សមតុល្យជាក់ស្តែងនៅសល់៖ ${updated.currentBalanceKhr.toLocaleString()} ៛`);
+                    setSuccessMessage(`បានគណនាកាត់ចំណាយចេញពីទុនបម្រុងរួចរាល់! សមតុល្យជាក់ស្តែងនៅសល់៖ ${roundKhr(updated.currentBalanceKhr).toLocaleString()} ៛`);
                     setTimeout(() => setSuccessMessage(null), 4000);
                   }}
                   className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-black transition shadow-sm cursor-pointer active:scale-95"
@@ -506,7 +507,7 @@ export const ReserveFundModal: React.FC<ReserveFundModalProps> = ({ isOpen, onCl
                           }`}
                         >
                           {tx.type === 'REPLENISH' ? '+' : tx.type === 'WITHDRAW' ? '-' : ''}
-                          {tx.amountKhr.toLocaleString()} ៛
+                          {roundKhr(tx.amountKhr).toLocaleString()} ៛
                         </div>
                         <button
                           type="button"
@@ -938,7 +939,7 @@ export const ReserveFundModal: React.FC<ReserveFundModalProps> = ({ isOpen, onCl
                           }`}
                         >
                           {tx.type === 'REPLENISH' ? '+' : tx.type === 'WITHDRAW' ? '-' : ''}
-                          {tx.amountKhr.toLocaleString()} ៛
+                          {roundKhr(tx.amountKhr).toLocaleString()} ៛
                         </div>
                         <div className="text-[11px] text-gray-400 font-sans">
                           ${tx.amountUsd.toFixed(2)}

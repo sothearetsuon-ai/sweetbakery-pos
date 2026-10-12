@@ -1158,7 +1158,15 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         try {
           const parsed = JSON.parse(savedDemo);
           if (parsed && typeof parsed.targetAmountKhr === 'number') {
-            return parsed;
+            return {
+              ...parsed,
+              targetAmountKhr: roundKhr(parsed.targetAmountKhr),
+              currentBalanceKhr: roundKhr(parsed.currentBalanceKhr),
+              history: (parsed.history || []).map((h: any) => ({
+                ...h,
+                amountKhr: roundKhr(h.amountKhr),
+              })),
+            };
           }
         } catch (e) {}
       }
@@ -1168,7 +1176,15 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       try {
         const parsed = JSON.parse(saved);
         if (parsed && typeof parsed.targetAmountKhr === 'number') {
-          return parsed;
+          return {
+            ...parsed,
+            targetAmountKhr: roundKhr(parsed.targetAmountKhr),
+            currentBalanceKhr: roundKhr(parsed.currentBalanceKhr),
+            history: (parsed.history || []).map((h: any) => ({
+              ...h,
+              amountKhr: roundKhr(h.amountKhr),
+            })),
+          };
         }
       } catch (e) {}
     }
@@ -1197,25 +1213,34 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   // Live dynamic reserve fund calculation: Target Float - Paid Cash Expenses + Replenishments
   const dynamicReserveFund: ReserveFund = useMemo(() => {
-    const targetKhr = Number(reserveFund.targetAmountKhr) || 4000000;
+    const targetKhr = roundKhr(Number(reserveFund.targetAmountKhr) || 4000000);
     const targetUsd = Number(reserveFund.targetAmountUsd) || Number((targetKhr / exchangeRate).toFixed(2));
 
     // Sum all expenses explicitly paid from Reserve Fund
-    const totalReserveExpensesKhr = expenses
-      .filter((e) => isExpensePaidFromReserve(e))
-      .reduce((sum, e) => {
-        const amt = Number(e.amountKhr) || Math.round((Number(e.amountUsd) || 0) * exchangeRate);
-        return sum + amt;
-      }, 0);
+    const totalReserveExpensesKhr = roundKhr(
+      expenses
+        .filter((e) => isExpensePaidFromReserve(e))
+        .reduce((sum, e) => {
+          const amt = roundKhr(Number(e.amountKhr) || (Number(e.amountUsd) || 0) * exchangeRate);
+          return sum + amt;
+        }, 0)
+    );
 
     // Sum all top-ups (replenishments)
-    const totalReplenishedKhr = (reserveFund.history || [])
-      .filter((tx) => tx.type === 'REPLENISH')
-      .reduce((sum, tx) => sum + (Number(tx.amountKhr) || 0), 0);
+    const totalReplenishedKhr = roundKhr(
+      (reserveFund.history || [])
+        .filter((tx) => tx.type === 'REPLENISH')
+        .reduce((sum, tx) => sum + roundKhr(Number(tx.amountKhr) || 0), 0)
+    );
 
     // Calculated balance: Target Float - Reserve Expenses + Replenishments
-    const calculatedBalKhr = Math.max(0, targetKhr - totalReserveExpensesKhr + totalReplenishedKhr);
+    const calculatedBalKhr = roundKhr(Math.max(0, targetKhr - totalReserveExpensesKhr + totalReplenishedKhr));
     const calculatedBalUsd = Number((calculatedBalKhr / exchangeRate).toFixed(2));
+
+    const cleanHistory = (reserveFund.history || []).map((h) => ({
+      ...h,
+      amountKhr: roundKhr(h.amountKhr),
+    }));
 
     return {
       ...reserveFund,
@@ -1223,6 +1248,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       targetAmountUsd: targetUsd,
       currentBalanceKhr: calculatedBalKhr,
       currentBalanceUsd: calculatedBalUsd,
+      history: cleanHistory,
     };
   }, [reserveFund, expenses, exchangeRate]);
 
@@ -2393,6 +2419,12 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     isUpdatingFromLan.current = false;
     const cleanRf: ReserveFund = {
       ...nextRf,
+      targetAmountKhr: roundKhr(nextRf.targetAmountKhr),
+      currentBalanceKhr: roundKhr(nextRf.currentBalanceKhr),
+      history: (nextRf.history || []).map((h) => ({
+        ...h,
+        amountKhr: roundKhr(h.amountKhr),
+      })),
       isInitialDefault: false,
       updatedAt: new Date().toISOString(),
     };
@@ -2420,18 +2452,20 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   // Reserve Fund actions
   const updateReserveTarget = (targetKhr: number, targetUsd?: number, updateCurrentBalance?: boolean) => {
-    const validKhr = Math.max(0, targetKhr);
+    const validKhr = roundKhr(Math.max(0, targetKhr));
     const validUsd = targetUsd !== undefined ? targetUsd : Number((validKhr / exchangeRate).toFixed(2));
     const current = reserveFundRef.current;
     
     // If updateCurrentBalance is true, deduct existing paid cash expenses
-    let newBalanceKhr = current.currentBalanceKhr;
+    let newBalanceKhr = roundKhr(current.currentBalanceKhr);
     let newBalanceUsd = current.currentBalanceUsd;
     if (updateCurrentBalance) {
-      const totalCashExpensesKhr = expenses
-        .filter((e) => isExpensePaidFromReserve(e))
-        .reduce((sum, e) => sum + e.amountKhr, 0);
-      newBalanceKhr = Math.max(0, validKhr - totalCashExpensesKhr);
+      const totalCashExpensesKhr = roundKhr(
+        expenses
+          .filter((e) => isExpensePaidFromReserve(e))
+          .reduce((sum, e) => sum + roundKhr(e.amountKhr || (e.amountUsd * exchangeRate)), 0)
+      );
+      newBalanceKhr = roundKhr(Math.max(0, validKhr - totalCashExpensesKhr));
       newBalanceUsd = Number((newBalanceKhr / exchangeRate).toFixed(2));
     }
 
@@ -2460,12 +2494,14 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const reconcileReserveFundWithExpenses = (customBaseTargetKhr?: number): ReserveFund => {
     isUpdatingFromLan.current = false;
     const current = reserveFundRef.current;
-    const baseTarget = customBaseTargetKhr || current.targetAmountKhr || 4000000;
-    const totalDeductibleKhr = expenses
-      .filter((e) => isExpensePaidFromReserve(e))
-      .reduce((sum, e) => sum + e.amountKhr, 0);
+    const baseTarget = roundKhr(customBaseTargetKhr || current.targetAmountKhr || 4000000);
+    const totalDeductibleKhr = roundKhr(
+      expenses
+        .filter((e) => isExpensePaidFromReserve(e))
+        .reduce((sum, e) => sum + roundKhr(e.amountKhr || (e.amountUsd * exchangeRate)), 0)
+    );
 
-    const newBalanceKhr = Math.max(0, baseTarget - totalDeductibleKhr);
+    const newBalanceKhr = roundKhr(Math.max(0, baseTarget - totalDeductibleKhr));
     const newBalanceUsd = Number((newBalanceKhr / exchangeRate).toFixed(2));
     const baseTargetUsd = Number((baseTarget / exchangeRate).toFixed(2));
 
@@ -2501,9 +2537,11 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     const current = reserveFundRef.current;
     if (!current || !current.targetAmountKhr) return;
 
-    const totalCashPaidKhr = expenses
-      .filter((e) => isExpensePaidFromReserve(e))
-      .reduce((sum, e) => sum + e.amountKhr, 0);
+    const totalCashPaidKhr = roundKhr(
+      expenses
+        .filter((e) => isExpensePaidFromReserve(e))
+        .reduce((sum, e) => sum + roundKhr(e.amountKhr || (e.amountUsd * exchangeRate)), 0)
+    );
 
     if (totalCashPaidKhr <= 0) return;
 
@@ -2514,7 +2552,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   }, [expenses]);
 
   const adjustCurrentBalance = (balanceKhr: number, balanceUsd?: number, reason?: string) => {
-    const validKhr = Math.max(0, balanceKhr);
+    const validKhr = roundKhr(Math.max(0, balanceKhr));
     const validUsd = balanceUsd !== undefined ? balanceUsd : Number((validKhr / exchangeRate).toFixed(2));
     const current = reserveFundRef.current;
     const tx: ReserveFundTransaction = {
@@ -2538,10 +2576,10 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   };
 
   const withdrawReserveFund = (amountKhr: number, amountUsd: number, reason: string, expenseId?: string): ReserveFund => {
-    const validKhr = Math.max(0, amountKhr);
+    const validKhr = roundKhr(Math.max(0, amountKhr));
     const validUsd = Math.max(0, amountUsd);
     const current = reserveFundRef.current;
-    const newBalKhr = Math.max(0, current.currentBalanceKhr - validKhr);
+    const newBalKhr = roundKhr(Math.max(0, current.currentBalanceKhr - validKhr));
     const newBalUsd = Math.max(0, Number((newBalKhr / exchangeRate).toFixed(2)));
     const tx: ReserveFundTransaction = {
       id: `rf-wd-${Date.now()}`,
@@ -2566,10 +2604,10 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   };
 
   const replenishReserveFund = (amountKhr: number, amountUsd?: number, source?: string, notes?: string): ReserveFund => {
-    const validKhr = Math.max(0, amountKhr);
+    const validKhr = roundKhr(Math.max(0, amountKhr));
     const validUsd = amountUsd !== undefined ? amountUsd : Number((validKhr / exchangeRate).toFixed(2));
     const current = reserveFundRef.current;
-    const newBalKhr = current.currentBalanceKhr + validKhr;
+    const newBalKhr = roundKhr(current.currentBalanceKhr + validKhr);
     const newBalUsd = Number((newBalKhr / exchangeRate).toFixed(2));
     const tx: ReserveFundTransaction = {
       id: `rf-rep-${Date.now()}`,
@@ -2808,7 +2846,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       const targets = prev.filter((e) => expenseIds.includes(e.id) && e.paymentMethod !== 'RESERVE_FUND');
       if (targets.length === 0) return prev;
 
-      const totalDeductKhr = targets.reduce((sum, e) => sum + e.amountKhr, 0);
+      const totalDeductKhr = roundKhr(targets.reduce((sum, e) => sum + roundKhr(e.amountKhr || 0), 0));
       const totalDeductUsd = Number((totalDeductKhr / exchangeRate).toFixed(2));
 
       const updated = prev.map((exp) =>

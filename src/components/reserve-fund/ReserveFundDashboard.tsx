@@ -64,7 +64,7 @@ export const ReserveFundDashboard: React.FC<ReserveFundDashboardProps> = ({
   const [isSyncingCloud, setIsSyncingCloud] = useState(false);
 
   // Quick replenish inline form state
-  const deficitKhr = Math.max(0, reserveFund.targetAmountKhr - reserveFund.currentBalanceKhr);
+  const deficitKhr = roundKhr(Math.max(0, reserveFund.targetAmountKhr - reserveFund.currentBalanceKhr));
   const deficitUsd = Number((deficitKhr / exchangeRate).toFixed(2));
   const reserveFundPct = reserveFund.targetAmountKhr > 0
     ? Math.min(100, Math.max(0, Math.round((reserveFund.currentBalanceKhr / reserveFund.targetAmountKhr) * 100)))
@@ -187,9 +187,11 @@ export const ReserveFundDashboard: React.FC<ReserveFundDashboardProps> = ({
 
   // Total withdrawn from reserve fund
   const totalWithdrawnKhr = useMemo(() => {
-    return (reserveFund.history || [])
-      .filter((tx) => tx.type === 'WITHDRAW')
-      .reduce((sum, tx) => sum + (tx.amountKhr || 0), 0);
+    return roundKhr(
+      (reserveFund.history || [])
+        .filter((tx) => tx.type === 'WITHDRAW')
+        .reduce((sum, tx) => sum + (tx.amountKhr || 0), 0)
+    );
   }, [reserveFund.history]);
 
   // Filtered transactions history
@@ -218,12 +220,13 @@ export const ReserveFundDashboard: React.FC<ReserveFundDashboardProps> = ({
   // Quick preset replenish handler
   const handleQuickPresetReplenish = (khrAmount: number) => {
     soundFx.playPop();
-    const usd = Number((khrAmount / exchangeRate).toFixed(2));
+    const roundedKhr = roundKhr(khrAmount);
+    const usd = Number((roundedKhr / exchangeRate).toFixed(2));
     replenishReserveFund(
-      khrAmount,
+      roundedKhr,
       usd,
       'ពីប្រាក់ចំណូលលក់ប្រចាំថ្ងៃ',
-      `បូកបង្គ្រប់ទុនបម្រុងរហ័ស (+${khrAmount.toLocaleString()} ៛)`
+      `បូកបង្គ្រប់ទុនបម្រុងរហ័ស (+${roundedKhr.toLocaleString()} ៛)`
     );
     try {
       confetti({
@@ -233,7 +236,7 @@ export const ReserveFundDashboard: React.FC<ReserveFundDashboardProps> = ({
       });
     } catch (e) {}
     soundFx.playSuccess();
-    showFeedback(`បានបូកបង្គ្រប់ទុនបម្រុងចំនួន +${khrAmount.toLocaleString()} ៛ ($${usd}) ដោយជោគជ័យ!`);
+    showFeedback(`បានបូកបង្គ្រប់ទុនបម្រុងចំនួន +${roundedKhr.toLocaleString()} ៛ ($${usd}) ដោយជោគជ័យ!`);
   };
 
   // Submit replenish
@@ -245,7 +248,7 @@ export const ReserveFundDashboard: React.FC<ReserveFundDashboardProps> = ({
     let finalUsd = 0;
 
     if (replenishCurrency === 'KHR') {
-      finalKhr = Number(replenishAmountKhr) || 0;
+      finalKhr = roundKhr(Number(replenishAmountKhr) || 0);
       finalUsd = Number((finalKhr / exchangeRate).toFixed(2));
     } else {
       finalUsd = parseFloat(customUsdAmount) || 0;
@@ -281,7 +284,7 @@ export const ReserveFundDashboard: React.FC<ReserveFundDashboardProps> = ({
   const handleTargetSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     soundFx.playPop();
-    const khr = Number(targetKhrInput);
+    const khr = roundKhr(Number(targetKhrInput));
     if (khr <= 0) {
       alert('សូមបញ្ចូលចំនួនទុនបម្រុងគោលដៅត្រឹមត្រូវ!');
       return;
@@ -297,7 +300,7 @@ export const ReserveFundDashboard: React.FC<ReserveFundDashboardProps> = ({
   const handleBalanceAdjustSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     soundFx.playPop();
-    const khr = Number(directBalanceKhr);
+    const khr = roundKhr(Number(directBalanceKhr));
     if (khr < 0) {
       alert('សូមបញ្ចូលចំនួនទឹកប្រាក់ទុនជាក់ស្តែងត្រឹមត្រូវ!');
       return;
@@ -682,7 +685,7 @@ export const ReserveFundDashboard: React.FC<ReserveFundDashboardProps> = ({
 
           <div className="pt-1">
             <div className="text-2xl sm:text-3xl font-black font-sans text-emerald-700 dark:text-emerald-400 tracking-tight">
-              {reserveFund.currentBalanceKhr.toLocaleString()} ៛
+              {roundKhr(reserveFund.currentBalanceKhr).toLocaleString()} ៛
             </div>
             <div className="text-xs font-bold font-sans text-slate-500 dark:text-slate-400 mt-0.5">
               ~${reserveFund.currentBalanceUsd.toFixed(2)} USD
@@ -694,7 +697,7 @@ export const ReserveFundDashboard: React.FC<ReserveFundDashboardProps> = ({
             <button
               onClick={() => {
                 soundFx.playPop();
-                setDirectBalanceKhr(reserveFund.currentBalanceKhr);
+                setDirectBalanceKhr(roundKhr(reserveFund.currentBalanceKhr));
                 setActiveActionTab(activeActionTab === 'balance-adjust' ? null : 'balance-adjust');
               }}
               className="text-xs font-bold text-emerald-700 hover:text-emerald-800 underline cursor-pointer"
@@ -714,7 +717,7 @@ export const ReserveFundDashboard: React.FC<ReserveFundDashboardProps> = ({
             <button
               onClick={() => {
                 soundFx.playPop();
-                setTargetKhrInput(reserveFund.targetAmountKhr);
+                setTargetKhrInput(roundKhr(reserveFund.targetAmountKhr));
                 setActiveActionTab(activeActionTab === 'target-setting' ? null : 'target-setting');
               }}
               className="text-xs font-bold text-slate-600 hover:text-slate-900 underline cursor-pointer"
@@ -725,7 +728,7 @@ export const ReserveFundDashboard: React.FC<ReserveFundDashboardProps> = ({
 
           <div className="pt-1">
             <div className="text-2xl sm:text-3xl font-black font-sans text-slate-800 dark:text-white tracking-tight">
-              {reserveFund.targetAmountKhr.toLocaleString()} ៛
+              {roundKhr(reserveFund.targetAmountKhr).toLocaleString()} ៛
             </div>
             <div className="text-xs font-bold font-sans text-slate-500 dark:text-slate-400 mt-0.5">
               ~${reserveFund.targetAmountUsd.toFixed(2)} USD
@@ -758,7 +761,7 @@ export const ReserveFundDashboard: React.FC<ReserveFundDashboardProps> = ({
             {deficitKhr > 0 ? (
               <>
                 <div className="text-2xl sm:text-3xl font-black font-sans text-rose-600 dark:text-rose-400 tracking-tight">
-                  +{deficitKhr.toLocaleString()} ៛
+                  +{roundKhr(deficitKhr).toLocaleString()} ៛
                 </div>
                 <div className="text-xs font-bold font-sans text-rose-500 mt-0.5">
                   ~${deficitUsd.toFixed(2)} USD
@@ -805,10 +808,10 @@ export const ReserveFundDashboard: React.FC<ReserveFundDashboardProps> = ({
 
           <div className="pt-1">
             <div className="text-2xl sm:text-3xl font-black font-sans text-slate-800 dark:text-white tracking-tight">
-              {totalWithdrawnKhr.toLocaleString()} ៛
+              {roundKhr(totalWithdrawnKhr).toLocaleString()} ៛
             </div>
             <div className="text-xs font-bold font-sans text-slate-500 mt-0.5">
-              ~${(totalWithdrawnKhr / exchangeRate).toFixed(2)} USD
+              ~${(roundKhr(totalWithdrawnKhr) / exchangeRate).toFixed(2)} USD
             </div>
           </div>
 
@@ -830,7 +833,7 @@ export const ReserveFundDashboard: React.FC<ReserveFundDashboardProps> = ({
             <strong className="text-emerald-700 dark:text-emerald-400 font-sans text-base">{reserveFundPct}%</strong>
           </span>
           <span className="text-slate-500 font-sans font-medium">
-            {reserveFund.currentBalanceKhr.toLocaleString()} ៛ / {reserveFund.targetAmountKhr.toLocaleString()} ៛
+            {roundKhr(reserveFund.currentBalanceKhr).toLocaleString()} ៛ / {roundKhr(reserveFund.targetAmountKhr).toLocaleString()} ៛
           </span>
         </div>
 
@@ -1301,7 +1304,7 @@ export const ReserveFundDashboard: React.FC<ReserveFundDashboardProps> = ({
                           }`}
                         >
                           {isReplenish ? '+' : isWithdraw ? '-' : ''}
-                          {(tx.amountKhr || 0).toLocaleString()} ៛
+                          {roundKhr(tx.amountKhr || 0).toLocaleString()} ៛
                         </div>
                         <div className="text-[10px] text-slate-400 font-bold">
                           ~${(tx.amountUsd || 0).toFixed(2)} USD
