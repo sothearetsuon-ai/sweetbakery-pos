@@ -315,17 +315,9 @@ export const autoMigrateExpenseDates = (items: Expense[]): Expense[] => {
 export const cleanDeduplicateExpenses = (items: Expense[]): Expense[] => {
   const deletedIds = loadDeletedIds('expenses');
   const mockExpenseIds = new Set(['exp-1', 'exp-2', 'exp-4', 'exp-5', 'exp-6', 'exp-7']);
-  const initialExpenseIdSet = new Set(initialExpenses.map((e) => e.id));
-
-  // Check if dataset contains real user-recorded expenses (e.g. exp-17..., or items not in demo/initial mocks)
-  const hasRealUserExpenses = (Array.isArray(items) ? items : []).some(
-    (e) => e && e.id && !mockExpenseIds.has(e.id) && !initialExpenseIdSet.has(e.id)
-  );
 
   const nonMock = (Array.isArray(items) ? items : []).filter((e) => {
     if (!e || !e.id || mockExpenseIds.has(e.id) || deletedIds.has(e.id)) return false;
-    // When real store expenses exist, purge old mock/demo initial items from the dataset
-    if (hasRealUserExpenses && initialExpenseIdSet.has(e.id)) return false;
     return true;
   });
 
@@ -333,7 +325,7 @@ export const cleanDeduplicateExpenses = (items: Expense[]): Expense[] => {
   const seenSignatures = new Set<string>();
   const result: Expense[] = [];
 
-  // 1. Prioritize user-provided items (which include their edits, paymentMethod updates, and reserve fund allocations)
+  // 1. Prioritize user-provided items (all 87 store expenses from database)
   for (const exp of nonMock) {
     if (!exp || !exp.id || seenIds.has(exp.id) || deletedIds.has(exp.id)) continue;
     seenIds.add(exp.id);

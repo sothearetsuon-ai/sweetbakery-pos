@@ -357,10 +357,9 @@ class OfflineSyncEngine {
           if (raw) deletedExpenses = new Set(JSON.parse(raw));
         } catch (e) {}
 
-        const initialExpenseIds = new Set(initialExpenses.map((e) => e.id));
         const mockExpenseIds = new Set(['exp-1', 'exp-2', 'exp-3', 'exp-4', 'exp-5', 'exp-6', 'exp-7']);
         const expensesToSync = localData.expenses.filter(
-          (e) => e && e.id && !deletedExpenses.has(e.id) && !mockExpenseIds.has(e.id) && !initialExpenseIds.has(e.id)
+          (e) => e && e.id && !deletedExpenses.has(e.id) && !mockExpenseIds.has(e.id)
         );
         if (expensesToSync.length > 0) {
           expensesCount = await batchSaveFirestoreDocs(
