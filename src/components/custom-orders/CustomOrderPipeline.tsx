@@ -582,6 +582,7 @@ export const CustomOrderPipeline: React.FC = () => {
                       onAddDeposit={(ord) => setSelectedOrderForDeposit(ord)}
                       onDelete={(ord) => setOrderToDelete(ord)}
                       onViewReceipt={handleOpenReceipt}
+                      onAddPartyAddon={handleOpenReceipt}
                     />
                   ))
                 )}

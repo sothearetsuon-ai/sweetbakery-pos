@@ -1,22 +1,33 @@
-import React from 'react';
-import { X, Printer, CheckCircle2 } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, Printer, CheckCircle2, Sparkles } from 'lucide-react';
 import { CompletedSale } from '../../types';
 import { useBakery } from '../../context/BakeryContext';
 import { t } from '../../utils/translations';
 import { getProductImageUrl } from '../../utils/imagePath';
 import { formatDateTimeDMY, formatDateDMY } from '../../utils/dateUtils';
+import { AddPartyAddonsToSaleModal } from './AddPartyAddonsToSaleModal';
 
 interface ReceiptModalProps {
   sale: CompletedSale | null;
   isOpen: boolean;
   onClose: () => void;
+  onSaleUpdated?: (sale: CompletedSale) => void;
 }
 
-export const ReceiptModal: React.FC<ReceiptModalProps> = ({ sale, isOpen, onClose }) => {
+export const ReceiptModal: React.FC<ReceiptModalProps> = ({ sale, isOpen, onClose, onSaleUpdated }) => {
   const { lang, exchangeRate, storeInfo } = useBakery();
   const text = t[lang];
 
-  if (!isOpen || !sale) return null;
+  const [activeSale, setActiveSale] = useState<CompletedSale | null>(sale);
+  const [isAddPartyOpen, setIsAddPartyOpen] = useState(false);
+
+  useEffect(() => {
+    setActiveSale(sale);
+  }, [sale]);
+
+  const currentSale = activeSale || sale;
+
+  if (!isOpen || !currentSale) return null;
 
   const handlePrint = () => {
     window.print();
@@ -68,44 +79,44 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({ sale, isOpen, onClos
 
             {/* Receipt Metadata */}
             <div className="text-[10px] space-y-1 border-b border-dashed border-slate-300 pb-2">
-              {sale.isDeposit && (
+              {currentSale.isDeposit && (
                 <div className="py-1 px-2 bg-amber-100 text-amber-900 font-black text-center rounded-md uppercase tracking-wider text-[10px] mb-1">
                   *** បង្កាន់ដៃកក់ប្រាក់ (DEPOSIT RECEIPT) ***
                 </div>
               )}
               <div className="flex justify-between">
                 <span>វិក្កយបត្រ (Inv #):</span>
-                <span className="font-bold">{sale.orderNumber}</span>
+                <span className="font-bold">{currentSale.orderNumber}</span>
               </div>
               <div className="flex justify-between">
                 <span>កាលបរិច្ឆេទ (Date):</span>
-                <span className="font-bold">{formatDateTimeDMY(sale.createdAt)}</span>
+                <span className="font-bold">{formatDateTimeDMY(currentSale.createdAt)}</span>
               </div>
-              {sale.customerName && (
+              {currentSale.customerName && (
                 <div className="flex justify-between">
                   <span>អតិថិជន:</span>
-                  <span className="font-bold">{sale.customerName}</span>
+                  <span className="font-bold">{currentSale.customerName}</span>
                 </div>
               )}
-              {sale.customerPhone && (
+              {currentSale.customerPhone && (
                 <div className="flex justify-between">
                   <span>ទូរស័ព្ទ:</span>
-                  <span className="font-bold">{sale.customerPhone}</span>
+                  <span className="font-bold">{currentSale.customerPhone}</span>
                 </div>
               )}
-              {sale.pickupDate && (
+              {currentSale.pickupDate && (
                 <div className="flex justify-between font-bold text-amber-900 bg-amber-50 px-1.5 py-0.5 rounded">
                   <span>ពេលមកយក (Pickup):</span>
-                  <span>{formatDateDMY(sale.pickupDate)} {sale.pickupTime || ''}</span>
+                  <span>{formatDateDMY(currentSale.pickupDate)} {currentSale.pickupTime || ''}</span>
                 </div>
               )}
               <div className="flex justify-between">
                 <span>បេឡាធិការ (Cashier):</span>
-                <span>{sale.cashierName}</span>
+                <span>{currentSale.cashierName}</span>
               </div>
               <div className="flex justify-between">
                 <span>ការទូទាត់:</span>
-                <span className="font-bold">{sale.paymentMethod}</span>
+                <span className="font-bold">{currentSale.paymentMethod}</span>
               </div>
             </div>
 
@@ -120,7 +131,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({ sale, isOpen, onClos
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {sale.items.map((item, idx) => {
+                  {currentSale.items.map((item, idx) => {
                     const itemKhr = Math.round(item.priceUsd * exchangeRate * item.quantity);
                     return (
                       <tr key={idx} className="text-[11px]">
@@ -145,45 +156,45 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({ sale, isOpen, onClos
             <div className="space-y-1 text-xs border-b border-dashed border-slate-300 pb-3">
               {/* Grand Total KHR First in Large Font */}
               <div className="flex justify-between font-black text-sm pt-1 text-slate-900">
-                <span>{sale.isDeposit ? 'តម្លៃទំនិញសរុប (Total):' : 'សរុបត្រូវបង់ (KHR ៛):'}</span>
-                <span>{sale.totalKhr.toLocaleString()} ៛</span>
+                <span>{currentSale.isDeposit ? 'តម្លៃទំនិញសរុប (Total):' : 'សរុបត្រូវបង់ (KHR ៛):'}</span>
+                <span>{currentSale.totalKhr.toLocaleString()} ៛</span>
               </div>
               {/* Secondary USD */}
               <div className="flex justify-between font-bold text-xs text-slate-500">
                 <span>សមមូល (USD $):</span>
-                <span>${sale.totalUsd.toFixed(2)}</span>
+                <span>${currentSale.totalUsd.toFixed(2)}</span>
               </div>
 
               {/* Deposit breakdown if applicable */}
-              {sale.isDeposit && (
+              {currentSale.isDeposit && (
                 <div className="mt-2 p-2 bg-amber-50 rounded-xl border border-amber-200 text-xs space-y-1">
                   <div className="flex justify-between font-bold text-amber-900">
                     <span>ប្រាក់បានកក់ (Deposit Paid):</span>
-                    <span className="font-black">{sale.depositKhr?.toLocaleString()} ៛ (~${sale.depositUsd?.toFixed(2)})</span>
+                    <span className="font-black">{currentSale.depositKhr?.toLocaleString()} ៛ (~${currentSale.depositUsd?.toFixed(2)})</span>
                   </div>
                   <div className="flex justify-between font-black text-rose-600">
                     <span>នៅខ្វះពេលមកយក (Remaining):</span>
-                    <span>{sale.remainingKhr?.toLocaleString()} ៛ (~${sale.remainingUsd?.toFixed(2)})</span>
+                    <span>{currentSale.remainingKhr?.toLocaleString()} ៛ (~${currentSale.remainingUsd?.toFixed(2)})</span>
                   </div>
                 </div>
               )}
 
-              {sale.paidKhr !== undefined && (
+              {currentSale.paidKhr !== undefined && (
                 <div className="flex justify-between text-[11px] pt-1">
                   <span>ប្រាក់ទទួលបាន (៛):</span>
-                  <span>{sale.paidKhr.toLocaleString()} ៛</span>
+                  <span>{currentSale.paidKhr.toLocaleString()} ៛</span>
                 </div>
               )}
-              {sale.paidUsd !== undefined && (
+              {currentSale.paidUsd !== undefined && (
                 <div className="flex justify-between text-[11px] pt-1">
                   <span>ប្រាក់ទទួលបាន ($):</span>
-                  <span>${sale.paidUsd.toFixed(2)}</span>
+                  <span>${currentSale.paidUsd.toFixed(2)}</span>
                 </div>
               )}
-              {sale.changeKhr !== undefined && sale.changeKhr > 0 && (
+              {currentSale.changeKhr !== undefined && currentSale.changeKhr > 0 && (
                 <div className="flex justify-between text-[11px] text-emerald-700 font-bold">
                   <span>ប្រាក់អាប់ជូន (៛ / $):</span>
-                  <span>{sale.changeKhr.toLocaleString()} ៛ (~${sale.changeUsd?.toFixed(2)})</span>
+                  <span>{currentSale.changeKhr.toLocaleString()} ៛ (~${currentSale.changeUsd?.toFixed(2)})</span>
                 </div>
               )}
             </div>
@@ -211,7 +222,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({ sale, isOpen, onClos
                 />
               </div>
               <p className="text-[8px] text-slate-400">
-                {sale.paymentMethod === 'KHQR_BAKONG'
+                {currentSale.paymentMethod === 'KHQR_BAKONG'
                   ? 'ទូទាត់តាម KHQR Bakong ជោគជ័យ'
                   : 'ស្កេន KHQR ដើម្បីទូទាត់ ឬវាយតម្លៃសេវាកម្ម'}
               </p>
@@ -220,22 +231,47 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({ sale, isOpen, onClos
         </div>
 
         {/* Modal Buttons */}
-        <div className="p-4 bg-slate-50 border-t border-slate-100 flex items-center gap-2">
+        <div className="p-3.5 bg-slate-50 border-t border-slate-100 space-y-2">
+          {/* Post-purchase Add Party Add-ons Button */}
           <button
-            onClick={handlePrint}
-            className="flex-1 py-2.5 bg-slate-900 hover:bg-black text-white text-xs font-bold rounded-xl flex items-center justify-center gap-2 transition-all shadow-md active:scale-98"
+            type="button"
+            onClick={() => setIsAddPartyOpen(true)}
+            className="w-full py-2.5 bg-gradient-to-r from-amber-500 via-rose-500 to-pink-600 hover:from-amber-600 hover:to-pink-700 text-white text-xs font-black rounded-xl flex items-center justify-center gap-1.5 shadow-md shadow-pink-500/20 active:scale-98 transition-all cursor-pointer"
           >
-            <Printer className="w-4 h-4" />
-            <span>{text.printReceipt}</span>
+            <Sparkles className="w-4 h-4 text-amber-200 animate-pulse" />
+            <span>🎉 + ថែម Party Add-ons (ក្រោយទិញរួច)</span>
           </button>
-          <button
-            onClick={onClose}
-            className="px-4 py-2.5 bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-semibold rounded-xl transition-colors"
-          >
-            {text.close}
-          </button>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handlePrint}
+              className="flex-1 py-2.5 bg-slate-900 hover:bg-black text-white text-xs font-bold rounded-xl flex items-center justify-center gap-2 transition-all shadow-md active:scale-98 cursor-pointer"
+            >
+              <Printer className="w-4 h-4" />
+              <span>{text.printReceipt}</span>
+            </button>
+            <button
+              onClick={onClose}
+              className="px-4 py-2.5 bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-semibold rounded-xl transition-colors cursor-pointer"
+            >
+              {text.close}
+            </button>
+          </div>
         </div>
       </div>
+
+      {/* Add Party Add-ons to Sale Modal */}
+      <AddPartyAddonsToSaleModal
+        isOpen={isAddPartyOpen}
+        onClose={() => setIsAddPartyOpen(false)}
+        sale={currentSale}
+        onSuccess={(updated) => {
+          setActiveSale(updated);
+          if (onSaleUpdated) {
+            onSaleUpdated(updated);
+          }
+        }}
+      />
     </div>
   );
 };

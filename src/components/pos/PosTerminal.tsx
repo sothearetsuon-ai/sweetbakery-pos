@@ -380,6 +380,21 @@ export const PosTerminal: React.FC = () => {
                 </button>
               )}
 
+              {/* Party Accessories Trigger */}
+              <button
+                type="button"
+                onClick={() => {
+                  soundFx.playPop();
+                  setIsPartyAccessoriesOpen(true);
+                }}
+                className="px-3 sm:px-3.5 py-2 sm:py-2.5 bg-gradient-to-r from-amber-500/10 via-rose-500/10 to-pink-500/10 hover:from-amber-500/20 hover:to-pink-500/20 text-pink-700 border border-pink-200/80 rounded-2xl text-xs font-black transition-all shadow-2xs flex items-center gap-1.5 active:scale-95 cursor-pointer"
+                title="គ្រប់គ្រង & ទិញគ្រឿងបន្ថែមសម្រាប់កម្មវិធី (Party Accessories)"
+              >
+                <Sparkles className="w-4 h-4 text-amber-500" />
+                <span className="hidden sm:inline">🎉 Party Add-ons</span>
+                <span className="sm:hidden">🎉 Party</span>
+              </button>
+
               <button
                 onClick={() => {
                   soundFx.playPop();

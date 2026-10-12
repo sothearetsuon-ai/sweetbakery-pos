@@ -15,12 +15,14 @@ import {
   X,
   Filter,
   AlertTriangle,
+  Sparkles,
 } from 'lucide-react';
 import { useBakery } from '../../context/BakeryContext';
 import { CompletedSale } from '../../types';
 import { ReceiptModal } from '../pos/ReceiptModal';
 import { AddPastSaleModal } from './AddPastSaleModal';
 import { EditSaleModal } from './EditSaleModal';
+import { AddPartyAddonsToSaleModal } from '../pos/AddPartyAddonsToSaleModal';
 import { soundFx } from '../../utils/audio';
 import { formatDateTimeDMY, formatDateDMY } from '../../utils/dateUtils';
 
@@ -50,6 +52,7 @@ export const SalesHistory: React.FC = () => {
   const [isAddPastOpen, setIsAddPastOpen] = useState(false);
   const [editingSale, setEditingSale] = useState<CompletedSale | null>(null);
   const [viewingReceiptSale, setViewingReceiptSale] = useState<CompletedSale | null>(null);
+  const [partyAddonSale, setPartyAddonSale] = useState<CompletedSale | null>(null);
   const [saleToDelete, setSaleToDelete] = useState<CompletedSale | null>(null);
   const [restoreStockOnDelete, setRestoreStockOnDelete] = useState<boolean>(true);
   const [isConfirmClearAllSales, setIsConfirmClearAllSales] = useState(false);
@@ -549,7 +552,21 @@ export const SalesHistory: React.FC = () => {
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      {/* Add Party Add-ons button */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          soundFx.playPop();
+                          setPartyAddonSale(sale);
+                        }}
+                        className="px-2 py-1.5 bg-gradient-to-r from-amber-500/10 via-rose-500/10 to-pink-500/10 hover:from-amber-500/20 hover:to-pink-500/20 text-pink-700 border border-pink-200/80 rounded-xl transition-all shadow-2xs inline-flex items-center gap-1 text-[11px] font-bold cursor-pointer"
+                        title="ថែម Party Add-ons លើការលក់នេះ"
+                      >
+                        <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                        <span>+ ថែម Party</span>
+                      </button>
+
                       <button
                         type="button"
                         onClick={() => {
@@ -649,9 +666,23 @@ export const SalesHistory: React.FC = () => {
                           <div className="text-[10px] text-slate-400">{sale.cashierName}</div>
                         </td>
 
-                        {/* Actions: View/Print, Edit, Delete */}
+                        {/* Actions: Add Party, View/Print, Edit, Delete */}
                         <td className="p-4 text-center">
-                          <div className="flex items-center justify-center gap-1.5">
+                          <div className="flex items-center justify-center gap-1.5 flex-wrap">
+                            {/* Add Party Add-ons button */}
+                            <button
+                              type="button"
+                              title="ថែម Party Add-ons លើការលក់នេះ"
+                              onClick={() => {
+                                soundFx.playPop();
+                                setPartyAddonSale(sale);
+                              }}
+                              className="p-1.5 bg-gradient-to-r from-amber-500/10 via-rose-500/10 to-pink-500/10 hover:from-amber-500/20 hover:to-pink-500/20 text-pink-700 border border-pink-200/80 rounded-xl transition-all shadow-2xs inline-flex items-center gap-1 text-[11px] font-bold cursor-pointer"
+                            >
+                              <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                              <span>+ ថែម Party</span>
+                            </button>
+
                             {/* View/Print Receipt */}
                             <button
                               type="button"
@@ -723,6 +754,13 @@ export const SalesHistory: React.FC = () => {
         isOpen={!!viewingReceiptSale}
         sale={viewingReceiptSale}
         onClose={() => setViewingReceiptSale(null)}
+      />
+
+      {/* Modal to Add Party Add-ons to Sale */}
+      <AddPartyAddonsToSaleModal
+        isOpen={!!partyAddonSale}
+        sale={partyAddonSale}
+        onClose={() => setPartyAddonSale(null)}
       />
 
       {/* In-App Modal to Confirm Delete Single Sale (Touch Friendly, Portal to Body) */}

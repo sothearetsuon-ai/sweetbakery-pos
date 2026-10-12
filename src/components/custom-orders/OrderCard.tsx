@@ -13,9 +13,10 @@ interface OrderCardProps {
   onAddDeposit?: (order: CustomCakeOrder) => void;
   onDelete?: (order: CustomCakeOrder) => void;
   onViewReceipt?: (order: CustomCakeOrder) => void;
+  onAddPartyAddon?: (order: CustomCakeOrder) => void;
 }
 
-export const OrderCard: React.FC<OrderCardProps> = ({ order, onAdvanceStatus, onAddDeposit, onDelete, onViewReceipt }) => {
+export const OrderCard: React.FC<OrderCardProps> = ({ order, onAdvanceStatus, onAddDeposit, onDelete, onViewReceipt, onAddPartyAddon }) => {
   const { exchangeRate } = useBakery();
   const [previewImage, setPreviewImage] = useState<{ url: string; title: string } | null>(null);
 
@@ -292,26 +293,56 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, onAdvanceStatus, on
                   (~${remainingUsd.toFixed(2)})
                 </div>
               </div>
-              {onAddDeposit && (
+              <div className="flex items-center gap-1 flex-wrap justify-end">
+                {onAddPartyAddon && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      soundFx.playPop();
+                      onAddPartyAddon(order);
+                    }}
+                    className="px-2 py-0.5 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 hover:border-amber-300 rounded-lg text-[10px] font-black transition-all flex items-center gap-1 shadow-2xs active:scale-95 cursor-pointer"
+                    title="ថែម Party Add-ons លើនំកុម្ម៉ង់នេះ"
+                  >
+                    <Sparkles className="w-3 h-3 text-amber-600" />
+                    <span>+ ថែម Party</span>
+                  </button>
+                )}
+                {onAddDeposit && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      soundFx.playPop();
+                      onAddDeposit(order);
+                    }}
+                    className="px-2 py-0.5 bg-pink-50 hover:bg-pink-100 text-pink-700 border border-pink-200 hover:border-pink-300 rounded-lg text-[10px] font-black transition-all flex items-center gap-1 shadow-2xs active:scale-95 cursor-pointer"
+                    title="បន្ថែមប្រាក់កក់លើនំកុម្ម៉ង់នេះ"
+                  >
+                    <Wallet className="w-3 h-3 text-pink-600" />
+                    <span>+ បន្ថែមប្រាក់កក់</span>
+                  </button>
+                )}
+              </div>
+            </>
+          ) : (
+            <div className="flex items-center gap-1 flex-wrap justify-end">
+              <span className="inline-flex items-center gap-1 text-[10px] font-black text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md">
+                <CheckCircle2 className="w-3 h-3" /> បង់គ្រប់
+              </span>
+              {onAddPartyAddon && (
                 <button
                   type="button"
                   onClick={() => {
                     soundFx.playPop();
-                    onAddDeposit(order);
+                    onAddPartyAddon(order);
                   }}
-                  className="px-2 py-0.5 bg-pink-50 hover:bg-pink-100 text-pink-700 border border-pink-200 hover:border-pink-300 rounded-lg text-[10px] font-black transition-all flex items-center gap-1 shadow-2xs active:scale-95 cursor-pointer"
-                  title="បន្ថែមប្រាក់កក់លើនំកុម្ម៉ង់នេះ"
+                  className="px-2 py-0.5 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 hover:border-amber-300 rounded-lg text-[10px] font-black transition-all flex items-center gap-1 shadow-2xs active:scale-95 cursor-pointer"
+                  title="ថែម Party Add-ons លើនំកុម្ម៉ង់នេះ"
                 >
-                  <Wallet className="w-3 h-3 text-pink-600" />
-                  <span>+ បន្ថែមប្រាក់កក់</span>
+                  <Sparkles className="w-3 h-3 text-amber-600" />
+                  <span>+ ថែម Party</span>
                 </button>
               )}
-            </>
-          ) : (
-            <div className="flex items-center gap-1">
-              <span className="inline-flex items-center gap-1 text-[10px] font-black text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md">
-                <CheckCircle2 className="w-3 h-3" /> បង់គ្រប់
-              </span>
               {onAddDeposit && (
                 <button
                   type="button"
