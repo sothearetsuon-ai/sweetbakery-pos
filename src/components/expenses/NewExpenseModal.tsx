@@ -29,6 +29,7 @@ import confetti from 'canvas-confetti';
 import { useBakery } from '../../context/BakeryContext';
 import { Expense, ExpenseCategory, ExpenseType } from '../../types';
 import { soundFx } from '../../utils/audio';
+import { roundKhr } from '../../utils/currencyUtils';
 import { compressImageFile } from '../../utils/imageCompressor';
 import { CameraCaptureModal } from '../common/CameraCaptureModal';
 
@@ -213,9 +214,9 @@ export const NewExpenseModal: React.FC<NewExpenseModalProps> = ({
       const q = expenseToEdit.quantity ?? 1;
       setQuantity(q.toString());
       setUnit(expenseToEdit.unit || 'គីឡូ (kg)');
-      const p = expenseToEdit.unitPriceKhr ?? Math.round(expenseToEdit.amountKhr / q);
-      setUnitPriceKhr(p.toString());
-      setAmountKhr(expenseToEdit.amountKhr.toString());
+      const p = expenseToEdit.unitPriceKhr ?? (expenseToEdit.amountKhr / q);
+      setUnitPriceKhr(roundKhr(p).toString());
+      setAmountKhr(roundKhr(expenseToEdit.amountKhr).toString());
       setDate(expenseToEdit.date);
       setPaidBy(expenseToEdit.paidBy);
       setPaymentMethod(expenseToEdit.paymentMethod);
@@ -272,9 +273,9 @@ export const NewExpenseModal: React.FC<NewExpenseModalProps> = ({
     const q = parseFloat(newQtyStr) || 0;
     const p = parseFloat(unitPriceKhr) || 0;
     if (p > 0) {
-      setAmountKhr(Math.round(q * p).toString());
+      setAmountKhr(roundKhr(q * p).toString());
     } else if (parseFloat(amountKhr) > 0 && q > 0) {
-      setUnitPriceKhr(Math.round(parseFloat(amountKhr) / q).toString());
+      setUnitPriceKhr(roundKhr(parseFloat(amountKhr) / q).toString());
     }
   };
 
@@ -282,7 +283,7 @@ export const NewExpenseModal: React.FC<NewExpenseModalProps> = ({
     setUnitPriceKhr(newPriceStr);
     const p = parseFloat(newPriceStr) || 0;
     const q = parseFloat(quantity) || 1;
-    setAmountKhr(Math.round(q * p).toString());
+    setAmountKhr(roundKhr(q * p).toString());
   };
 
   const handleTotalAmountChange = (newTotalStr: string) => {
@@ -290,7 +291,7 @@ export const NewExpenseModal: React.FC<NewExpenseModalProps> = ({
     const t = parseFloat(newTotalStr) || 0;
     const q = parseFloat(quantity) || 1;
     if (q > 0) {
-      setUnitPriceKhr(Math.round(t / q).toString());
+      setUnitPriceKhr(roundKhr(t / q).toString());
     }
   };
 
@@ -303,19 +304,19 @@ export const NewExpenseModal: React.FC<NewExpenseModalProps> = ({
       setTitle(found.nameKh);
       setUnit(found.unit);
       if (found.supplier) setSupplier(found.supplier);
-      const estPriceKhr = found.costPerUnitKhr || Math.round(found.costPerUnitUsd * exchangeRate);
+      const estPriceKhr = roundKhr(found.costPerUnitKhr || (found.costPerUnitUsd * exchangeRate));
       if (estPriceKhr > 0) {
         setUnitPriceKhr(estPriceKhr.toString());
         const q = parseFloat(quantity) || 1;
-        setAmountKhr(Math.round(q * estPriceKhr).toString());
+        setAmountKhr(roundKhr(q * estPriceKhr).toString());
       }
     }
   };
 
   const numQuantity = parseFloat(quantity) || 1;
-  const numUnitPriceKhr = parseFloat(unitPriceKhr) || 0;
+  const numUnitPriceKhr = roundKhr(parseFloat(unitPriceKhr) || 0);
   const numUnitPriceUsd = Number((numUnitPriceKhr / exchangeRate).toFixed(2));
-  const numAmountKhr = parseInt(amountKhr, 10) || Math.round(numQuantity * numUnitPriceKhr);
+  const numAmountKhr = roundKhr(parseInt(amountKhr, 10) || (numQuantity * numUnitPriceKhr));
   const numAmountUsd = Number((numAmountKhr / exchangeRate).toFixed(2));
 
   // Wholesale to Retail dynamic calculations
@@ -323,8 +324,8 @@ export const NewExpenseModal: React.FC<NewExpenseModalProps> = ({
   const numItemsPerPack = Math.max(1, parseFloat(itemsPerPack) || 1);
   const totalRetailItems = Math.max(1, Math.round(numWholesalePacks * numItemsPerPack));
 
-  const wholesaleTotalKhr = parseInt(amountKhr, 10) || Math.round(numQuantity * numUnitPriceKhr) || 0;
-  const retailUnitCostKhr = wholesaleTotalKhr > 0 && totalRetailItems > 0 ? Math.round(wholesaleTotalKhr / totalRetailItems) : 0;
+  const wholesaleTotalKhr = roundKhr(parseInt(amountKhr, 10) || (numQuantity * numUnitPriceKhr) || 0);
+  const retailUnitCostKhr = wholesaleTotalKhr > 0 && totalRetailItems > 0 ? roundKhr(wholesaleTotalKhr / totalRetailItems) : 0;
   const retailUnitCostUsd = Number((retailUnitCostKhr / exchangeRate).toFixed(2));
 
   const marginPct = parseFloat(profitMarginPct) || 0;
@@ -332,12 +333,12 @@ export const NewExpenseModal: React.FC<NewExpenseModalProps> = ({
 
   const calcRoundedSellingPrice = (raw: number, mode: '100' | '500' | '1000' | 'none') => {
     if (raw <= 0) return 0;
-    if (mode === 'none') return Math.round(raw);
+    if (mode === 'none') return roundKhr(raw);
     const step = parseInt(mode, 10) || 100;
     return Math.ceil(raw / step) * step;
   };
 
-  const retailSellingPriceKhr = calcRoundedSellingPrice(rawSellingPriceKhr, retailRoundingMode);
+  const retailSellingPriceKhr = roundKhr(calcRoundedSellingPrice(rawSellingPriceKhr, retailRoundingMode));
   const retailSellingPriceUsd = Number((retailSellingPriceKhr / exchangeRate).toFixed(2));
 
   const profitPerItemKhr = Math.max(0, retailSellingPriceKhr - retailUnitCostKhr);
@@ -414,17 +415,17 @@ export const NewExpenseModal: React.FC<NewExpenseModalProps> = ({
       supplier: supplier.trim() || undefined,
       quantity: numQuantity,
       unit: unit.trim() || 'ដុំ',
-      unitPriceKhr: numUnitPriceKhr > 0 ? numUnitPriceKhr : Math.round(numAmountKhr / numQuantity),
+      unitPriceKhr: roundKhr(numUnitPriceKhr > 0 ? numUnitPriceKhr : (numAmountKhr / numQuantity)),
       unitPriceUsd: numUnitPriceUsd > 0 ? numUnitPriceUsd : Number((numAmountUsd / numQuantity).toFixed(2)),
       amountUsd: numAmountUsd,
-      amountKhr: numAmountKhr,
+      amountKhr: roundKhr(numAmountKhr),
       // Wholesale to retail metadata
       wholesalePackQty: isWholesaleCalcOpen ? numItemsPerPack : undefined,
       wholesalePackUnit: isWholesaleCalcOpen ? wholesalePackUnit : undefined,
       retailUnit: isWholesaleCalcOpen ? retailUnit : undefined,
-      retailUnitCostKhr: isWholesaleCalcOpen && retailUnitCostKhr > 0 ? retailUnitCostKhr : undefined,
+      retailUnitCostKhr: isWholesaleCalcOpen && retailUnitCostKhr > 0 ? roundKhr(retailUnitCostKhr) : undefined,
       retailProfitMarginPct: isWholesaleCalcOpen && marginPct > 0 ? marginPct : undefined,
-      retailSellingPriceKhr: isWholesaleCalcOpen && retailSellingPriceKhr > 0 ? retailSellingPriceKhr : undefined,
+      retailSellingPriceKhr: isWholesaleCalcOpen && retailSellingPriceKhr > 0 ? roundKhr(retailSellingPriceKhr) : undefined,
       retailSellingPriceUsd: isWholesaleCalcOpen && retailSellingPriceUsd > 0 ? retailSellingPriceUsd : undefined,
       paidBy,
       paymentMethod,

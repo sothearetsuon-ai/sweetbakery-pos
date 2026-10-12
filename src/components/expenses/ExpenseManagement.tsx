@@ -39,6 +39,7 @@ import { ReserveFundModal } from './ReserveFundModal';
 import { InvoiceScannerModal } from './InvoiceScannerModal';
 import { soundFx } from '../../utils/audio';
 import { formatDateDMY, normalizeDateToYMD } from '../../utils/dateUtils';
+import { roundKhr } from '../../utils/currencyUtils';
 
 export { normalizeDateToYMD };
 
@@ -337,11 +338,11 @@ export const ExpenseManagement: React.FC<ExpenseManagementProps> = ({
 
   // Financial sums (All-time)
   const totalSalesUsd = sales.reduce((sum, s) => sum + s.totalUsd, 0);
-  const totalSalesKhr = sales.reduce((sum, s) => sum + (s.totalKhr || Math.round(s.totalUsd * exchangeRate)), 0);
+  const totalSalesKhr = roundKhr(sales.reduce((sum, s) => sum + roundKhr(s.totalKhr || (s.totalUsd * exchangeRate)), 0));
   const totalExpensesUsd = expenses.reduce((sum, e) => sum + e.amountUsd, 0);
-  const totalExpensesKhr = expenses.reduce((sum, e) => sum + (e.amountKhr || Math.round(e.amountUsd * exchangeRate)), 0);
+  const totalExpensesKhr = roundKhr(expenses.reduce((sum, e) => sum + roundKhr(e.amountKhr || (e.amountUsd * exchangeRate)), 0));
   const netProfitUsd = totalSalesUsd - totalExpensesUsd;
-  const netProfitKhr = totalSalesKhr - totalExpensesKhr;
+  const netProfitKhr = roundKhr(totalSalesKhr - totalExpensesKhr);
 
   // Breakdown: Ingredients vs Supplies vs General (All-time)
   const ingredientExpenses = useMemo(() => expenses.filter(isIngredientExpense), [expenses]);
@@ -349,17 +350,17 @@ export const ExpenseManagement: React.FC<ExpenseManagementProps> = ({
   const generalExpenses = useMemo(() => expenses.filter(isGeneralExpense), [expenses]);
 
   const totalIngredientsUsd = useMemo(() => ingredientExpenses.reduce((sum, e) => sum + e.amountUsd, 0), [ingredientExpenses]);
-  const totalIngredientsKhr = useMemo(() => ingredientExpenses.reduce((sum, e) => sum + (e.amountKhr || Math.round(e.amountUsd * exchangeRate)), 0), [ingredientExpenses, exchangeRate]);
+  const totalIngredientsKhr = useMemo(() => roundKhr(ingredientExpenses.reduce((sum, e) => sum + roundKhr(e.amountKhr || (e.amountUsd * exchangeRate)), 0)), [ingredientExpenses, exchangeRate]);
 
   const totalSuppliesUsd = useMemo(() => supplyExpenses.reduce((sum, e) => sum + e.amountUsd, 0), [supplyExpenses]);
-  const totalSuppliesKhr = useMemo(() => supplyExpenses.reduce((sum, e) => sum + (e.amountKhr || Math.round(e.amountUsd * exchangeRate)), 0), [supplyExpenses, exchangeRate]);
+  const totalSuppliesKhr = useMemo(() => roundKhr(supplyExpenses.reduce((sum, e) => sum + roundKhr(e.amountKhr || (e.amountUsd * exchangeRate)), 0)), [supplyExpenses, exchangeRate]);
 
   const totalGeneralUsd = useMemo(() => generalExpenses.reduce((sum, e) => sum + e.amountUsd, 0), [generalExpenses]);
-  const totalGeneralKhr = useMemo(() => generalExpenses.reduce((sum, e) => sum + (e.amountKhr || Math.round(e.amountUsd * exchangeRate)), 0), [generalExpenses, exchangeRate]);
+  const totalGeneralKhr = useMemo(() => roundKhr(generalExpenses.reduce((sum, e) => sum + roundKhr(e.amountKhr || (e.amountUsd * exchangeRate)), 0)), [generalExpenses, exchangeRate]);
 
   // Gross profit = Sales - Ingredient Costs
   const grossProfitUsd = totalSalesUsd - totalIngredientsUsd;
-  const grossProfitKhr = totalSalesKhr - totalIngredientsKhr;
+  const grossProfitKhr = roundKhr(totalSalesKhr - totalIngredientsKhr);
   const grossMarginPct = totalSalesUsd > 0 ? ((grossProfitUsd / totalSalesUsd) * 100).toFixed(0) : '0';
   const netMarginPct = totalSalesUsd > 0 ? ((netProfitUsd / totalSalesUsd) * 100).toFixed(0) : '0';
 
@@ -496,7 +497,7 @@ export const ExpenseManagement: React.FC<ExpenseManagementProps> = ({
 
   // Filtered sums
   const filteredExpensesKhr = useMemo(() => {
-    return filteredExpenses.reduce((sum, e) => sum + (e.amountKhr || Math.round(e.amountUsd * exchangeRate)), 0);
+    return roundKhr(filteredExpenses.reduce((sum, e) => sum + roundKhr(e.amountKhr || (e.amountUsd * exchangeRate)), 0));
   }, [filteredExpenses, exchangeRate]);
 
   const filteredExpensesUsd = useMemo(() => {
@@ -509,7 +510,7 @@ export const ExpenseManagement: React.FC<ExpenseManagementProps> = ({
   const filteredGeneral = useMemo(() => filteredExpenses.filter(isGeneralExpense), [filteredExpenses]);
 
   const filteredIngredientsKhr = useMemo(() => {
-    return filteredIngredients.reduce((sum, e) => sum + (e.amountKhr || Math.round(e.amountUsd * exchangeRate)), 0);
+    return roundKhr(filteredIngredients.reduce((sum, e) => sum + roundKhr(e.amountKhr || (e.amountUsd * exchangeRate)), 0));
   }, [filteredIngredients, exchangeRate]);
 
   const filteredIngredientsUsd = useMemo(() => {
@@ -517,7 +518,7 @@ export const ExpenseManagement: React.FC<ExpenseManagementProps> = ({
   }, [filteredIngredients]);
 
   const filteredSuppliesKhr = useMemo(() => {
-    return filteredSupplies.reduce((sum, e) => sum + (e.amountKhr || Math.round(e.amountUsd * exchangeRate)), 0);
+    return roundKhr(filteredSupplies.reduce((sum, e) => sum + roundKhr(e.amountKhr || (e.amountUsd * exchangeRate)), 0));
   }, [filteredSupplies, exchangeRate]);
 
   const filteredSuppliesUsd = useMemo(() => {
@@ -525,7 +526,7 @@ export const ExpenseManagement: React.FC<ExpenseManagementProps> = ({
   }, [filteredSupplies]);
 
   const filteredGeneralKhr = useMemo(() => {
-    return filteredGeneral.reduce((sum, e) => sum + (e.amountKhr || Math.round(e.amountUsd * exchangeRate)), 0);
+    return roundKhr(filteredGeneral.reduce((sum, e) => sum + roundKhr(e.amountKhr || (e.amountUsd * exchangeRate)), 0));
   }, [filteredGeneral, exchangeRate]);
 
   const filteredGeneralUsd = useMemo(() => {
@@ -804,7 +805,7 @@ export const ExpenseManagement: React.FC<ExpenseManagementProps> = ({
             </div>
           </div>
           <div className="text-xl sm:text-2xl font-black text-amber-600 tracking-tight">
-            {(datePreset !== 'ALL' ? filteredIngredientsKhr : totalIngredientsKhr).toLocaleString()} ៛
+            {roundKhr(datePreset !== 'ALL' ? filteredIngredientsKhr : totalIngredientsKhr).toLocaleString()} ៛
           </div>
           <div className="text-xs text-slate-500 font-semibold flex items-center justify-between">
             <span>~ ${(datePreset !== 'ALL' ? filteredIngredientsUsd : totalIngredientsUsd).toFixed(2)} USD</span>
@@ -842,7 +843,7 @@ export const ExpenseManagement: React.FC<ExpenseManagementProps> = ({
             </div>
           </div>
           <div className="text-xl sm:text-2xl font-black text-purple-600 tracking-tight">
-            {(datePreset !== 'ALL' ? filteredSuppliesKhr : totalSuppliesKhr).toLocaleString()} ៛
+            {roundKhr(datePreset !== 'ALL' ? filteredSuppliesKhr : totalSuppliesKhr).toLocaleString()} ៛
           </div>
           <div className="text-xs text-slate-500 font-semibold flex items-center justify-between">
             <span>~ ${(datePreset !== 'ALL' ? filteredSuppliesUsd : totalSuppliesUsd).toFixed(2)} USD</span>
@@ -880,7 +881,7 @@ export const ExpenseManagement: React.FC<ExpenseManagementProps> = ({
             </div>
           </div>
           <div className="text-xl sm:text-2xl font-black text-sky-600 tracking-tight">
-            {(datePreset !== 'ALL' ? filteredGeneralKhr : totalGeneralKhr).toLocaleString()} ៛
+            {roundKhr(datePreset !== 'ALL' ? filteredGeneralKhr : totalGeneralKhr).toLocaleString()} ៛
           </div>
           <div className="text-xs text-slate-500 font-semibold flex items-center justify-between">
             <span>~ ${(datePreset !== 'ALL' ? filteredGeneralUsd : totalGeneralUsd).toFixed(2)} USD</span>
@@ -918,7 +919,7 @@ export const ExpenseManagement: React.FC<ExpenseManagementProps> = ({
             </div>
           </div>
           <div className="text-xl sm:text-2xl font-black text-rose-600 tracking-tight">
-            {(datePreset !== 'ALL' ? filteredExpensesKhr : totalExpensesKhr).toLocaleString()} ៛
+            {roundKhr(datePreset !== 'ALL' ? filteredExpensesKhr : totalExpensesKhr).toLocaleString()} ៛
           </div>
           <div className="text-xs text-slate-500 font-semibold">
             ~ ${(datePreset !== 'ALL' ? filteredExpensesUsd : totalExpensesUsd).toFixed(2)} USD (
@@ -968,7 +969,7 @@ export const ExpenseManagement: React.FC<ExpenseManagementProps> = ({
             <div className="flex items-baseline justify-between">
               <span className="text-xs font-bold text-slate-500">ចំណេញដុល (Gross):</span>
               <span className="text-sm font-black text-emerald-600">
-                +{grossProfitKhr.toLocaleString()} ៛
+                +{roundKhr(grossProfitKhr).toLocaleString()} ៛
               </span>
             </div>
             <div className="flex items-baseline justify-between border-t border-slate-100 pt-1">
@@ -978,14 +979,14 @@ export const ExpenseManagement: React.FC<ExpenseManagementProps> = ({
                   netProfitKhr >= 0 ? 'text-blue-600' : 'text-rose-600'
                 }`}
               >
-                {netProfitKhr >= 0 ? '+' : ''}{netProfitKhr.toLocaleString()} ៛
+                {netProfitKhr >= 0 ? '+' : ''}{roundKhr(netProfitKhr).toLocaleString()} ៛
               </span>
             </div>
           </div>
 
           <div className="text-[10px] text-slate-400 font-semibold pt-1 border-t border-emerald-50 flex items-center justify-between">
             <span>ចំណូលសរុប៖</span>
-            <span className="font-bold text-slate-700">{totalSalesKhr.toLocaleString()} ៛</span>
+            <span className="font-bold text-slate-700">{roundKhr(totalSalesKhr).toLocaleString()} ៛</span>
           </div>
         </div>
       </div>
@@ -1917,7 +1918,7 @@ export const ExpenseManagement: React.FC<ExpenseManagementProps> = ({
                     };
                     const displayQty = expense.quantity ?? 1;
                     const displayUnitPriceKhr =
-                      expense.unitPriceKhr ?? Math.round(expense.amountKhr / displayQty);
+                      roundKhr(expense.unitPriceKhr ?? (expense.amountKhr / displayQty));
 
                     return (
                       <tr
@@ -2000,14 +2001,14 @@ export const ExpenseManagement: React.FC<ExpenseManagementProps> = ({
                             {displayQty} <span className="text-slate-500 text-[10px] font-normal">{expense.unit || 'ដុំ'}</span>
                           </div>
                           <div className="text-[10px] text-slate-500 font-medium mt-0.5">
-                            @ {displayUnitPriceKhr.toLocaleString()} ៛
+                            @ {roundKhr(displayUnitPriceKhr).toLocaleString()} ៛
                           </div>
                         </td>
 
                         {/* Total Amount */}
                         <td className="py-2.5 px-2.5 text-right whitespace-nowrap">
                           <div className="font-black text-rose-600 text-xs">
-                            {expense.amountKhr.toLocaleString()} ៛
+                            {roundKhr(expense.amountKhr).toLocaleString()} ៛
                           </div>
                           <div className="text-[10px] text-slate-400 font-semibold">
                             ~ ${expense.amountUsd.toFixed(2)} USD
@@ -2154,7 +2155,7 @@ export const ExpenseManagement: React.FC<ExpenseManagementProps> = ({
             };
             const displayQty = expense.quantity ?? 1;
             const displayUnitPriceKhr =
-              expense.unitPriceKhr ?? Math.round(expense.amountKhr / displayQty);
+              roundKhr(expense.unitPriceKhr ?? (expense.amountKhr / displayQty));
 
             return (
               <div
@@ -2201,7 +2202,7 @@ export const ExpenseManagement: React.FC<ExpenseManagementProps> = ({
                       )}
                       {expense.retailSellingPriceKhr && (
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-black bg-emerald-50 text-emerald-800 border border-emerald-300">
-                          <span>🏷️ លក់រាយ៖ {expense.retailSellingPriceKhr.toLocaleString()} ៛</span>
+                          <span>🏷️ លក់រាយ៖ {roundKhr(expense.retailSellingPriceKhr).toLocaleString()} ៛</span>
                           {expense.retailProfitMarginPct && (
                             <span className="text-emerald-600 font-bold">(+{expense.retailProfitMarginPct}%)</span>
                           )}
@@ -2227,7 +2228,7 @@ export const ExpenseManagement: React.FC<ExpenseManagementProps> = ({
 
                   <div className="text-right shrink-0">
                     <div className="font-black text-rose-600 text-base">
-                      {expense.amountKhr.toLocaleString()} ៛
+                      {roundKhr(expense.amountKhr).toLocaleString()} ៛
                     </div>
                     <div className="text-[10px] text-slate-400 font-bold">
                       ~ ${expense.amountUsd.toFixed(2)} USD
@@ -2243,11 +2244,11 @@ export const ExpenseManagement: React.FC<ExpenseManagementProps> = ({
                     </span>
                     <span className="text-slate-300">@</span>
                     <span className="text-slate-600 font-medium">
-                      {displayUnitPriceKhr.toLocaleString()} ៛
+                      {roundKhr(displayUnitPriceKhr).toLocaleString()} ៛
                     </span>
                     {expense.retailUnitCostKhr && expense.wholesalePackQty && (
                       <span className="text-[10px] text-emerald-700 font-bold bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
-                        ដើម {expense.retailUnitCostKhr.toLocaleString()} ៛/{expense.retailUnit || 'រាយ'}
+                        ដើម {roundKhr(expense.retailUnitCostKhr).toLocaleString()} ៛/{expense.retailUnit || 'រាយ'}
                       </span>
                     )}
                   </div>

@@ -339,7 +339,11 @@ export const cleanDeduplicateExpenses = (items: Expense[]): Expense[] => {
     if (seenSignatures.has(sig)) continue;
     seenSignatures.add(sig);
 
-    result.push(exp);
+    result.push({
+      ...exp,
+      amountKhr: roundKhr(exp.amountKhr !== undefined ? exp.amountKhr : (exp.amountUsd * 4000)),
+      unitPriceKhr: exp.unitPriceKhr !== undefined ? roundKhr(exp.unitPriceKhr) : undefined,
+    });
   }
 
   // 2. Only inject initialExpenses if the store dataset is COMPLETELY EMPTY (initial first-time setup with zero records)
@@ -355,7 +359,11 @@ export const cleanDeduplicateExpenses = (items: Expense[]): Expense[] => {
       seenIds.add(exp.id);
       seenSignatures.add(sig);
 
-      result.push(exp);
+      result.push({
+        ...exp,
+        amountKhr: roundKhr(exp.amountKhr !== undefined ? exp.amountKhr : (exp.amountUsd * 4000)),
+        unitPriceKhr: exp.unitPriceKhr !== undefined ? roundKhr(exp.unitPriceKhr) : undefined,
+      });
     }
   }
 
@@ -1130,21 +1138,29 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   // Expenses management
   const [expenses, setExpenses] = useState<Expense[]>(() => {
+    let list: Expense[] = [];
     if (globalIsDemoMode) {
       seedDemoDataIfMissing();
       const saved = localStorage.getItem('demo_bakery_expenses');
-      return saved ? autoMigrateExpenseDates(JSON.parse(saved)) : demoExpenses;
+      list = saved ? autoMigrateExpenseDates(JSON.parse(saved)) : demoExpenses;
+    } else {
+      const saved = localStorage.getItem('bakery_expenses');
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed)) {
+            list = cleanDeduplicateExpenses(parsed);
+          }
+        } catch (e) {}
+      } else {
+        list = initialExpenses;
+      }
     }
-    const saved = localStorage.getItem('bakery_expenses');
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) {
-          return cleanDeduplicateExpenses(parsed);
-        }
-      } catch (e) {}
-    }
-    return initialExpenses;
+    return (Array.isArray(list) ? list : []).map((e) => ({
+      ...e,
+      amountKhr: roundKhr(e.amountKhr !== undefined ? e.amountKhr : (e.amountUsd * 4000)),
+      unitPriceKhr: e.unitPriceKhr !== undefined ? roundKhr(e.unitPriceKhr) : undefined,
+    }));
   });
 
   // Reserve Fund (ទុនបម្រុងហាង & Petty Cash) state
@@ -2551,6 +2567,31 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
   }, [expenses]);
 
+  // Auto-sanitize existing expenses: guarantee all amounts in Riel are strictly rounded to 100 Riel
+  useEffect(() => {
+    if (!expenses || expenses.length === 0) return;
+    let hadUnrounded = false;
+    const sanitized = expenses.map((e) => {
+      const roundedAmt = roundKhr(e.amountKhr !== undefined ? e.amountKhr : (e.amountUsd * exchangeRate));
+      const roundedUnit = e.unitPriceKhr !== undefined ? roundKhr(e.unitPriceKhr) : undefined;
+      if (e.amountKhr !== roundedAmt || (e.unitPriceKhr !== undefined && e.unitPriceKhr !== roundedUnit)) {
+        hadUnrounded = true;
+        return {
+          ...e,
+          amountKhr: roundedAmt,
+          unitPriceKhr: roundedUnit,
+        };
+      }
+      return e;
+    });
+
+    if (hadUnrounded) {
+      setExpenses(sanitized);
+      safeSetStorage('bakery_expenses', JSON.stringify(sanitized));
+      saveToLanSync({ expenses: sanitized }, true);
+    }
+  }, [expenses, exchangeRate]);
+
   const adjustCurrentBalance = (balanceKhr: number, balanceUsd?: number, reason?: string) => {
     const validKhr = roundKhr(Math.max(0, balanceKhr));
     const validUsd = balanceUsd !== undefined ? balanceUsd : Number((validKhr / exchangeRate).toFixed(2));
@@ -2657,8 +2698,13 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     isUpdatingFromLan.current = false;
     if (lanSyncTimer.current) clearTimeout(lanSyncTimer.current);
 
+    const validAmountKhr = roundKhr(expenseData.amountKhr !== undefined ? expenseData.amountKhr : (expenseData.amountUsd * exchangeRate));
+    const validUnitPriceKhr = expenseData.unitPriceKhr !== undefined ? roundKhr(expenseData.unitPriceKhr) : undefined;
+
     const newExpense: Expense = {
       ...expenseData,
+      amountKhr: validAmountKhr,
+      unitPriceKhr: validUnitPriceKhr,
       id: `exp-${Date.now()}`,
       createdAt: new Date().toISOString(),
     };
@@ -2708,6 +2754,8 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     const now = Date.now();
     const newExpenses: Expense[] = expensesData.map((data, idx) => ({
       ...data,
+      amountKhr: roundKhr(data.amountKhr !== undefined ? data.amountKhr : (data.amountUsd * exchangeRate)),
+      unitPriceKhr: data.unitPriceKhr !== undefined ? roundKhr(data.unitPriceKhr) : undefined,
       id: `exp-${now}-${idx}-${Math.random().toString(36).slice(2, 6)}`,
       createdAt: new Date(now + idx * 10).toISOString(),
     }));
@@ -2720,7 +2768,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     newExpenses.forEach((exp) => {
       const isPaid = !exp.paymentStatus || exp.paymentStatus === 'PAID';
       if (isExpensePaidFromReserve(exp) && isPaid) {
-        totalRfKhr += exp.amountKhr || 0;
+        totalRfKhr += roundKhr(exp.amountKhr || 0);
         totalRfUsd += exp.amountUsd || 0;
         rfItems.push(exp);
       }
@@ -2729,7 +2777,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     let nextRf: ReserveFund | undefined = undefined;
     if (rfItems.length > 0 && totalRfKhr > 0) {
       nextRf = withdrawReserveFund(
-        totalRfKhr,
+        roundKhr(totalRfKhr),
         totalRfUsd,
         `ដកចំណាយ (${rfItems.length} មុខទំនិញស្កេន AI)៖ ${rfItems[0].title}${rfItems.length > 1 ? ` និង ${rfItems.length - 1} មុខទៀត` : ''}`,
         rfItems[0].id
@@ -3069,7 +3117,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   };
 
   const totalExpensesUsd = expenses.reduce((acc, exp) => acc + exp.amountUsd, 0);
-  const totalExpensesKhr = Math.round(totalExpensesUsd * exchangeRate);
+  const totalExpensesKhr = roundKhr(expenses.reduce((acc, exp) => acc + roundKhr(exp.amountKhr || (exp.amountUsd * exchangeRate)), 0));
 
   // Flavor actions
   const addFlavor = (flavorName: string) => {

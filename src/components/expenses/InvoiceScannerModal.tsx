@@ -28,6 +28,7 @@ import confetti from 'canvas-confetti';
 import { useBakery } from '../../context/BakeryContext';
 import { ExpenseCategory, ExpenseType } from '../../types';
 import { soundFx } from '../../utils/audio';
+import { roundKhr } from '../../utils/currencyUtils';
 import {
   getGeminiApiKey,
   getGeminiApiKeyAsync,
@@ -241,17 +242,18 @@ export const InvoiceScannerModal: React.FC<InvoiceScannerModalProps> = ({
 
         // Recalculate total if qty or unit price changed
         if ('quantity' in updates || 'unitPriceKhr' in updates) {
-          updated.totalKhr = Math.round(updated.quantity * updated.unitPriceKhr);
+          updated.totalKhr = roundKhr(updated.quantity * updated.unitPriceKhr);
         }
 
         // Recalculate retail if wholesale changed
         if (updated.isWholesale && updated.wholesalePackQty && updated.wholesalePackQty > 0) {
-          updated.retailUnitCostKhr = Math.round(
+          updated.retailUnitCostKhr = roundKhr(
             updated.totalKhr / (updated.quantity * updated.wholesalePackQty)
           );
           const margin = updated.retailProfitMarginPct || 30;
-          updated.retailSellingPriceKhr =
-            Math.ceil((updated.retailUnitCostKhr * (1 + margin / 100)) / 100) * 100;
+          updated.retailSellingPriceKhr = roundKhr(
+            Math.ceil((updated.retailUnitCostKhr * (1 + margin / 100)) / 100) * 100
+          );
         }
 
         return updated;
@@ -291,7 +293,7 @@ export const InvoiceScannerModal: React.FC<InvoiceScannerModalProps> = ({
 
   // Summary of selected items
   const selectedItems = items.filter((item) => selectedItemIds.has(item.id));
-  const totalSelectedKhr = selectedItems.reduce((sum, item) => sum + item.totalKhr, 0);
+  const totalSelectedKhr = roundKhr(selectedItems.reduce((sum, item) => sum + item.totalKhr, 0));
   const totalSelectedUsd = Number((totalSelectedKhr / exchangeRate).toFixed(2));
 
   // Batch Import handler
@@ -314,9 +316,9 @@ export const InvoiceScannerModal: React.FC<InvoiceScannerModalProps> = ({
         supplier: supplier.trim(),
         quantity: item.quantity,
         unit: item.unit.trim(),
-        unitPriceKhr: item.unitPriceKhr,
+        unitPriceKhr: roundKhr(item.unitPriceKhr),
         unitPriceUsd: Number((item.unitPriceKhr / exchangeRate).toFixed(2)),
-        amountKhr: item.totalKhr,
+        amountKhr: roundKhr(item.totalKhr),
         amountUsd: Number((item.totalKhr / exchangeRate).toFixed(2)),
         paidBy: paidBy.trim() || 'Admin',
         paymentMethod: paymentMethod,
@@ -329,9 +331,9 @@ export const InvoiceScannerModal: React.FC<InvoiceScannerModalProps> = ({
         wholesalePackQty: item.isWholesale ? item.wholesalePackQty : undefined,
         wholesalePackUnit: item.isWholesale ? item.wholesalePackUnit || item.unit : undefined,
         retailUnit: item.retailUnit,
-        retailUnitCostKhr: item.retailUnitCostKhr,
+        retailUnitCostKhr: item.retailUnitCostKhr ? roundKhr(item.retailUnitCostKhr) : undefined,
         retailProfitMarginPct: item.retailProfitMarginPct,
-        retailSellingPriceKhr: item.retailSellingPriceKhr,
+        retailSellingPriceKhr: item.retailSellingPriceKhr ? roundKhr(item.retailSellingPriceKhr) : undefined,
         retailSellingPriceUsd: item.retailSellingPriceKhr
           ? Number((item.retailSellingPriceKhr / exchangeRate).toFixed(2))
           : undefined,

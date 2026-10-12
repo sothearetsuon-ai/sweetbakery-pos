@@ -2,6 +2,7 @@ import { ExpenseCategory, ExpenseType } from '../types';
 import { idbGet, idbSet, idbDel } from '../utils/idbStorage';
 import { saveFirestoreDoc } from './firebase';
 import { normalizeDateToYMD } from '../utils/dateUtils';
+import { roundKhr } from '../utils/currencyUtils';
 
 export interface ExtractedInvoiceItem {
   id: string;
@@ -456,13 +457,13 @@ Return ONLY a valid JSON object matching this schema without any markdown format
       // Normalize items and compute IDs and retail margins
       const items: ExtractedInvoiceItem[] = (parsed.items || []).map((it: any, idx: number) => {
         const qty = Math.max(1, Number(it.quantity) || 1);
-        let unitPriceKhr = Math.round(Number(it.unitPriceKhr) || 0);
-        let totalKhr = Math.round(Number(it.totalKhr) || 0);
+        let unitPriceKhr = roundKhr(Number(it.unitPriceKhr) || 0);
+        let totalKhr = roundKhr(Number(it.totalKhr) || 0);
 
         if (totalKhr === 0 && unitPriceKhr > 0) {
-          totalKhr = unitPriceKhr * qty;
+          totalKhr = roundKhr(unitPriceKhr * qty);
         } else if (unitPriceKhr === 0 && totalKhr > 0) {
-          unitPriceKhr = Math.round(totalKhr / qty);
+          unitPriceKhr = roundKhr(totalKhr / qty);
         }
 
         const isWholesale = Boolean(it.isWholesale);
@@ -472,9 +473,9 @@ Return ONLY a valid JSON object matching this schema without any markdown format
         let retailProfitMarginPct: number | undefined;
 
         if (isWholesale && wholesalePackQty && wholesalePackQty > 0) {
-          retailUnitCostKhr = Math.round(totalKhr / (qty * wholesalePackQty));
+          retailUnitCostKhr = roundKhr(totalKhr / (qty * wholesalePackQty));
           retailProfitMarginPct = 30; // default 30% margin
-          retailSellingPriceKhr = Math.ceil((retailUnitCostKhr * 1.3) / 100) * 100;
+          retailSellingPriceKhr = roundKhr(Math.ceil((retailUnitCostKhr * 1.3) / 100) * 100);
         }
 
         return {
@@ -508,7 +509,7 @@ Return ONLY a valid JSON object matching this schema without any markdown format
         date: extractedDate,
         invoiceNumber: parsed.invoiceNumber || undefined,
         currency: parsed.currency === 'USD' ? 'USD' : 'KHR',
-        totalAmountKhr: Number(parsed.totalAmountKhr) || items.reduce((sum, item) => sum + item.totalKhr, 0),
+        totalAmountKhr: roundKhr(Number(parsed.totalAmountKhr) || items.reduce((sum, item) => sum + item.totalKhr, 0)),
         items: items,
         rawNotes: parsed.rawNotes || (parsed.invoiceNumber ? `វិក្កយបត្រលេខ៖ ${parsed.invoiceNumber}` : ''),
       };
