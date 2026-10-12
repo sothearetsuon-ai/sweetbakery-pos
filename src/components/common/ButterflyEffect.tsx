@@ -89,6 +89,9 @@ export const ButterflyEffect: React.FC<{
   const mouseRef = useRef<{ x: number; y: number; active: boolean }>({ x: -1000, y: -1000, active: false });
   const animFrameRef = useRef<number>(0);
 
+  const isMobile = typeof window !== 'undefined' && (window.innerWidth < 768 || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent));
+  const effectiveCount = isMobile ? Math.min(count, 3) : count;
+
   const [, setRenderTrigger] = useState(0);
 
   // Initialize butterflies with natural varied parameters
@@ -100,7 +103,7 @@ export const ButterflyEffect: React.FC<{
 
     const colors: ButterflyData['colorType'][] = ['monarch', 'blue', 'pink', 'emerald', 'purple', 'gold'];
 
-    const initialButterflies: ButterflyData[] = Array.from({ length: count }).map((_, i) => {
+    const initialButterflies: ButterflyData[] = Array.from({ length: effectiveCount }).map((_, i) => {
       const heading = Math.random() * Math.PI * 2;
       const speed = 1.0 + Math.random() * 1.5;
       const size = 26 + Math.random() * 18; // 26px to 44px
@@ -155,14 +158,28 @@ export const ButterflyEffect: React.FC<{
     if (!enabled) return;
 
     let lastSparkleTime = Date.now();
+    let lastRenderTime = 0;
 
     const update = () => {
+      // Pause if tab or window is hidden
+      if (typeof document !== 'undefined' && document.hidden) {
+        animFrameRef.current = requestAnimationFrame(update);
+        return;
+      }
+
+      const now = Date.now();
+      // Throttle rendering to ~30 FPS to prevent CPU overheating and battery drain
+      if (now - lastRenderTime < 33) {
+        animFrameRef.current = requestAnimationFrame(update);
+        return;
+      }
+      lastRenderTime = now;
+
       const width = window.innerWidth;
       const height = window.innerHeight;
-      const now = Date.now();
 
-      // Spawn subtle magic sparkles every 180ms
-      const shouldSpawnSparkles = now - lastSparkleTime > 180;
+      // Spawn subtle magic sparkles every 250ms
+      const shouldSpawnSparkles = now - lastSparkleTime > 250;
       if (shouldSpawnSparkles) {
         lastSparkleTime = now;
       }

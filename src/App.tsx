@@ -47,10 +47,14 @@ export const App: React.FC = () => {
   const [isThemePickerOpen, setIsThemePickerOpen] = useState(false);
   const [dismissedBannerThemeId, setDismissedBannerThemeId] = useState<string | null>(null);
 
-  // Flying Butterflies Effect State (Enabled by default)
+  // Flying Butterflies Effect State (Disabled by default on mobile devices to ensure peak speed & zero lag, enabled on desktop)
   const [isButterflyEnabled, setIsButterflyEnabled] = useState<boolean>(() => {
     const saved = localStorage.getItem('bakery_butterfly_effect');
-    return saved !== null ? saved === 'true' : true;
+    if (saved !== null) return saved === 'true';
+    const isMobile =
+      typeof window !== 'undefined' &&
+      (window.innerWidth < 768 || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent));
+    return !isMobile;
   });
 
   const handleToggleButterfly = () => {

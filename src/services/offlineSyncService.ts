@@ -436,6 +436,18 @@ class OfflineSyncEngine {
         uploaded++;
       }
 
+      // 10. Party Add-ons
+      if (Array.isArray((localData as any).partyAddons) && (localData as any).partyAddons.length > 0) {
+        await saveFirestoreDoc('settings', 'partyAddons', { items: (localData as any).partyAddons });
+        uploaded++;
+      }
+
+      // 11. Flavors
+      if (Array.isArray((localData as any).flavors) && (localData as any).flavors.length > 0) {
+        await saveFirestoreDoc('settings', 'flavors', { list: (localData as any).flavors });
+        uploaded++;
+      }
+
       this.queue = [];
       this.saveQueue();
       this.updateLastSyncTime();

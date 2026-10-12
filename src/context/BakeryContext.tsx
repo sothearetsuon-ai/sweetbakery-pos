@@ -2005,6 +2005,17 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       offlineSyncService.processQueue().catch(() => {});
     }
 
+    const isSameArrayFast = (a: any[], b: any[]) => {
+      if (a === b) return true;
+      if (!a || !b || a.length !== b.length) return false;
+      if (a.length === 0) return true;
+      if (a[0]?.id !== b[0]?.id || a[a.length - 1]?.id !== b[b.length - 1]?.id) return false;
+      if (a.length <= 40) return JSON.stringify(a) === JSON.stringify(b);
+      const firstMatch = a.slice(0, 5).every((item, i) => item.id === b[i]?.id && (item as any).updatedAt === (b[i] as any)?.updatedAt);
+      const lastMatch = a.slice(-5).every((item, i) => item.id === b[b.length - 5 + i]?.id);
+      return firstMatch && lastMatch;
+    };
+
     // Subscribe to products (High-speed real-time sync)
     const unsubProducts = subscribeToFirestoreCollection<Product>('products', (cloudProducts) => {
       if (globalIsDemoMode) return;
@@ -2014,7 +2025,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         );
         if (filtered.length > 0) {
           setProducts((prev) => {
-            if (JSON.stringify(prev) === JSON.stringify(filtered)) {
+            if (isSameArrayFast(prev, filtered)) {
               return prev;
             }
             safeSetStorage('bakery_products', JSON.stringify(filtered));
@@ -2034,7 +2045,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
         if (filtered.length > 0) {
           setSales((prev) => {
-            if (JSON.stringify(prev) === JSON.stringify(filtered)) {
+            if (isSameArrayFast(prev, filtered)) {
               return prev;
             }
             safeSetStorage('bakery_sales', JSON.stringify(filtered));
@@ -2051,7 +2062,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         const filtered = cloudOrders.filter((o) => o && o.id && !deletedOrderIds.current.has(o.id));
         if (filtered.length > 0) {
           setCustomOrders((prev) => {
-            if (JSON.stringify(prev) === JSON.stringify(filtered)) {
+            if (isSameArrayFast(prev, filtered)) {
               return prev;
             }
             safeSetStorage('bakery_custom_orders', JSON.stringify(filtered));
@@ -2069,7 +2080,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
         if (deduped.length > 0) {
           setExpenses((prev) => {
-            if (JSON.stringify(prev) === JSON.stringify(deduped)) {
+            if (isSameArrayFast(prev, deduped)) {
               return prev;
             }
             safeSetStorage('bakery_expenses', JSON.stringify(deduped));
@@ -2267,6 +2278,48 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       saveStoredTelegramConfig(cloudTelegram);
     });
 
+    // Subscribe to shared Party Add-ons across all devices (PC & Phone sync automatically)
+    const unsubPartyAddons = subscribeToFirestoreDoc<{ items?: PartyAddon[] }>('settings', 'partyAddons', (cloudData) => {
+      if (globalIsDemoMode || !cloudData) return;
+      const items = cloudData.items;
+      if (Array.isArray(items) && items.length > 0) {
+        setPartyAddons((prev) => {
+          if (
+            items.length === prev.length &&
+            items.every(
+              (a, idx) =>
+                a.id === prev[idx]?.id &&
+                a.nameKh === prev[idx]?.nameKh &&
+                a.priceKhr === prev[idx]?.priceKhr &&
+                a.priceUsd === prev[idx]?.priceUsd
+            )
+          ) {
+            return prev;
+          }
+          safeSetStorage('bakery_party_addons', JSON.stringify(items));
+          return items;
+        });
+      }
+    });
+
+    // Subscribe to shared Flavors across all devices (PC & Phone sync automatically)
+    const unsubFlavors = subscribeToFirestoreDoc<{ list?: string[] }>('settings', 'flavors', (cloudData) => {
+      if (globalIsDemoMode || !cloudData) return;
+      const list = cloudData.list;
+      if (Array.isArray(list) && list.length > 0) {
+        setFlavors((prev) => {
+          if (
+            list.length === prev.length &&
+            list.every((f, idx) => f === prev[idx])
+          ) {
+            return prev;
+          }
+          safeSetStorage('bakery_flavors', JSON.stringify(list));
+          return list;
+        });
+      }
+    });
+
     return () => {
       unsubProducts();
       unsubSales();
@@ -2280,6 +2333,8 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       unsubReserveFund();
       unsubGemini();
       unsubTelegram();
+      unsubPartyAddons();
+      unsubFlavors();
     };
   }, [currentStoreTenantId]);
 
@@ -2936,6 +2991,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       const updated = [trimmed, ...prev];
       try { localStorage.setItem('bakery_flavors', JSON.stringify(updated)); } catch (e) {}
       saveToLanSync({ flavors: updated });
+      syncSaveDoc('settings', 'flavors', { list: updated });
       return updated;
     });
   };
@@ -2947,6 +3003,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       const updated = prev.map((f) => (f === oldFlavor ? trimmed : f));
       try { localStorage.setItem('bakery_flavors', JSON.stringify(updated)); } catch (e) {}
       saveToLanSync({ flavors: updated });
+      syncSaveDoc('settings', 'flavors', { list: updated });
       return updated;
     });
   };
@@ -2956,6 +3013,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       const updated = prev.filter((f) => f !== flavorName);
       try { localStorage.setItem('bakery_flavors', JSON.stringify(updated)); } catch (e) {}
       saveToLanSync({ flavors: updated });
+      syncSaveDoc('settings', 'flavors', { list: updated });
       return updated;
     });
   };

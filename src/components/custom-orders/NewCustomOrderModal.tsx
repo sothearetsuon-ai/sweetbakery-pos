@@ -182,6 +182,35 @@ export const NewCustomOrderModal: React.FC<NewCustomOrderModalProps> = ({ isOpen
     });
   };
 
+  const handleAddNewAddon = () => {
+    if (!newAddonName.trim()) return;
+    soundFx.playSuccess();
+    const priceKhr = parseInt(newAddonPriceKhr, 10) || 0;
+    addPartyAddon(newAddonName.trim(), priceKhr);
+    setNewAddonName('');
+    setNewAddonPriceKhr('5000');
+    setIsAddingNewAddon(false);
+  };
+
+  const handleSaveEditAddon = () => {
+    if (!editingAddon) return;
+    soundFx.playSuccess();
+    const priceKhr = parseInt(editAddonPriceKhr, 10) || 0;
+    updatePartyAddon(editingAddon.id, editAddonName.trim(), priceKhr);
+    setEditingAddon(null);
+  };
+
+  const handleDeleteAddon = (id: string) => {
+    soundFx.playPop();
+    deletePartyAddon(id);
+    setSelectedAddonQuantities((prev) => {
+      const copy = { ...prev };
+      delete copy[id];
+      return copy;
+    });
+    setEditingAddon(null);
+  };
+
   // Calculations for Cake
   const addonsTotalKhr = Object.entries(selectedAddonQuantities).reduce((sum, [id, qty]) => {
     if (!qty || qty <= 0) return sum;
@@ -363,7 +392,7 @@ export const NewCustomOrderModal: React.FC<NewCustomOrderModalProps> = ({ isOpen
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs sm:backdrop-blur-md flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-200">
       <div className="bg-white rounded-3xl max-w-2xl w-full shadow-2xl border border-rose-100 overflow-hidden flex flex-col max-h-[94vh] animate-in zoom-in-95 duration-200">
         {/* Header */}
         <div className="px-5 py-3.5 border-b border-rose-100/70 flex items-center justify-between bg-gradient-to-r from-rose-50/70 via-pink-50/50 to-amber-50/40 shrink-0">
@@ -887,6 +916,126 @@ export const NewCustomOrderModal: React.FC<NewCustomOrderModalProps> = ({ isOpen
                   </div>
                 </div>
 
+                {/* Inline Add New Party Add-on Form */}
+                {isAddingNewAddon && (
+                  <div className="p-3 bg-white rounded-2xl border border-amber-300 shadow-sm space-y-2 animate-in fade-in duration-150">
+                    <div className="text-xs font-black text-amber-900 flex items-center justify-between">
+                      <span>✨ បង្កើតមុខទំនិញពិធីបន្ថែមថ្មី</span>
+                      <button
+                        type="button"
+                        onClick={() => setIsAddingNewAddon(false)}
+                        className="text-slate-400 hover:text-slate-600 p-0.5 cursor-pointer"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <input
+                        type="text"
+                        placeholder="ឈ្មោះទំនិញ (ឧ. ផ្កាភ្លើង Sparkler...)"
+                        value={newAddonName}
+                        onChange={(e) => setNewAddonName(e.target.value)}
+                        className="px-3 py-1.5 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500/20 font-medium"
+                      />
+                      <div className="relative">
+                        <input
+                          type="number"
+                          step="any"
+                          min="0"
+                          placeholder="តម្លៃជាលុយរៀល (៛)"
+                          value={newAddonPriceKhr}
+                          onChange={(e) => setNewAddonPriceKhr(e.target.value)}
+                          className="w-full px-3 py-1.5 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500/20 font-bold"
+                        />
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-[10px]">
+                          ៛
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex justify-end gap-2 pt-1">
+                      <button
+                        type="button"
+                        onClick={() => setIsAddingNewAddon(false)}
+                        className="px-3 py-1 text-slate-500 hover:bg-slate-100 rounded-lg text-xs"
+                      >
+                        បោះបង់
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleAddNewAddon}
+                        className="px-3 py-1 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-xs font-bold shadow-xs cursor-pointer"
+                      >
+                        រក្សាទុក
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Inline Edit Party Add-on Form */}
+                {editingAddon && (
+                  <div className="p-3 bg-white rounded-2xl border border-pink-300 shadow-sm space-y-2 animate-in fade-in duration-150">
+                    <div className="text-xs font-black text-slate-800 flex items-center justify-between">
+                      <span>✏️ កែប្រែទំនិញ៖ {editingAddon.nameKh}</span>
+                      <button
+                        type="button"
+                        onClick={() => setEditingAddon(null)}
+                        className="text-slate-400 hover:text-slate-600 p-0.5 cursor-pointer"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <input
+                        type="text"
+                        placeholder="ឈ្មោះទំនិញ"
+                        value={editAddonName}
+                        onChange={(e) => setEditAddonName(e.target.value)}
+                        className="px-3 py-1.5 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500 font-medium"
+                      />
+                      <div className="relative">
+                        <input
+                          type="number"
+                          step="any"
+                          min="0"
+                          placeholder="តម្លៃ (៛ KHR)"
+                          value={editAddonPriceKhr}
+                          onChange={(e) => setEditAddonPriceKhr(e.target.value)}
+                          className="w-full px-3 py-1.5 pr-7 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500 font-bold text-pink-600"
+                        />
+                        <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 font-bold">
+                          ៛
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between pt-1">
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteAddon(editingAddon.id)}
+                        className="px-2.5 py-1 bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 text-xs font-bold rounded-lg cursor-pointer transition-colors flex items-center gap-1"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>លុបមុខនេះ</span>
+                      </button>
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setEditingAddon(null)}
+                          className="px-3 py-1 bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-bold rounded-lg cursor-pointer transition-colors"
+                        >
+                          បោះបង់
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleSaveEditAddon}
+                          className="px-3 py-1 bg-pink-600 hover:bg-pink-700 text-white text-xs font-bold rounded-lg cursor-pointer transition-colors shadow-xs"
+                        >
+                          រក្សាទុក
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {/* Add-ons list grid */}
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
                   {partyAddons.map((addon) => {
@@ -908,6 +1057,23 @@ export const NewCustomOrderModal: React.FC<NewCustomOrderModalProps> = ({ isOpen
                             {addon.nameKh}
                           </div>
                           <div className="flex items-center gap-1 shrink-0">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                soundFx.playPop();
+                                setEditingAddon(addon);
+                                setEditAddonName(addon.nameKh);
+                                setEditAddonPriceKhr(String(addonKhr));
+                                setIsAddingNewAddon(false);
+                              }}
+                              className={`p-1 rounded-md transition-colors cursor-pointer ${
+                                isSelected ? 'hover:bg-white/20 text-pink-100 hover:text-white' : 'hover:bg-slate-100 text-slate-400 hover:text-slate-600'
+                              }`}
+                              title="កែប្រែ / លុប"
+                            >
+                              <Pencil className="w-2.5 h-2.5" />
+                            </button>
                             {isSelected ? (
                               <span className="bg-white text-pink-700 text-[10px] font-black px-1.5 py-0.5 rounded-full shadow-2xs">
                                 x{qty}

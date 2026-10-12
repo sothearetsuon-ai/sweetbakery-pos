@@ -21,7 +21,7 @@ import {
   deleteObject,
   FirebaseStorage,
 } from 'firebase/storage';
-import { BakeryBackupData, CompletedSale, CustomCakeOrder, Expense, Ingredient, Product, StaffMember, StoreInfo } from '../types';
+import { BakeryBackupData, CompletedSale, CustomCakeOrder, Expense, Ingredient, PartyAddon, Product, StaffMember, StoreInfo } from '../types';
 import { idbGet, idbSet, idbDel } from '../utils/idbStorage';
 
 export interface FirebaseConfig {
@@ -570,6 +570,9 @@ export const bulkUploadLocalToFirebase = async (
     if (data.flavors && data.flavors.length) {
       await setDoc(getScopedDocRef(db, 'settings', 'flavors'), { list: data.flavors });
     }
+    if (data.partyAddons && data.partyAddons.length) {
+      await setDoc(getScopedDocRef(db, 'settings', 'partyAddons'), { items: data.partyAddons });
+    }
 
     // 2. High-speed parallel batches for all collections
     const [
@@ -668,10 +671,14 @@ export const fetchEntireFirestoreData = async (): Promise<Partial<BakeryBackupDa
 
     let storeInfo: StoreInfo | undefined;
     let exchangeRate: number | undefined;
+    let partyAddons: PartyAddon[] | undefined;
+    let flavors: string[] | undefined;
 
     settingsSnap.forEach((d) => {
       if (d.id === 'storeInfo') storeInfo = d.data() as StoreInfo;
       if (d.id === 'currency') exchangeRate = d.data().exchangeRate;
+      if (d.id === 'partyAddons') partyAddons = d.data().items;
+      if (d.id === 'flavors') flavors = d.data().list;
     });
 
     return {
@@ -683,6 +690,8 @@ export const fetchEntireFirestoreData = async (): Promise<Partial<BakeryBackupDa
       ingredients,
       storeInfo,
       exchangeRate,
+      partyAddons,
+      flavors,
     };
   } catch (error) {
     console.error('Failed to fetch entire Firestore data:', error);
