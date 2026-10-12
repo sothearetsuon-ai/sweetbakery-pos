@@ -274,13 +274,13 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, onAdvanceStatus, on
       <div className="pt-2 border-t border-rose-50 flex items-center justify-between text-xs">
         <div>
           <div className="font-black text-pink-600 text-sm">
-            {(order.totalKhr ?? Math.round(order.totalUsd * exchangeRate)).toLocaleString()} ៛
+            {(Math.round((order.totalKhr ?? (order.totalUsd * exchangeRate)) / 100) * 100).toLocaleString()} ៛
           </div>
           <div className="text-[10px] text-slate-400 font-semibold">
             ~ ${order.totalUsd.toFixed(2)}
           </div>
           <div className="text-[10px] text-emerald-600 font-bold">
-            បានកក់៖ {(order.depositKhr ?? Math.round(order.depositUsd * exchangeRate)).toLocaleString()} ៛ (${order.depositUsd.toFixed(2)})
+            បានកក់៖ {(Math.round((order.depositKhr ?? (order.depositUsd * exchangeRate)) / 100) * 100).toLocaleString()} ៛ (${order.depositUsd.toFixed(2)})
           </div>
         </div>
 
@@ -288,7 +288,7 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, onAdvanceStatus, on
           {remainingUsd > 0 ? (
             <>
               <div className="text-[11px] text-rose-500 font-black leading-tight">
-                នៅខ្វះ {Math.round(remainingUsd * exchangeRate).toLocaleString()} ៛
+                នៅខ្វះ {(Math.round((remainingUsd * exchangeRate) / 100) * 100).toLocaleString()} ៛
                 <div className="text-[9px] text-slate-400 font-semibold">
                   (~${remainingUsd.toFixed(2)})
                 </div>

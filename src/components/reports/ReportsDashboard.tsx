@@ -179,7 +179,19 @@ export const ReportsDashboard: React.FC = () => {
   const grossMarginPercent = totalSalesUsd > 0 ? ((grossProfitUsd / totalSalesUsd) * 100).toFixed(1) : '0';
 
   const totalCustomOrdersValue = filteredCustomOrders.reduce((acc, o) => acc + o.totalUsd, 0);
+  const totalCustomOrdersValueKhr = Math.round(
+    filteredCustomOrders.reduce(
+      (acc, o) => acc + (o.totalKhr ?? (o.totalUsd * exchangeRate)),
+      0
+    ) / 100
+  ) * 100;
   const totalDepositsCollected = filteredCustomOrders.reduce((acc, o) => acc + o.depositUsd, 0);
+  const totalDepositsCollectedKhr = Math.round(
+    filteredCustomOrders.reduce(
+      (acc, o) => acc + (o.depositKhr ?? (o.depositUsd * exchangeRate)),
+      0
+    ) / 100
+  ) * 100;
 
   // Expenses funding breakdown (Reserve Fund vs Undeducted from Reserve Fund)
   const reserveFundExpenses = useMemo(
@@ -547,7 +559,7 @@ export const ReportsDashboard: React.FC = () => {
             </div>
           </div>
           <div className="text-2xl font-black text-purple-600 tracking-tight">
-            {Math.round(totalCustomOrdersValue * exchangeRate).toLocaleString()} ៛
+            {totalCustomOrdersValueKhr.toLocaleString()} ៛
           </div>
           <div className="text-xs text-slate-500 font-semibold">
             ~ ${totalCustomOrdersValue.toFixed(2)} USD ({filteredCustomOrders.length} នំ)
@@ -857,7 +869,7 @@ export const ReportsDashboard: React.FC = () => {
                   </div>
                   <div className="text-right">
                     <div className="font-black text-xs text-pink-600">
-                      {Math.round(item.totalUsd * exchangeRate).toLocaleString()} ៛
+                      {(Math.round((item.totalUsd * exchangeRate) / 100) * 100).toLocaleString()} ៛
                     </div>
                     <div className="text-[10px] text-slate-400 font-semibold">
                       ~ ${item.totalUsd.toFixed(2)}
@@ -880,7 +892,7 @@ export const ReportsDashboard: React.FC = () => {
               <div className="flex justify-between text-xs font-semibold mb-1">
                 <span>KHQR Bakong / ABA</span>
                 <span>
-                  {Math.round((paymentBreakdown['KHQR_BAKONG'] || 0) * exchangeRate).toLocaleString()} ៛
+                  {(Math.round(((paymentBreakdown['KHQR_BAKONG'] || 0) * exchangeRate) / 100) * 100).toLocaleString()} ៛
                   (~${(paymentBreakdown['KHQR_BAKONG'] || 0).toFixed(2)})
                 </span>
               </div>
@@ -902,7 +914,7 @@ export const ReportsDashboard: React.FC = () => {
               <div className="flex justify-between text-xs font-semibold mb-1">
                 <span>សាច់ប្រាក់ KHR (៛)</span>
                 <span>
-                  {Math.round((paymentBreakdown['CASH_KHR'] || 0) * exchangeRate).toLocaleString()} ៛
+                  {(Math.round(((paymentBreakdown['CASH_KHR'] || 0) * exchangeRate) / 100) * 100).toLocaleString()} ៛
                   (~${(paymentBreakdown['CASH_KHR'] || 0).toFixed(2)})
                 </span>
               </div>
@@ -924,7 +936,7 @@ export const ReportsDashboard: React.FC = () => {
               <div className="flex justify-between text-xs font-semibold mb-1">
                 <span>សាច់ប្រាក់ USD ($)</span>
                 <span>
-                  {Math.round((paymentBreakdown['CASH_USD'] || 0) * exchangeRate).toLocaleString()} ៛
+                  {(Math.round(((paymentBreakdown['CASH_USD'] || 0) * exchangeRate) / 100) * 100).toLocaleString()} ៛
                   (~${(paymentBreakdown['CASH_USD'] || 0).toFixed(2)})
                 </span>
               </div>

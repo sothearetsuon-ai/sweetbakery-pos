@@ -160,7 +160,7 @@ export const CustomOrderPipeline: React.FC = () => {
     if (matching) {
       setReceiptSale(matching);
     } else {
-      const orderTotalKhr = order.totalKhr ?? Math.round(order.totalUsd * exchangeRate);
+      const orderTotalKhr = Math.round((order.totalKhr ?? (order.totalUsd * exchangeRate)) / 100) * 100;
       
       const receiptItems = order.orderType === 'BREAD' && order.breadItems && order.breadItems.length > 0
         ? order.breadItems.map((it, idx) => ({

@@ -1079,13 +1079,28 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [cart, setCart] = useState<CartItem[]>([]);
 
   const [customOrders, setCustomOrders] = useState<CustomCakeOrder[]>(() => {
+    let saved: string | null = null;
     if (globalIsDemoMode) {
       seedDemoDataIfMissing();
-      const saved = localStorage.getItem('demo_bakery_custom_orders');
-      return saved ? JSON.parse(saved) : initialOrders;
+      saved = localStorage.getItem('demo_bakery_custom_orders');
+    } else {
+      saved = localStorage.getItem('bakery_custom_orders');
     }
-    const saved = localStorage.getItem('bakery_custom_orders');
-    return saved ? JSON.parse(saved) : initialOrders;
+    const rawList: CustomCakeOrder[] = saved ? JSON.parse(saved) : initialOrders;
+    return (Array.isArray(rawList) ? rawList : []).map((o) => {
+      if (!o) return o;
+      const cleanTotal = o.totalKhr !== undefined
+        ? Math.round(o.totalKhr / 100) * 100
+        : Math.round(((o.totalUsd || 0) * 4000) / 100) * 100;
+      const cleanDeposit = o.depositKhr !== undefined
+        ? Math.round(o.depositKhr / 100) * 100
+        : Math.round(((o.depositUsd || 0) * 4000) / 100) * 100;
+      return {
+        ...o,
+        totalKhr: cleanTotal,
+        depositKhr: cleanDeposit,
+      };
+    });
   });
 
   const [ingredients, setIngredients] = useState<Ingredient[]>(() => {
@@ -3714,8 +3729,17 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const addCustomOrder = (orderData: Omit<CustomCakeOrder, 'id' | 'orderNumber' | 'createdAt'>): CustomCakeOrder => {
     const randomSuffix = Math.floor(1000 + Math.random() * 9000);
     const orderNumber = `CK-${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, '0')}-${randomSuffix}`;
+    const cleanTotalKhr = orderData.totalKhr !== undefined
+      ? Math.round(orderData.totalKhr / 100) * 100
+      : Math.round(((orderData.totalUsd || 0) * exchangeRate) / 100) * 100;
+    const cleanDepositKhr = orderData.depositKhr !== undefined
+      ? Math.round(orderData.depositKhr / 100) * 100
+      : Math.round(((orderData.depositUsd || 0) * exchangeRate) / 100) * 100;
+
     const newOrder: CustomCakeOrder = {
       ...orderData,
+      totalKhr: cleanTotalKhr,
+      depositKhr: cleanDepositKhr,
       id: `ord-${Date.now()}`,
       orderNumber,
       createdAt: new Date().toISOString(),
