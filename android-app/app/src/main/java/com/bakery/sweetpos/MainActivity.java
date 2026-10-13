@@ -460,17 +460,39 @@ public class MainActivity extends AppCompatActivity {
                         outputFile.delete();
                     }
 
-                    URL url = new URL(downloadUrl);
-                    HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-                    connection.setConnectTimeout(25000);
-                    connection.setReadTimeout(60000);
-                    connection.connect();
+                    URL currentUrl = new URL(downloadUrl);
+                    HttpURLConnection connection = null;
+                    int responseCode = 0;
+                    int redirectCount = 0;
 
-                    int responseCode = connection.getResponseCode();
+                    while (redirectCount < 6) {
+                        connection = (HttpURLConnection) currentUrl.openConnection();
+                        connection.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android) SweetBakeryApp/1.0");
+                        connection.setConnectTimeout(25000);
+                        connection.setReadTimeout(60000);
+                        connection.setInstanceFollowRedirects(true);
+                        connection.connect();
+
+                        responseCode = connection.getResponseCode();
+                        if (responseCode == HttpURLConnection.HTTP_MOVED_PERM ||
+                            responseCode == HttpURLConnection.HTTP_MOVED_TEMP ||
+                            responseCode == HttpURLConnection.HTTP_SEE_OTHER ||
+                            responseCode == 307 || responseCode == 308) {
+                            String newUrl = connection.getHeaderField("Location");
+                            if (newUrl != null && !newUrl.isEmpty()) {
+                                currentUrl = new URL(newUrl);
+                                redirectCount++;
+                                continue;
+                            }
+                        }
+                        break;
+                    }
+
                     if (responseCode != HttpURLConnection.HTTP_OK) {
-                        final String errMsg = "Download failed: Server returned HTTP " + responseCode;
+                        final int finalResponseCode = responseCode;
+                        final String errMsg = "Download failed: Server returned HTTP " + finalResponseCode;
                         runOnUiThread(() -> {
-                            Toast.makeText(MainActivity.this, "ការទាញយកបានបរាជ័យ (HTTP " + responseCode + ")", Toast.LENGTH_LONG).show();
+                            Toast.makeText(MainActivity.this, "ការទាញយកបានបរាជ័យ (HTTP " + finalResponseCode + ")", Toast.LENGTH_LONG).show();
                             webView.evaluateJavascript("window.onUpdateDownloadError && window.onUpdateDownloadError('" + errMsg + "')", null);
                         });
                         return;

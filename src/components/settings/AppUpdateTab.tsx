@@ -106,7 +106,7 @@ export const AppUpdateTab: React.FC = () => {
       urlToUse ||
       customApkUrl.trim() ||
       updateInfo?.apkDownloadUrl ||
-      'https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/latest/download/SweetBakery-Android.apk';
+      'https://raw.githubusercontent.com/sothearetsuon-ai/sweetbakery-pos/main/SweetBakery-Android.apk';
 
     if (isAndroid) {
       setIsDownloading(true);
@@ -321,13 +321,13 @@ export const AppUpdateTab: React.FC = () => {
               </a>
 
               <a
-                href="https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/latest/download/SweetBakery-Android.apk"
+                href="https://raw.githubusercontent.com/sothearetsuon-ai/sweetbakery-pos/main/SweetBakery-Android.apk"
                 target="_blank"
                 rel="noreferrer"
                 className="w-full py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 border border-slate-300 cursor-pointer active:scale-95"
               >
                 <ExternalLink className="w-3.5 h-3.5 text-slate-500" />
-                <span>ទាញយកពី GitHub Releases (Cloud Backup)</span>
+                <span>ទាញយកពី GitHub Raw Link (Cloud Mirror)</span>
               </a>
             </div>
           </div>

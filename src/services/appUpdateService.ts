@@ -105,7 +105,7 @@ export const checkForAppUpdates = async (): Promise<AppUpdateInfo> => {
         ],
         apkDownloadUrl:
           data.apkDownloadUrl ||
-          'https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/latest/download/SweetBakery-Android.apk',
+          'https://raw.githubusercontent.com/sothearetsuon-ai/sweetbakery-pos/main/SweetBakery-Android.apk',
         windowsDownloadUrl: data.windowsDownloadUrl,
         mandatory: Boolean(data.mandatory),
       };
@@ -126,7 +126,7 @@ export const checkForAppUpdates = async (): Promise<AppUpdateInfo> => {
       'ដំណើរការលឿន និងសន្សំសំចៃទិន្នន័យ',
     ],
     apkDownloadUrl:
-      'https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/latest/download/SweetBakery-Android.apk',
+      'https://raw.githubusercontent.com/sothearetsuon-ai/sweetbakery-pos/main/SweetBakery-Android.apk',
   };
 };
 

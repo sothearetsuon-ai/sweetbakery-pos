@@ -7,7 +7,7 @@
     "ប្រព័ន្ធ In-App Auto Update (អាប់ដែតក្នុង App ផ្ទាល់)",
     "ពង្រីកទំហំអេក្រង់ និងប៊ូតុងឱ្យធំទូលាយលើទូរសព្ទដៃ"
   ],
-  "apkDownloadUrl": "https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/latest/download/SweetBakery-Android.apk",
+  "apkDownloadUrl": "https://raw.githubusercontent.com/sothearetsuon-ai/sweetbakery-pos/main/SweetBakery-Android.apk",
   "windowsDownloadUrl": "https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/latest/download/SweetBakery-POS-Windows.zip",
   "mandatory": false
 }
