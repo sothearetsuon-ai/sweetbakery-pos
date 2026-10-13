@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 
 import confetti from 'canvas-confetti';
+import { CameraCaptureModal } from '../common/CameraCaptureModal';
 import { useBakery } from '../../context/BakeryContext';
 import { ExpenseCategory, ExpenseType } from '../../types';
 import { soundFx } from '../../utils/audio';
@@ -87,6 +88,7 @@ export const InvoiceScannerModal: React.FC<InvoiceScannerModalProps> = ({
   const [selectedItemIds, setSelectedItemIds] = useState<Set<string>>(new Set());
   const [isImporting, setIsImporting] = useState(false);
   const [isPreviewImageModalOpen, setIsPreviewImageModalOpen] = useState(false);
+  const [isLiveCameraOpen, setIsLiveCameraOpen] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
@@ -174,25 +176,17 @@ export const InvoiceScannerModal: React.FC<InvoiceScannerModalProps> = ({
     }
   };
 
-  // Handle Image Selection
-  const handleImageFile = async (file: File) => {
-    if (!file.type.startsWith('image/')) {
-      setScanError('សូមជ្រើសរើសឯកសារជារូបភាព (JPG, PNG, WebP)');
-      return;
-    }
-
+  // Process Base64 Image with Gemini Vision AI
+  const handleBase64Image = async (base64: string) => {
     try {
       soundFx.playPop();
       setScanError(null);
       setIsScanning(true);
-
-      // Fast Canvas Compression (1280px provides razor-sharp text while reducing payload by 70% for 3x faster AI response)
-      const compressedBase64 = await compressImage(file, 1280, 1280, 0.78);
-      setSelectedImage(compressedBase64);
+      setSelectedImage(base64);
 
       // Call Gemini Vision AI using active/entered key
       const effectiveKey = keyInput.trim() || apiKey || getGeminiApiKey();
-      const result = await scanInvoiceWithGemini(compressedBase64, effectiveKey, exchangeRate);
+      const result = await scanInvoiceWithGemini(base64, effectiveKey, exchangeRate);
 
       setExtractedData(result);
       setSupplier(result.supplier || 'អ្នកផ្គត់ផ្គង់ទូទៅ');
@@ -209,6 +203,23 @@ export const InvoiceScannerModal: React.FC<InvoiceScannerModalProps> = ({
       soundFx.playNotificationAlert();
     } finally {
       setIsScanning(false);
+    }
+  };
+
+  // Handle Image Selection
+  const handleImageFile = async (file: File) => {
+    if (!file.type.startsWith('image/')) {
+      setScanError('សូមជ្រើសរើសឯកសារជារូបភាព (JPG, PNG, WebP)');
+      return;
+    }
+
+    try {
+      // Fast Canvas Compression (1280px provides razor-sharp text while reducing payload by 70% for 3x faster AI response)
+      const compressedBase64 = await compressImage(file, 1280, 1280, 0.78);
+      await handleBase64Image(compressedBase64);
+    } catch (err: any) {
+      console.error('Image compression error:', err);
+      setScanError('មិនអាចបង្រួមរូបភាពបានទេ សូមសាកល្បងរូបភាពផ្សេង');
     }
   };
 
@@ -629,7 +640,7 @@ export const InvoiceScannerModal: React.FC<InvoiceScannerModalProps> = ({
                         type="button"
                         onClick={() => {
                           soundFx.playPop();
-                          cameraInputRef.current?.click();
+                          setIsLiveCameraOpen(true);
                         }}
                         className="px-5 py-3 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white font-black text-sm rounded-2xl shadow-lg shadow-indigo-600/30 flex items-center gap-2 transition-all active:scale-95 cursor-pointer"
                       >
@@ -1222,6 +1233,19 @@ export const InvoiceScannerModal: React.FC<InvoiceScannerModalProps> = ({
             </button>
           </div>
         </div>
+      )}
+      {/* Live Webcam / Phone Camera Capture Modal */}
+      {isLiveCameraOpen && (
+        <CameraCaptureModal
+          isOpen={isLiveCameraOpen}
+          onClose={() => setIsLiveCameraOpen(false)}
+          onCapture={(base64Img) => {
+            setIsLiveCameraOpen(false);
+            handleBase64Image(base64Img);
+          }}
+          title="ថតរូបវិក្កយបត្រ (Invoice Camera Scanner)"
+          subtitle="ដាក់វិក្កយបត្រឱ្យចំកណ្តាលកាមេរ៉ាឱ្យច្បាស់ដើម្បីឱ្យ AI អានទិន្នន័យ"
+        />
       )}
     </div>
   );
