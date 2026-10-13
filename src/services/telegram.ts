@@ -18,7 +18,7 @@ const STORAGE_KEY = 'bakery_telegram_config';
 
 export const DEFAULT_TELEGRAM_CONFIG: TelegramConfig = {
   botToken: '8544004471:AAFsyBJbtmKR6W46zGtqGhNVWjE2AIvzWC4',
-  chatId: '8970210109',
+  chatId: '-5528089668',
   enabled: true,
   notifySales: true,
   notifyCustomOrders: true,
