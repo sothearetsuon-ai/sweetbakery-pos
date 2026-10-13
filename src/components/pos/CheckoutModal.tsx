@@ -853,9 +853,14 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                 </div>
               </div>
 
-              <p className="text-[11px] text-slate-500 font-medium">
-                ស្កេនជាមួយគ្រប់កម្មវិធីធនាគារក្នុងស្រុក (ABA, ACLEDA, Wing, Canadia...)
-              </p>
+              <div className="bg-amber-50/90 border border-amber-200 rounded-xl p-2.5 text-[11px] text-amber-950 font-medium space-y-1 text-center">
+                <p>
+                  📱 ស្កេនជាមួយគ្រប់កម្មវិធីធនាគារក្នុងស្រុក (ABA, ACLEDA, Wing, Canadia...)
+                </p>
+                <p className="text-amber-800 font-bold">
+                  💡 នៅពេលភ្ញៀវស្កេនរួច សូមចុចប៊ូតុង <strong className="text-emerald-700">«បញ្ជាក់ដោយដៃ»</strong> ដើម្បីឱ្យ Soundbox បន្លឺសំឡេងប្រកាស និងបញ្ចប់ការលក់!
+                </p>
+              </div>
             </div>
           )}
         </div>
