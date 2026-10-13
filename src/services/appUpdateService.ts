@@ -42,6 +42,19 @@ export const isElectronWindowsApp = (): boolean => {
   );
 };
 
+export const isWindowsPlatform = (): boolean => {
+  if (typeof window === 'undefined') return false;
+  const ua = (navigator.userAgent || '').toLowerCase();
+  const platform = ((navigator as any).userAgentData?.platform || navigator.platform || '').toLowerCase();
+  return (
+    isElectronWindowsApp() ||
+    ua.includes('windows') ||
+    ua.includes('win32') ||
+    ua.includes('win64') ||
+    platform.includes('win')
+  );
+};
+
 export const getNativeAppVersion = (): string => {
   if (isAndroidNativeApp() && (window as any).SweetBakeryNative?.getAppVersion) {
     try {
@@ -127,6 +140,8 @@ export const checkForAppUpdates = async (): Promise<AppUpdateInfo> => {
     ],
     apkDownloadUrl:
       'https://raw.githubusercontent.com/sothearetsuon-ai/sweetbakery-pos/main/SweetBakery-Android.apk',
+    windowsDownloadUrl:
+      'https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/latest/download/SweetBakery-POS-Windows.zip',
   };
 };
 

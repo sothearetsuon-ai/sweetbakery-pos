@@ -25,6 +25,7 @@ import {
   CURRENT_BUILD_DATE,
   isAndroidNativeApp,
   isElectronWindowsApp,
+  isWindowsPlatform,
   getNativeAppVersion,
   checkForAppUpdates,
   triggerInAppAndroidUpdate,
@@ -46,7 +47,8 @@ export const AppUpdateTab: React.FC = () => {
   const [copiedUrl, setCopiedUrl] = useState(false);
 
   const isAndroid = isAndroidNativeApp();
-  const isWindows = isElectronWindowsApp();
+  const isElectron = isElectronWindowsApp();
+  const isWindows = isWindowsPlatform();
 
   // Listen to Android native progress callbacks
   useEffect(() => {
@@ -105,8 +107,9 @@ export const AppUpdateTab: React.FC = () => {
     const downloadUrl =
       urlToUse ||
       customApkUrl.trim() ||
-      updateInfo?.apkDownloadUrl ||
-      'https://raw.githubusercontent.com/sothearetsuon-ai/sweetbakery-pos/main/SweetBakery-Android.apk';
+      (isWindows
+        ? (updateInfo?.windowsDownloadUrl || 'https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/latest/download/SweetBakery-POS-Windows.zip')
+        : (updateInfo?.apkDownloadUrl || 'https://raw.githubusercontent.com/sothearetsuon-ai/sweetbakery-pos/main/SweetBakery-Android.apk'));
 
     if (isAndroid) {
       setIsDownloading(true);
@@ -116,8 +119,49 @@ export const AppUpdateTab: React.FC = () => {
         window.open(downloadUrl, '_blank');
       }
     } else {
-      // For browser or windows
-      window.open(downloadUrl, '_blank');
+      handleDownloadWindows();
+    }
+  };
+
+  const handleDownloadWindows = () => {
+    soundFx.playSuccess();
+    const winUrl =
+      updateInfo?.windowsDownloadUrl ||
+      'https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/latest/download/SweetBakery-POS-Windows.zip';
+    const link = document.createElement('a');
+    link.href = winUrl;
+    link.target = '_blank';
+    link.rel = 'noreferrer';
+    link.download = 'SweetBakery-POS-Windows.zip';
+    document.body.appendChild(link);
+    link.click();
+    setTimeout(() => {
+      if (document.body.contains(link)) {
+        document.body.removeChild(link);
+      }
+    }, 200);
+  };
+
+  const handleDownloadAndroid = () => {
+    soundFx.playSuccess();
+    const apkUrl =
+      updateInfo?.apkDownloadUrl ||
+      'https://raw.githubusercontent.com/sothearetsuon-ai/sweetbakery-pos/main/SweetBakery-Android.apk';
+    if (isAndroid) {
+      handleStartUpdate(apkUrl);
+    } else {
+      const link = document.createElement('a');
+      link.href = apkUrl;
+      link.target = '_blank';
+      link.rel = 'noreferrer';
+      link.download = 'SweetBakery-Android.apk';
+      document.body.appendChild(link);
+      link.click();
+      setTimeout(() => {
+        if (document.body.contains(link)) {
+          document.body.removeChild(link);
+        }
+      }, 200);
     }
   };
 
@@ -161,8 +205,10 @@ export const AppUpdateTab: React.FC = () => {
                 <h5 className="text-sm sm:text-base font-black text-slate-800">
                   {isAndroid
                     ? '📱 កម្មវិធីទូរសព្ទ Android (Native App)'
-                    : isWindows
+                    : isElectron
                     ? '💻 កម្មវិធីកុំព្យូទ័រ Windows (Desktop App)'
+                    : isWindows
+                    ? '💻 កុំព្យូទ័រ Windows (Web App)'
                     : '🌐 កម្មវិធី Web App / PWA'}
                 </h5>
                 <span className="text-[10px] sm:text-xs font-bold px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200">
@@ -186,14 +232,25 @@ export const AppUpdateTab: React.FC = () => {
               <span>{isChecking ? 'កំពុងពិនិត្យ...' : '🔄 ពិនិត្យកំណែថ្មី'}</span>
             </button>
 
+            {/* Direct Windows Update Button */}
             <button
               type="button"
-              onClick={() => handleStartUpdate()}
-              disabled={isDownloading}
-              className="w-full sm:w-auto px-5 py-3 bg-gradient-to-r from-pink-600 via-rose-500 to-red-600 hover:from-pink-700 hover:to-red-700 text-white rounded-xl text-xs sm:text-sm font-black shadow-md shadow-pink-500/25 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 active:scale-95"
+              onClick={handleDownloadWindows}
+              className="w-full sm:w-auto px-4 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 text-white rounded-xl text-xs sm:text-sm font-black shadow-md shadow-blue-500/25 transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95"
             >
-              <Download className="w-4 h-4 animate-bounce" />
-              <span>⚡ ទាញយក និងដំឡើងភ្លាមៗ (Install Update)</span>
+              <Monitor className="w-4 h-4" />
+              <span>💻 Update Windows</span>
+            </button>
+
+            {/* Direct Android Update Button */}
+            <button
+              type="button"
+              onClick={handleDownloadAndroid}
+              disabled={isDownloading}
+              className="w-full sm:w-auto px-4 py-3 bg-gradient-to-r from-pink-600 via-rose-500 to-red-600 hover:from-pink-700 text-white rounded-xl text-xs sm:text-sm font-black shadow-md shadow-pink-500/25 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 active:scale-95"
+            >
+              <Smartphone className="w-4 h-4" />
+              <span>📱 Update Android</span>
             </button>
           </div>
         </div>
@@ -248,15 +305,26 @@ export const AppUpdateTab: React.FC = () => {
                   </div>
                 )}
 
-                <button
-                  type="button"
-                  onClick={() => handleStartUpdate()}
-                  disabled={isDownloading}
-                  className="w-full py-3.5 bg-gradient-to-r from-amber-500 via-orange-500 to-pink-600 hover:from-amber-600 hover:to-pink-700 text-white rounded-2xl text-xs sm:text-sm font-black shadow-lg shadow-orange-500/25 transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95 disabled:opacity-50"
-                >
-                  <Download className="w-5 h-5" />
-                  <span>⚡ ទាញយក និងអាប់ដែតឥឡូវនេះ (Update Now)</span>
-                </button>
+                <div className="flex flex-col sm:flex-row items-center gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={handleDownloadWindows}
+                    className="w-full sm:flex-1 py-3.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 text-white rounded-2xl text-xs sm:text-sm font-black shadow-lg shadow-blue-500/25 transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95"
+                  >
+                    <Monitor className="w-5 h-5" />
+                    <span>💻 អាប់ដែត Windows (Download .zip)</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleDownloadAndroid}
+                    disabled={isDownloading}
+                    className="w-full sm:flex-1 py-3.5 bg-gradient-to-r from-pink-600 to-rose-600 hover:from-pink-700 text-white rounded-2xl text-xs sm:text-sm font-black shadow-lg shadow-pink-500/25 transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95 disabled:opacity-50"
+                  >
+                    <Smartphone className="w-5 h-5" />
+                    <span>📱 អាប់ដែត Android (Download .apk)</span>
+                  </button>
+                </div>
               </div>
             ) : (
               <div className="p-4 sm:p-5 bg-emerald-50/80 border-2 border-emerald-200 rounded-2xl flex items-center gap-3">
@@ -305,25 +373,25 @@ export const AppUpdateTab: React.FC = () => {
                 <span>📱 ទូរសព្ទ Android (SweetBakery-Android.apk)</span>
               </div>
               <p className="text-xs text-slate-500 leading-relaxed font-medium">
-                ទំហំ៖ <strong>~15.8 MB</strong> | ដំណើរការលើ Android 7.0 ឡើងទៅ មានប្រព័ន្ធសំឡេងប្រកាស KHQR Soundbox ភាសាខ្មែរភ្ជាប់មកស្រាប់។
+                ទំហំ៖ <strong>~9.1 MB</strong> | ដំណើរការលើ Android 7.0 ឡើងទៅ មានប្រព័ន្ធសំឡេងប្រកាស KHQR Soundbox ភាសាខ្មែរភ្ជាប់មកស្រាប់។
               </p>
             </div>
 
             <div className="space-y-2 pt-2">
-              <a
-                href="./SweetBakery-Android.apk"
-                download="SweetBakery-Android.apk"
-                onClick={() => soundFx.playSuccess()}
+              <button
+                type="button"
+                onClick={handleDownloadAndroid}
                 className="w-full py-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-xl text-xs sm:text-sm font-black transition-all flex items-center justify-center gap-2 shadow-md shadow-emerald-600/25 cursor-pointer active:scale-95"
               >
                 <Download className="w-4 h-4 animate-bounce" />
-                <span>📥 ទាញយក APK ផ្ទាល់ពីក្នុង App (Direct APK)</span>
-              </a>
+                <span>📥 ទាញយក APK (SweetBakery-Android.apk ~9.1 MB)</span>
+              </button>
 
               <a
                 href="https://raw.githubusercontent.com/sothearetsuon-ai/sweetbakery-pos/main/SweetBakery-Android.apk"
                 target="_blank"
                 rel="noreferrer"
+                download="SweetBakery-Android.apk"
                 className="w-full py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 border border-slate-300 cursor-pointer active:scale-95"
               >
                 <ExternalLink className="w-3.5 h-3.5 text-slate-500" />
@@ -340,29 +408,28 @@ export const AppUpdateTab: React.FC = () => {
                 <span>💻 កុំព្យូទ័រ Windows (SweetBakery-POS-Windows.zip)</span>
               </div>
               <p className="text-xs text-slate-500 leading-relaxed font-medium">
-                ទំហំ៖ <strong>~120 MB</strong> | ដំណើរការលើ Windows 10/11 មិនបាច់ដំឡើងអ្វីផ្សេងឡើយ ពន្លា Zip រួចចុច Run ដំណើរការភ្លាម។
+                ទំហំ៖ <strong>~160 MB</strong> | ដំណើរការលើ Windows 10/11 មិនបាច់ដំឡើងអ្វីផ្សេងឡើយ ពន្លា Zip រួចចុច Run ដំណើរការភ្លាម។
               </p>
             </div>
 
             <div className="space-y-2 pt-2">
-              <a
-                href="./SweetBakery-POS-Windows.zip"
-                download="SweetBakery-POS-Windows.zip"
-                onClick={() => soundFx.playSuccess()}
+              <button
+                type="button"
+                onClick={handleDownloadWindows}
                 className="w-full py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl text-xs sm:text-sm font-black transition-all flex items-center justify-center gap-2 shadow-md shadow-blue-600/25 cursor-pointer active:scale-95"
               >
                 <Download className="w-4 h-4" />
-                <span>📥 ទាញយក Windows Zip ផ្ទាល់ (Direct Setup)</span>
-              </a>
+                <span>📥 ទាញយក Windows Zip (SweetBakery-POS-Windows.zip)</span>
+              </button>
 
               <a
-                href="https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/latest/download/SweetBakery-POS-Windows.zip"
+                href="https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/latest"
                 target="_blank"
                 rel="noreferrer"
                 className="w-full py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 border border-slate-300 cursor-pointer active:scale-95"
               >
                 <ExternalLink className="w-3.5 h-3.5 text-slate-500" />
-                <span>ទាញយកពី GitHub Releases (Cloud Backup)</span>
+                <span>បើកទំព័រ GitHub Releases (v1.2.0)</span>
               </a>
             </div>
           </div>
