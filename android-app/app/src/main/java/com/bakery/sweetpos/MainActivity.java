@@ -1,0 +1,559 @@
+package com.bakery.sweetpos;
+
+import android.Manifest;
+import android.annotation.SuppressLint;
+import android.content.ActivityNotFoundException;
+import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
+import android.net.Uri;
+import android.os.Build;
+import android.os.Bundle;
+import android.os.Environment;
+import android.provider.Settings;
+import android.view.View;
+import android.webkit.JavascriptInterface;
+import android.webkit.PermissionRequest;
+import android.webkit.ValueCallback;
+import android.webkit.WebChromeClient;
+import android.webkit.WebResourceError;
+import android.webkit.WebResourceRequest;
+import android.webkit.WebResourceResponse;
+import android.webkit.WebSettings;
+import android.webkit.WebView;
+import android.webkit.WebViewClient;
+import android.widget.Button;
+import android.widget.LinearLayout;
+import android.widget.ProgressBar;
+import android.widget.Toast;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
+import androidx.core.content.FileProvider;
+import androidx.webkit.WebViewAssetLoader;
+
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.InputStream;
+import java.io.IOException;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.util.Locale;
+import java.util.concurrent.Executors;
+import android.speech.tts.TextToSpeech;
+import android.media.MediaPlayer;
+import android.media.AudioAttributes;
+
+public class MainActivity extends AppCompatActivity {
+
+    private static final String APP_URL = "https://appassets.androidplatform.net/index.html";
+    private static final int FILE_CHOOSER_REQUEST_CODE = 1001;
+    private static final int CAMERA_PERMISSION_REQUEST_CODE = 2001;
+
+    private WebView webView;
+    private ProgressBar progressBar;
+    private LinearLayout offlineLayout;
+    private Button btnRetry;
+    private WebViewAssetLoader assetLoader;
+
+    private ValueCallback<Uri[]> uploadMessageCallback;
+    private PermissionRequest pendingWebPermissionRequest;
+
+    private TextToSpeech textToSpeech;
+    private MediaPlayer mediaPlayer;
+
+    @SuppressLint("SetJavaScriptEnabled")
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+
+        // Initialize Android TextToSpeech engine
+        try {
+            textToSpeech = new TextToSpeech(this, status -> {
+                if (status == TextToSpeech.SUCCESS && textToSpeech != null) {
+                    textToSpeech.setLanguage(new Locale("km", "KH"));
+                    textToSpeech.setSpeechRate(0.95f);
+                    textToSpeech.setPitch(1.0f);
+                }
+            });
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        webView = findViewById(R.id.webView);
+        progressBar = findViewById(R.id.progressBar);
+        offlineLayout = findViewById(R.id.offlineLayout);
+        btnRetry = findViewById(R.id.btnRetry);
+
+        // Pre-request camera permission so WebRTC live camera works instantly
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA}, CAMERA_PERMISSION_REQUEST_CODE);
+        }
+
+        // Hardware Acceleration and GPU-accelerated rendering
+        webView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
+        webView.setOverScrollMode(View.OVER_SCROLL_NEVER);
+        webView.setVerticalScrollBarEnabled(false);
+        webView.setHorizontalScrollBarEnabled(false);
+
+        // Serve local bundled assets securely
+        assetLoader = new WebViewAssetLoader.Builder()
+                .setDomain("appassets.androidplatform.net")
+                .addPathHandler("/", new WebViewAssetLoader.AssetsPathHandler(this))
+                .addPathHandler("/assets/", new WebViewAssetLoader.AssetsPathHandler(this))
+                .addPathHandler("/uploads/", new WebViewAssetLoader.AssetsPathHandler(this))
+                .build();
+
+        configureWebView();
+
+        // Native bridge for In-App Updates and platform info
+        webView.addJavascriptInterface(new SweetBakeryNativeBridge(), "SweetBakeryNative");
+
+        btnRetry.setOnClickListener(v -> {
+            offlineLayout.setVisibility(View.GONE);
+            webView.loadUrl(APP_URL);
+        });
+
+        webView.loadUrl(APP_URL);
+    }
+
+    @SuppressLint("SetJavaScriptEnabled")
+    private void configureWebView() {
+        WebSettings webSettings = webView.getSettings();
+        webSettings.setJavaScriptEnabled(true);
+        webSettings.setDomStorageEnabled(true);
+        webSettings.setDatabaseEnabled(true);
+        webSettings.setAllowFileAccess(true);
+        webSettings.setAllowContentAccess(true);
+        webSettings.setLoadWithOverviewMode(true);
+        webSettings.setUseWideViewPort(true);
+        webSettings.setSupportZoom(false);
+        webSettings.setBuiltInZoomControls(false);
+        webSettings.setDisplayZoomControls(false);
+        webSettings.setCacheMode(WebSettings.LOAD_DEFAULT);
+        webSettings.setRenderPriority(WebSettings.RenderPriority.HIGH);
+        webSettings.setEnableSmoothTransition(true);
+        webSettings.setMediaPlaybackRequiresUserGesture(false);
+        webSettings.setUserAgentString(webSettings.getUserAgentString() + " SweetBakeryAndroidApp/1.0");
+
+        webView.setWebViewClient(new WebViewClient() {
+            @Override
+            public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
+                Uri uri = request.getUrl();
+
+                // 1. First attempt with WebViewAssetLoader
+                WebResourceResponse response = assetLoader.shouldInterceptRequest(uri);
+                if (response != null) {
+                    return response;
+                }
+
+                // 2. Direct high-speed local asset resolution for appassets.androidplatform.net
+                String host = uri.getHost();
+                if (host != null && (host.equals("appassets.androidplatform.net") || host.equals("localhost"))) {
+                    String path = uri.getPath();
+                    if (path != null) {
+                        String cleanPath = path.startsWith("/") ? path.substring(1) : path;
+                        if (cleanPath.isEmpty()) cleanPath = "index.html";
+
+                        try {
+                            InputStream is = getAssets().open(cleanPath);
+                            String mimeType = getMimeTypeForPath(cleanPath);
+                            return new WebResourceResponse(mimeType, "UTF-8", is);
+                        } catch (IOException e) {
+                            // Instant 404 response to PREVENT 30-50s Android network timeout on missing/api paths!
+                            return new WebResourceResponse("text/plain", "UTF-8", 404, "Not Found", null, null);
+                        }
+                    }
+                }
+
+                return null;
+            }
+
+            @Override
+            public void onPageStarted(WebView view, String url, Bitmap favicon) {
+                super.onPageStarted(view, url, favicon);
+                progressBar.setVisibility(View.VISIBLE);
+            }
+
+            @Override
+            public void onPageFinished(WebView view, String url) {
+                super.onPageFinished(view, url);
+                progressBar.setVisibility(View.GONE);
+            }
+
+            @Override
+            public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) {
+                super.onReceivedError(view, request, error);
+                if (request.isForMainFrame() && !request.getUrl().toString().contains("appassets.androidplatform.net")) {
+                    progressBar.setVisibility(View.GONE);
+                    offlineLayout.setVisibility(View.VISIBLE);
+                }
+            }
+
+            @Override
+            public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
+                String url = request.getUrl().toString();
+                if (url.startsWith("https://appassets.androidplatform.net") || url.startsWith("file://")) {
+                    return false;
+                }
+                // Open external links in device browser
+                try {
+                    Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
+                    startActivity(intent);
+                    return true;
+                } catch (ActivityNotFoundException e) {
+                    return false;
+                }
+            }
+        });
+
+        webView.setWebChromeClient(new WebChromeClient() {
+            @Override
+            public void onProgressChanged(WebView view, int newProgress) {
+                progressBar.setProgress(newProgress);
+                if (newProgress == 100) {
+                    progressBar.setVisibility(View.GONE);
+                }
+            }
+
+            @Override
+            public void onPermissionRequest(final PermissionRequest request) {
+                runOnUiThread(() -> {
+                    if (ContextCompat.checkSelfPermission(MainActivity.this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
+                        request.grant(request.getResources());
+                    } else {
+                        pendingWebPermissionRequest = request;
+                        ActivityCompat.requestPermissions(MainActivity.this,
+                                new String[]{Manifest.permission.CAMERA},
+                                CAMERA_PERMISSION_REQUEST_CODE);
+                    }
+                });
+            }
+
+            @Override
+            public void onPermissionRequestCanceled(PermissionRequest request) {
+                if (pendingWebPermissionRequest != null && pendingWebPermissionRequest.equals(request)) {
+                    pendingWebPermissionRequest = null;
+                }
+            }
+
+            @Override
+            public boolean onShowFileChooser(WebView webView, ValueCallback<Uri[]> filePathCallback,
+                                            FileChooserParams fileChooserParams) {
+                if (uploadMessageCallback != null) {
+                    uploadMessageCallback.onReceiveValue(null);
+                }
+                uploadMessageCallback = filePathCallback;
+
+                Intent intent = fileChooserParams.createIntent();
+                try {
+                    startActivityForResult(intent, FILE_CHOOSER_REQUEST_CODE);
+                } catch (ActivityNotFoundException e) {
+                    uploadMessageCallback = null;
+                    Toast.makeText(MainActivity.this, "មិនអាចបើកកម្មវិធីជ្រើសរើសឯកសារបានឡើយ", Toast.LENGTH_SHORT).show();
+                    return false;
+                }
+                return true;
+            }
+        });
+    }
+
+    private String getMimeTypeForPath(String path) {
+        String lower = path.toLowerCase();
+        if (lower.endsWith(".html")) return "text/html";
+        if (lower.endsWith(".js") || lower.endsWith(".mjs")) return "application/javascript";
+        if (lower.endsWith(".css")) return "text/css";
+        if (lower.endsWith(".json")) return "application/json";
+        if (lower.endsWith(".png")) return "image/png";
+        if (lower.endsWith(".jpg") || lower.endsWith(".jpeg")) return "image/jpeg";
+        if (lower.endsWith(".webp")) return "image/webp";
+        if (lower.endsWith(".svg")) return "image/svg+xml";
+        if (lower.endsWith(".ico")) return "image/x-icon";
+        if (lower.endsWith(".woff2")) return "font/woff2";
+        if (lower.endsWith(".woff")) return "font/woff";
+        if (lower.endsWith(".ttf")) return "font/ttf";
+        if (lower.endsWith(".mp3")) return "audio/mpeg";
+        return "application/octet-stream";
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == FILE_CHOOSER_REQUEST_CODE) {
+            if (uploadMessageCallback != null) {
+                Uri[] results = null;
+                if (resultCode == RESULT_OK && data != null) {
+                    if (data.getData() != null) {
+                        results = new Uri[]{data.getData()};
+                    } else if (data.getClipData() != null) {
+                        int count = data.getClipData().getItemCount();
+                        results = new Uri[count];
+                        for (int i = 0; i < count; i++) {
+                            results[i] = data.getClipData().getItemAt(i).getUri();
+                        }
+                    }
+                }
+                uploadMessageCallback.onReceiveValue(results);
+                uploadMessageCallback = null;
+            }
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == CAMERA_PERMISSION_REQUEST_CODE) {
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                if (pendingWebPermissionRequest != null) {
+                    pendingWebPermissionRequest.grant(pendingWebPermissionRequest.getResources());
+                    pendingWebPermissionRequest = null;
+                }
+            } else {
+                if (pendingWebPermissionRequest != null) {
+                    pendingWebPermissionRequest.deny();
+                    pendingWebPermissionRequest = null;
+                }
+                Toast.makeText(this, "សូមផ្តល់សិទ្ធិប្រើកាមេរ៉ា ដើម្បីថតរូបភាព", Toast.LENGTH_SHORT).show();
+            }
+        }
+    }
+
+    public class SweetBakeryNativeBridge {
+
+        @JavascriptInterface
+        public boolean isNativeApp() {
+            return true;
+        }
+
+        @JavascriptInterface
+        public String getAppVersion() {
+            try {
+                return getPackageManager().getPackageInfo(getPackageName(), 0).versionName;
+            } catch (Exception e) {
+                return "1.2.0";
+            }
+        }
+
+        @JavascriptInterface
+        public void speakKhmer(String text) {
+            if (text == null || text.trim().isEmpty()) return;
+            runOnUiThread(() -> {
+                try {
+                    if (textToSpeech != null) {
+                        textToSpeech.speak(text, TextToSpeech.QUEUE_FLUSH, null, "KHMER_PAYMENT_ALERT");
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            });
+        }
+
+        @JavascriptInterface
+        public void playAudioUrl(String audioUrl) {
+            if (audioUrl == null || audioUrl.trim().isEmpty()) return;
+            Executors.newSingleThreadExecutor().execute(() -> {
+                File tempAudioFile = null;
+                try {
+                    runOnUiThread(() -> {
+                        Toast.makeText(MainActivity.this, "🔔 KHQR Soundbox កំពុងប្រកាស...", Toast.LENGTH_SHORT).show();
+                    });
+
+                    // Download the speech audio file to local cache first (100% reliable)
+                    URL url = new URL(audioUrl);
+                    HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+                    conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36");
+                    conn.setRequestProperty("Referer", "https://translate.google.com/");
+                    conn.setConnectTimeout(10000);
+                    conn.setReadTimeout(15000);
+
+                    if (conn.getResponseCode() == HttpURLConnection.HTTP_OK) {
+                        File cacheDir = getCacheDir();
+                        tempAudioFile = new File(cacheDir, "soundbox_alert.mp3");
+                        InputStream is = conn.getInputStream();
+                        FileOutputStream fos = new FileOutputStream(tempAudioFile);
+                        byte[] buffer = new byte[4096];
+                        int read;
+                        while ((read = is.read(buffer)) != -1) {
+                            fos.write(buffer, 0, read);
+                        }
+                        fos.flush();
+                        fos.close();
+                        is.close();
+
+                        // Now play the downloaded local mp3 with MediaPlayer
+                        if (mediaPlayer != null) {
+                            try {
+                                mediaPlayer.stop();
+                                mediaPlayer.release();
+                            } catch (Exception ignored) {}
+                            mediaPlayer = null;
+                        }
+
+                        mediaPlayer = new MediaPlayer();
+                        mediaPlayer.setAudioAttributes(
+                            new AudioAttributes.Builder()
+                                .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
+                                .setUsage(AudioAttributes.USAGE_ASSISTANCE_SONIFICATION)
+                                .build()
+                        );
+                        mediaPlayer.setDataSource(tempAudioFile.getAbsolutePath());
+                        mediaPlayer.prepare();
+                        mediaPlayer.start();
+                    } else {
+                        throw new IOException("HTTP " + conn.getResponseCode());
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    // Play guaranteed bundled raw audio (R.raw.khqr_success)
+                    runOnUiThread(() -> {
+                        try {
+                            if (mediaPlayer != null) {
+                                try {
+                                    mediaPlayer.stop();
+                                    mediaPlayer.release();
+                                } catch (Exception ignored) {}
+                                mediaPlayer = null;
+                            }
+                            int resId = getResources().getIdentifier("khqr_success", "raw", getPackageName());
+                            if (resId != 0) {
+                                mediaPlayer = MediaPlayer.create(MainActivity.this, resId);
+                                if (mediaPlayer != null) {
+                                    mediaPlayer.start();
+                                    return;
+                                }
+                            }
+                        } catch (Exception ex) {
+                            ex.printStackTrace();
+                        }
+
+                        if (textToSpeech != null) {
+                            textToSpeech.speak("ទទួលបានប្រាក់តាមរយៈ KHQR ជោគជ័យ", TextToSpeech.QUEUE_FLUSH, null, "FALLBACK");
+                        }
+                    });
+                }
+            });
+        }
+
+        @JavascriptInterface
+        public void downloadAndInstallUpdate(String downloadUrl) {
+            if (downloadUrl == null || downloadUrl.trim().isEmpty()) {
+                runOnUiThread(() -> Toast.makeText(MainActivity.this, "URL អាប់ដែតមិនត្រឹមត្រូវឡើយ", Toast.LENGTH_SHORT).show());
+                return;
+            }
+
+            Executors.newSingleThreadExecutor().execute(() -> {
+                File outputFile = null;
+                try {
+                    runOnUiThread(() -> {
+                        Toast.makeText(MainActivity.this, "កំពុងទាញយកកំណែអាប់ដែតថ្មី...", Toast.LENGTH_SHORT).show();
+                        webView.evaluateJavascript("window.onUpdateDownloadStart && window.onUpdateDownloadStart()", null);
+                    });
+
+                    File dir = getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS);
+                    if (dir == null) dir = getCacheDir();
+                    outputFile = new File(dir, "SweetBakery-Update.apk");
+                    if (outputFile.exists()) {
+                        outputFile.delete();
+                    }
+
+                    URL url = new URL(downloadUrl);
+                    HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+                    connection.setConnectTimeout(25000);
+                    connection.setReadTimeout(60000);
+                    connection.connect();
+
+                    int responseCode = connection.getResponseCode();
+                    if (responseCode != HttpURLConnection.HTTP_OK) {
+                        final String errMsg = "Download failed: Server returned HTTP " + responseCode;
+                        runOnUiThread(() -> {
+                            Toast.makeText(MainActivity.this, "ការទាញយកបានបរាជ័យ (HTTP " + responseCode + ")", Toast.LENGTH_LONG).show();
+                            webView.evaluateJavascript("window.onUpdateDownloadError && window.onUpdateDownloadError('" + errMsg + "')", null);
+                        });
+                        return;
+                    }
+
+                    int fileLength = connection.getContentLength();
+                    InputStream input = connection.getInputStream();
+                    FileOutputStream output = new FileOutputStream(outputFile);
+
+                    byte[] data = new byte[8192];
+                    long total = 0;
+                    int count;
+                    long lastReportTime = 0;
+
+                    while ((count = input.read(data)) != -1) {
+                        total += count;
+                        output.write(data, 0, count);
+
+                        long now = System.currentTimeMillis();
+                        if (fileLength > 0 && (now - lastReportTime > 250)) {
+                            lastReportTime = now;
+                            final int progress = (int) (total * 100 / fileLength);
+                            runOnUiThread(() -> {
+                                webView.evaluateJavascript("window.onUpdateDownloadProgress && window.onUpdateDownloadProgress(" + progress + ")", null);
+                            });
+                        }
+                    }
+
+                    output.flush();
+                    output.close();
+                    input.close();
+
+                    final File finalFile = outputFile;
+                    runOnUiThread(() -> {
+                        webView.evaluateJavascript("window.onUpdateDownloadComplete && window.onUpdateDownloadComplete()", null);
+                        installApk(finalFile);
+                    });
+
+                } catch (Exception e) {
+                    final String err = e.getMessage() != null ? e.getMessage() : "Unknown error";
+                    runOnUiThread(() -> {
+                        Toast.makeText(MainActivity.this, "កំហុសពេលទាញយក: " + err, Toast.LENGTH_LONG).show();
+                        webView.evaluateJavascript("window.onUpdateDownloadError && window.onUpdateDownloadError('" + err.replace("'", "\\'") + "')", null);
+                    });
+                }
+            });
+        }
+    }
+
+    private void installApk(File apkFile) {
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                if (!getPackageManager().canRequestPackageInstalls()) {
+                    Toast.makeText(this, "សូមអនុញ្ញាតសិទ្ធិដំឡើង App ពី SweetBakery POS", Toast.LENGTH_LONG).show();
+                    Intent permissionIntent = new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES);
+                    permissionIntent.setData(Uri.parse("package:" + getPackageName()));
+                    startActivity(permissionIntent);
+                    return;
+                }
+            }
+
+            Uri apkUri = FileProvider.getUriForFile(
+                    this,
+                    getPackageName() + ".provider",
+                    apkFile
+            );
+
+            Intent intent = new Intent(Intent.ACTION_VIEW);
+            intent.setDataAndType(apkUri, "application/vnd.android.package-archive");
+            intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            startActivity(intent);
+        } catch (Exception e) {
+            Toast.makeText(this, "មិនអាចបើកកម្មវិធីដំឡើងបានទេ: " + e.getMessage(), Toast.LENGTH_LONG).show();
+        }
+    }
+
+    @Override
+    public void onBackPressed() {
+        if (webView.canGoBack()) {
+            webView.goBack();
+        } else {
+            super.onBackPressed();
+        }
+    }
+}

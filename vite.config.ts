@@ -880,11 +880,20 @@ self.addEventListener('fetch', (event) => {
             (await cache.match('./')) ||
             (await cache.match('/'));
           if (cachedPage) return cachedPage;
-          return new Response('Offline: Please open when connected first', {
-            status: 503,
-            statusText: 'Offline',
-            headers: { 'Content-Type': 'text/plain' },
-          });
+          const keys = await cache.keys();
+          for (const key of keys) {
+            if (key.url.endsWith('index.html') || key.url.endsWith('/')) {
+              const matched = await cache.match(key);
+              if (matched) return matched;
+            }
+          }
+          return new Response(
+            '<!DOCTYPE html><html lang="km"><head><meta charset="utf-8"><title>SweetBakery POS</title></head><body style="font-family:sans-serif;text-align:center;padding:60px;background:#fff1f2;color:#be185d;"><h2>🎂 កំពុងភ្ជាប់ទៅកាន់ SweetBakery POS...</h2><p style="color:#64748b;">សូមរង់ចាំបន្តិច ឬចុចប៊ូតុងខាងក្រោមដើម្បីដំណើរការឡើងវិញ។</p><button onclick="window.location.reload()" style="padding:12px 28px;border-radius:12px;background:#ec4899;color:white;border:none;cursor:pointer;font-size:16px;box-shadow:0 4px 12px rgba(236,72,153,0.3);">🔄 ផ្ទុកទំព័រឡើងវិញ (Reload)</button></body></html>',
+            {
+              status: 200,
+              headers: { 'Content-Type': 'text/html; charset=utf-8' },
+            }
+          );
         })
     );
     return;

@@ -16,7 +16,10 @@ import {
   X,
   Eye,
   EyeOff,
+  QrCode,
+  Volume2,
 } from 'lucide-react';
+import confetti from 'canvas-confetti';
 import { useBakery } from '../../context/BakeryContext';
 import { t } from '../../utils/translations';
 import { ProductCard } from './ProductCard';
@@ -25,9 +28,11 @@ import { CheckoutModal } from './CheckoutModal';
 import { ReceiptModal } from './ReceiptModal';
 import { AddProductModal } from './AddProductModal';
 import { PartyAccessoriesModal } from './PartyAccessoriesModal';
+import { KhqrStandeeModal } from './KhqrStandeeModal';
 import { Product, CompletedSale } from '../../types';
 import { soundFx } from '../../utils/audio';
 import { sortProductsNewestFirst } from '../../utils/productUtils';
+import { paymentListener, PaymentNotification } from '../../services/paymentListener';
 
 export const PosTerminal: React.FC = () => {
   const {
@@ -49,6 +54,7 @@ export const PosTerminal: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [isPartyAccessoriesOpen, setIsPartyAccessoriesOpen] = useState(false);
+  const [isKhqrStandeeOpen, setIsKhqrStandeeOpen] = useState(false);
   const [checkoutOptions, setCheckoutOptions] = useState<{
     isDeposit?: boolean;
     depositKhr?: number;
@@ -57,6 +63,7 @@ export const PosTerminal: React.FC = () => {
     pickupDate?: string;
     pickupTime?: string;
     notes?: string;
+    paymentMethod?: 'CASH_KHR' | 'CASH_USD' | 'KHQR_BAKONG';
   }>({});
   const [isAddProductOpen, setIsAddProductOpen] = useState(false);
   const [isCartDrawerOpen, setIsCartDrawerOpen] = useState(false);
@@ -72,6 +79,33 @@ export const PosTerminal: React.FC = () => {
   const barcodeBufferRef = useRef<string>('');
   const lastKeyTimeRef = useRef<number>(0);
   const scanToastTimeoutRef = useRef<any>(null);
+
+  // Live Payment Soundbox Toast State
+  const [livePaymentNotification, setLivePaymentNotification] = useState<PaymentNotification | null>(null);
+  const livePaymentTimeoutRef = useRef<any>(null);
+
+  // Subscribe to real-time incoming payments while on the main POS screen
+  useEffect(() => {
+    const unsub = paymentListener.subscribe((payment) => {
+      // Show floating soundbox toast
+      setLivePaymentNotification(payment);
+      confetti({
+        particleCount: 45,
+        spread: 60,
+        origin: { y: 0.1 },
+      });
+
+      if (livePaymentTimeoutRef.current) clearTimeout(livePaymentTimeoutRef.current);
+      livePaymentTimeoutRef.current = setTimeout(() => {
+        setLivePaymentNotification(null);
+      }, 7000);
+    });
+
+    return () => {
+      unsub();
+      if (livePaymentTimeoutRef.current) clearTimeout(livePaymentTimeoutRef.current);
+    };
+  }, []);
 
   const totalCartItems = cart.reduce((acc, item) => acc + item.quantity, 0);
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -282,6 +316,36 @@ export const PosTerminal: React.FC = () => {
         </div>
       )}
 
+      {/* Live KHQR Payment Soundbox Floating Toast */}
+      {livePaymentNotification && (
+        <div className="absolute top-3 right-4 z-50 animate-in fade-in slide-in-from-top-4 duration-300 max-w-sm">
+          <div className="p-3.5 bg-gradient-to-r from-emerald-600 to-teal-700 text-white rounded-2xl shadow-2xl shadow-emerald-900/40 border-2 border-emerald-300/60 backdrop-blur-md flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center shrink-0">
+                <Volume2 className="w-5 h-5 text-white animate-pulse" />
+              </div>
+              <div>
+                <div className="text-[10px] font-black uppercase tracking-wider text-emerald-100 flex items-center gap-1">
+                  <span>🔔 KHQR សារប្រាក់ចូល (Soundbox)</span>
+                </div>
+                <div className="text-base font-black text-white leading-tight">
+                  +{livePaymentNotification.amount.toLocaleString()} {livePaymentNotification.currency}
+                </div>
+                <div className="text-[10px] text-emerald-100">
+                  {livePaymentNotification.bankName || 'Bakong KHQR'} • បានផ្ទៀងផ្ទាត់
+                </div>
+              </div>
+            </div>
+            <button
+              onClick={() => setLivePaymentNotification(null)}
+              className="text-emerald-200 hover:text-white p-1 hover:bg-white/10 rounded-lg transition-colors cursor-pointer"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Products catalog area */}
       <div className="flex-1 flex flex-col min-w-0 p-3 sm:p-6 overflow-y-auto pb-28 lg:pb-6">
         {/* Search & Category Tabs (Sticky at top when scrolling products) */}
@@ -306,6 +370,21 @@ export const PosTerminal: React.FC = () => {
 
             {/* Actions: Add New Product & Mobile Cart Trigger */}
             <div className="flex items-center gap-2">
+              {/* Quick KHQR Standee Trigger Button */}
+              <button
+                type="button"
+                onClick={() => {
+                  soundFx.playPop();
+                  setIsKhqrStandeeOpen(true);
+                }}
+                className="px-3 sm:px-3.5 py-2 sm:py-2.5 rounded-2xl text-xs font-black bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200/90 shadow-2xs flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all"
+                title="បង្ហាញផ្ទាំងស្កេន KHQR លើតុគិតប្រាក់ (Counter Standee)"
+              >
+                <QrCode className="w-4 h-4 text-red-600" />
+                <span className="hidden sm:inline">KHQR ហាង</span>
+                <span className="sm:hidden">KHQR</span>
+              </button>
+
               {/* Barcode Scanner Ready Badge */}
               <div
                 title="ម៉ាស៊ីនស្កេនបាកូដដំណើរការ៖ អាចស្កេនបាកូដទំនិញគ្រប់ពេលដើម្បីបញ្ចូលកន្ត្រកភ្លាមៗ"
@@ -458,34 +537,47 @@ export const PosTerminal: React.FC = () => {
           </div>
         )}
       </div>
-
-      {/* 1. Mobile Floating Sticky Cart Bar */}
       {cart.length > 0 && !isCartDrawerOpen && (
-        <div className="sm:hidden fixed bottom-16 left-3 right-3 z-30">
+        <div className="sm:hidden fixed bottom-16 left-3 right-3 z-30 flex gap-2">
+          {/* Quick KHQR Direct Action on Mobile */}
+          <button
+            type="button"
+            onClick={() => {
+              soundFx.playChime();
+              setCheckoutOptions({ paymentMethod: 'KHQR_BAKONG' });
+              setIsCheckoutOpen(true);
+            }}
+            className="bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 text-white px-3.5 py-2.5 rounded-2xl shadow-xl shadow-red-600/30 flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer ring-2 ring-red-300 shrink-0 font-battambang"
+            title="ស្កេន KHQR ភ្លាមៗ"
+          >
+            <QrCode className="w-5 h-5 text-white animate-pulse" />
+            <span className="text-xs font-black">KHQR</span>
+          </button>
+
           <button
             type="button"
             onClick={() => {
               soundFx.playPop();
               setIsCartDrawerOpen(true);
             }}
-            className="w-full bg-gradient-to-r from-pink-600 via-rose-600 to-amber-500 text-white p-2.5 sm:p-3 rounded-2xl shadow-xl shadow-pink-600/30 flex items-center justify-between transition-all active:scale-95 cursor-pointer"
+            className="flex-1 bg-gradient-to-r from-pink-600 via-rose-600 to-amber-500 text-white p-2.5 rounded-2xl shadow-xl shadow-pink-600/30 flex items-center justify-between transition-all active:scale-95 cursor-pointer"
           >
-            <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center font-black relative">
-                <ShoppingBag className="w-5 h-5 text-white" />
-                <span className="absolute -top-1.5 -right-1.5 bg-white text-pink-600 text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center shadow-xs">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center font-black relative">
+                <ShoppingBag className="w-4 h-4 text-white" />
+                <span className="absolute -top-1.5 -right-1.5 bg-white text-pink-600 text-[10px] font-black w-4 h-4 rounded-full flex items-center justify-center shadow-xs">
                   {totalCartItems}
                 </span>
               </div>
               <div className="text-left">
-                <div className="text-xs font-black">{totalCartItems} មុខក្នុងកន្ត្រក</div>
+                <div className="text-xs font-black">{totalCartItems} មុខ</div>
                 <div className="text-[11px] text-pink-100 font-bold font-mono">
-                  សរុប៖ {cartTotalKhr.toLocaleString()} ៛
+                  {cartTotalKhr.toLocaleString()} ៛
                 </div>
               </div>
             </div>
-            <div className="flex items-center gap-1.5 bg-white text-pink-600 px-3 py-1.5 rounded-xl text-xs font-black shadow-xs">
-              <span>មើលកន្ត្រក & គិតលុយ</span>
+            <div className="flex items-center gap-1 bg-white text-pink-600 px-2.5 py-1 rounded-xl text-xs font-black shadow-xs">
+              <span>កន្ត្រក</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </div>
           </button>
@@ -494,7 +586,21 @@ export const PosTerminal: React.FC = () => {
 
       {/* 2. Desktop Floating Quick Cart Pill (Always Visible when Cart has items and drawer is closed) */}
       {cart.length > 0 && !isCartDrawerOpen && (
-        <div className="hidden sm:flex fixed bottom-6 right-6 z-40 animate-in fade-in slide-in-from-bottom-4 duration-200">
+        <div className="hidden sm:flex fixed bottom-6 right-6 z-40 items-center gap-2 animate-in fade-in slide-in-from-bottom-4 duration-200">
+          <button
+            type="button"
+            onClick={() => {
+              soundFx.playChime();
+              setCheckoutOptions({ paymentMethod: 'KHQR_BAKONG' });
+              setIsCheckoutOpen(true);
+            }}
+            className="bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 text-white px-4 py-3 rounded-full shadow-2xl shadow-red-600/35 flex items-center gap-2 cursor-pointer transition-all hover:scale-105 active:scale-95 border-2 border-white/50 font-battambang ring-2 ring-red-300"
+            title="ស្កេន KHQR ភ្លាមៗ"
+          >
+            <QrCode className="w-4.5 h-4.5 text-white animate-pulse" />
+            <span className="text-xs font-black">ស្កេន KHQR ({cartTotalKhr.toLocaleString()} ៛)</span>
+          </button>
+
           <button
             type="button"
             onClick={() => {
@@ -538,6 +644,7 @@ export const PosTerminal: React.FC = () => {
               <CartPanel
                 isDrawer={true}
                 onClose={() => setIsCartDrawerOpen(false)}
+                onOpenKhqrStandee={() => setIsKhqrStandeeOpen(true)}
                 onCheckout={(opts) => {
                   setIsCartDrawerOpen(false);
                   setCheckoutOptions(opts || {});
@@ -560,6 +667,7 @@ export const PosTerminal: React.FC = () => {
         isOpen={isCheckoutOpen}
         onClose={() => setIsCheckoutOpen(false)}
         onSuccess={(sale) => setActiveReceiptSale(sale)}
+        initialPaymentMethod={checkoutOptions.paymentMethod}
         initialIsDeposit={checkoutOptions.isDeposit}
         initialDepositKhr={checkoutOptions.depositKhr}
         initialCustomerName={checkoutOptions.customerName}
@@ -580,6 +688,12 @@ export const PosTerminal: React.FC = () => {
       <PartyAccessoriesModal
         isOpen={isPartyAccessoriesOpen}
         onClose={() => setIsPartyAccessoriesOpen(false)}
+      />
+
+      {/* Quick Counter Standee Modal */}
+      <KhqrStandeeModal
+        isOpen={isKhqrStandeeOpen}
+        onClose={() => setIsKhqrStandeeOpen(false)}
       />
     </div>
   );

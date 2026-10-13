@@ -5,27 +5,37 @@ import { BakeryProvider } from './context/BakeryContext';
 import { MusicProvider } from './context/MusicContext';
 import './index.css';
 
+// Service Worker registration: only for Web (HTTP/HTTPS), never for Electron (file:) or native WebView
 if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    const serviceWorkerUrl = new URL('sw.js', document.baseURI).toString();
-    navigator.serviceWorker.register(serviceWorkerUrl).then((registration) => {
-      // Check for updates periodically and on focus
-      registration.update();
-      registration.onupdatefound = () => {
-        const installingWorker = registration.installing;
-        if (installingWorker) {
-          installingWorker.onstatechange = () => {
-            if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
-              console.log('[SW] New version detected. Reloading for instant update...');
-              window.location.reload();
-            }
-          };
-        }
-      };
-    }).catch((error) => {
-      console.warn('Offline cache registration failed:', error);
+  if (window.location.protocol === 'http:' || window.location.protocol === 'https:') {
+    window.addEventListener('load', () => {
+      const serviceWorkerUrl = new URL('sw.js', document.baseURI).toString();
+      navigator.serviceWorker.register(serviceWorkerUrl).then((registration) => {
+        // Check for updates periodically and on focus
+        registration.update();
+        registration.onupdatefound = () => {
+          const installingWorker = registration.installing;
+          if (installingWorker) {
+            installingWorker.onstatechange = () => {
+              if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                console.log('[SW] New version detected. Reloading for instant update...');
+                window.location.reload();
+              }
+            };
+          }
+        };
+      }).catch((error) => {
+        console.warn('Offline cache registration failed:', error);
+      });
     });
-  });
+  } else {
+    // When running inside Electron / local file protocol, proactively unregister any stale SW
+    navigator.serviceWorker.getRegistrations().then((registrations) => {
+      for (const reg of registrations) {
+        reg.unregister();
+      }
+    }).catch(() => {});
+  }
 }
 
 interface Props {

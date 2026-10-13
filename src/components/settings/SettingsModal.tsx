@@ -33,6 +33,7 @@ import {
   Key,
   Building2,
   Copy,
+  Rocket,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { useBakery } from '../../context/BakeryContext';
@@ -45,11 +46,12 @@ import { StaffManagement } from '../staff/StaffManagement';
 import { FirebaseSettingsTab } from './FirebaseSettingsTab';
 import { TelegramSettingsTab } from './TelegramSettingsTab';
 import { NotificationSettingsTab } from './NotificationSettingsTab';
+import { AppUpdateTab } from './AppUpdateTab';
 import { CameraCaptureModal } from '../common/CameraCaptureModal';
 import { isSuperAdminAuthenticated } from '../../utils/superAdminAuth';
 import { getStoreId, setStoreId } from '../../services/firebase';
 
-export type SettingsTab = 'store' | 'khqr' | 'staff' | 'backup' | 'firebase' | 'currency' | 'telegram' | 'notifications';
+export type SettingsTab = 'store' | 'khqr' | 'staff' | 'backup' | 'firebase' | 'currency' | 'telegram' | 'notifications' | 'updates';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -404,6 +406,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     { id: 'currency', label: 'អត្រាប្តូរប្រាក់ & ប្រព័ន្ធ', icon: DollarSign },
     { id: 'telegram', label: 'Telegram Bot 📬', icon: Send },
     { id: 'notifications', label: 'ការដាស់តឿន 🔔', icon: Bell },
+    { id: 'updates', label: 'អាប់ដែត App 🚀', icon: Rocket },
   ];
 
   const tabs = allTabs.filter((tab) => {
@@ -476,7 +479,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         </div>
 
         {/* Tab Navigation */}
-        <div className="px-6 pt-2.5 bg-slate-50 border-b border-rose-100 flex items-center gap-1.5 overflow-x-auto">
+        <div className="px-3 sm:px-6 py-2.5 bg-slate-50 border-b border-rose-100 flex items-center gap-2 overflow-x-auto scrollbar-none no-scrollbar shrink-0">
           {tabs.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
@@ -488,13 +491,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   soundFx.playPop();
                   setActiveTab(tab.id);
                 }}
-                className={`flex items-center gap-2 px-4 py-2.5 rounded-t-2xl font-black text-xs transition-all border-b-2 cursor-pointer ${
+                className={`flex items-center gap-2 px-3.5 py-2 sm:px-4 sm:py-2.5 rounded-xl font-bold text-xs sm:text-sm whitespace-nowrap shrink-0 transition-all cursor-pointer select-none ${
                   isActive
-                    ? 'bg-white text-pink-600 border-pink-500 shadow-2xs'
-                    : 'text-slate-500 hover:text-slate-800 border-transparent hover:bg-white/60'
+                    ? 'bg-gradient-to-r from-pink-600 to-rose-500 text-white shadow-md shadow-pink-500/25 ring-2 ring-pink-500/20'
+                    : 'bg-white text-slate-600 hover:text-slate-900 border border-slate-200/90 hover:bg-slate-100 shadow-2xs'
                 }`}
               >
-                <Icon className={`w-4 h-4 ${isActive ? 'text-pink-500' : 'text-slate-400'}`} />
+                <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-white' : 'text-slate-500'}`} />
                 <span>{tab.label}</span>
               </button>
             );
@@ -502,7 +505,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         </div>
 
         {/* Content Body */}
-        <div className="p-6 overflow-y-auto flex-1">
+        <div className="p-4 sm:p-6 overflow-y-auto flex-1">
           {activeTab === 'staff' ? (
             /* Staff & Permissions Tab */
             isDemoMode ? (
@@ -751,43 +754,47 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           ) : activeTab === 'notifications' ? (
             /* Device Notifications & Reminders Tab */
             <NotificationSettingsTab />
+          ) : activeTab === 'updates' ? (
+            /* App Updates & In-App Auto Update Tab */
+            <AppUpdateTab />
           ) : (
             /* Other Settings Tabs in Form */
             <form onSubmit={handleSave} id="settings-form" className="space-y-5">
               {activeTab === 'store' && (
                 <>
                   {/* Logo Upload Section */}
-                  <div className="p-4 rounded-2xl bg-rose-50/40 border border-rose-100 space-y-3">
-                    <label className="block text-xs font-black text-slate-700 uppercase tracking-wider">
-                      Logo ប្រចាំហាង (Bakery Brand Logo)
+                  {/* Logo Upload Section */}
+                  <div className="p-5 rounded-3xl bg-rose-50/50 border-2 border-rose-100 space-y-3.5 shadow-2xs">
+                    <label className="block text-xs sm:text-sm font-black text-slate-800 uppercase tracking-wider">
+                      LOGO ប្រចាំហាង (Bakery Brand Logo)
                     </label>
-                    <div className="flex items-center gap-4">
+                    <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4">
                       {/* Logo Preview Box */}
-                      <div className="w-20 h-20 rounded-2xl border-2 border-dashed border-rose-300 bg-white shadow-xs overflow-hidden flex items-center justify-center shrink-0 relative group">
+                      <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl border-2 border-dashed border-rose-300 bg-white shadow-xs overflow-hidden flex items-center justify-center shrink-0 relative group">
                         {isUploadingLogo ? (
                           <div className="flex flex-col items-center justify-center text-pink-500">
-                            <Loader2 className="w-6 h-6 animate-spin" />
-                            <span className="text-[9px] font-bold mt-1">កំពុងផ្ទុក...</span>
+                            <Loader2 className="w-7 h-7 animate-spin" />
+                            <span className="text-[10px] font-bold mt-1">កំពុងផ្ទុក...</span>
                           </div>
                         ) : logoUrl ? (
                           <img src={getProductImageUrl(logoUrl)} alt="Store Logo Preview" className="w-full h-full object-cover" />
                         ) : (
                           <div className="text-center p-2 text-slate-400">
-                            <ImageIcon className="w-7 h-7 mx-auto mb-1 text-pink-400" />
-                            <span className="text-[9px] font-bold block">គ្មាន Logo</span>
+                            <ImageIcon className="w-8 h-8 mx-auto mb-1 text-pink-400" />
+                            <span className="text-[10px] font-bold block">គ្មាន Logo</span>
                           </div>
                         )}
                       </div>
 
                       {/* Upload & Clear Buttons */}
-                      <div className="flex-1 space-y-2">
-                        <div className="flex flex-wrap gap-2">
+                      <div className="flex-1 space-y-2.5 w-full">
+                        <div className="flex flex-wrap gap-2.5">
                           <button
                             type="button"
                             onClick={() => fileInputRef.current?.click()}
-                            className="px-3.5 py-2 bg-gradient-to-r from-pink-600 to-rose-500 hover:from-pink-700 hover:to-rose-600 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-pink-500/20 flex items-center gap-1.5 active:scale-95 cursor-pointer"
+                            className="px-4 py-2.5 bg-gradient-to-r from-pink-600 to-rose-500 hover:from-pink-700 hover:to-rose-600 text-white rounded-xl text-xs sm:text-sm font-bold transition-all shadow-md shadow-pink-500/20 flex items-center gap-2 active:scale-95 cursor-pointer"
                           >
-                            <Upload className="w-3.5 h-3.5" />
+                            <Upload className="w-4 h-4" />
                             <span>Upload Logo (File)</span>
                           </button>
 
@@ -797,9 +804,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                               soundFx.playPop();
                               setCameraTarget('logo');
                             }}
-                            className="px-3.5 py-2 bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 active:scale-95 cursor-pointer"
+                            className="px-4 py-2.5 bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 active:scale-95 cursor-pointer"
                           >
-                            <Camera className="w-3.5 h-3.5" />
+                            <Camera className="w-4 h-4" />
                             <span>📸 ថត Logo</span>
                           </button>
 
@@ -816,14 +823,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                   body: JSON.stringify({ storeInfo: { ...storeInfo, logoUrl: '' } }),
                                 }).catch(() => {});
                               }}
-                              className="px-3 py-2 bg-white hover:bg-rose-50 text-rose-600 border border-rose-200 rounded-xl text-xs font-bold transition-all flex items-center gap-1 cursor-pointer"
+                              className="px-4 py-2.5 bg-white hover:bg-rose-50 text-rose-600 border border-rose-200 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-1.5 cursor-pointer"
                             >
-                              <Trash2 className="w-3.5 h-3.5" />
+                              <Trash2 className="w-4 h-4" />
                               <span>លុប Logo</span>
                             </button>
                           )}
                         </div>
-                        <p className="text-[11px] text-slate-500">
+                        <p className="text-xs sm:text-sm text-slate-500 font-medium">
                           Logo នេះនឹងត្រូវបង្ហាញលើរបារខាងលើ Navbar និងលើវិក្កយបត្រព្រីនជូនភ្ញៀវ
                         </p>
                       </div>
@@ -838,13 +845,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   </div>
 
                   {/* Store Tenant ID (Multi-Tenant Isolation) */}
-                  <div className="p-3.5 bg-gradient-to-r from-purple-50 via-pink-50/50 to-amber-50/40 border border-purple-200/90 rounded-2xl space-y-2">
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="font-bold text-slate-700 flex items-center gap-1.5">
+                  <div className="p-4 sm:p-5 bg-gradient-to-r from-purple-50 via-pink-50/50 to-amber-50/40 border-2 border-purple-200/90 rounded-3xl space-y-3 shadow-2xs">
+                    <div className="flex items-center justify-between flex-wrap gap-2 text-xs sm:text-sm">
+                      <span className="font-black text-slate-800 flex items-center gap-2">
                         <Building2 className="w-4 h-4 text-purple-600" />
                         <span>លេខសម្គាល់ហាង (Store Tenant ID - ការពារទិន្នន័យដាច់ដោយឡែក)</span>
                       </span>
-                      <span className="text-[10px] font-black bg-purple-100 text-purple-800 px-2 py-0.5 rounded-full border border-purple-200">
+                      <span className="text-xs font-black bg-purple-100 text-purple-800 px-2.5 py-0.5 rounded-full border border-purple-200">
                         Multi-Tenant Cloud
                       </span>
                     </div>
@@ -855,7 +862,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                         value={storeIdInput}
                         onChange={(e) => setStoreIdInput(e.target.value.toUpperCase())}
                         placeholder="ឧ. STORE-SENSOK-01"
-                        className="flex-1 px-3 py-2 text-xs font-mono font-black uppercase bg-white border border-slate-300 rounded-xl focus:outline-none focus:border-purple-500 shadow-2xs text-purple-900"
+                        className="flex-1 px-4 py-2.5 sm:py-3 text-sm sm:text-base font-mono font-black uppercase bg-white border-2 border-slate-300 rounded-xl focus:outline-none focus:border-purple-500 shadow-2xs text-purple-900"
                       />
                       <button
                         type="button"
@@ -865,14 +872,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                           setCopiedStoreId(true);
                           setTimeout(() => setCopiedStoreId(false), 2000);
                         }}
-                        className="px-3 py-2 bg-white hover:bg-slate-100 border border-slate-300 text-slate-700 rounded-xl text-xs font-bold transition-all flex items-center gap-1 cursor-pointer shrink-0 shadow-2xs"
+                        className="px-4 py-2.5 sm:py-3 bg-white hover:bg-slate-100 border-2 border-slate-300 text-slate-700 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-1.5 cursor-pointer shrink-0 shadow-2xs active:scale-95"
                       >
-                        {copiedStoreId ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5 text-slate-500" />}
+                        {copiedStoreId ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4 text-slate-500" />}
                         <span>{copiedStoreId ? 'បានចម្លង' : 'ចម្លង ID'}</span>
                       </button>
                     </div>
 
-                    <p className="text-[11px] text-slate-500 font-medium leading-relaxed">
+                    <p className="text-xs sm:text-sm text-slate-600 font-medium leading-relaxed">
                       💡 លេខសម្គាល់នេះធានាថាទិន្នន័យរបស់ហាងលោកអ្នក (មុខទំនិញ, ការលក់, ចំណាយ) រក្សាទុកដាច់ដោយឡែក ១០០% ពីហាងដទៃ (សម្រាប់ហាងវិជ្ជតាដើម សូមទុក <span className="font-bold text-purple-700 font-mono">DEFAULT</span> ដដែល)។ <br />
                       ⚠️ <strong>ចំណាំ៖</strong> «លេខសម្គាល់ហាង» នេះមិនមែនជា License Key ទេ។ បើចង់បន្តសុពលភាព សូមប្រើកូដបន្តសុពលភាព (License Key) ឬផ្ញើ Device ID ទៅកាន់ Admin។
                     </p>
@@ -881,7 +888,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   {/* Store Names */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-xs font-bold text-slate-700 mb-1">
+                      <label className="block text-xs sm:text-sm font-bold text-slate-700 mb-1">
                         ឈ្មោះហាង (ភាសាខ្មែរ) *
                       </label>
                       <input
@@ -890,12 +897,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                         value={nameKh}
                         onChange={(e) => setNameKh(e.target.value)}
                         placeholder="ឧ. ហាងនំខេក ស្វីតបេកខឺរី"
-                        className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500 font-bold text-slate-800"
+                        className="w-full px-4 py-2.5 sm:py-3 text-sm sm:text-base border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500 font-bold text-slate-800"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-xs font-bold text-slate-700 mb-1">
+                      <label className="block text-xs sm:text-sm font-bold text-slate-700 mb-1">
                         ឈ្មោះហាង (English) *
                       </label>
                       <input
@@ -904,14 +911,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                         value={nameEn}
                         onChange={(e) => setNameEn(e.target.value)}
                         placeholder="e.g. SweetBakery & Cafe"
-                        className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500 font-bold text-slate-800"
+                        className="w-full px-4 py-2.5 sm:py-3 text-sm sm:text-base border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500 font-bold text-slate-800"
                       />
                     </div>
                   </div>
 
                   {/* Slogan / Tagline */}
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                    <label className="block text-xs sm:text-sm font-bold text-slate-700 mb-1">
                       ពាក្យស្លោក / Tagline (បង្ហាញលើវិក្កយបត្រ)
                     </label>
                     <input
@@ -919,15 +926,15 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       value={tagline}
                       onChange={(e) => setTagline(e.target.value)}
                       placeholder="ឧ. នំខេកឆ្ងាញ់ប្រណិត ស្រស់ៗរាល់ថ្ងៃ • មានទទួលកុម្ម៉ង់គ្រប់ម៉ូដ"
-                      className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500"
+                      className="w-full px-4 py-2.5 sm:py-3 text-sm sm:text-base border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500"
                     />
                   </div>
 
                   {/* Store Phone & Address */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-xs font-bold text-slate-700 mb-1 flex items-center gap-1">
-                        <Phone className="w-3.5 h-3.5 text-pink-500" />
+                      <label className="block text-xs sm:text-sm font-bold text-slate-700 mb-1 flex items-center gap-1.5">
+                        <Phone className="w-4 h-4 text-pink-500" />
                         <span>លេខទូរស័ព្ទទាក់ទង</span>
                       </label>
                       <input
@@ -935,13 +942,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                         value={phone}
                         onChange={(e) => setPhone(e.target.value)}
                         placeholder="ឧ. 012 345 678 / 098 765 432"
-                        className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500 font-semibold"
+                        className="w-full px-4 py-2.5 sm:py-3 text-sm sm:text-base border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500 font-semibold"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-xs font-bold text-slate-700 mb-1 flex items-center gap-1">
-                        <MapPin className="w-3.5 h-3.5 text-pink-500" />
+                      <label className="block text-xs sm:text-sm font-bold text-slate-700 mb-1 flex items-center gap-1.5">
+                        <MapPin className="w-4 h-4 text-pink-500" />
                         <span>អាសយដ្ឋានហាង</span>
                       </label>
                       <input
@@ -949,25 +956,25 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                         value={address}
                         onChange={(e) => setAddress(e.target.value)}
                         placeholder="ឧ. ផ្ទះលេខ 128E, ផ្លូវ 271, ភ្នំពេញ"
-                        className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500 font-semibold"
+                        className="w-full px-4 py-2.5 sm:py-3 text-sm sm:text-base border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500 font-semibold"
                       />
                     </div>
 
                     {/* Google Maps URL */}
-                    <div>
-                      <label className="block text-xs font-bold text-slate-700 mb-1 flex items-center gap-1">
-                        <MapPin className="w-3.5 h-3.5 text-emerald-500" />
+                    <div className="sm:col-span-2">
+                      <label className="block text-xs sm:text-sm font-bold text-slate-700 mb-1 flex items-center gap-1.5">
+                        <MapPin className="w-4 h-4 text-emerald-500" />
                         <span>Google Maps Link</span>
-                        <span className="text-[10px] text-slate-400 font-normal">(ស្រេចចិត្ត)</span>
+                        <span className="text-xs text-slate-400 font-normal">(ស្រេចចិត្ត)</span>
                       </label>
                       <input
                         type="url"
                         value={mapsUrl}
                         onChange={(e) => setMapsUrl(e.target.value)}
                         placeholder="https://maps.app.goo.gl/..."
-                        className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 font-semibold text-emerald-700"
+                        className="w-full px-4 py-2.5 sm:py-3 text-sm sm:text-base border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 font-semibold text-emerald-700"
                       />
-                      <p className="text-[10px] text-slate-400 mt-1">បើក Google Maps → ចុច Share → Copy Link → Paste ទីនេះ</p>
+                      <p className="text-xs text-slate-400 mt-1">បើក Google Maps → ចុច Share → Copy Link → Paste ទីនេះ</p>
                     </div>
                   </div>
 
@@ -1201,45 +1208,156 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               )}
 
               {activeTab === 'currency' && (
-                <div className="space-y-5">
+                <div className="space-y-6">
                   {/* Exchange rate */}
-                  <div className="bg-amber-50/60 p-4 rounded-2xl border border-amber-200/80 space-y-1.5">
-                    <label className="block text-xs font-black text-amber-900 uppercase tracking-wider flex items-center gap-1">
-                      <DollarSign className="w-3.5 h-3.5 text-amber-600" />
-                      <span>អត្រាប្តូរប្រាក់ (Exchange Rate: $1 = ? ៛ KHR)</span>
-                    </label>
-                    <div className="relative">
-                      <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-xs">
-                        ៛ / USD
-                      </span>
-                      <input
-                        type="number"
-                        step="10"
-                        required
-                        value={rateInput}
-                        onChange={(e) => setRateInput(e.target.value)}
-                        className="w-full px-3 py-2 text-base font-black text-pink-600 bg-white border border-amber-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500"
-                      />
+                  <div className="bg-gradient-to-br from-amber-50/90 via-orange-50/50 to-pink-50/40 p-5 sm:p-6 rounded-3xl border-2 border-amber-200/90 space-y-4 shadow-sm">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-amber-500 to-orange-500 text-white flex items-center justify-center shadow-lg shadow-amber-500/25 shrink-0">
+                        <DollarSign className="w-7 h-7 stroke-[2.5]" />
+                      </div>
+                      <div>
+                        <h4 className="text-base sm:text-lg font-black text-amber-950">
+                          អត្រាប្តូរប្រាក់ (Exchange Rate: $1 USD = ? ៛ KHR)
+                        </h4>
+                        <p className="text-xs sm:text-sm text-amber-800/90 font-medium">
+                          តម្លៃលក់ទាំងអស់ជា KHR និងប្រាក់អាប់ នឹងត្រូវគណនាដោយស្វ័យប្រវត្តិតាមអត្រានេះ
+                        </p>
+                      </div>
                     </div>
-                    <p className="text-[11px] text-amber-800/80">
-                      តម្លៃលក់ទាំងអស់ជា KHR និងប្រាក់អាប់នឹងត្រូវគណនាដោយស្វ័យប្រវត្តិតាមអត្រានេះ
-                    </p>
+
+                    {/* Big Numeric Input Box */}
+                    <div className="bg-white p-4 sm:p-5 rounded-2xl border-2 border-amber-300 shadow-inner flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                      <div className="flex items-center gap-2 text-slate-800 font-black text-lg sm:text-2xl">
+                        <span className="text-pink-600 bg-pink-50 px-3 py-1 rounded-xl border border-pink-200">$ 1.00 USD</span>
+                        <span className="text-slate-400">=</span>
+                      </div>
+                      
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="number"
+                          step="10"
+                          min="1000"
+                          max="10000"
+                          required
+                          value={rateInput}
+                          onChange={(e) => setRateInput(e.target.value)}
+                          className="w-full sm:w-48 px-4 py-3 text-2xl sm:text-3xl font-black text-pink-600 text-center bg-slate-50 border-2 border-pink-400 rounded-2xl focus:outline-none focus:ring-4 focus:ring-pink-500/20 focus:bg-white transition-all shadow-sm"
+                        />
+                        <span className="text-slate-800 font-black text-base sm:text-xl whitespace-nowrap">
+                          ៛ (KHR)
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Quick Preset Buttons */}
+                    <div className="space-y-2 pt-1">
+                      <div className="text-xs sm:text-sm font-black text-amber-950 flex items-center justify-between">
+                        <span>⚡ ចុចជ្រើសរើសអត្រាភ្លាមៗ (Quick Presets)៖</span>
+                      </div>
+                      <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                        {[4000, 4050, 4100, 4150, 4200].map((preset) => {
+                          const isSelected = Number(rateInput) === preset;
+                          return (
+                            <button
+                              key={preset}
+                              type="button"
+                              onClick={() => {
+                                soundFx.playPop();
+                                setRateInput(String(preset));
+                              }}
+                              className={`py-3 px-3 rounded-2xl font-black text-sm sm:text-base transition-all cursor-pointer flex items-center justify-center gap-1 shadow-sm active:scale-95 ${
+                                isSelected
+                                  ? 'bg-gradient-to-r from-pink-600 to-rose-600 text-white shadow-md shadow-pink-500/30 ring-2 ring-pink-500/40'
+                                  : 'bg-white hover:bg-pink-50 text-slate-800 border border-slate-200 hover:border-pink-300'
+                              }`}
+                            >
+                              <span>{preset.toLocaleString()}</span>
+                              <span className="text-xs opacity-75">៛</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      {/* Step Adjust Buttons */}
+                      <div className="flex items-center justify-center gap-2 pt-1 flex-wrap">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            soundFx.playPop();
+                            setRateInput(String(Math.max(1000, Number(rateInput || 4100) - 50)));
+                          }}
+                          className="px-4 py-2 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-xl text-xs sm:text-sm font-black cursor-pointer shadow-2xs active:scale-95"
+                        >
+                          - 50 ៛
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            soundFx.playPop();
+                            setRateInput(String(Math.max(1000, Number(rateInput || 4100) - 10)));
+                          }}
+                          className="px-4 py-2 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-xl text-xs sm:text-sm font-black cursor-pointer shadow-2xs active:scale-95"
+                        >
+                          - 10 ៛
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            soundFx.playPop();
+                            setRateInput(String(Number(rateInput || 4100) + 10));
+                          }}
+                          className="px-4 py-2 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-xl text-xs sm:text-sm font-black cursor-pointer shadow-2xs active:scale-95"
+                        >
+                          + 10 ៛
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            soundFx.playPop();
+                            setRateInput(String(Number(rateInput || 4100) + 50));
+                          }}
+                          className="px-4 py-2 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-xl text-xs sm:text-sm font-black cursor-pointer shadow-2xs active:scale-95"
+                        >
+                          + 50 ៛
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Live Preview Conversion Cards */}
+                    <div className="bg-white/95 p-4 sm:p-5 rounded-2xl border border-amber-200/90 space-y-2.5">
+                      <div className="text-xs sm:text-sm font-black text-slate-800 flex items-center justify-between">
+                        <span>📊 តារាងផ្ទៀងផ្ទាត់ការប្តូរប្រាក់ជាក់ស្តែង (Live Preview)</span>
+                        <span className="text-pink-600 font-mono font-bold">$1 = {Number(rateInput || 4100).toLocaleString()} ៛</span>
+                      </div>
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs sm:text-sm">
+                        {[1, 5, 10, 20].map((usd) => {
+                          const khrVal = usd * Number(rateInput || 4100);
+                          return (
+                            <div key={usd} className="bg-slate-50 p-2.5 rounded-xl border border-slate-200/80 text-center">
+                              <span className="text-slate-500 font-bold block">${usd}.00</span>
+                              <span className="text-pink-600 font-black text-sm sm:text-base block mt-0.5">{khrVal.toLocaleString()} ៛</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
                   </div>
 
                   {/* Reset Data Danger Zone */}
-                  <div className="p-4 rounded-2xl bg-rose-50/60 border border-rose-200 space-y-2">
-                    <h4 className="text-xs font-black text-rose-900 uppercase tracking-wider">
-                      កំណត់ទិន្នន័យឡើងវិញ (Reset Demo Data)
+                  <div className="p-5 rounded-3xl bg-rose-50/70 border-2 border-rose-200 space-y-3">
+                    <h4 className="text-sm sm:text-base font-black text-rose-950 uppercase tracking-wider flex items-center gap-1.5">
+                      <RefreshCw className="w-4 h-4 text-rose-600" />
+                      <span>កំណត់ទិន្នន័យឡើងវិញ (Reset Demo Data)</span>
                     </h4>
-                    <p className="text-xs text-rose-700">
+                    <p className="text-xs sm:text-sm text-rose-700 leading-relaxed font-medium">
                       ប្រសិនបើលោកអ្នកចង់សម្អាតទិន្នន័យចាស់ៗ និងចាប់ផ្តើមទិន្នន័យគំរូដើមឡើងវិញ លោកអ្នកអាចចុចប៊ូតុងខាងក្រោម៖
                     </p>
                     <button
                       type="button"
                       onClick={handleResetData}
-                      className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer shadow-sm"
+                      className="px-5 py-3 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs sm:text-sm font-black transition-all flex items-center gap-2 cursor-pointer shadow-sm active:scale-95"
                     >
-                      <RefreshCw className="w-3.5 h-3.5" />
+                      <RefreshCw className="w-4 h-4" />
                       <span>កំណត់ទិន្នន័យទាំងអស់ឡើងវិញ (Reset All)</span>
                     </button>
                   </div>
@@ -1250,11 +1368,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-3.5 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
-          {activeTab === 'staff' || activeTab === 'backup' || activeTab === 'firebase' || activeTab === 'telegram' || activeTab === 'notifications' ? (
-            <div className="flex items-center justify-between w-full">
-              <span className="text-xs text-slate-400">
-                {activeTab === 'notifications'
+        <div className="px-4 sm:px-6 py-3.5 bg-slate-50 border-t border-slate-100 flex items-center justify-between shrink-0">
+          {activeTab === 'staff' || activeTab === 'backup' || activeTab === 'firebase' || activeTab === 'telegram' || activeTab === 'notifications' || activeTab === 'updates' ? (
+            <div className="flex items-center justify-between w-full gap-3">
+              <span className="text-xs text-slate-500 hidden sm:inline font-medium">
+                {activeTab === 'updates'
+                  ? '💡 កម្មវិធីនឹងរក្សាទិន្នន័យចាស់ៗដដែល ១០០% ពេលអាប់ដែតកំណែថ្មី'
+                  : activeTab === 'notifications'
                   ? '💡 ការកំណត់ការជូនដំណឹងត្រូវបានរក្សាទុកដោយស្វ័យប្រវត្តិ'
                   : activeTab === 'firebase'
                   ? '💡 ការកំណត់ Google Firebase ត្រូវបានរក្សាទុកដោយស្វ័យប្រវត្តិ'
@@ -1267,17 +1387,17 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               <button
                 type="button"
                 onClick={onClose}
-                className="px-5 py-2 bg-gradient-to-r from-pink-600 to-rose-500 hover:from-pink-700 hover:to-rose-600 text-white text-xs font-black rounded-xl shadow-md transition-all cursor-pointer"
+                className="w-full sm:w-auto px-6 py-3 bg-gradient-to-r from-pink-600 to-rose-500 hover:from-pink-700 hover:to-rose-600 text-white text-xs sm:text-sm font-black rounded-xl shadow-md transition-all cursor-pointer active:scale-95"
               >
                 រួចរាល់ (Done)
               </button>
             </div>
           ) : (
-            <div className="flex items-center justify-between w-full">
+            <div className="flex items-center justify-between w-full gap-3">
               <button
                 type="button"
                 onClick={onClose}
-                className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-200/70 rounded-xl transition-all cursor-pointer"
+                className="px-5 py-3 text-xs sm:text-sm font-bold text-slate-600 hover:bg-slate-200/70 rounded-xl transition-all cursor-pointer active:scale-95"
               >
                 បោះបង់
               </button>
@@ -1286,7 +1406,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 type="button"
                 onClick={handleSave}
                 disabled={isSaving || isUploadingLogo || isUploadingKhqr}
-                className={`px-6 py-2.5 text-white text-xs font-black rounded-xl transition-all shadow-md flex items-center gap-2 active:scale-95 cursor-pointer ${
+                className={`flex-1 sm:flex-initial px-6 py-3 text-white text-xs sm:text-sm font-black rounded-xl transition-all shadow-md flex items-center justify-center gap-2 active:scale-95 cursor-pointer ${
                   savedSuccess
                     ? 'bg-emerald-600 shadow-emerald-600/30'
                     : isSaving || isUploadingLogo || isUploadingKhqr

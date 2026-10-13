@@ -13,6 +13,8 @@ import {
   Smartphone,
   DollarSign,
   Package,
+  Radio,
+  QrCode,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { NotificationConfig } from '../../types';
@@ -26,6 +28,7 @@ import {
   sendTestNotification,
 } from '../../services/notifications';
 import { soundFx } from '../../utils/audio';
+import { khmerVoiceSoundbox } from '../../utils/khmerVoice';
 
 export const NotificationSettingsTab: React.FC = () => {
   const [config, setConfig] = useState<NotificationConfig>(getStoredNotificationConfig);
@@ -82,23 +85,91 @@ export const NotificationSettingsTab: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Header Banner */}
-      <div className="bg-gradient-to-r from-pink-500/10 via-rose-500/10 to-amber-500/10 border border-pink-200 rounded-3xl p-5 flex items-start gap-4">
-        <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-pink-500 to-rose-600 text-white flex items-center justify-center shadow-lg shadow-pink-500/20 shrink-0">
-          <Bell className="w-6 h-6" />
-        </div>
-        <div className="flex-1">
-          <div className="flex items-center gap-2 flex-wrap">
-            <h4 className="text-base font-black text-slate-800">
-              ប្រព័ន្ធដាស់តឿនលើអេក្រង់ទូរសព្ទ (Push / Device Notifications)
-            </h4>
-            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-pink-100 text-pink-800 border border-pink-300">
-              ស្វ័យប្រវត្តិ
-            </span>
+      {/* KHQR Voice Soundbox Live Test & Settings Card */}
+      <div className="bg-gradient-to-br from-slate-900 via-rose-950 to-slate-900 text-white border-2 border-rose-500/30 rounded-3xl p-5 sm:p-6 shadow-xl space-y-4">
+        <div className="flex items-start justify-between gap-4 flex-wrap">
+          <div className="flex items-center gap-3.5">
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-rose-500 to-red-600 text-white flex items-center justify-center shadow-lg shadow-rose-500/40 shrink-0">
+              <Radio className="w-6 h-6 animate-pulse" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h4 className="text-base sm:text-lg font-black tracking-tight text-white flex items-center gap-2">
+                  <span>ប្រព័ន្ធប្រកាសសំឡេង KHQR Voice Soundbox</span>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-rose-500/30 text-rose-300 border border-rose-400/40">
+                    Live
+                  </span>
+                </h4>
+              </div>
+              <p className="text-xs text-slate-300 mt-1 leading-relaxed">
+                បន្លឺសំឡេងកណ្ដឹង <strong>«ទឺង!»</strong> និងប្រកាសជាភាសាខ្មែរភ្លាមៗពេលភ្ញៀវស្កេនលុយចូល ដើម្បីការពារការបន្លំរូបថត Screen ក្លែងក្លាយ។
+              </p>
+            </div>
           </div>
-          <p className="text-xs text-slate-600 mt-1 leading-relaxed">
-            ផ្ញើសារជូនដំណឹង និងបន្លឺសំឡេងកណ្ដឹងលើអេក្រង់ទូរសព្ទបុគ្គលិកដោយផ្ទាល់ (Lock Screen / Notification Banner) ដើម្បីដាស់តឿន <strong>កត់ត្រាចំណាយប្រចាំថ្ងៃ</strong>, <strong>រំលឹកនំកុម្ម៉ង់ត្រូវប្រគល់ជូនភ្ញៀវ</strong> និង <strong>បិទវេន</strong>។
-          </p>
+
+          {/* Soundbox Master Toggle */}
+          <button
+            type="button"
+            onClick={() => {
+              const current = khmerVoiceSoundbox.isEnabled();
+              khmerVoiceSoundbox.setEnabled(!current);
+              soundFx.playPop();
+              // force re-render
+              setConfig({ ...config });
+            }}
+            className={`px-3 py-1.5 rounded-xl border text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+              khmerVoiceSoundbox.isEnabled()
+                ? 'bg-emerald-500/20 text-emerald-300 border-emerald-400/40 hover:bg-emerald-500/30'
+                : 'bg-slate-800 text-slate-400 border-slate-700 hover:bg-slate-700'
+            }`}
+          >
+            {khmerVoiceSoundbox.isEnabled() ? <Volume2 className="w-4 h-4 text-emerald-400" /> : <VolumeX className="w-4 h-4" />}
+            <span>{khmerVoiceSoundbox.isEnabled() ? 'Soundbox: បើកដំណើរការ' : 'Soundbox: បានបិទ'}</span>
+          </button>
+        </div>
+
+        {/* Test Buttons Row */}
+        <div className="pt-3 border-t border-white/10 flex flex-wrap items-center gap-2.5">
+          <span className="text-xs font-bold text-slate-300 mr-1">សាកល្បងសំឡេងប្រកាស៖</span>
+          
+          <button
+            type="button"
+            onClick={() => {
+              soundFx.playPop();
+              khmerVoiceSoundbox.announcePayment(10000, 'KHR', 'ABA KHQR');
+              confetti({ particleCount: 40, spread: 50, origin: { y: 0.6 } });
+            }}
+            className="px-3 py-1.5 bg-rose-600 hover:bg-rose-500 text-white rounded-xl text-xs font-black shadow-md shadow-rose-600/30 transition-all active:scale-95 cursor-pointer flex items-center gap-1.5"
+          >
+            <Volume2 className="w-3.5 h-3.5" />
+            <span>តេស្ត ១០,០០០ រៀល</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              soundFx.playPop();
+              khmerVoiceSoundbox.announcePayment(25000, 'KHR', 'ACLEDA KHQR');
+              confetti({ particleCount: 40, spread: 50, origin: { y: 0.6 } });
+            }}
+            className="px-3 py-1.5 bg-amber-600 hover:bg-amber-500 text-white rounded-xl text-xs font-black shadow-md shadow-amber-600/30 transition-all active:scale-95 cursor-pointer flex items-center gap-1.5"
+          >
+            <Volume2 className="w-3.5 h-3.5" />
+            <span>តេស្ត ២៥,០០០ រៀល</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              soundFx.playPop();
+              khmerVoiceSoundbox.announcePayment(5, 'USD', 'Bakong KHQR');
+              confetti({ particleCount: 40, spread: 50, origin: { y: 0.6 } });
+            }}
+            className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-black shadow-md shadow-emerald-600/30 transition-all active:scale-95 cursor-pointer flex items-center gap-1.5"
+          >
+            <Volume2 className="w-3.5 h-3.5" />
+            <span>តេស្ត $5.00 ដុល្លារ</span>
+          </button>
         </div>
       </div>
 

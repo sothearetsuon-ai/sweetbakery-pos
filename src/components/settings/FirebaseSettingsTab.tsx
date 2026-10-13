@@ -277,47 +277,47 @@ export const FirebaseSettingsTab: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Header Banner */}
-      <div className="bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-pink-500/10 border border-orange-200/80 rounded-3xl p-5 flex items-start gap-4">
-        <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-amber-500 to-orange-500 text-white flex items-center justify-center shadow-lg shadow-orange-500/20 shrink-0">
-          <Cloud className="w-6 h-6" />
+      <div className="bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-pink-500/10 border-2 border-orange-200/90 rounded-3xl p-5 sm:p-6 flex items-start gap-4 shadow-xs">
+        <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-amber-500 to-orange-500 text-white flex items-center justify-center shadow-lg shadow-orange-500/25 shrink-0">
+          <Cloud className="w-7 h-7 stroke-[2.5]" />
         </div>
         <div className="flex-1">
           <div className="flex items-center gap-2 flex-wrap">
-            <h4 className="text-base font-black text-slate-800">
+            <h4 className="text-base sm:text-lg font-black text-slate-800">
               Google Firebase Cloud Firestore (Real-Time Live Sync)
             </h4>
-            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-800 border border-emerald-300">
+            <span className="px-3 py-0.5 rounded-full text-xs font-black bg-emerald-100 text-emerald-800 border border-emerald-300">
               ឥតគិតថ្លៃ $0/ខែ
             </span>
           </div>
-          <p className="text-xs text-slate-600 mt-1 leading-relaxed">
+          <p className="text-xs sm:text-sm text-slate-600 mt-1.5 leading-relaxed font-medium">
             តភ្ជាប់ប្រព័ន្ធ POS ជាមួយ Google Cloud Firestore ដើម្បីឱ្យទូរសព្ទបុគ្គលិកទាំងអស់ និងកុំព្យូទ័រ Cashier ព្រមទាំងទូរសព្ទម្ចាស់ហាង អាច <strong>Sync ទិន្នន័យឃើញគ្នាភ្លាមៗក្នុងពេលជាក់ស្តែង (Live Real-Time)</strong> មិនខ្លាចបាត់ទិន្នន័យឡើយ។
           </p>
         </div>
       </div>
 
       {/* Connection Status Card */}
-      <div className="p-5 rounded-3xl border bg-white shadow-xs">
-        <div className="flex items-center justify-between flex-wrap gap-3 pb-4 border-b border-slate-100">
+      <div className="p-5 sm:p-6 rounded-3xl border-2 border-slate-200/90 bg-white shadow-xs">
+        <div className="flex items-center justify-between flex-wrap gap-3 pb-5 border-b border-slate-100">
           <div className="flex items-center gap-3">
             <div
-              className={`w-4 h-4 rounded-full ${
+              className={`w-5 h-5 rounded-full shrink-0 ${
                 currentConfig
                   ? 'bg-emerald-500 ring-4 ring-emerald-100 animate-pulse'
                   : 'bg-slate-300'
               }`}
             />
             <div>
-              <h5 className="text-sm font-black text-slate-800">
+              <h5 className="text-base sm:text-lg font-black text-slate-800">
                 {currentConfig ? '🟢 បានតភ្ជាប់ជាមួយ Google Firebase Cloud' : '⚪ មិនទាន់បានកំណត់ការតភ្ជាប់ (Local Mode)'}
               </h5>
-              <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                <p className="text-xs text-slate-500">
+              <div className="flex items-center gap-2 mt-1 flex-wrap">
+                <p className="text-xs sm:text-sm text-slate-600 font-medium">
                   {currentConfig
                     ? `Project ID: ${currentConfig.projectId}`
                     : 'ប្រព័ន្ធកំពុងដំណើរការរក្សាទុកទិន្នន័យក្នុង Browser LocalStorage នៃឧបករណ៍នេះ'}
                 </p>
-                <span className="text-[10px] font-mono font-bold bg-purple-50 text-purple-700 border border-purple-200 px-1.5 py-0.2 rounded">
+                <span className="text-xs font-mono font-bold bg-purple-50 text-purple-700 border border-purple-200 px-2.5 py-0.5 rounded-lg">
                   Store ID: {getStoreId()} (Isolated)
                 </span>
               </div>
@@ -328,9 +328,9 @@ export const FirebaseSettingsTab: React.FC = () => {
             <button
               type="button"
               onClick={handleDisconnect}
-              className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
+              className="px-4 py-2 bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 cursor-pointer shadow-2xs active:scale-95"
             >
-              <Trash2 className="w-3.5 h-3.5" />
+              <Trash2 className="w-4 h-4" />
               <span>ផ្តាច់ការតភ្ជាប់ (Disconnect)</span>
             </button>
           )}
@@ -338,24 +338,24 @@ export const FirebaseSettingsTab: React.FC = () => {
 
         {/* If Connected: Actions & Sync Tools */}
         {currentConfig ? (
-          <div className="pt-4 space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="pt-5 space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {/* Push local to cloud */}
-              <div className="p-4 bg-emerald-50/70 border border-emerald-200 rounded-2xl space-y-2">
-                <div className="flex items-center gap-2">
-                  <UploadCloud className="w-4 h-4 text-emerald-600" />
-                  <h6 className="text-xs font-black text-emerald-900">
+              <div className="p-5 bg-emerald-50/70 border-2 border-emerald-200 rounded-2xl space-y-2.5">
+                <div className="flex items-center gap-2.5">
+                  <UploadCloud className="w-5 h-5 text-emerald-600 shrink-0" />
+                  <h6 className="text-sm sm:text-base font-black text-emerald-950">
                     រុញទិន្នន័យបច្ចុប្បន្នឡើង Cloud (Push to Cloud)
                   </h6>
                 </div>
-                <p className="text-[11px] text-emerald-700 leading-relaxed">
+                <p className="text-xs sm:text-sm text-emerald-800 leading-relaxed font-medium">
                   បញ្ជូននំទាំងអស់ ({products.length} មុខ), ការលក់ ({sales.length} លើក), កុម្ម៉ង់ ({customOrders.length}), និងចំណាយ ({expenses.length}) ឡើងទៅ Google Cloud។
                 </p>
                 <button
                   type="button"
                   onClick={handlePushLocalToCloud}
                   disabled={isSyncingUp}
-                  className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black transition-all flex items-center justify-center gap-2 shadow-sm cursor-pointer disabled:opacity-50"
+                  className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs sm:text-sm font-black transition-all flex items-center justify-center gap-2 shadow-sm cursor-pointer disabled:opacity-50 active:scale-95"
                 >
                   {isSyncingUp ? (
                     <RefreshCw className="w-4 h-4 animate-spin" />
@@ -367,21 +367,21 @@ export const FirebaseSettingsTab: React.FC = () => {
               </div>
 
               {/* Pull cloud to local */}
-              <div className="p-4 bg-indigo-50/70 border border-indigo-200 rounded-2xl space-y-2">
-                <div className="flex items-center gap-2">
-                  <DownloadCloud className="w-4 h-4 text-indigo-600" />
-                  <h6 className="text-xs font-black text-indigo-900">
+              <div className="p-5 bg-indigo-50/70 border-2 border-indigo-200 rounded-2xl space-y-2.5">
+                <div className="flex items-center gap-2.5">
+                  <DownloadCloud className="w-5 h-5 text-indigo-600 shrink-0" />
+                  <h6 className="text-sm sm:text-base font-black text-indigo-950">
                     ទាញទិន្នន័យពី Cloud មកវិញ (Pull from Cloud)
                   </h6>
                 </div>
-                <p className="text-[11px] text-indigo-700 leading-relaxed">
+                <p className="text-xs sm:text-sm text-indigo-800 leading-relaxed font-medium">
                   ទាញទិន្នន័យថ្មីបំផុតពី Google Cloud មកដាក់លើទូរសព្ទ ឬកុំព្យូទ័រនេះវិញ។
                 </p>
                 <button
                   type="button"
                   onClick={handlePullCloudToLocal}
                   disabled={isPulling}
-                  className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-black transition-all flex items-center justify-center gap-2 shadow-sm cursor-pointer disabled:opacity-50"
+                  className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs sm:text-sm font-black transition-all flex items-center justify-center gap-2 shadow-sm cursor-pointer disabled:opacity-50 active:scale-95"
                 >
                   {isPulling ? (
                     <RefreshCw className="w-4 h-4 animate-spin" />
@@ -396,21 +396,21 @@ export const FirebaseSettingsTab: React.FC = () => {
             {/* Sync Up Alert */}
             {syncUpResult && (
               <div
-                className={`p-3.5 rounded-2xl border text-xs flex items-start gap-2.5 ${
+                className={`p-4 rounded-2xl border text-xs sm:text-sm flex items-start gap-3 ${
                   syncUpResult.success
                     ? 'bg-emerald-50 border-emerald-300 text-emerald-800'
                     : 'bg-rose-50 border-rose-300 text-rose-800'
                 }`}
               >
                 {syncUpResult.success ? (
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                  <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
                 ) : (
-                  <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                  <AlertTriangle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
                 )}
                 <div>
                   <p className="font-bold">{syncUpResult.message}</p>
                   {syncUpResult.counts && (
-                    <p className="mt-0.5 text-emerald-700">
+                    <p className="mt-1 text-emerald-700 font-medium">
                       នំ: {syncUpResult.counts.products} | ការលក់: {syncUpResult.counts.sales} | កុម្ម៉ង់: {syncUpResult.counts.orders} | ចំណាយ: {syncUpResult.counts.expenses}
                     </p>
                   )}
@@ -421,16 +421,16 @@ export const FirebaseSettingsTab: React.FC = () => {
             {/* Pull Alert */}
             {pullResult && (
               <div
-                className={`p-3.5 rounded-2xl border text-xs flex items-start gap-2.5 ${
+                className={`p-4 rounded-2xl border text-xs sm:text-sm flex items-start gap-3 ${
                   pullResult.success
                     ? 'bg-emerald-50 border-emerald-300 text-emerald-800'
                     : 'bg-rose-50 border-rose-300 text-rose-800'
                 }`}
               >
                 {pullResult.success ? (
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                  <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
                 ) : (
-                  <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                  <AlertTriangle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
                 )}
                 <p className="font-bold">{pullResult.message}</p>
               </div>
@@ -438,21 +438,21 @@ export const FirebaseSettingsTab: React.FC = () => {
           </div>
         ) : (
           /* If Not Connected: Input Config Form */
-          <div className="pt-4 space-y-4">
+          <div className="pt-5 space-y-5">
             {/* Quick Auto-Connect SweetBakery Cloud */}
-            <div className="p-4 bg-gradient-to-r from-orange-500/10 via-pink-500/10 to-amber-500/10 border border-orange-200 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div className="p-5 bg-gradient-to-r from-orange-500/10 via-pink-500/10 to-amber-500/10 border-2 border-orange-200/90 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <div>
-                <p className="text-xs font-black text-slate-800">
+                <p className="text-sm sm:text-base font-black text-slate-800">
                   ⚡ តភ្ជាប់ទៅកាន់ Google Cloud ផ្លូវការ (SweetBakery Cloud)
                 </p>
-                <p className="text-[11px] text-slate-500 mt-0.5">
+                <p className="text-xs sm:text-sm text-slate-600 mt-1 font-medium">
                   ចុចត្រង់នេះដើម្បីភ្ជាប់ទូរសព្ទ/ឧបករណ៍នេះទៅ Cloud រួមរបស់ហាងដោយស្វ័យប្រវត្តិ មិនបាច់ចម្លងកូដឡើយ។
                 </p>
               </div>
               <button
                 type="button"
                 onClick={handleResetToDefault}
-                className="px-4 py-2.5 bg-gradient-to-r from-orange-500 to-pink-600 hover:from-orange-600 hover:to-pink-700 text-white rounded-xl text-xs font-black shadow-md shadow-orange-500/20 whitespace-nowrap cursor-pointer transition-all"
+                className="w-full sm:w-auto px-5 py-3 bg-gradient-to-r from-orange-500 to-pink-600 hover:from-orange-600 hover:to-pink-700 text-white rounded-xl text-xs sm:text-sm font-black shadow-md shadow-orange-500/20 whitespace-nowrap cursor-pointer transition-all active:scale-95"
               >
                 តភ្ជាប់ Cloud ស្វ័យប្រវត្តិ (Auto-Connect)
               </button>
@@ -461,7 +461,7 @@ export const FirebaseSettingsTab: React.FC = () => {
             <form onSubmit={handleConnectFromInput} className="space-y-4">
               {!showManualFields ? (
                 <div>
-                  <label className="block text-xs font-black text-slate-700 mb-1.5 flex items-center justify-between">
+                  <label className="block text-xs sm:text-sm font-black text-slate-700 mb-2 flex items-center justify-between">
                     <span>បិទភ្ជាប់កូដ Firebase Config (Paste Configuration Snippet)</span>
                     <button
                       type="button"
@@ -476,65 +476,65 @@ export const FirebaseSettingsTab: React.FC = () => {
                     value={rawInput}
                     onChange={(e) => setRawInput(e.target.value)}
                     placeholder={`ឧទាហរណ៍ ចម្លងពី Google Console មកបិទភ្ជាប់៖\nconst firebaseConfig = {\n  apiKey: "AIzaSyD-xxxxx",\n  authDomain: "sweetbakery-pos.firebaseapp.com",\n  projectId: "sweetbakery-pos",\n  storageBucket: "sweetbakery-pos.firebasestorage.app",\n  messagingSenderId: "123456789",\n  appId: "1:123456789:web:xxxxx"\n};`}
-                    className="w-full p-3 text-xs font-mono bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 text-slate-800"
+                    className="w-full p-4 text-xs sm:text-sm font-mono bg-slate-50 border-2 border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 text-slate-800"
                   />
-                  <p className="text-[11px] text-slate-400 mt-1">
+                  <p className="text-xs text-slate-500 mt-1 font-medium">
                     💡 ប្រព័ន្ធនឹងស្រង់យក apiKey, projectId, authDomain ដោយស្វ័យប្រវត្តិ។
                   </p>
                 </div>
               ) : (
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-black text-slate-700">បញ្ចូលព័ត៌មានលម្អិត</span>
+                    <span className="text-xs sm:text-sm font-black text-slate-800">បញ្ចូលព័ត៌មានលម្អិត</span>
                     <button
                       type="button"
                       onClick={() => setShowManualFields(false)}
-                      className="text-pink-600 hover:text-pink-700 text-xs font-bold hover:underline cursor-pointer"
+                      className="text-pink-600 hover:text-pink-700 text-xs sm:text-sm font-bold hover:underline cursor-pointer"
                     >
                       បិទភ្ជាប់កូដទាំងមូល (Quick Paste)
                     </button>
                   </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                     <div>
-                      <label className="block text-[11px] font-bold text-slate-600 mb-1">API Key *</label>
+                      <label className="block text-xs sm:text-sm font-bold text-slate-700 mb-1">API Key *</label>
                       <input
                         type="text"
                         required
                         value={apiKeyInput}
                         onChange={(e) => setApiKeyInput(e.target.value)}
                         placeholder="AIzaSy..."
-                        className="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl font-mono"
+                        className="w-full px-3.5 py-2.5 text-xs sm:text-sm border-2 border-slate-200 rounded-xl font-mono"
                       />
                     </div>
                     <div>
-                      <label className="block text-[11px] font-bold text-slate-600 mb-1">Project ID *</label>
+                      <label className="block text-xs sm:text-sm font-bold text-slate-700 mb-1">Project ID *</label>
                       <input
                         type="text"
                         required
                         value={projectIdInput}
                         onChange={(e) => setProjectIdInput(e.target.value)}
                         placeholder="sweetbakery-pos"
-                        className="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl font-mono"
+                        className="w-full px-3.5 py-2.5 text-xs sm:text-sm border-2 border-slate-200 rounded-xl font-mono"
                       />
                     </div>
                     <div>
-                      <label className="block text-[11px] font-bold text-slate-600 mb-1">App ID</label>
+                      <label className="block text-xs sm:text-sm font-bold text-slate-700 mb-1">App ID</label>
                       <input
                         type="text"
                         value={appIdInput}
                         onChange={(e) => setAppIdInput(e.target.value)}
                         placeholder="1:123456789:web:..."
-                        className="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl font-mono"
+                        className="w-full px-3.5 py-2.5 text-xs sm:text-sm border-2 border-slate-200 rounded-xl font-mono"
                       />
                     </div>
                     <div>
-                      <label className="block text-[11px] font-bold text-slate-600 mb-1">Auth Domain</label>
+                      <label className="block text-xs sm:text-sm font-bold text-slate-700 mb-1">Auth Domain</label>
                       <input
                         type="text"
                         value={authDomainInput}
                         onChange={(e) => setAuthDomainInput(e.target.value)}
                         placeholder="sweetbakery-pos.firebaseapp.com"
-                        className="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl font-mono"
+                        className="w-full px-3.5 py-2.5 text-xs sm:text-sm border-2 border-slate-200 rounded-xl font-mono"
                       />
                     </div>
                   </div>
@@ -544,16 +544,16 @@ export const FirebaseSettingsTab: React.FC = () => {
               {/* Feedback Alert */}
               {testResult && (
                 <div
-                  className={`p-3.5 rounded-2xl border text-xs flex items-start gap-2.5 ${
+                  className={`p-4 rounded-2xl border text-xs sm:text-sm flex items-start gap-3 ${
                     testResult.success
                       ? 'bg-emerald-50 border-emerald-300 text-emerald-800'
                       : 'bg-rose-50 border-rose-300 text-rose-800'
                   }`}
                 >
                   {testResult.success ? (
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                    <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
                   ) : (
-                    <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                    <AlertTriangle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
                   )}
                   <div>
                     <p className="font-bold">{testResult.message}</p>
@@ -564,7 +564,7 @@ export const FirebaseSettingsTab: React.FC = () => {
               <button
                 type="submit"
                 disabled={isTesting}
-                className="py-3 px-6 bg-gradient-to-r from-orange-500 to-pink-600 hover:from-orange-600 hover:to-pink-700 text-white rounded-2xl text-xs font-black shadow-md shadow-orange-500/20 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                className="w-full py-3.5 px-6 bg-gradient-to-r from-orange-500 to-pink-600 hover:from-orange-600 hover:to-pink-700 text-white rounded-2xl text-xs sm:text-sm font-black shadow-md shadow-orange-500/20 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 active:scale-95"
               >
                 {isTesting ? (
                   <RefreshCw className="w-4 h-4 animate-spin" />
@@ -579,11 +579,11 @@ export const FirebaseSettingsTab: React.FC = () => {
       </div>
 
       {/* Step-by-Step Tutorial Card */}
-      <div className="bg-slate-50 border border-slate-200 rounded-3xl p-5 space-y-4">
+      <div className="bg-slate-50 border-2 border-slate-200/90 rounded-3xl p-5 sm:p-6 space-y-4">
         <div className="flex items-center justify-between flex-wrap gap-2">
           <div className="flex items-center gap-2">
-            <HelpCircle className="w-4 h-4 text-orange-500" />
-            <h5 className="text-xs font-black text-slate-800 uppercase tracking-wider">
+            <HelpCircle className="w-5 h-5 text-orange-500" />
+            <h5 className="text-xs sm:text-sm font-black text-slate-800 uppercase tracking-wider">
               របៀបបង្កើត Google Firebase Project ដោយឥតគិតថ្លៃ ($0) ក្នុងរយៈពេល ២ នាទី
             </h5>
           </div>
@@ -591,50 +591,50 @@ export const FirebaseSettingsTab: React.FC = () => {
             href="https://console.firebase.google.com"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-xs font-bold text-orange-600 hover:text-orange-700 flex items-center gap-1 hover:underline"
+            className="text-xs sm:text-sm font-bold text-orange-600 hover:text-orange-700 flex items-center gap-1.5 hover:underline"
           >
             <span>បើក Google Firebase Console</span>
-            <ExternalLink className="w-3.5 h-3.5" />
+            <ExternalLink className="w-4 h-4" />
           </a>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-3 text-xs text-slate-600">
-          <div className="bg-white p-3.5 rounded-2xl border border-slate-200/80 space-y-1.5">
-            <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-orange-100 text-orange-700 font-black text-[10px]">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 text-xs sm:text-sm text-slate-600">
+          <div className="bg-white p-4 rounded-2xl border border-slate-200 space-y-2 shadow-2xs">
+            <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-orange-100 text-orange-700 font-black text-xs">
               1
             </span>
-            <p className="font-bold text-slate-800">បង្កើត Project</p>
-            <p className="text-[11px] text-slate-500 leading-relaxed">
-              ចូល <a href="https://console.firebase.google.com" target="_blank" rel="noreferrer" className="text-orange-600 underline">console.firebase.google.com</a> ដោយប្រើ Gmail រួចចុច <strong>Add project</strong> (ដាក់ឈ្មោះ <strong>SweetBakery</strong>)។
+            <p className="font-black text-slate-800">បង្កើត Project</p>
+            <p className="text-xs text-slate-600 leading-relaxed font-medium">
+              ចូល <a href="https://console.firebase.google.com" target="_blank" rel="noreferrer" className="text-orange-600 underline font-bold">console.firebase.google.com</a> ដោយប្រើ Gmail រួចចុច <strong>Add project</strong> (ដាក់ឈ្មោះ <strong>SweetBakery</strong>)។
             </p>
           </div>
 
-          <div className="bg-white p-3.5 rounded-2xl border border-slate-200/80 space-y-1.5">
-            <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-orange-100 text-orange-700 font-black text-[10px]">
+          <div className="bg-white p-4 rounded-2xl border border-slate-200 space-y-2 shadow-2xs">
+            <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-orange-100 text-orange-700 font-black text-xs">
               2
             </span>
-            <p className="font-bold text-slate-800">បង្កើត Firestore</p>
-            <p className="text-[11px] text-slate-500 leading-relaxed">
+            <p className="font-black text-slate-800">បង្កើត Firestore</p>
+            <p className="text-xs text-slate-600 leading-relaxed font-medium">
               ក្នុងម៉ឺនុយឆ្វេង ចុច <strong>Build &gt; Firestore Database</strong> &gt; ចុច <strong>Create Database</strong> &gt; ជ្រើសរើស <strong>Start in test mode</strong>។
             </p>
           </div>
 
-          <div className="bg-white p-3.5 rounded-2xl border border-slate-200/80 space-y-1.5">
-            <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-orange-100 text-orange-700 font-black text-[10px]">
+          <div className="bg-white p-4 rounded-2xl border border-slate-200 space-y-2 shadow-2xs">
+            <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-orange-100 text-orange-700 font-black text-xs">
               3
             </span>
-            <p className="font-bold text-slate-800">បន្ថែម Web App</p>
-            <p className="text-[11px] text-slate-500 leading-relaxed">
+            <p className="font-black text-slate-800">បន្ថែម Web App</p>
+            <p className="text-xs text-slate-600 leading-relaxed font-medium">
               ចុច <strong>Project Settings ⚙️</strong> &gt; អូសចុះក្រោមចុចសញ្ញា <strong>&lt;/&gt; (Web App)</strong> &gt; ដាក់ឈ្មោះ "POS" រួចចុច Register app។
             </p>
           </div>
 
-          <div className="bg-white p-3.5 rounded-2xl border border-slate-200/80 space-y-1.5">
-            <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-orange-100 text-orange-700 font-black text-[10px]">
+          <div className="bg-white p-4 rounded-2xl border border-slate-200 space-y-2 shadow-2xs">
+            <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-orange-100 text-orange-700 font-black text-xs">
               4
             </span>
-            <p className="font-bold text-slate-800">Copy &amp; Paste</p>
-            <p className="text-[11px] text-slate-500 leading-relaxed">
+            <p className="font-black text-slate-800">Copy &amp; Paste</p>
+            <p className="text-xs text-slate-600 leading-relaxed font-medium">
               ចម្លងកូដ <code>const firebaseConfig = &#123; ... &#125;;</code> យកមកបិទភ្ជាប់ក្នុងប្រអប់ខាងលើ រួចចុច "តេស្ត &amp; រក្សាទុក" ជាការស្រេច!
             </p>
           </div>

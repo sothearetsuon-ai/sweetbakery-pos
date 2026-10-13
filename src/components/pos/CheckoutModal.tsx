@@ -5,6 +5,7 @@ import {
   QrCode,
   Banknote,
   CheckCircle,
+  CheckCircle2,
   Calculator,
   Sparkles,
   Maximize2,
@@ -14,6 +15,10 @@ import {
   User,
   Clock,
   FileText,
+  Volume2,
+  VolumeX,
+  Radio,
+  ShieldCheck,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { useBakery } from '../../context/BakeryContext';
@@ -23,6 +28,8 @@ import { soundFx } from '../../utils/audio';
 import { KhqrStandeeModal } from './KhqrStandeeModal';
 import { formatDateDMY } from '../../utils/dateUtils';
 import { roundKhr } from '../../utils/currencyUtils';
+import { paymentListener, PaymentNotification } from '../../services/paymentListener';
+import { khmerVoiceSoundbox } from '../../utils/khmerVoice';
 
 interface CheckoutModalProps {
   isOpen: boolean;
@@ -35,6 +42,7 @@ interface CheckoutModalProps {
   initialPickupDate?: string;
   initialPickupTime?: string;
   initialNotes?: string;
+  initialPaymentMethod?: 'CASH_KHR' | 'CASH_USD' | 'KHQR_BAKONG';
 }
 
 export const CheckoutModal: React.FC<CheckoutModalProps> = ({
@@ -48,6 +56,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
   initialPickupDate,
   initialPickupTime,
   initialNotes,
+  initialPaymentMethod,
 }) => {
   const {
     lang,
@@ -106,9 +115,16 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
       const dueNow = activeDeposit ? depKhr : cartTotalKhr;
       setReceivedKhr(dueNow.toString());
       setReceivedUsd(Number((dueNow / exchangeRate).toFixed(2)).toString());
+
+      if (initialPaymentMethod) {
+        setPaymentMethod(initialPaymentMethod);
+      } else {
+        setPaymentMethod('CASH_KHR');
+      }
     }
   }, [
     isOpen,
+    initialPaymentMethod,
     initialIsDeposit,
     initialDepositKhr,
     initialCustomerName,
@@ -120,6 +136,40 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
     defaultDeposit50Pct,
     exchangeRate,
   ]);
+
+  // Real-time KHQR Payment Soundbox State
+  const [verifiedPayment, setVerifiedPayment] = useState<PaymentNotification | null>(null);
+  const [isSoundboxMuted, setIsSoundboxMuted] = useState(!khmerVoiceSoundbox.isEnabled());
+
+  // Subscribe to real-time incoming payments when checkout is open
+  useEffect(() => {
+    if (!isOpen) {
+      setVerifiedPayment(null);
+      return;
+    }
+
+    const targetKhr = isDeposit ? (parseInt(depositAmountKhr, 10) || defaultDeposit50Pct) : cartTotalKhr;
+    const targetUsd = Number((targetKhr / exchangeRate).toFixed(2));
+
+    const unsubscribe = paymentListener.subscribe((payment) => {
+      // Check if received payment matches due amount (within small tolerance)
+      const matchesKhr = payment.currency === 'KHR' && Math.abs(payment.amount - targetKhr) <= 500;
+      const matchesUsd = payment.currency === 'USD' && Math.abs(payment.amount - targetUsd) <= 0.2;
+
+      if (matchesKhr || matchesUsd) {
+        setVerifiedPayment(payment);
+        confetti({
+          particleCount: 60,
+          spread: 80,
+          origin: { y: 0.6 },
+        });
+      }
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, [isOpen, isDeposit, depositAmountKhr, defaultDeposit50Pct, cartTotalKhr, exchangeRate]);
 
   if (!isOpen) return null;
 
@@ -642,10 +692,10 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
             </div>
           )}
 
-          {/* KHQR Bakong */}
+          {/* KHQR Bakong with Real-time Soundbox Verification */}
           {paymentMethod === 'KHQR_BAKONG' && (
-            <div className="p-5 bg-gradient-to-b from-slate-50 to-pink-50/20 border border-rose-100 rounded-3xl text-center space-y-3">
-              <div className="flex items-center justify-between px-2">
+            <div className="p-5 bg-gradient-to-b from-slate-50 via-pink-50/15 to-rose-50/30 border border-rose-100 rounded-3xl text-center space-y-3.5">
+              <div className="flex items-center justify-between px-1">
                 <div className="flex items-center gap-2">
                   <div className="bg-[#D32F2F] text-white font-black text-xs px-2.5 py-0.5 rounded-lg shadow-sm">
                     KHQR
@@ -655,18 +705,123 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                   </span>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => {
-                    soundFx.playPop();
-                    setIsStandeeOpen(true);
-                  }}
-                  className="px-2.5 py-1 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 rounded-xl text-[11px] font-bold transition-all shadow-2xs flex items-center gap-1 cursor-pointer"
-                >
-                  <Maximize2 className="w-3 h-3" />
-                  <span>ពង្រីក Standee ធំ</span>
-                </button>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const next = !isSoundboxMuted;
+                      khmerVoiceSoundbox.setEnabled(!next);
+                      setIsSoundboxMuted(next);
+                      soundFx.playPop();
+                    }}
+                    title={isSoundboxMuted ? 'បើកសំឡេងប្រកាស Soundbox' : 'បិទសំឡេងប្រកាស Soundbox'}
+                    className={`p-1.5 rounded-xl border text-[11px] font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                      isSoundboxMuted
+                        ? 'bg-slate-100 text-slate-400 border-slate-200'
+                        : 'bg-emerald-50 text-emerald-600 border-emerald-200 hover:bg-emerald-100'
+                    }`}
+                  >
+                    {isSoundboxMuted ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
+                    <span className="text-[10px] hidden sm:inline">{isSoundboxMuted ? 'បិទសំឡេង' : 'Soundbox'}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      soundFx.playPop();
+                      setIsStandeeOpen(true);
+                    }}
+                    className="px-2.5 py-1 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 rounded-xl text-[11px] font-bold transition-all shadow-2xs flex items-center gap-1 cursor-pointer"
+                  >
+                    <Maximize2 className="w-3 h-3" />
+                    <span>Standee</span>
+                  </button>
+                </div>
               </div>
+
+              {/* Verified Payment Alert Card */}
+              {verifiedPayment ? (
+                <div className="p-4 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-2xl shadow-lg shadow-emerald-500/25 border-2 border-emerald-300 animate-in fade-in slide-in-from-top duration-300">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-9 h-9 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center shrink-0">
+                        <CheckCircle2 className="w-6 h-6 text-white" />
+                      </div>
+                      <div className="text-left">
+                        <div className="text-[11px] font-bold uppercase tracking-wider text-emerald-100 flex items-center gap-1">
+                          <ShieldCheck className="w-3.5 h-3.5" />
+                          <span>បានផ្ទៀងផ្ទាត់ជោគជ័យ (Verified)</span>
+                        </div>
+                        <div className="text-base font-black text-white">
+                          +{verifiedPayment.amount.toLocaleString()} {verifiedPayment.currency}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded-full font-bold">
+                        {verifiedPayment.bankName || 'Bakong KHQR'}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="mt-2.5 pt-2 border-t border-white/20 flex items-center justify-between text-[11px] text-emerald-100">
+                    <span>វិក្កយបត្រត្រឹមត្រូវ គ្មានការបន្លំ!</span>
+                    <button
+                      type="button"
+                      onClick={() => handleConfirm()}
+                      className="px-3 py-1 bg-white text-emerald-700 hover:bg-emerald-50 font-black rounded-lg shadow-sm cursor-pointer transition-all active:scale-95"
+                    >
+                      បញ្ចប់ការលក់ភ្លាមៗ
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                /* Live Soundbox Radar Status Bar */
+                <div className="p-2.5 bg-slate-900 text-white rounded-2xl shadow-inner flex items-center justify-between px-3">
+                  <div className="flex items-center gap-2">
+                    <div className="relative flex h-2.5 w-2.5">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+                    </div>
+                    <span className="text-[11px] font-bold text-slate-200">
+                      កំពុងស្តាប់សញ្ញាប្រាក់ចូល (Soundbox Live)...
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        // Test the Khmer soundbox voice announcement
+                        paymentListener.simulatePayment(dueNowKhr, 'KHR', 'ABA KHQR (តេស្ត)');
+                      }}
+                      className="px-2 py-0.5 bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-700 rounded-lg text-[10px] font-bold cursor-pointer transition-all flex items-center gap-1"
+                      title="ចុចដើម្បីសាកល្បងសំឡេងប្រកាសរបស់ Soundbox"
+                    >
+                      <Volume2 className="w-3 h-3" />
+                      <span>តេស្តសំឡេង</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        // Staff manually marks payment as verified
+                        setVerifiedPayment({
+                          id: `manual_${Date.now()}`,
+                          amount: dueNowKhr,
+                          currency: 'KHR',
+                          timestamp: Date.now(),
+                          bankName: 'ផ្ទៀងផ្ទាត់ដោយដៃ (Manual)',
+                        });
+                        khmerVoiceSoundbox.announcePayment(dueNowKhr, 'KHR', 'ABA Pay');
+                        confetti({ particleCount: 50, spread: 60, origin: { y: 0.6 } });
+                      }}
+                      className="px-2 py-0.5 bg-emerald-600/30 hover:bg-emerald-600/50 text-emerald-300 border border-emerald-500/30 rounded-lg text-[10px] font-bold cursor-pointer transition-all flex items-center gap-1"
+                      title="ចុចប្រសិនបើភ្ញៀវបានបង់រួចហើយបុគ្គលិកចង់បញ្ជាក់ភ្លាមៗ"
+                    >
+                      <CheckCircle className="w-3 h-3" />
+                      <span>បញ្ជាក់ដោយដៃ</span>
+                    </button>
+                  </div>
+                </div>
+              )}
 
               {/* QR Display */}
               <div className="relative w-48 h-48 mx-auto bg-white p-2.5 rounded-3xl border-2 border-dashed border-red-300/80 shadow-md flex flex-col items-center justify-center overflow-hidden">

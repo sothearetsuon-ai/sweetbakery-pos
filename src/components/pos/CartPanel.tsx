@@ -25,6 +25,8 @@ import {
   ChevronUp,
   Maximize2,
   Minimize2,
+  QrCode,
+  Banknote,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { useBakery } from '../../context/BakeryContext';
@@ -44,10 +46,12 @@ interface CartPanelProps {
     pickupDate?: string;
     pickupTime?: string;
     notes?: string;
+    paymentMethod?: 'CASH_KHR' | 'CASH_USD' | 'KHQR_BAKONG';
   }) => void;
   onClose?: () => void;
   isMobileSheet?: boolean;
   isDrawer?: boolean;
+  onOpenKhqrStandee?: () => void;
 }
 
 export const CartPanel: React.FC<CartPanelProps> = ({
@@ -55,6 +59,7 @@ export const CartPanel: React.FC<CartPanelProps> = ({
   onClose,
   isMobileSheet = false,
   isDrawer = false,
+  onOpenKhqrStandee,
 }) => {
   const {
     lang,
@@ -246,6 +251,21 @@ export const CartPanel: React.FC<CartPanelProps> = ({
             >
               <Trash2 className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">{text.clearCart}</span>
+            </button>
+          )}
+
+          {onOpenKhqrStandee && (
+            <button
+              type="button"
+              onClick={() => {
+                soundFx.playPop();
+                onOpenKhqrStandee();
+              }}
+              className="px-2.5 py-1.5 rounded-xl border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 transition-all cursor-pointer flex items-center gap-1.5 text-xs font-black shadow-2xs active:scale-95"
+              title="បើកផ្ទាំងស្កេន KHQR ហាងលើតុ (Counter Standee)"
+            >
+              <QrCode className="w-3.5 h-3.5 text-red-600" />
+              <span className="text-[11px] hidden sm:inline">KHQR ហាង</span>
             </button>
           )}
 
@@ -1178,53 +1198,151 @@ export const CartPanel: React.FC<CartPanelProps> = ({
             </div>
           )}
 
-          {/* Glowing Checkout / Deposit Button */}
+          {/* Action Buttons: KHQR Quick Scan vs Cash/Regular Checkout */}
           {!isDepositMode ? (
-            <button
-              type="button"
-              onClick={() => {
-                soundFx.playChime();
-                onCheckout({
-                  isDeposit: false,
-                  depositKhr: finalTotalKhr,
-                  customerName: customerName.trim() || undefined,
-                  customerPhone: customerPhone.trim() || undefined,
-                  pickupDate: pickupDate || undefined,
-                  pickupTime: pickupTime || undefined,
-                  notes: orderNotes.trim() || undefined,
-                });
-              }}
-              className="w-full py-4 bg-gradient-to-r from-pink-600 via-rose-500 to-pink-600 hover:from-pink-700 hover:via-rose-600 hover:to-pink-700 shimmer-btn animate-pulse-glow text-white font-black rounded-2xl shadow-xl shadow-pink-500/30 flex items-center justify-center gap-2.5 text-base transition-all duration-300 active:scale-[0.98] hover:scale-[1.01] cursor-pointer"
-            >
-              <Sparkles className="w-5 h-5 text-pink-100 relative z-10 shrink-0" />
-              <span className="relative z-10 font-black text-white text-base tracking-wide drop-shadow-xs">
-                {text.checkout} • {finalTotalKhr.toLocaleString()} ៛
-              </span>
-              <ArrowRight className="w-5 h-5 ml-1 text-white relative z-10 shrink-0" />
-            </button>
+            <div className="space-y-2">
+              {/* 1. Large High-Priority KHQR Quick Scan Button */}
+              <button
+                type="button"
+                onClick={() => {
+                  soundFx.playChime();
+                  onCheckout({
+                    isDeposit: false,
+                    depositKhr: finalTotalKhr,
+                    customerName: customerName.trim() || undefined,
+                    customerPhone: customerPhone.trim() || undefined,
+                    pickupDate: pickupDate || undefined,
+                    pickupTime: pickupTime || undefined,
+                    notes: orderNotes.trim() || undefined,
+                    paymentMethod: 'KHQR_BAKONG',
+                  });
+                }}
+                className="w-full py-3.5 sm:py-4 bg-gradient-to-r from-red-600 via-rose-600 to-red-600 hover:from-red-700 hover:to-rose-700 text-white font-black rounded-2xl shadow-xl shadow-red-600/30 flex items-center justify-between px-4 sm:px-5 transition-all duration-200 active:scale-[0.98] cursor-pointer ring-2 ring-red-400/50 group"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center font-black shadow-xs">
+                    <QrCode className="w-5 h-5 text-white animate-pulse" />
+                  </div>
+                  <div className="text-left">
+                    <div className="text-[11px] font-bold text-red-100 flex items-center gap-1.5">
+                      <span>ស្កេនទូទាត់រហ័ស</span>
+                      <span className="text-[9px] bg-white text-red-700 px-1.5 py-0.2 rounded-md font-black tracking-wide">
+                        BAKONG
+                      </span>
+                    </div>
+                    <div className="text-sm sm:text-base font-black text-white tracking-tight">
+                      ស្កេន KHQR • {finalTotalKhr.toLocaleString()} ៛
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1 bg-white/20 text-white px-3 py-1.5 rounded-xl text-xs font-black shadow-2xs group-hover:bg-white group-hover:text-red-700 transition-colors">
+                  <span>ស្កេន</span>
+                  <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                </div>
+              </button>
+
+              {/* 2. Secondary Row: Cash & Full Checkout Options */}
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    soundFx.playChime();
+                    onCheckout({
+                      isDeposit: false,
+                      depositKhr: finalTotalKhr,
+                      customerName: customerName.trim() || undefined,
+                      customerPhone: customerPhone.trim() || undefined,
+                      pickupDate: pickupDate || undefined,
+                      pickupTime: pickupTime || undefined,
+                      notes: orderNotes.trim() || undefined,
+                      paymentMethod: 'CASH_KHR',
+                    });
+                  }}
+                  className="flex-1 py-3 bg-white hover:bg-emerald-50 text-emerald-800 border-2 border-emerald-400/60 hover:border-emerald-600 font-black rounded-xl text-xs sm:text-sm flex items-center justify-center gap-2 transition-all active:scale-[0.98] shadow-xs cursor-pointer"
+                >
+                  <Banknote className="w-4 h-4 text-emerald-600" />
+                  <span>សាច់ប្រាក់ (Cash)</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    soundFx.playChime();
+                    onCheckout({
+                      isDeposit: false,
+                      depositKhr: finalTotalKhr,
+                      customerName: customerName.trim() || undefined,
+                      customerPhone: customerPhone.trim() || undefined,
+                      pickupDate: pickupDate || undefined,
+                      pickupTime: pickupTime || undefined,
+                      notes: orderNotes.trim() || undefined,
+                    });
+                  }}
+                  className="flex-1 py-3 bg-slate-900 hover:bg-slate-800 text-white font-black rounded-xl text-xs sm:text-sm flex items-center justify-center gap-1.5 transition-all active:scale-[0.98] shadow-md cursor-pointer"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-pink-300" />
+                  <span>{text.checkout}</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
           ) : (
-            <button
-              type="button"
-              onClick={() => {
-                soundFx.playChime();
-                onCheckout({
-                  isDeposit: true,
-                  depositKhr: numDepositKhr,
-                  customerName: customerName.trim() || undefined,
-                  customerPhone: customerPhone.trim() || undefined,
-                  pickupDate: pickupDate || undefined,
-                  pickupTime: pickupTime || undefined,
-                  notes: orderNotes.trim() || undefined,
-                });
-              }}
-              className="w-full py-4 bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 hover:from-amber-600 hover:via-orange-600 hover:to-amber-700 shimmer-btn text-white font-black rounded-2xl shadow-xl shadow-amber-500/30 flex items-center justify-center gap-2.5 text-base transition-all duration-300 active:scale-[0.98] hover:scale-[1.01] cursor-pointer"
-            >
-              <Wallet className="w-5 h-5 text-amber-100 relative z-10 shrink-0" />
-              <span className="relative z-10 font-black text-white text-base tracking-wide drop-shadow-xs">
-                កត់ត្រាកក់ប្រាក់ • {numDepositKhr.toLocaleString()} ៛
-              </span>
-              <ArrowRight className="w-5 h-5 ml-1 text-white relative z-10 shrink-0" />
-            </button>
+            <div className="space-y-2">
+              <button
+                type="button"
+                onClick={() => {
+                  soundFx.playChime();
+                  onCheckout({
+                    isDeposit: true,
+                    depositKhr: numDepositKhr,
+                    customerName: customerName.trim() || undefined,
+                    customerPhone: customerPhone.trim() || undefined,
+                    pickupDate: pickupDate || undefined,
+                    pickupTime: pickupTime || undefined,
+                    notes: orderNotes.trim() || undefined,
+                    paymentMethod: 'KHQR_BAKONG',
+                  });
+                }}
+                className="w-full py-3.5 bg-gradient-to-r from-red-600 via-rose-600 to-red-600 hover:from-red-700 hover:to-rose-700 text-white font-black rounded-2xl shadow-lg shadow-red-500/25 flex items-center justify-between px-4 transition-all duration-200 active:scale-[0.98] cursor-pointer ring-2 ring-red-400/50"
+              >
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center font-black">
+                    <QrCode className="w-5 h-5 text-white" />
+                  </div>
+                  <div className="text-left">
+                    <div className="text-[10px] font-bold text-red-100">កក់តាម KHQR Bakong</div>
+                    <div className="text-sm font-black text-white">
+                      ស្កេនកក់ • {numDepositKhr.toLocaleString()} ៛
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1 bg-white/20 px-2.5 py-1 rounded-xl text-xs font-black">
+                  <span>ស្កេន</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  soundFx.playChime();
+                  onCheckout({
+                    isDeposit: true,
+                    depositKhr: numDepositKhr,
+                    customerName: customerName.trim() || undefined,
+                    customerPhone: customerPhone.trim() || undefined,
+                    pickupDate: pickupDate || undefined,
+                    pickupTime: pickupTime || undefined,
+                    notes: orderNotes.trim() || undefined,
+                    paymentMethod: 'CASH_KHR',
+                  });
+                }}
+                className="w-full py-3 bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 hover:from-amber-600 hover:to-orange-600 text-white font-black rounded-xl shadow-md shadow-amber-500/20 flex items-center justify-center gap-2 text-xs sm:text-sm transition-all active:scale-[0.98] cursor-pointer"
+              >
+                <Wallet className="w-4 h-4 text-amber-100" />
+                <span>កត់ត្រាកក់ប្រាក់សុទ្ធ • {numDepositKhr.toLocaleString()} ៛</span>
+              </button>
+            </div>
           )}
         </div>
       )}
