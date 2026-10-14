@@ -9,3 +9,10 @@ local_bakery_songs.json
 recovered_*.json
 
 scripts/create_release.cjs
+windows-app/SweetBakery-POS-win32-x64/
+windows-app-pkg/
+android-app/app/build/
+android-app/build/
+android-app/.gradle/
+*.zip
+*.exe

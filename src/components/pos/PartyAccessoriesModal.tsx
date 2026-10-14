@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   X,
   Plus,
@@ -12,7 +12,13 @@ import {
   Package,
   PackagePlus,
   AlertTriangle,
+  History,
+  Calendar,
+  ArrowRight,
+  RotateCcw,
+  CheckCircle2,
 } from 'lucide-react';
+import confetti from 'canvas-confetti';
 import { useBakery } from '../../context/BakeryContext';
 import { PartyAddon, Product } from '../../types';
 import { soundFx } from '../../utils/audio';
@@ -33,6 +39,8 @@ export const PartyAccessoriesModal: React.FC<PartyAccessoriesModalProps> = ({
     updatePartyAddon,
     restockPartyAddon,
     deletePartyAddon,
+    deductPartyAddonsStockFromPastSales,
+    sales,
     exchangeRate,
     addToCart,
     cart,
@@ -60,6 +68,74 @@ export const PartyAccessoriesModal: React.FC<PartyAccessoriesModalProps> = ({
 
   // Delete confirmation
   const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  // Retroactive past sales deduction state
+  const [isReconcileOpen, setIsReconcileOpen] = useState(false);
+  const [reconcileSinceDate, setReconcileSinceDate] = useState('2026-10-08');
+  const [reconcileResultMsg, setReconcileResultMsg] = useState<string | null>(null);
+
+  const reconcilePreview = useMemo(() => {
+    const targetSales = (sales || []).filter((s) => {
+      if (!s.createdAt) return false;
+      return s.createdAt.slice(0, 10) >= reconcileSinceDate;
+    });
+
+    const soldMap: Record<string, number> = {};
+    targetSales.forEach((s) => {
+      (s.items || []).forEach((item) => {
+        if (!item.productId) return;
+        const rawId = item.productId.startsWith('addon-') ? item.productId.slice(6) : item.productId;
+        const matched = partyAddons.find(
+          (a) =>
+            a.id === rawId ||
+            `addon-${a.id}` === item.productId ||
+            (item.nameKh && item.nameKh.includes(a.nameKh))
+        );
+        if (matched) {
+          soldMap[matched.id] = (soldMap[matched.id] || 0) + (Number(item.quantity) || 1);
+        }
+      });
+    });
+
+    const items = partyAddons.map((addon) => {
+      const sold = soldMap[addon.id] || 0;
+      const current = addon.stockQty ?? 0;
+      const remaining = Math.max(0, current - sold);
+      return {
+        addon,
+        sold,
+        current,
+        remaining,
+      };
+    });
+
+    const totalSold = Object.values(soldMap).reduce((a, b) => a + b, 0);
+
+    return {
+      salesCount: targetSales.length,
+      totalSold,
+      items,
+      soldMap,
+    };
+  }, [sales, partyAddons, reconcileSinceDate]);
+
+  const handleApplyReconcile = () => {
+    soundFx.playSuccess();
+    const res = deductPartyAddonsStockFromPastSales(reconcileSinceDate);
+    try {
+      confetti({ particleCount: 70, spread: 70 });
+    } catch (e) {}
+    const totalPieces = Object.values(res.soldSummary).reduce((a, b) => a + b, 0);
+    if (totalPieces > 0) {
+      setReconcileResultMsg(
+        `✅ បានកាត់ស្តុកជោគជ័យ! សរុប ${totalPieces} ឯកតា ពីការលក់ចំនួន ${res.totalSalesScanned} វិក្កយបត្រ (គិតចាប់ពីថ្ងៃ ${reconcileSinceDate})។`
+      );
+    } else {
+      setReconcileResultMsg(
+        `ℹ️ មិនមានទំនិញគ្រឿងបន្ថែមពិធីត្រូវបានលក់ក្នុងវិក្កយបត្រចាប់ពីថ្ងៃ ${reconcileSinceDate} មកទេ។ បងអាចចុចរូបខ្មៅដៃ ✏️ លើមុខទំនិញខាងក្រោមដើម្បីកំណត់ចំនួនស្តុកជាក់ស្តែងដោយផ្ទាល់បាន។`
+      );
+    }
+  };
 
   if (!isOpen) return null;
 
@@ -225,26 +301,210 @@ export const PartyAccessoriesModal: React.FC<PartyAccessoriesModalProps> = ({
 
         {/* Content Body */}
         <div className="p-4 sm:p-6 overflow-y-auto space-y-4 flex-1">
-          {/* Action Header: Add New Accessory Trigger */}
-          <div className="flex items-center justify-between pb-1">
+          {/* Action Header: Triggers for Add New and Past Sales Deduction */}
+          <div className="flex items-center justify-between flex-wrap gap-2 pb-1">
             <div className="text-xs font-bold text-slate-700">
               បញ្ជីមុខទំនិញពិធីបច្ចុប្បន្ន ({partyAddons.length})
             </div>
-            {!isAddingNew && (
+            <div className="flex items-center gap-2">
               <button
                 type="button"
                 onClick={() => {
                   soundFx.playPop();
-                  setIsAddingNew(true);
-                  setEditingId(null);
+                  setIsReconcileOpen((prev) => !prev);
+                  if (!isReconcileOpen) {
+                    setIsAddingNew(false);
+                    setEditingId(null);
+                    setReconcileResultMsg(null);
+                  }
                 }}
-                className="px-3 py-1.5 bg-gradient-to-r from-pink-600 to-rose-600 hover:from-pink-700 hover:to-rose-700 text-white rounded-xl text-xs font-black flex items-center gap-1.5 shadow-md shadow-pink-500/20 active:scale-95 transition-all cursor-pointer"
+                className={`px-3 py-1.5 rounded-xl text-xs font-black flex items-center gap-1.5 shadow-sm active:scale-95 transition-all cursor-pointer ${
+                  isReconcileOpen
+                    ? 'bg-amber-600 text-white ring-2 ring-amber-300'
+                    : 'bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white shadow-amber-500/20'
+                }`}
               >
-                <Plus className="w-3.5 h-3.5 stroke-[3]" />
-                <span>+ ថែមមុខទំនិញថ្មី</span>
+                <RotateCcw className="w-3.5 h-3.5" />
+                <span>{isReconcileOpen ? 'លាក់ផ្ទាំងកាត់ស្តុក' : '🔄 កាត់ស្តុកពីការលក់កន្លងមក'}</span>
               </button>
-            )}
+
+              {!isAddingNew && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    soundFx.playPop();
+                    setIsAddingNew(true);
+                    setIsReconcileOpen(false);
+                    setEditingId(null);
+                  }}
+                  className="px-3 py-1.5 bg-gradient-to-r from-pink-600 to-rose-600 hover:from-pink-700 hover:to-rose-700 text-white rounded-xl text-xs font-black flex items-center gap-1.5 shadow-md shadow-pink-500/20 active:scale-95 transition-all cursor-pointer"
+                >
+                  <Plus className="w-3.5 h-3.5 stroke-[3]" />
+                  <span>+ ថែមមុខទំនិញថ្មី</span>
+                </button>
+              )}
+            </div>
           </div>
+
+          {/* Past Sales Retroactive Stock Deduction Panel */}
+          {isReconcileOpen && (
+            <div className="p-4 bg-gradient-to-br from-amber-50 via-orange-50/50 to-pink-50/40 rounded-2xl border-2 border-amber-300 shadow-sm space-y-3 animate-in fade-in slide-in-from-top-2 duration-200">
+              <div className="flex items-center justify-between border-b border-amber-200/80 pb-2">
+                <div className="flex items-center gap-2 text-xs sm:text-sm font-black text-amber-950">
+                  <RotateCcw className="w-4 h-4 text-amber-600" />
+                  <span>គណនាកាត់ស្តុកពីការលក់កន្លងមក (Sync Sold Stock from Past Sales)</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsReconcileOpen(false)}
+                  className="text-xs font-bold text-slate-500 hover:text-slate-700"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <div className="text-xs text-slate-600 leading-relaxed font-medium">
+                ប្រព័ន្ធនឹងស្កេនរាល់វិក្កយបត្រលក់ក្នុងប្រព័ន្ធចាប់ពីកាលបរិច្ឆេទដែលបានជ្រើសរើស រួចបូកសរុបចំនួនគ្រឿងបន្ថែមដែលបានលក់ និងកាត់ចេញពីស្តុកបច្ចុប្បន្នដោយស្វ័យប្រវត្តិ៖
+              </div>
+
+              {/* Date Filter Bar */}
+              <div className="flex flex-wrap items-center gap-2 pt-1">
+                <div className="flex items-center gap-1.5 bg-white px-3 py-1.5 rounded-xl border border-amber-300 text-xs">
+                  <Calendar className="w-3.5 h-3.5 text-amber-600" />
+                  <span className="font-bold text-slate-700">គិតចាប់ពីថ្ងៃ៖</span>
+                  <input
+                    type="date"
+                    value={reconcileSinceDate}
+                    onChange={(e) => {
+                      setReconcileSinceDate(e.target.value);
+                      setReconcileResultMsg(null);
+                    }}
+                    className="font-mono text-slate-800 font-bold focus:outline-none"
+                  />
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setReconcileSinceDate('2026-10-08');
+                    setReconcileResultMsg(null);
+                  }}
+                  className={`px-2.5 py-1 text-[11px] font-bold rounded-lg border transition-all ${
+                    reconcileSinceDate === '2026-10-08'
+                      ? 'bg-amber-600 text-white border-amber-700 shadow-xs'
+                      : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'
+                  }`}
+                >
+                  ⭐ ចាប់ពី 08-10-2026
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    const today = new Date().toISOString().slice(0, 10);
+                    setReconcileSinceDate(today);
+                    setReconcileResultMsg(null);
+                  }}
+                  className={`px-2.5 py-1 text-[11px] font-bold rounded-lg border transition-all ${
+                    reconcileSinceDate === new Date().toISOString().slice(0, 10)
+                      ? 'bg-amber-600 text-white border-amber-700 shadow-xs'
+                      : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'
+                  }`}
+                >
+                  📅 ថ្ងៃនេះ
+                </button>
+              </div>
+
+              {/* Stat summary cards */}
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <div className="p-2.5 bg-white/90 rounded-xl border border-amber-200 flex items-center justify-between">
+                  <span className="text-slate-600 font-medium">វិក្កយបត្រស្កេនបាន៖</span>
+                  <strong className="text-slate-800 font-mono text-sm">{reconcilePreview.salesCount} សន្លឹក</strong>
+                </div>
+                <div className="p-2.5 bg-white/90 rounded-xl border border-amber-200 flex items-center justify-between">
+                  <span className="text-slate-600 font-medium">សម្ភារៈលក់បានសរុប៖</span>
+                  <strong className="text-amber-700 font-mono text-sm">{reconcilePreview.totalSold} ឯកតា</strong>
+                </div>
+              </div>
+
+              {/* Items Breakdown Table */}
+              <div className="bg-white rounded-xl border border-amber-200 overflow-hidden">
+                <div className="px-3 py-2 bg-amber-100/60 font-black text-[11px] text-amber-900 grid grid-cols-12 gap-1">
+                  <div className="col-span-5">ឈ្មោះគ្រឿងបន្ថែម</div>
+                  <div className="col-span-2 text-center">លក់បាន</div>
+                  <div className="col-span-2 text-center">ស្តុកចាស់</div>
+                  <div className="col-span-3 text-right">ស្តុកក្រោយកាត់</div>
+                </div>
+
+                <div className="divide-y divide-slate-100 max-h-48 overflow-y-auto">
+                  {reconcilePreview.items.map((row) => (
+                    <div
+                      key={row.addon.id}
+                      className={`px-3 py-2 text-xs grid grid-cols-12 gap-1 items-center ${
+                        row.sold > 0 ? 'bg-amber-50/40 font-medium' : 'text-slate-600'
+                      }`}
+                    >
+                      <div className="col-span-5 font-bold text-slate-800 line-clamp-1">
+                        {row.addon.nameKh}
+                      </div>
+                      <div className="col-span-2 text-center">
+                        {row.sold > 0 ? (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-rose-100 text-rose-700 border border-rose-200">
+                            -{row.sold}
+                          </span>
+                        ) : (
+                          <span className="text-slate-400 font-mono">0</span>
+                        )}
+                      </div>
+                      <div className="col-span-2 text-center font-mono text-slate-700">
+                        {row.current}
+                      </div>
+                      <div className="col-span-3 text-right font-mono font-bold">
+                        {row.sold > 0 ? (
+                          <span className="text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                            {row.remaining}
+                          </span>
+                        ) : (
+                          <span className="text-slate-500">{row.current}</span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {reconcileResultMsg && (
+                <div className="p-3 bg-emerald-50 border border-emerald-300 rounded-xl text-xs text-emerald-800 flex items-start gap-2 animate-in fade-in">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                  <span className="font-medium leading-relaxed">{reconcileResultMsg}</span>
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              <div className="flex items-center gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={handleApplyReconcile}
+                  className="flex-1 py-2.5 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white rounded-xl text-xs font-black shadow-md shadow-amber-600/25 transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-95"
+                >
+                  <RotateCcw className="w-4 h-4" />
+                  <span>
+                    {reconcilePreview.totalSold > 0
+                      ? `អនុវត្តកាត់ស្តុក (${reconcilePreview.totalSold} ឯកតា)`
+                      : 'កាត់ស្តុកស្វ័យប្រវត្តិតាមការលក់'}
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setIsReconcileOpen(false)}
+                  className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-all cursor-pointer"
+                >
+                  បិទ
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* Add New Accessory Card Form */}
           {isAddingNew && (

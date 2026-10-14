@@ -454,6 +454,11 @@ interface BakeryContextType {
   updatePartyAddon: (id: string, nameKh: string, priceKhr: number, priceUsd?: number, stockQty?: number, minAlertStock?: number) => void;
   restockPartyAddon: (id: string, additionalStock: number) => void;
   deletePartyAddon: (id: string) => void;
+  deductPartyAddonsStockFromPastSales: (sinceDate?: string) => {
+    totalSalesScanned: number;
+    soldSummary: Record<string, number>;
+    updatedAddons: PartyAddon[];
+  };
 
   cart: CartItem[];
   addToCart: (product: Product, size?: string, flavor?: string) => void;
@@ -3478,6 +3483,53 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     });
   };
 
+  const deductPartyAddonsStockFromPastSales = (sinceDate: string = '2026-10-08') => {
+    const pastSales = sales.filter((s) => {
+      if (!s.createdAt) return false;
+      const dateStr = s.createdAt.slice(0, 10);
+      return dateStr >= sinceDate;
+    });
+
+    const soldSummary: Record<string, number> = {};
+    pastSales.forEach((s) => {
+      (s.items || []).forEach((item) => {
+        if (!item.productId) return;
+        const rawAddonId = item.productId.startsWith('addon-') ? item.productId.slice(6) : item.productId;
+        const matched = partyAddons.find(
+          (a) =>
+            a.id === rawAddonId ||
+            `addon-${a.id}` === item.productId ||
+            (item.nameKh && item.nameKh.includes(a.nameKh))
+        );
+        if (matched) {
+          soldSummary[matched.id] = (soldSummary[matched.id] || 0) + (Number(item.quantity) || 1);
+        }
+      });
+    });
+
+    const updated = partyAddons.map((a) => {
+      const sold = soldSummary[a.id] || 0;
+      if (sold > 0) {
+        return {
+          ...a,
+          stockQty: Math.max(0, (a.stockQty ?? 0) - sold),
+        };
+      }
+      return a;
+    });
+
+    setPartyAddons(updated);
+    safeSetStorage('bakery_party_addons', JSON.stringify(updated));
+    saveToLanSync({ partyAddons: updated });
+    syncSaveDoc('settings', 'partyAddons', { items: updated });
+
+    return {
+      totalSalesScanned: pastSales.length,
+      soldSummary,
+      updatedAddons: updated,
+    };
+  };
+
   // Product actions
   const addProduct = (product: Omit<Product, 'id'>) => {
     isUpdatingFromLan.current = false;
@@ -5177,6 +5229,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         updatePartyAddon,
         restockPartyAddon,
         deletePartyAddon,
+        deductPartyAddonsStockFromPastSales,
         cart,
         addToCart,
         removeFromCart,
