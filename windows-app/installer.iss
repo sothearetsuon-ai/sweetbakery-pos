@@ -27,8 +27,10 @@ DisableProgramGroupPage=yes
 OutputDir=..
 OutputBaseFilename=SweetBakery-POS-Setup
 SetupIconFile=icon.ico
-Compression=lzma2/ultra64
+Compression=lzma2/fast
 SolidCompression=yes
+CloseApplications=force
+RestartApplications=no
 
 ; Modern Wizard Styling
 WizardStyle=modern

@@ -15,8 +15,8 @@ export interface AppUpdateInfo {
   mandatory?: boolean;
 }
 
-export const CURRENT_APP_VERSION = '1.2.0';
-export const CURRENT_BUILD_DATE = '2026-10-13';
+export const CURRENT_APP_VERSION = '1.2.1';
+export const CURRENT_BUILD_DATE = '2026-10-14';
 
 // Storage key for custom update server URL if configured
 const STORAGE_KEY_UPDATE_URL = 'sweetbakery_update_manifest_url';
@@ -36,11 +36,16 @@ export const isAndroidNativeApp = (): boolean => {
   return typeof (window as any).SweetBakeryNative !== 'undefined';
 };
 
-export const isElectronWindowsApp = (): boolean => {
+export const isDesktopElectronApp = (): boolean => {
   return (
+    typeof (window as any).SweetBakeryDesktop !== 'undefined' ||
     typeof (window as any).electron !== 'undefined' ||
     navigator.userAgent.toLowerCase().includes('electron')
   );
+};
+
+export const isElectronWindowsApp = (): boolean => {
+  return isDesktopElectronApp();
 };
 
 export const isWindowsPlatform = (): boolean => {
@@ -48,7 +53,7 @@ export const isWindowsPlatform = (): boolean => {
   const ua = (navigator.userAgent || '').toLowerCase();
   const platform = ((navigator as any).userAgentData?.platform || navigator.platform || '').toLowerCase();
   return (
-    isElectronWindowsApp() ||
+    isDesktopElectronApp() ||
     ua.includes('windows') ||
     ua.includes('win32') ||
     ua.includes('win64') ||
@@ -159,3 +164,24 @@ export const triggerInAppAndroidUpdate = (apkUrl: string): boolean => {
   }
   return false;
 };
+
+/**
+ * Trigger 1-Click Telegram-Style Silent Update on Windows Desktop App
+ */
+export const triggerInAppDesktopUpdate = (
+  installerUrl: string,
+  onProgress?: (data: { percent: number; downloadedMB: string; totalMB: string }) => void,
+  onComplete?: () => void,
+  onError?: (err: string) => void
+): boolean => {
+  const desktop = (window as any).SweetBakeryDesktop;
+  if (desktop && desktop.startSilentUpdate) {
+    if (onProgress) desktop.onUpdateProgress(onProgress);
+    if (onComplete) desktop.onUpdateComplete(onComplete);
+    if (onError) desktop.onUpdateError(onError);
+    desktop.startSilentUpdate(installerUrl);
+    return true;
+  }
+  return false;
+};
+

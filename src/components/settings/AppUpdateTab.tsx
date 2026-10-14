@@ -24,11 +24,13 @@ import {
   CURRENT_APP_VERSION,
   CURRENT_BUILD_DATE,
   isAndroidNativeApp,
+  isDesktopElectronApp,
   isElectronWindowsApp,
   isWindowsPlatform,
   getNativeAppVersion,
   checkForAppUpdates,
   triggerInAppAndroidUpdate,
+  triggerInAppDesktopUpdate,
   getStoredUpdateUrl,
   setStoredUpdateUrl,
   AppUpdateInfo,
@@ -41,13 +43,16 @@ export const AppUpdateTab: React.FC = () => {
   const [hasChecked, setHasChecked] = useState(false);
   const [downloadProgress, setDownloadProgress] = useState<number | null>(null);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [isDesktopUpdating, setIsDesktopUpdating] = useState(false);
+  const [desktopProgress, setDesktopProgress] = useState<{ percent: number; downloadedMB: string; totalMB: string } | null>(null);
+  const [isRestarting, setIsRestarting] = useState(false);
   const [customApkUrl, setCustomApkUrl] = useState('');
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [manifestUrlInput, setManifestUrlInput] = useState(getStoredUpdateUrl());
   const [copiedUrl, setCopiedUrl] = useState(false);
 
   const isAndroid = isAndroidNativeApp();
-  const isElectron = isElectronWindowsApp();
+  const isDesktop = isDesktopElectronApp();
   const isWindows = isWindowsPlatform();
 
   // Listen to Android native progress callbacks
@@ -122,6 +127,43 @@ export const AppUpdateTab: React.FC = () => {
       const started = triggerInAppAndroidUpdate(downloadUrl);
       if (!started) {
         window.open(downloadUrl, '_blank');
+      }
+    } else {
+      handleOneClickDesktopUpdate();
+    }
+  };
+
+  const handleOneClickDesktopUpdate = () => {
+    soundFx.playPop();
+    const winUrl =
+      updateInfo?.windowsInstallerUrl ||
+      updateInfo?.windowsDownloadUrl ||
+      'https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/latest/download/SweetBakery-POS-Setup.exe';
+
+    if (isDesktop) {
+      setIsDesktopUpdating(true);
+      setIsRestarting(false);
+      setDesktopProgress({ percent: 0, downloadedMB: '0', totalMB: '...' });
+
+      const started = triggerInAppDesktopUpdate(
+        winUrl,
+        (progress) => {
+          setDesktopProgress(progress);
+        },
+        () => {
+          setIsRestarting(true);
+          soundFx.playSuccess();
+          confetti({ particleCount: 90, spread: 80 });
+        },
+        (err) => {
+          setIsDesktopUpdating(false);
+          setDesktopProgress(null);
+          alert('កំហុសពេលទាញយកកំណែអាប់ដែត៖ ' + err);
+        }
+      );
+
+      if (!started) {
+        handleDownloadWindows();
       }
     } else {
       handleDownloadWindows();
@@ -211,7 +253,7 @@ export const AppUpdateTab: React.FC = () => {
                 <h5 className="text-sm sm:text-base font-black text-slate-800">
                   {isAndroid
                     ? '📱 កម្មវិធីទូរសព្ទ Android (Native App)'
-                    : isElectron
+                    : isDesktop
                     ? '💻 កម្មវិធីកុំព្យូទ័រ Windows (Desktop App)'
                     : isWindows
                     ? '💻 កុំព្យូទ័រ Windows (Web App)'
@@ -231,28 +273,29 @@ export const AppUpdateTab: React.FC = () => {
             <button
               type="button"
               onClick={handleCheckUpdate}
-              disabled={isChecking || isDownloading}
+              disabled={isChecking || isDownloading || isDesktopUpdating}
               className="w-full sm:w-auto px-4 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs sm:text-sm font-black transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 active:scale-95 border border-slate-300"
             >
               <RefreshCw className={`w-4 h-4 ${isChecking ? 'animate-spin' : ''}`} />
               <span>{isChecking ? 'កំពុងពិនិត្យ...' : '🔄 ពិនិត្យកំណែថ្មី'}</span>
             </button>
 
-            {/* Direct Windows Update Button */}
+            {/* 1-Click Windows Telegram-style Update Button */}
             <button
               type="button"
-              onClick={handleDownloadWindows}
-              className="w-full sm:w-auto px-4 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 text-white rounded-xl text-xs sm:text-sm font-black shadow-md shadow-blue-500/25 transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95"
+              onClick={handleOneClickDesktopUpdate}
+              disabled={isDesktopUpdating || isDownloading}
+              className="w-full sm:w-auto px-4 py-3 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-700 text-white rounded-xl text-xs sm:text-sm font-black shadow-md shadow-blue-500/25 transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95 disabled:opacity-50"
             >
               <Monitor className="w-4 h-4" />
-              <span>💻 Update Windows</span>
+              <span>{isDesktop ? '💻 អាប់ដេត Windows (1-Click)' : '💻 ទាញយក Windows Setup'}</span>
             </button>
 
             {/* Direct Android Update Button */}
             <button
               type="button"
               onClick={handleDownloadAndroid}
-              disabled={isDownloading}
+              disabled={isDownloading || isDesktopUpdating}
               className="w-full sm:w-auto px-4 py-3 bg-gradient-to-r from-pink-600 via-rose-500 to-red-600 hover:from-pink-700 text-white rounded-xl text-xs sm:text-sm font-black shadow-md shadow-pink-500/25 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 active:scale-95"
             >
               <Smartphone className="w-4 h-4" />
@@ -260,6 +303,37 @@ export const AppUpdateTab: React.FC = () => {
             </button>
           </div>
         </div>
+
+        {/* Live Download Progress on Windows Desktop (Telegram-style) */}
+        {isDesktopUpdating && (
+          <div className="p-5 bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 border-2 border-blue-300 rounded-3xl space-y-3 shadow-md animate-in fade-in">
+            <div className="flex items-center justify-between text-xs sm:text-sm font-black text-blue-950">
+              <span className="flex items-center gap-2">
+                <RefreshCw className="w-5 h-5 text-blue-600 animate-spin" />
+                <span>
+                  {isRestarting
+                    ? '🚀 ទាញយករួចរាល់! កម្មវិធីកំពុងដំឡើង និងចាប់ផ្ដើមឡើងវិញដោយស្វ័យប្រវត្តិក្នង ២ វិនាទី...'
+                    : 'កំពុងទាញយកកំណែថ្មីស្វ័យប្រវត្តិតាមរបៀប Telegram (Silent Background Download)...'}
+                </span>
+              </span>
+              <span className="font-mono text-base font-black text-blue-700">
+                {desktopProgress?.percent ?? 0}%
+              </span>
+            </div>
+            <div className="w-full h-3.5 bg-white rounded-full overflow-hidden border border-blue-200 shadow-inner">
+              <div
+                className="h-full bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 transition-all duration-300"
+                style={{ width: `${desktopProgress?.percent ?? 0}%` }}
+              />
+            </div>
+            <div className="flex justify-between items-center text-xs text-slate-600 font-medium flex-wrap gap-2">
+              <span>ទំហំទាញយក៖ <strong>{desktopProgress?.downloadedMB || '0'} MB</strong> / {desktopProgress?.totalMB || '...'} MB</span>
+              <span className="text-emerald-700 font-bold bg-emerald-100/80 px-2 py-0.5 rounded-md">
+                ✨ មិនបាច់ចុច Next ទេ កម្មវិធីនឹង Relaunch ដោយខ្លួនឯង
+              </span>
+            </div>
+          </div>
+        )}
 
         {/* Live Download Progress on Android */}
         {isDownloading && (
@@ -314,21 +388,22 @@ export const AppUpdateTab: React.FC = () => {
                 <div className="flex flex-col sm:flex-row items-center gap-3 pt-2">
                   <button
                     type="button"
-                    onClick={handleDownloadWindows}
-                    className="w-full sm:flex-1 py-3.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 text-white rounded-2xl text-xs sm:text-sm font-black shadow-lg shadow-blue-500/25 transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95"
+                    onClick={handleOneClickDesktopUpdate}
+                    disabled={isDesktopUpdating || isDownloading}
+                    className="w-full sm:flex-1 py-3.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 text-white rounded-2xl text-xs sm:text-sm font-black shadow-lg shadow-blue-500/25 transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95 disabled:opacity-50"
                   >
                     <Monitor className="w-5 h-5" />
-                    <span>💻 អាប់ដែត Windows (Download .zip)</span>
+                    <span>{isDesktop ? '💻 អាប់ដេត Windows 1-Click (ដូច Telegram)' : '💻 ទាញយក Windows Setup (.exe)'}</span>
                   </button>
 
                   <button
                     type="button"
                     onClick={handleDownloadAndroid}
-                    disabled={isDownloading}
+                    disabled={isDownloading || isDesktopUpdating}
                     className="w-full sm:flex-1 py-3.5 bg-gradient-to-r from-pink-600 to-rose-600 hover:from-pink-700 text-white rounded-2xl text-xs sm:text-sm font-black shadow-lg shadow-pink-500/25 transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95 disabled:opacity-50"
                   >
                     <Smartphone className="w-5 h-5" />
-                    <span>📱 អាប់ដែត Android (Download .apk)</span>
+                    <span>📱 អាប់ដែត Android 1-Click (.apk)</span>
                   </button>
                 </div>
               </div>
