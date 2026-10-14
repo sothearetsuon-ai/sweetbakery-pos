@@ -265,8 +265,8 @@ export const ThemePickerModal: React.FC<ThemePickerModalProps> = ({
                 }`}
                 title="បើក/បិទ សត្វមេអំបៅហើរលើអេក្រង់"
               >
-                <span>🦋</span>
-                <span>មេអំបៅ៖ {isButterflyEnabled ? 'បើក (ON)' : 'បិទ (OFF)'}</span>
+                <span>🦋🐠</span>
+                <span>មេអំបៅ & ត្រីមាស៖ {isButterflyEnabled ? 'បើក (ON)' : 'បិទ (OFF)'}</span>
               </button>
             )}
 

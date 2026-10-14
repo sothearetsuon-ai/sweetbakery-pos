@@ -476,15 +476,15 @@ export const Navbar: React.FC<NavbarProps> = ({
                       className="w-full flex items-center justify-between p-2.5 rounded-2xl hover:bg-purple-50 text-slate-800 transition-colors cursor-pointer group text-left border border-transparent hover:border-purple-100"
                     >
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-pink-500 via-purple-500 to-indigo-500 text-white flex items-center justify-center shadow-xs group-hover:scale-105 transition-transform shrink-0 text-base">
-                          🦋
+                        <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-pink-500 via-purple-500 to-amber-500 text-white flex items-center justify-center shadow-xs group-hover:scale-105 transition-transform shrink-0 text-sm">
+                          🦋🐠
                         </div>
                         <div>
                           <div className="text-xs font-black text-slate-800 group-hover:text-purple-700">
-                            សត្វមេអំបៅហើរលើអេក្រង់
+                            មេអំបៅ & ត្រីមាសហុងស៊ុយ
                           </div>
                           <div className="text-[10px] text-slate-400">
-                            Animation មេអំបៅហើរលើផ្ទាំង POS
+                            មេអំបៅហើរ & ត្រីមាសហែលនាំសំណាងលើអេក្រង់
                           </div>
                         </div>
                       </div>
