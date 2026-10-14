@@ -1,13 +1,14 @@
 {
-  "version": "1.2.0",
-  "releaseDate": "2026-10-13",
+  "version": "1.2.4",
+  "releaseDate": "2026-10-14",
   "releaseNotes": [
-    "ប្រព័ន្ធសំឡេងប្រកាស KHQR Soundbox ភាសាខ្មែរភ្ជាប់មកស្រាប់ (Offline Natural Voice)",
-    "ប៊ូតុងទាញយកឯកសារ APK និង Setup ផ្ទាល់ក្នុង App (Direct In-App Downloads)",
-    "ប្រព័ន្ធ In-App Auto Update (អាប់ដែតក្នុង App ផ្ទាល់)",
-    "ពង្រីកទំហំអេក្រង់ និងប៊ូតុងឱ្យធំទូលាយលើទូរសព្ទដៃ"
+    "កែសម្រួលស្តុកគ្រឿងបន្ថែមពិធី (Party Accessories) មិនឱ្យបង្ហាញស្មើ ០ ដោយស្វ័យប្រវត្តិ",
+    "បន្ថែមប៊ូតុងកាត់ស្តុកគ្រឿងបន្ថែមពិធីពីការលក់កន្លងមក (Sync Past Sales since 08-10-2026)",
+    "កាត់ស្តុកគ្រឿងបន្ថែមពិធីដោយស្វ័យប្រវត្តិតាមការលក់ និងស្តារស្តុកមកវិញពេល Refund",
+    "បង្ហាញចំនួនស្តុកជាក់ស្តែងលើផ្ទាំង POS និងប៊ូតុងថែមស្តុក (+10, +20, +50) ភ្លាមៗ"
   ],
   "apkDownloadUrl": "https://raw.githubusercontent.com/sothearetsuon-ai/sweetbakery-pos/main/SweetBakery-Android.apk",
-  "windowsDownloadUrl": "https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/latest/download/SweetBakery-POS-Windows.zip",
+  "windowsInstallerUrl": "https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/latest/download/SweetBakery-POS-Setup.exe",
+  "windowsDownloadUrl": "https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/latest/download/SweetBakery-POS-Setup.exe",
   "mandatory": false
 }
