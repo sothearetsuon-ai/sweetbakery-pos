@@ -51,7 +51,7 @@ export const AddPartyAddonsToSaleModal: React.FC<AddPartyAddonsToSaleModalProps>
 
   const handleIncrement = (addonId: string) => {
     const addon = partyAddons.find((a) => a.id === addonId);
-    const maxStock = addon?.stockQty ?? 0;
+    const maxStock = typeof addon?.stockQty === 'number' && !isNaN(addon.stockQty) ? addon.stockQty : 50;
     const currentSelected = selectedQuantities[addonId] || 0;
 
     if (maxStock <= 0) {

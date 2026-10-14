@@ -793,7 +793,7 @@ export const CartPanel: React.FC<CartPanelProps> = ({
                 const qty = cartItem ? cartItem.quantity : 0;
                 const isSelected = qty > 0;
                 const addonKhr = addon.priceKhr ?? Math.round(addon.priceUsd * exchangeRate);
-                const currentStock = addon.stockQty ?? 0;
+                const currentStock = typeof addon.stockQty === 'number' && !isNaN(addon.stockQty) ? addon.stockQty : 50;
                 const isOutOfStock = currentStock <= 0;
                 const minAlert = addon.minAlertStock ?? 10;
                 const isLowStock = currentStock > 0 && currentStock <= minAlert;

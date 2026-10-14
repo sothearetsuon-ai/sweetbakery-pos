@@ -222,6 +222,15 @@ export const initialPartyAddons: PartyAddon[] = [
   { id: 'card', nameKh: '💌 កាតជូនពរប្រណិត', priceUsd: 1.0, priceKhr: 4000, stockQty: 120, minAlertStock: 25 },
 ];
 
+export const ensurePartyAddonDefaults = (list: any[]): PartyAddon[] => {
+  if (!Array.isArray(list)) return initialPartyAddons;
+  return list.map((item) => ({
+    ...item,
+    stockQty: typeof item.stockQty === 'number' && !isNaN(item.stockQty) ? item.stockQty : 50,
+    minAlertStock: typeof item.minAlertStock === 'number' && !isNaN(item.minAlertStock) ? item.minAlertStock : 10,
+  }));
+};
+
 export const seedDemoDataIfMissing = () => {
   if (typeof window === 'undefined') return;
   
@@ -1095,8 +1104,9 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           try {
             const parsed = JSON.parse(savedAddons);
             if (Array.isArray(parsed) && parsed.length > 0) {
-              setPartyAddons(parsed);
-              try { localStorage.setItem('bakery_party_addons', savedAddons); } catch (e) {}
+              const withDefaults = ensurePartyAddonDefaults(parsed);
+              setPartyAddons(withDefaults);
+              try { localStorage.setItem('bakery_party_addons', JSON.stringify(withDefaults)); } catch (e) {}
             }
           } catch (e) {}
         }
@@ -1151,25 +1161,6 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     const saved = localStorage.getItem('bakery_flavors');
     return saved ? JSON.parse(saved) : initialFlavors;
   });
-
-  // Dynamic Party Add-ons list
-  const initialPartyAddons: PartyAddon[] = [
-    { id: 'hat', nameKh: '🎩 មួកខួបកំណើត (Pack 5)', priceUsd: 2.0, priceKhr: 8000, stockQty: 50, minAlertStock: 10 },
-    { id: 'num-candle', nameKh: '🕯️ ទៀនលេខ 0-9 ពណ៌មាស', priceUsd: 0.75, priceKhr: 3000, stockQty: 100, minAlertStock: 20 },
-    { id: 'sparkler', nameKh: '🎆 ទៀនកាំជ្រួចភ្លើង (Fountain)', priceUsd: 1.5, priceKhr: 6000, stockQty: 60, minAlertStock: 15 },
-    { id: 'spray', nameKh: '❄️ ស្ព្រាយបាញ់ព្រិល/ខ្សែពណ៌', priceUsd: 1.5, priceKhr: 6000, stockQty: 40, minAlertStock: 10 },
-    { id: 'topper', nameKh: '✨ ស្លាក Happy Birthday Acrylic', priceUsd: 1.2, priceKhr: 4800, stockQty: 80, minAlertStock: 15 },
-    { id: 'card', nameKh: '💌 កាតជូនពរប្រណិត', priceUsd: 1.0, priceKhr: 4000, stockQty: 120, minAlertStock: 25 },
-  ];
-
-  const ensurePartyAddonDefaults = (list: any[]): PartyAddon[] => {
-    if (!Array.isArray(list)) return initialPartyAddons;
-    return list.map((item) => ({
-      ...item,
-      stockQty: typeof item.stockQty === 'number' ? item.stockQty : 50,
-      minAlertStock: typeof item.minAlertStock === 'number' ? item.minAlertStock : 10,
-    }));
-  };
 
   const [partyAddons, setPartyAddons] = useState<PartyAddon[]>(() => {
     if (globalIsDemoMode) {
@@ -2619,7 +2610,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           // Keep any locally created items that haven't arrived in cloud yet
           const cloudIds = new Set(items.map((i) => i.id));
           const localPending = prev.filter((p) => !cloudIds.has(p.id) && p.id.startsWith('addon-'));
-          const merged = [...items, ...localPending];
+          const merged = ensurePartyAddonDefaults([...items, ...localPending]);
 
           if (
             merged.length === prev.length &&
