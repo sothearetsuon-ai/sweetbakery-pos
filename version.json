@@ -1,13 +1,14 @@
 {
-  "version": "1.2.0",
-  "releaseDate": "2026-10-13",
+  "version": "1.2.1",
+  "releaseDate": "2026-10-14",
   "releaseNotes": [
-    "ប្រព័ន្ធសំឡេងប្រកាស KHQR Soundbox ភាសាខ្មែរភ្ជាប់មកស្រាប់ (Offline Natural Voice)",
-    "ប៊ូតុងទាញយកឯកសារ APK និង Setup ផ្ទាល់ក្នុង App (Direct In-App Downloads)",
-    "ប្រព័ន្ធ In-App Auto Update (អាប់ដែតក្នុង App ផ្ទាល់)",
+    "មុខងារ Upload រូបភាពនំ និងកែប្រែរូបភាពផ្ទាល់លើផ្ទាំងកាតាឡុក (Catalog)",
+    "កម្មវិធីដំឡើងស្តង់ដារ Windows Official Setup Installer (.exe) មិនបាត់ពេល restart",
+    "ប៊ូតុងអាប់ដែត App ផ្ទាល់លើ Sidebar និង Navbar",
     "ពង្រីកទំហំអេក្រង់ និងប៊ូតុងឱ្យធំទូលាយលើទូរសព្ទដៃ"
   ],
   "apkDownloadUrl": "https://raw.githubusercontent.com/sothearetsuon-ai/sweetbakery-pos/main/SweetBakery-Android.apk",
-  "windowsDownloadUrl": "https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/latest/download/SweetBakery-POS-Windows.zip",
+  "windowsInstallerUrl": "https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/latest/download/SweetBakery-POS-Setup.exe",
+  "windowsDownloadUrl": "https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/latest/download/SweetBakery-POS-Setup.exe",
   "mandatory": false
 }

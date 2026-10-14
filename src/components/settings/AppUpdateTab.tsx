@@ -83,6 +83,11 @@ export const AppUpdateTab: React.FC = () => {
     };
   }, []);
 
+  // Automatically check for updates whenever the tab opens
+  useEffect(() => {
+    handleCheckUpdate();
+  }, []);
+
   const handleCheckUpdate = async () => {
     soundFx.playPop();
     setIsChecking(true);
@@ -126,13 +131,14 @@ export const AppUpdateTab: React.FC = () => {
   const handleDownloadWindows = () => {
     soundFx.playSuccess();
     const winUrl =
+      updateInfo?.windowsInstallerUrl ||
       updateInfo?.windowsDownloadUrl ||
-      'https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/latest/download/SweetBakery-POS-Windows.zip';
+      'https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/latest/download/SweetBakery-POS-Setup.exe';
     const link = document.createElement('a');
     link.href = winUrl;
     link.target = '_blank';
     link.rel = 'noreferrer';
-    link.download = 'SweetBakery-POS-Windows.zip';
+    link.download = 'SweetBakery-POS-Setup.exe';
     document.body.appendChild(link);
     link.click();
     setTimeout(() => {
@@ -327,15 +333,38 @@ export const AppUpdateTab: React.FC = () => {
                 </div>
               </div>
             ) : (
-              <div className="p-4 sm:p-5 bg-emerald-50/80 border-2 border-emerald-200 rounded-2xl flex items-center gap-3">
-                <CheckCircle2 className="w-6 h-6 text-emerald-600 shrink-0" />
-                <div>
-                  <h6 className="text-sm sm:text-base font-black text-emerald-900">
-                    ✅ លោកអ្នកកំពុងប្រើប្រាស់កំណែចុងក្រោយបំផុតហើយ!
-                  </h6>
-                  <p className="text-xs sm:text-sm text-emerald-700 mt-0.5 font-medium">
-                    SweetBakery POS v{currentVersion} ដំណើរការដោយរលូន និងមានសុវត្ថិភាពខ្ពស់។
-                  </p>
+              <div className="p-4 sm:p-5 bg-emerald-50/80 border-2 border-emerald-200 rounded-2xl space-y-3">
+                <div className="flex items-center gap-3">
+                  <CheckCircle2 className="w-6 h-6 text-emerald-600 shrink-0" />
+                  <div>
+                    <h6 className="text-sm sm:text-base font-black text-emerald-900">
+                      ✅ លោកអ្នកកំពុងប្រើប្រាស់កំណែចុងក្រោយបំផុតហើយ!
+                    </h6>
+                    <p className="text-xs sm:text-sm text-emerald-700 mt-0.5 font-medium">
+                      SweetBakery POS v{currentVersion} ដំណើរការដោយរលូន និងមានសុវត្ថិភាពខ្ពស់។
+                    </p>
+                  </div>
+                </div>
+
+                <div className="pt-2 border-t border-emerald-200/60 flex flex-col sm:flex-row items-center gap-2.5">
+                  <span className="text-xs font-bold text-slate-600">ចង់ទាញយកដំឡើងឡើងវិញ?</span>
+                  <button
+                    type="button"
+                    onClick={handleDownloadAndroid}
+                    disabled={isDownloading}
+                    className="w-full sm:w-auto px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 shadow-xs"
+                  >
+                    <Smartphone className="w-3.5 h-3.5" />
+                    <span>📱 ទាញយក APK ឡើងវិញ</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleDownloadWindows}
+                    className="w-full sm:w-auto px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 shadow-xs"
+                  >
+                    <Monitor className="w-3.5 h-3.5" />
+                    <span>💻 ទាញយក Windows Setup ឡើងវិញ</span>
+                  </button>
                 </div>
               </div>
             )}
@@ -405,10 +434,10 @@ export const AppUpdateTab: React.FC = () => {
             <div className="space-y-1.5">
               <div className="flex items-center gap-2 text-slate-800 font-black text-sm">
                 <Monitor className="w-5 h-5 text-blue-600" />
-                <span>💻 កុំព្យូទ័រ Windows (SweetBakery-POS-Windows.zip)</span>
+                <span>💻 កុំព្យូទ័រ Windows (SweetBakery-POS-Setup.exe)</span>
               </div>
               <p className="text-xs text-slate-500 leading-relaxed font-medium">
-                ទំហំ៖ <strong>~160 MB</strong> | ដំណើរការលើ Windows 10/11 មិនបាច់ដំឡើងអ្វីផ្សេងឡើយ ពន្លា Zip រួចចុច Run ដំណើរការភ្លាម។
+                ទំហំ៖ <strong>~113 MB</strong> | កម្មវិធីដំឡើងស្តង់ដារ Windows Official Installer ដំឡើងម្តងប្រើបានរហូត មិនបាត់ពេល restart ឡើយ។
               </p>
             </div>
 
@@ -419,7 +448,7 @@ export const AppUpdateTab: React.FC = () => {
                 className="w-full py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl text-xs sm:text-sm font-black transition-all flex items-center justify-center gap-2 shadow-md shadow-blue-600/25 cursor-pointer active:scale-95"
               >
                 <Download className="w-4 h-4" />
-                <span>📥 ទាញយក Windows Zip (SweetBakery-POS-Windows.zip)</span>
+                <span>📥 ទាញយក Windows Setup (SweetBakery-POS-Setup.exe ~113 MB)</span>
               </button>
 
               <a

@@ -26,6 +26,10 @@ import {
   Croissant,
   Flame,
   Coffee,
+  Camera,
+  Upload,
+  Edit,
+  Image as ImageIcon,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { useBakery } from '../../context/BakeryContext';
@@ -76,6 +80,7 @@ export const getCategoryIcon = (iconName?: string) => {
 interface ShowcaseCardProps {
   product: Product;
   onClick: () => void;
+  onEdit?: (product: Product) => void;
   exchangeRate: number;
   lang: string;
   hidePrices?: boolean;
@@ -84,6 +89,7 @@ interface ShowcaseCardProps {
 const ShowcaseCard: React.FC<ShowcaseCardProps> = ({
   product,
   onClick,
+  onEdit,
   exchangeRate,
   lang,
   hidePrices = true,
@@ -163,6 +169,23 @@ const ShowcaseCard: React.FC<ShowcaseCardProps> = ({
               {currentIdx + 1}/{images.length} • ស្លាយ
             </span>
           </div>
+        )}
+
+        {/* Quick Upload / Edit Button on Card */}
+        {onEdit && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              soundFx.playPop();
+              onEdit(product);
+            }}
+            title="Upload រូបភាពថ្មី ឬកែសម្រួលនំនេះ"
+            className="absolute top-3 right-3 z-30 bg-black/60 hover:bg-[#E6514D] text-white px-2.5 py-1.5 rounded-xl backdrop-blur-md border border-white/20 shadow-md transition-all active:scale-90 flex items-center gap-1.5 text-[11px] font-bold cursor-pointer opacity-90 hover:opacity-100"
+          >
+            <Camera className="w-3.5 h-3.5 text-pink-300" />
+            <span className="hidden sm:inline">Upload រូប</span>
+          </button>
         )}
 
         {/* Dot indicators at bottom */}
@@ -269,9 +292,16 @@ export const CustomerShowcase: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [previewProduct, setPreviewProduct] = useState<Product | null>(null);
+  const [productToEdit, setProductToEdit] = useState<Product | null>(null);
   const [isAddProductOpen, setIsAddProductOpen] = useState(false);
   const [isKioskOpen, setIsKioskOpen] = useState(false);
   const [orderConfirmed, setOrderConfirmed] = useState(false);
+
+  const handleOpenEditProduct = (prod: Product) => {
+    soundFx.playPop();
+    setProductToEdit(prod);
+    setIsAddProductOpen(true);
+  };
 
   // Custom price selection modal state
   const [productForCustomPricing, setProductForCustomPricing] = useState<Product | null>(null);
@@ -695,16 +725,33 @@ export const CustomerShowcase: React.FC = () => {
           )}
         </div>
 
-        {/* Search Input */}
-        <div className="relative w-72">
-          <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-          <input
-            type="text"
-            placeholder="ស្វែងរកម៉ូដនំ..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 bg-white border border-[#F2DBD3] rounded-2xl text-xs focus:outline-none focus:ring-2 focus:ring-[#E6514D]/25 focus:border-[#E6514D] font-medium shadow-2xs"
-          />
+        {/* Search Input & Prominent Upload / Add Cake Button */}
+        <div className="flex items-center gap-2.5 w-full sm:w-auto">
+          <div className="relative flex-1 sm:w-64">
+            <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input
+              type="text"
+              placeholder="ស្វែងរកម៉ូដនំ..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-9 pr-4 py-2 bg-white border border-[#F2DBD3] rounded-2xl text-xs focus:outline-none focus:ring-2 focus:ring-[#E6514D]/25 focus:border-[#E6514D] font-medium shadow-2xs"
+            />
+          </div>
+
+          <button
+            type="button"
+            onClick={() => {
+              soundFx.playPop();
+              setProductToEdit(null);
+              setIsAddProductOpen(true);
+            }}
+            className="px-3.5 sm:px-4 py-2 bg-gradient-to-r from-[#FF6F68] to-[#E6514D] hover:brightness-110 text-white font-black rounded-2xl text-xs shadow-md shadow-[#E6514D]/25 flex items-center gap-1.5 active:scale-95 cursor-pointer transition-all shrink-0"
+            title="Upload រូបភាព ឬបញ្ចូលម៉ូដនំថ្មី"
+          >
+            <Upload className="w-3.5 h-3.5 stroke-[3]" />
+            <span className="hidden sm:inline">+ Upload រូបនំថ្មី</span>
+            <span className="sm:hidden">+ នំថ្មី</span>
+          </button>
         </div>
       </div>
 
@@ -718,6 +765,7 @@ export const CustomerShowcase: React.FC = () => {
               soundFx.playPop();
               setPreviewProduct(product);
             }}
+            onEdit={handleOpenEditProduct}
             exchangeRate={exchangeRate}
             lang={lang}
             hidePrices={hidePrices}
@@ -968,18 +1016,36 @@ export const CustomerShowcase: React.FC = () => {
                 </div>
               </div>
 
-              {/* Order / Select design button */}
-              <button
-                type="button"
-                onClick={() => {
-                  handleOpenCustomPrice(previewProduct);
-                  setPreviewProduct(null);
-                }}
-                className="w-full py-3.5 rounded-2xl font-black text-xs bg-gradient-to-r from-pink-600 to-rose-500 hover:from-pink-700 hover:to-rose-600 text-white shadow-lg shadow-pink-500/25 flex items-center justify-center gap-2 active:scale-95 cursor-pointer transition-all"
-              >
-                <ShoppingBag className="w-4 h-4" />
-                <span>រើសម៉ូដនំនេះ & កំណត់តម្លៃ ✨ (Select Design & Set Price)</span>
-              </button>
+              <div className="space-y-2 pt-2">
+                {/* Order / Select design button */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleOpenCustomPrice(previewProduct);
+                    setPreviewProduct(null);
+                  }}
+                  className="w-full py-3.5 rounded-2xl font-black text-xs bg-gradient-to-r from-pink-600 to-rose-500 hover:from-pink-700 hover:to-rose-600 text-white shadow-lg shadow-pink-500/25 flex items-center justify-center gap-2 active:scale-95 cursor-pointer transition-all"
+                >
+                  <ShoppingBag className="w-4 h-4" />
+                  <span>រើសម៉ូដនំនេះ & កំណត់តម្លៃ ✨ (Select Design & Set Price)</span>
+                </button>
+
+                {/* Upload & Edit Cake Action */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    soundFx.playPop();
+                    const prod = previewProduct;
+                    setPreviewProduct(null);
+                    setProductToEdit(prod);
+                    setIsAddProductOpen(true);
+                  }}
+                  className="w-full py-2.5 rounded-2xl font-bold text-xs bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 flex items-center justify-center gap-2 active:scale-95 cursor-pointer transition-all"
+                >
+                  <Upload className="w-4 h-4 text-rose-500" />
+                  <span>Upload រូបភាពថ្មី / កែប្រែនំនេះ (Edit & Upload Photos)</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -988,7 +1054,11 @@ export const CustomerShowcase: React.FC = () => {
       {/* Multi-Image Upload Modal */}
       <AddProductModal
         isOpen={isAddProductOpen}
-        onClose={() => setIsAddProductOpen(false)}
+        productToEdit={productToEdit}
+        onClose={() => {
+          setIsAddProductOpen(false);
+          setProductToEdit(null);
+        }}
       />
 
       {/* Auto-play Kiosk Slideshow Modal */}
@@ -1055,6 +1125,22 @@ export const CustomerShowcase: React.FC = () => {
         isOpen={isContactModalOpen}
         onClose={() => setIsContactModalOpen(false)}
       />
+
+      {/* Mobile Floating Action Button (FAB) to Add Cake & Upload Photos anywhere */}
+      <div className="fixed bottom-20 right-4 z-40 md:hidden animate-in fade-in zoom-in duration-300">
+        <button
+          type="button"
+          onClick={() => {
+            soundFx.playPop();
+            setProductToEdit(null);
+            setIsAddProductOpen(true);
+          }}
+          className="h-12 px-4 rounded-full bg-gradient-to-r from-[#FF6F68] to-[#E6514D] text-white font-black text-xs shadow-2xl shadow-rose-500/50 flex items-center gap-2 border-2 border-white/60 active:scale-95 transition-transform cursor-pointer"
+        >
+          <Camera className="w-4 h-4" />
+          <span>+ Upload រូបនំ</span>
+        </button>
+      </div>
     </div>
   );
 };

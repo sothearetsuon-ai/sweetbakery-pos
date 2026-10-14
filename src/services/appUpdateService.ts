@@ -11,6 +11,7 @@ export interface AppUpdateInfo {
   releaseNotes: string[];
   apkDownloadUrl: string;
   windowsDownloadUrl?: string;
+  windowsInstallerUrl?: string;
   mandatory?: boolean;
 }
 
@@ -119,7 +120,8 @@ export const checkForAppUpdates = async (): Promise<AppUpdateInfo> => {
         apkDownloadUrl:
           data.apkDownloadUrl ||
           'https://raw.githubusercontent.com/sothearetsuon-ai/sweetbakery-pos/main/SweetBakery-Android.apk',
-        windowsDownloadUrl: data.windowsDownloadUrl,
+        windowsDownloadUrl: data.windowsDownloadUrl || data.windowsInstallerUrl,
+        windowsInstallerUrl: data.windowsInstallerUrl || data.windowsDownloadUrl,
         mandatory: Boolean(data.mandatory),
       };
     }
@@ -141,7 +143,9 @@ export const checkForAppUpdates = async (): Promise<AppUpdateInfo> => {
     apkDownloadUrl:
       'https://raw.githubusercontent.com/sothearetsuon-ai/sweetbakery-pos/main/SweetBakery-Android.apk',
     windowsDownloadUrl:
-      'https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/latest/download/SweetBakery-POS-Windows.zip',
+      'https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/latest/download/SweetBakery-POS-Setup.exe',
+    windowsInstallerUrl:
+      'https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/latest/download/SweetBakery-POS-Setup.exe',
   };
 };
 

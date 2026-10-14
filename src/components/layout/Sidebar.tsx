@@ -21,6 +21,7 @@ import {
   PhoneCall,
   Link as LinkIcon,
   ShieldCheck,
+  Rocket,
 } from 'lucide-react';
 import { useBakery } from '../../context/BakeryContext';
 import { useMusic } from '../../context/MusicContext';
@@ -516,6 +517,26 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </span>
           </button>
         )}
+
+        {/* In-App Update Button */}
+        <button
+          type="button"
+          onClick={() => {
+            soundFx.playPop();
+            onOpenSettings('updates' as any);
+            onCloseMobile?.();
+          }}
+          className="w-full flex items-center justify-between px-3.5 py-2 rounded-2xl font-bold text-xs text-indigo-700 bg-indigo-50/70 hover:bg-indigo-100 transition-all border border-indigo-200/80 shadow-2xs cursor-pointer group"
+          title="ពិនិត្យមើលកំណែថ្មី & ទាញយកអាប់ដែតក្នុង App"
+        >
+          <div className="flex items-center gap-2.5">
+            <Rocket className="w-4 h-4 text-indigo-600 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
+            <span>អាប់ដែត App 🚀</span>
+          </div>
+          <span className="text-[10px] text-indigo-700 font-black bg-indigo-200/80 px-2 py-0.5 rounded-full border border-indigo-300">
+            Update
+          </span>
+        </button>
 
         {/* Settings button */}
         <button

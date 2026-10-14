@@ -7,3 +7,5 @@ local_bakery_songs.json
 .env
 .DS_Store
 recovered_*.json
+
+scripts/create_release.cjs

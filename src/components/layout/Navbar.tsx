@@ -25,6 +25,7 @@ import {
   FlaskConical,
   LogOut,
   Phone,
+  Rocket,
 } from 'lucide-react';
 import { useBakery } from '../../context/BakeryContext';
 import { useMusic } from '../../context/MusicContext';
@@ -638,7 +639,34 @@ export const Navbar: React.FC<NavbarProps> = ({
                     </span>
                   </button>
 
-                  {/* 10. Store Settings */}
+                  {/* 10. App Updates & In-App Auto Update */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsQuickToolsOpen(false);
+                      onOpenSettingsModal('updates');
+                    }}
+                    className="w-full flex items-center justify-between p-2.5 rounded-2xl hover:bg-indigo-50 text-slate-800 transition-colors cursor-pointer group text-left border border-transparent hover:border-indigo-100"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-indigo-600 to-purple-600 text-white flex items-center justify-center shadow-xs group-hover:scale-105 transition-transform shrink-0">
+                        <Rocket className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <div className="text-xs font-black text-slate-800 group-hover:text-indigo-600">
+                          អាប់ដែតកម្មវិធី (App Update)
+                        </div>
+                        <div className="text-[10px] text-slate-400">
+                          ពិនិត្យកំណែថ្មី & ទាញយកក្នុង App
+                        </div>
+                      </div>
+                    </div>
+                    <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700">
+                      v1.2.0
+                    </span>
+                  </button>
+
+                  {/* 11. Store Settings */}
                   <button
                     type="button"
                     onClick={() => {

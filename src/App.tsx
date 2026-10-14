@@ -36,6 +36,7 @@ import { useBakery } from './context/BakeryContext';
 import { soundFx } from './utils/audio';
 import confetti from 'canvas-confetti';
 import { initTelegramMiniApp, isTelegramWebApp, getTelegramStartParam } from './services/telegramWebApp';
+import { checkForAppUpdates, AppUpdateInfo } from './services/appUpdateService';
 
 export const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabType>('pos');
@@ -98,6 +99,19 @@ export const App: React.FC = () => {
   // 35-Day Trial License State
   const [licenseInfo, setLicenseInfo] = useState<LicenseInfo>(() => getLicenseInfo());
   const [isRenewModalOpen, setIsRenewModalOpen] = useState(false);
+
+  // In-App Update Alert State (Automatic Background Version Check)
+  const [availableUpdate, setAvailableUpdate] = useState<AppUpdateInfo | null>(null);
+
+  React.useEffect(() => {
+    checkForAppUpdates()
+      .then((info) => {
+        if (info && info.hasUpdate) {
+          setAvailableUpdate(info);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   // Customer Self-Order Link & Portal Mode
   const [isCustomerPortalOpen, setIsCustomerPortalOpen] = useState(() => {
@@ -213,6 +227,38 @@ export const App: React.FC = () => {
     >
       {/* Demo Sandbox Mode Sticky Banner */}
       <DemoModeBanner />
+
+      {/* Auto In-App Update Alert Banner (Prominently shows when a new version is published) */}
+      {availableUpdate && (
+        <div className="bg-gradient-to-r from-purple-700 via-indigo-600 to-pink-600 text-white px-3 sm:px-4 py-2 text-xs font-black flex items-center justify-between shadow-md shrink-0 animate-in slide-in-from-top duration-300 font-battambang z-30">
+          <div className="flex items-center gap-2 truncate">
+            <span className="animate-bounce shrink-0 text-sm">🚀</span>
+            <span className="truncate">
+              មានកំណែអាប់ដែតថ្មី៖ <strong>SweetBakery POS v{availableUpdate.latestVersion}</strong> (ចុចដើម្បីដំឡើងភ្លាមៗ)
+            </span>
+          </div>
+          <div className="flex items-center gap-2 shrink-0 ml-2">
+            <button
+              type="button"
+              onClick={() => {
+                soundFx.playPop();
+                handleOpenSettings('updates');
+              }}
+              className="bg-white text-indigo-700 hover:bg-white/90 px-3 py-1 rounded-xl text-xs font-black shadow-xs cursor-pointer active:scale-95 transition-all"
+            >
+              អាប់ដែតឥឡូវនេះ ✨
+            </button>
+            <button
+              type="button"
+              onClick={() => setAvailableUpdate(null)}
+              className="text-white/80 hover:text-white px-1.5 py-0.5 rounded cursor-pointer"
+              title="បិទបដានេះ"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Background Notification Scheduler & Polite Banner (Completely disabled in Demo mode) */}
       {!isDemoMode && <NotificationReminderScheduler />}
