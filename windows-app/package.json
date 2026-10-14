@@ -1,0 +1,22 @@
+{
+  "name": "sweetbakery-pos-windows",
+  "version": "1.2.1",
+  "description": "SweetBakery POS - ប្រព័ន្ធគ្រប់គ្រងហាងនំខេកស្តង់ដារ",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "package": "npx electron-packager . SweetBakery-POS --platform=win32 --arch=x64 --icon=icon.ico --out=dist --overwrite --prune=true"
+  },
+  "keywords": [
+    "bakery",
+    "pos",
+    "system"
+  ],
+  "author": "SweetBakery Team",
+  "license": "ISC",
+  "devDependencies": {
+    "electron": "^44.7.0",
+    "electron-packager": "^17.1.2",
+    "innosetup-compiler": "^6.3.1"
+  }
+}
