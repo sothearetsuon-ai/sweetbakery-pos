@@ -1,15 +1,13 @@
 {
-  "version": "1.2.5",
-  "releaseDate": "2026-10-14",
+  "version": "1.2.0",
+  "releaseDate": "2026-10-13",
   "releaseNotes": [
-    "បន្ថែមប្រភេទ «🎉 សម្ភារៈ & គ្រឿងតុបតែង» ក្នុងផ្ទាំងបញ្ចូលទំនិញថ្មី",
-    "ប៊ូតុងប្តូររវាង «🎂 មុខនំ/ភេសជ្ជៈ» និង «🎉 សម្ភារៈ & គ្រឿងតុបតែង» យ៉ាងងាយស្រួល",
-    "បន្ថែមខ្នាតសម្ភារៈ៖ ដុំ, ប្រអប់, កញ្ចប់, ដើម, សន្លឹក",
-    "បង្ហាញផ្ទាំង Category «🎉 សម្ភារៈពិធី» លើអេក្រង់លក់ POS ផ្ទាល់",
-    "កែសម្រួលស្តុកគ្រឿងបន្ថែមមិនឱ្យធ្លាក់សូន្យដោយស្វ័យប្រវត្តិ"
+    "ប្រព័ន្ធសំឡេងប្រកាស KHQR Soundbox ភាសាខ្មែរភ្ជាប់មកស្រាប់ (Offline Natural Voice)",
+    "ប៊ូតុងទាញយកឯកសារ APK និង Setup ផ្ទាល់ក្នុង App (Direct In-App Downloads)",
+    "ប្រព័ន្ធ In-App Auto Update (អាប់ដែតក្នុង App ផ្ទាល់)",
+    "ពង្រីកទំហំអេក្រង់ និងប៊ូតុងឱ្យធំទូលាយលើទូរសព្ទដៃ"
   ],
   "apkDownloadUrl": "https://raw.githubusercontent.com/sothearetsuon-ai/sweetbakery-pos/main/SweetBakery-Android.apk",
-  "windowsInstallerUrl": "https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/latest/download/SweetBakery-POS-Setup.exe",
-  "windowsDownloadUrl": "https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/latest/download/SweetBakery-POS-Setup.exe",
+  "windowsDownloadUrl": "https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/latest/download/SweetBakery-POS-Windows.zip",
   "mandatory": false
 }
