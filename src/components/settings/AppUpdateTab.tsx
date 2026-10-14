@@ -27,6 +27,7 @@ import {
   isDesktopElectronApp,
   isElectronWindowsApp,
   isWindowsPlatform,
+  isIOSDevice,
   getNativeAppVersion,
   checkForAppUpdates,
   triggerInAppAndroidUpdate,
@@ -54,6 +55,7 @@ export const AppUpdateTab: React.FC = () => {
   const isAndroid = isAndroidNativeApp();
   const isDesktop = isDesktopElectronApp();
   const isWindows = isWindowsPlatform();
+  const isIOS = isIOSDevice();
 
   // Listen to Android native progress callbacks
   useEffect(() => {
@@ -240,7 +242,9 @@ export const AppUpdateTab: React.FC = () => {
         <div className="flex items-center justify-between flex-wrap gap-3 pb-4 border-b border-slate-100">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-2xl bg-slate-100 text-slate-700 flex items-center justify-center shrink-0">
-              {isAndroid ? (
+              {isIOS ? (
+                <Smartphone className="w-5 h-5 text-purple-600" />
+              ) : isAndroid ? (
                 <Smartphone className="w-5 h-5 text-emerald-600" />
               ) : isWindows ? (
                 <Monitor className="w-5 h-5 text-blue-600" />
@@ -251,7 +255,9 @@ export const AppUpdateTab: React.FC = () => {
             <div>
               <div className="flex items-center gap-2">
                 <h5 className="text-sm sm:text-base font-black text-slate-800">
-                  {isAndroid
+                  {isIOS
+                    ? '🍎 ទូរសព្ទ iPhone / iPad (Apple iOS PWA)'
+                    : isAndroid
                     ? '📱 កម្មវិធីទូរសព្ទ Android (Native App)'
                     : isDesktop
                     ? '💻 កម្មវិធីកុំព្យូទ័រ Windows (Desktop App)'
@@ -535,6 +541,53 @@ export const AppUpdateTab: React.FC = () => {
                 <ExternalLink className="w-3.5 h-3.5 text-slate-500" />
                 <span>បើកទំព័រ GitHub Releases (v1.2.0)</span>
               </a>
+            </div>
+          </div>
+
+          {/* Apple iOS (iPhone & iPad) PWA Card */}
+          <div className="p-4 bg-white rounded-2xl border-2 border-purple-200 shadow-xs space-y-3 flex flex-col justify-between md:col-span-2">
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-2 text-slate-800 font-black text-sm">
+                <Smartphone className="w-5 h-5 text-purple-600" />
+                <span>🍎 សម្រាប់ទូរសព្ទ iPhone / iPad (Apple iOS)</span>
+              </div>
+              <p className="text-xs text-slate-500 leading-relaxed font-medium">
+                Apple មិនអនុញ្ញាតឱ្យដំឡើង file ពីក្រៅដូច Android ឡើយ។ ប៉ុន្តែបងអាចដំឡើងប្រើប្រាស់ជា <strong>PWA (Add to Home Screen)</strong> ពេញអេក្រង់ Full Screen ដូច App ពិតៗ និង <strong>Auto-Update ស្វ័យប្រវត្តិតាម Cloud គ្រប់ពេលបើក (មិនបាច់ដំឡើង file អ្វីឡើយ)</strong>៖
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 pt-1 text-xs">
+              <div className="p-2.5 bg-purple-50 rounded-xl border border-purple-200">
+                <span className="font-bold text-purple-900 block mb-0.5">ជំហាន ១</span>
+                <span className="text-slate-600">បើក <strong>Safari</strong> លើ iPhone</span>
+              </div>
+              <div className="p-2.5 bg-purple-50 rounded-xl border border-purple-200">
+                <span className="font-bold text-purple-900 block mb-0.5">ជំហាន ២</span>
+                <span className="text-slate-600">ចូល <code>sweetbakery-8040d.web.app</code></span>
+              </div>
+              <div className="p-2.5 bg-purple-50 rounded-xl border border-purple-200">
+                <span className="font-bold text-purple-900 block mb-0.5">ជំហាន ៣</span>
+                <span className="text-slate-600">ចុចប៊ូតុង <strong>Share</strong> (សញ្ញា 📤)</span>
+              </div>
+              <div className="p-2.5 bg-purple-50 rounded-xl border border-purple-200">
+                <span className="font-bold text-purple-900 block mb-0.5">ជំហាន ៤</span>
+                <span className="text-slate-600">ចុច <strong>Add to Home Screen ➕</strong></span>
+              </div>
+            </div>
+
+            <div className="flex flex-col sm:flex-row items-center gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  soundFx.playPop();
+                  navigator.clipboard.writeText('https://sweetbakery-8040d.web.app');
+                  alert('បានចម្លង Link សម្រាប់បើកក្នុង Safari លើ iPhone ជោគជ័យ! ✅\nhttps://sweetbakery-8040d.web.app');
+                }}
+                className="w-full sm:flex-1 py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 text-white rounded-xl text-xs sm:text-sm font-black transition-all flex items-center justify-center gap-2 shadow-md shadow-purple-600/25 cursor-pointer active:scale-95"
+              >
+                <ExternalLink className="w-4 h-4" />
+                <span>📋 ចម្លង Cloud Link សម្រាប់ iPhone / iPad</span>
+              </button>
             </div>
           </div>
         </div>
