@@ -1,11 +1,11 @@
 {
-  "version": "1.2.1",
+  "version": "1.2.2",
   "releaseDate": "2026-10-14",
   "releaseNotes": [
-    "មុខងារ Upload រូបភាពនំ និងកែប្រែរូបភាពផ្ទាល់លើផ្ទាំងកាតាឡុក (Catalog)",
-    "កម្មវិធីដំឡើងស្តង់ដារ Windows Official Setup Installer (.exe) មិនបាត់ពេល restart",
-    "ប៊ូតុងអាប់ដែត App ផ្ទាល់លើ Sidebar និង Navbar",
-    "ពង្រីកទំហំអេក្រង់ និងប៊ូតុងឱ្យធំទូលាយលើទូរសព្ទដៃ"
+    "កាត់ស្តុកគ្រឿងបន្ថែមពិធី (Party Accessories) ដោយស្វ័យប្រវត្តិរាល់ពេលលក់",
+    "បង្ហាញចំនួនស្តុកជាក់ស្តែងលើផ្ទាំង POS និងប៊ូតុងថែមស្តុក (+10, +20, +50) ភ្លាមៗ",
+    "ប្រកាសអាសន្នពេលអស់ស្តុក ឬស្តុកនៅសល់តិច",
+    "ស្តារស្តុកគ្រឿងពិធីចូលវិញស្វ័យប្រវត្តពេលលុប ឬបោះបង់ការលក់"
   ],
   "apkDownloadUrl": "https://raw.githubusercontent.com/sothearetsuon-ai/sweetbakery-pos/main/SweetBakery-Android.apk",
   "windowsInstallerUrl": "https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/latest/download/SweetBakery-POS-Setup.exe",
