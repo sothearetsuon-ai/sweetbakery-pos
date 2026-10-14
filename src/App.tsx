@@ -1,4 +1,4 @@
-import { Phone } from 'lucide-react';
+import { Phone, Rocket, X } from 'lucide-react';
 import React, { useState } from 'react';
 import { Navbar } from './components/layout/Navbar';
 import { Sidebar, TabType } from './components/layout/Sidebar';
@@ -418,6 +418,51 @@ export const App: React.FC = () => {
           window.history.pushState({}, '', '?order=true');
         }}
       />
+
+      {/* Floating Auto-Update Available Toast */}
+      {availableUpdate && availableUpdate.hasUpdate && (
+        <div className="fixed top-4 right-4 z-50 max-w-sm w-[calc(100vw-32px)] bg-white/95 backdrop-blur-md border-2 border-pink-400 rounded-3xl shadow-2xl p-4 animate-in slide-in-from-top duration-300">
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-pink-500 to-rose-600 text-white flex items-center justify-center shrink-0 shadow-md shadow-pink-500/30">
+              <Rocket className="w-5 h-5 animate-bounce" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center justify-between">
+                <h4 className="text-xs sm:text-sm font-black text-slate-900 flex items-center gap-1.5">
+                  <span>កំណែថ្មី v{availableUpdate.latestVersion}</span>
+                  <span className="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-pink-100 text-pink-700">
+                    New
+                  </span>
+                </h4>
+                <button
+                  type="button"
+                  onClick={() => setAvailableUpdate(null)}
+                  className="text-slate-400 hover:text-slate-600 p-0.5 rounded-lg cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+              <p className="text-[11px] text-slate-600 mt-1 line-clamp-2">
+                {availableUpdate.releaseNotes?.[0] || 'មានការកែលម្អប្រព័ន្ធ និងបន្ថែមមុខងារថ្មី'}
+              </p>
+              <div className="mt-2.5 flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    soundFx.playSuccess();
+                    setSettingsTab('updates');
+                    setIsSettingsModalOpen(true);
+                    setAvailableUpdate(null);
+                  }}
+                  className="flex-1 py-1.5 bg-gradient-to-r from-pink-600 to-rose-600 text-white text-xs font-black rounded-xl shadow-xs hover:from-pink-700 hover:to-rose-700 transition-all cursor-pointer flex items-center justify-center gap-1"
+                >
+                  <span>🚀 អាប់ដេតឥឡូវនេះ (1-Click)</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Floating Offline-to-Cloud Auto-Sync Toast */}
       <OfflineAutoSyncToast />

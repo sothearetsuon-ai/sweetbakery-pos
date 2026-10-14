@@ -201,9 +201,7 @@ export const InventoryManagement: React.FC = () => {
               <button
                 onClick={() => {
                   soundFx.playPop();
-                  setDefaultAddCategory('party');
-                  setEditingProduct(null);
-                  setIsAddProductOpen(true);
+                  setIsPartyAccessoriesOpen(true);
                 }}
                 className="px-3.5 py-2 bg-gradient-to-r from-amber-500 via-rose-500 to-pink-600 hover:from-amber-600 hover:to-pink-700 text-white rounded-xl text-xs font-black shadow-md shadow-amber-500/20 flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all"
               >
