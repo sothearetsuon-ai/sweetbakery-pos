@@ -1,15 +1,14 @@
 {
-  "version": "1.2.6",
+  "version": "1.2.7",
   "releaseDate": "2026-10-14",
   "releaseNotes": [
-    "បន្ថែមហ្វូងមេអំបៅឱ្យកាន់តែច្រើន និងរស់រវើកលើទូរសព្ទដៃ (More 3D Butterflies)",
-    "បន្ថែមសត្វត្រីមាសហែលនាំសំណាង និងលាភហុងស៊ុយ (Lucky Swimming Goldfish & Koi)",
-    "ចលនាពពុះទឹកសំណាង និងកន្ទុយត្រីបក់បោយបែបធម្មជាតិ (Water Bubbles & Tail Waves)",
-    "បើកដំណើរការដោយស្វ័យប្រវត្តិតែម្តងលើគ្រប់ទូរសព្ទដៃ និងកុំព្យូទ័រ",
-    "កែលម្អប្រព័ន្ធអាប់ដេតស្វ័យប្រវត្តិ 1-Click កាន់តែលឿន និងរលូន"
+    "បំបែកប៊ូតុងបើក/បិទមេអំបៅ និងត្រីមាសដាច់ដោយឡែកពីគ្នា (Independent Controls)",
+    "រចនាត្រីមាសជាទិដ្ឋភាពចំហៀងពិតៗ ជាមួយកន្ទុយសំពត់សូត្រ និងព្រុយរលាស់ស្អាត (Realistic Side-Profile Goldfish)",
+    "បន្ថែមពពុះខ្យល់ហើរចេញពីមាត់ត្រី និងចលនាត្រឡប់ទិសដៅហែលទឹកតាមធម្មជាតិ",
+    "កែលម្អប្រព័ន្ធទាញយក និងដំឡើងអាប់ដេតស្វ័យប្រវត្តិកាន់តែលឿន និងរលូន"
   ],
-  "apkDownloadUrl": "https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.2.6/SweetBakery-Android.apk",
-  "windowsInstallerUrl": "https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/latest/download/SweetBakery-POS-Setup.exe",
-  "windowsDownloadUrl": "https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/latest/download/SweetBakery-POS-Setup.exe",
+  "apkDownloadUrl": "https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.2.7/SweetBakery-Android.apk",
+  "windowsInstallerUrl": "https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.2.7/SweetBakery-POS-Setup.exe",
+  "windowsDownloadUrl": "https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.2.7/SweetBakery-POS-Setup.exe",
   "mandatory": false
 }

@@ -15,7 +15,7 @@ export interface AppUpdateInfo {
   mandatory?: boolean;
 }
 
-export const CURRENT_APP_VERSION = '1.2.6';
+export const CURRENT_APP_VERSION = '1.2.7';
 export const CURRENT_BUILD_DATE = '2026-10-14';
 
 // Storage key for custom update server URL if configured
@@ -137,7 +137,7 @@ export const checkForAppUpdates = async (): Promise<AppUpdateInfo> => {
         ],
         apkDownloadUrl:
           data.apkDownloadUrl ||
-          'https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.2.6/SweetBakery-Android.apk',
+          'https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.2.7/SweetBakery-Android.apk',
         windowsDownloadUrl: data.windowsDownloadUrl || data.windowsInstallerUrl,
         windowsInstallerUrl: data.windowsInstallerUrl || data.windowsDownloadUrl,
         mandatory: Boolean(data.mandatory),
@@ -159,7 +159,7 @@ export const checkForAppUpdates = async (): Promise<AppUpdateInfo> => {
       'ដំណើរការលឿន និងសន្សំសំចៃទិន្នន័យ',
     ],
     apkDownloadUrl:
-      'https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.2.6/SweetBakery-Android.apk',
+      'https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.2.7/SweetBakery-Android.apk',
     windowsDownloadUrl:
       'https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/latest/download/SweetBakery-POS-Setup.exe',
     windowsInstallerUrl:
