@@ -181,72 +181,129 @@ ipcMain.on('start-desktop-silent-update', async (event, downloadUrl) => {
 
   console.log('🚀 Starting 1-Click Silent Desktop Update from:', targetUrl);
 
-  const downloadFile = (fileUrl, destination, onProgress) => {
+  // Try fast and resilient curl.exe first (native on Windows 10/11, handles system TLS and proxies)
+  const downloadViaCurl = () => {
     return new Promise((resolve, reject) => {
-      const parsedUrl = new URL(fileUrl);
-      const protocol = parsedUrl.protocol === 'https:' ? https : http;
+      try { if (fs.existsSync(tempPath)) fs.unlinkSync(tempPath); } catch (e) {}
 
-      const request = protocol.get(fileUrl, {
-        headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) SweetBakeryDesktop/1.0' }
-      }, (response) => {
-        // Handle 301, 302, 307, 308 redirects from GitHub
-        if (response.statusCode >= 300 && response.statusCode < 400 && response.headers.location) {
-          return downloadFile(response.headers.location, destination, onProgress).then(resolve).catch(reject);
-        }
+      const curl = spawn('curl.exe', [
+        '-L',
+        '--connect-timeout', '20',
+        '--max-time', '600',
+        '--retry', '3',
+        '-o', tempPath,
+        targetUrl
+      ]);
 
-        if (response.statusCode !== 200) {
-          return reject(new Error(`Server returned HTTP ${response.statusCode}`));
-        }
-
-        const totalBytes = parseInt(response.headers['content-length'] || '0', 10);
-        let receivedBytes = 0;
-        let lastReport = 0;
-
-        const fileStream = fs.createWriteStream(destination);
-        response.on('data', (chunk) => {
-          receivedBytes += chunk.length;
-          const now = Date.now();
-          if (totalBytes > 0 && now - lastReport > 200) {
-            lastReport = now;
-            const percent = Math.min(100, Math.round((receivedBytes / totalBytes) * 100));
-            onProgress(percent, (receivedBytes / 1024 / 1024).toFixed(1), (totalBytes / 1024 / 1024).toFixed(1));
+      let lastPercent = 0;
+      const progressTimer = setInterval(() => {
+        try {
+          if (fs.existsSync(tempPath)) {
+            const stats = fs.statSync(tempPath);
+            const downloadedMB = (stats.size / 1024 / 1024).toFixed(1);
+            const estimatedTotalMB = 318;
+            const percent = Math.min(99, Math.round((stats.size / (estimatedTotalMB * 1024 * 1024)) * 100));
+            if (percent !== lastPercent) {
+              lastPercent = percent;
+              if (mainWindow && !mainWindow.isDestroyed()) {
+                mainWindow.webContents.send('desktop-update-progress', {
+                  percent,
+                  downloadedMB,
+                  totalMB: estimatedTotalMB.toFixed(1)
+                });
+              }
+            }
           }
-        });
+        } catch (e) {}
+      }, 500);
 
-        response.pipe(fileStream);
-
-        fileStream.on('finish', () => {
-          fileStream.close();
-          onProgress(100, (receivedBytes / 1024 / 1024).toFixed(1), (totalBytes / 1024 / 1024).toFixed(1));
+      curl.on('close', (code) => {
+        clearInterval(progressTimer);
+        if (code === 0 && fs.existsSync(tempPath) && fs.statSync(tempPath).size > 1000000) {
           resolve();
-        });
-
-        fileStream.on('error', (err) => {
-          fs.unlink(destination, () => {});
-          reject(err);
-        });
+        } else {
+          reject(new Error(`curl failed with code ${code}`));
+        }
       });
 
-      request.on('error', (err) => {
-        fs.unlink(destination, () => {});
+      curl.on('error', (err) => {
+        clearInterval(progressTimer);
         reject(err);
       });
     });
   };
 
-  try {
-    await downloadFile(targetUrl, tempPath, (percent, rec, tot) => {
-      if (mainWindow && !mainWindow.isDestroyed()) {
-        mainWindow.webContents.send('desktop-update-progress', { percent, downloadedMB: rec, totalMB: tot });
-      }
+  // Fallback: Node.js https.get
+  const downloadViaNode = () => {
+    return new Promise((resolve, reject) => {
+      const getFile = (url) => {
+        const req = https.get(url, {
+          headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) SweetBakeryDesktop/1.0' },
+          timeout: 30000
+        }, (res) => {
+          if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+            return getFile(res.headers.location);
+          }
+          if (res.statusCode !== 200) {
+            return reject(new Error(`Server returned HTTP ${res.statusCode}`));
+          }
+
+          const totalBytes = parseInt(res.headers['content-length'] || '0', 10);
+          let receivedBytes = 0;
+          let lastReport = 0;
+          const fileStream = fs.createWriteStream(tempPath);
+
+          res.on('data', (chunk) => {
+            receivedBytes += chunk.length;
+            const now = Date.now();
+            if (totalBytes > 0 && now - lastReport > 250) {
+              lastReport = now;
+              const percent = Math.min(100, Math.round((receivedBytes / totalBytes) * 100));
+              if (mainWindow && !mainWindow.isDestroyed()) {
+                mainWindow.webContents.send('desktop-update-progress', {
+                  percent,
+                  downloadedMB: (receivedBytes / 1024 / 1024).toFixed(1),
+                  totalMB: (totalBytes / 1024 / 1024).toFixed(1)
+                });
+              }
+            }
+          });
+
+          res.pipe(fileStream);
+
+          fileStream.on('finish', () => {
+            fileStream.close();
+            resolve();
+          });
+
+          fileStream.on('error', reject);
+        });
+
+        req.on('timeout', () => {
+          req.destroy();
+          reject(new Error('Connection timed out'));
+        });
+
+        req.on('error', reject);
+      };
+
+      getFile(targetUrl);
     });
+  };
+
+  try {
+    try {
+      await downloadViaCurl();
+    } catch (curlErr) {
+      console.warn('curl download failed, trying Node https download...', curlErr);
+      await downloadViaNode();
+    }
 
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.webContents.send('desktop-update-complete');
     }
 
     // Launch Inno Setup directly in silent mode (/VERYSILENT /SUPPRESSMSGBOXES /FORCECLOSEAPPLICATIONS)
-    // Inno Setup itself handles closing old app, updating files, and auto-relaunching!
     spawn(tempPath, ['/VERYSILENT', '/SUPPRESSMSGBOXES', '/FORCECLOSEAPPLICATIONS'], {
       detached: true,
       stdio: 'ignore'
@@ -257,9 +314,15 @@ ipcMain.on('start-desktop-silent-update', async (event, downloadUrl) => {
     }, 800);
 
   } catch (err) {
-    console.error('Desktop Update Failed:', err);
+    console.error('All desktop update download attempts failed:', err);
+    // Automatic fallback: Open download link directly in the default browser so user is NEVER stuck!
+    shell.openExternal(targetUrl);
+
     if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.webContents.send('desktop-update-error', err.message || 'Download failed');
+      mainWindow.webContents.send(
+        'desktop-update-error',
+        'ការតភ្ជាប់មានភាពយឺតយ៉ាវ (ETIMEDOUT)។ ប្រព័ន្ធបានបើកកម្មវិធីរុករក (Browser) ដើម្បីទាញយកឯកសារដំឡើង Setup ដោយផ្ទាល់ជូនលោកអ្នកជំនួសវិញ!'
+      );
     }
   }
 });

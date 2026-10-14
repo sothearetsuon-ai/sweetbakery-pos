@@ -165,7 +165,8 @@ export const AppUpdateTab: React.FC = () => {
         (err) => {
           setIsDesktopUpdating(false);
           setDesktopProgress(null);
-          alert('កំហុសពេលទាញយកកំណែអាប់ដែត៖ ' + err);
+          // Automatically fallback to browser download so user is never blocked
+          handleDownloadWindows();
         }
       );
 
@@ -397,6 +398,19 @@ export const AppUpdateTab: React.FC = () => {
                     <span>📱 អាប់ដែត Android 1-Click (.apk)</span>
                   </button>
                 </div>
+
+                {isDesktop && (
+                  <div className="text-center pt-1">
+                    <button
+                      type="button"
+                      onClick={handleDownloadWindows}
+                      className="text-xs text-blue-600 hover:text-blue-800 underline font-bold cursor-pointer inline-flex items-center gap-1"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                      <span>ប្រសិនបើបណ្តាញយឺត ឬមិនដំណើរការ៖ ចុចទីនេះដើម្បីទាញយក Setup ដំឡើងតាម Browser</span>
+                    </button>
+                  </div>
+                )}
               </div>
             ) : (
               <div className="p-4 sm:p-5 bg-emerald-50/80 border-2 border-emerald-200 rounded-2xl space-y-3">
