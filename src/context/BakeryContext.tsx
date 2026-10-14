@@ -3547,6 +3547,27 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }).catch((err) => console.error('Error saving product to LAN:', err));
 
     syncSaveDoc('products', newProduct.id, newProduct);
+
+    // If added as party/decoration supply, also mirror into partyAddons for quick POS drawer
+    if (newProduct.categoryId === 'party') {
+      const partyItem: PartyAddon = {
+        id: newProduct.id.replace('p-', ''),
+        nameKh: newProduct.nameKh,
+        nameEn: newProduct.nameEn,
+        priceUsd: newProduct.priceUsd,
+        priceKhr: newProduct.priceKhr,
+        stockQty: newProduct.stockQty ?? 50,
+        minAlertStock: 10,
+      };
+      setPartyAddons((prev) => {
+        if (prev.some((a) => a.id === partyItem.id || a.nameKh === partyItem.nameKh)) return prev;
+        const updated = [...prev, partyItem];
+        safeSetStorage('bakery_party_addons', JSON.stringify(updated));
+        saveToLanSync({ partyAddons: updated });
+        syncSaveDoc('settings', 'partyAddons', { items: updated });
+        return updated;
+      });
+    }
   };
 
   const updateProduct = (product: Product) => {
@@ -3567,6 +3588,29 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }).catch((err) => console.error('Error saving product to LAN:', err));
 
     syncSaveDoc('products', updatedProd.id, updatedProd);
+
+    // Sync partyAddons if it is a party supply
+    if (updatedProd.categoryId === 'party') {
+      const rawId = updatedProd.id.replace('p-', '');
+      setPartyAddons((prev) => {
+        const updated = prev.map((a) =>
+          a.id === rawId || a.nameKh === updatedProd.nameKh
+            ? {
+                ...a,
+                nameKh: updatedProd.nameKh,
+                nameEn: updatedProd.nameEn,
+                priceUsd: updatedProd.priceUsd,
+                priceKhr: updatedProd.priceKhr,
+                stockQty: updatedProd.stockQty ?? a.stockQty ?? 50,
+              }
+            : a
+        );
+        safeSetStorage('bakery_party_addons', JSON.stringify(updated));
+        saveToLanSync({ partyAddons: updated });
+        syncSaveDoc('settings', 'partyAddons', { items: updated });
+        return updated;
+      });
+    }
   };
 
   const deleteProduct = (productId: string) => {
@@ -3587,6 +3631,16 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }).catch((err) => console.error('Error deleting product from LAN:', err));
 
     syncDeleteDoc('products', productId);
+
+    const rawId = productId.replace('p-', '');
+    setPartyAddons((prev) => {
+      if (!prev.some((a) => a.id === rawId)) return prev;
+      const updated = prev.filter((a) => a.id !== rawId);
+      safeSetStorage('bakery_party_addons', JSON.stringify(updated));
+      saveToLanSync({ partyAddons: updated });
+      syncSaveDoc('settings', 'partyAddons', { items: updated });
+      return updated;
+    });
   };
 
   const restockProduct = (productId: string, additionalStock: number) => {

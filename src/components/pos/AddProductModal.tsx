@@ -36,6 +36,8 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
   const [unit, setUnit] = useState(defaultCategoryId === 'party' ? 'ដុំ' : 'នំ');
   const [description, setDescription] = useState('');
   
+  const isParty = categoryId === 'party';
+
   // Multi-image state
   const [images, setImages] = useState<string[]>([]);
   const [primaryIndex, setPrimaryIndex] = useState<number>(0);
@@ -243,10 +245,14 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
             </div>
             <div>
               <h3 className="font-black text-slate-800 text-base">
-                {productToEdit ? 'កែប្រែព័ត៌មានមុខទំនិញ / នំ (Edit Product)' : 'បញ្ចូលមុខនំថ្មី & Upload រូបភាពច្រើន (Multi-Image Cake Upload)'}
+                {productToEdit
+                  ? (isParty ? 'កែប្រែព័ត៌មានសម្ភារៈតុបតែង (Edit Decoration)' : 'កែប្រែព័ត៌មានមុខទំនិញ / នំ (Edit Product)')
+                  : (isParty ? '✨ បញ្ចូលសម្ភារៈតុបតែង & គ្រឿងពិធីថ្មី (Add Party & Decoration)' : 'បញ្ចូលមុខទំនិញ / នំថ្មី & Upload រូបភាព (New Product / Cake)')}
               </h3>
               <p className="text-xs text-slate-500">
-                {productToEdit ? 'កែប្រែឈ្មោះ តម្លៃថ្លៃដើម/លក់ ប្រភេទ និងរូបភាពទំនិញ' : 'អាច Upload រូបភាពនំច្រើនជ្រុងក្នុងពេលតែមួយ និងមានចលនាស្លាយស្វ័យប្រវត្តិ'}
+                {isParty
+                  ? 'បន្ថែមមួកខួបកំណើត, ទៀនលេខ, ទៀនកាំជ្រួច, ស្លាក Happy Birthday, ស្ព្រាយ, កាតជូនពរ...'
+                  : (productToEdit ? 'កែប្រែឈ្មោះ តម្លៃថ្លៃដើម/លក់ ប្រភេទ និងរូបភាពទំនិញ' : 'អាច Upload រូបភាពច្រើនជ្រុងក្នុងពេលតែមួយ និងមានចលនាស្លាយស្វ័យប្រវត្តិ')}
               </p>
             </div>
           </div>
@@ -263,16 +269,54 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="p-6 overflow-y-auto space-y-4 flex-1">
+          {/* Quick Item Type Switcher: Cake/Beverage vs Party/Decorations */}
+          {!productToEdit && (
+            <div className="flex items-center gap-2 p-1.5 bg-slate-100 rounded-2xl">
+              <button
+                type="button"
+                onClick={() => {
+                  soundFx.playPop();
+                  if (categoryId === 'party') {
+                    setCategoryId('birthday');
+                    setUnit('នំ');
+                  }
+                }}
+                className={`flex-1 py-2 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                  !isParty
+                    ? 'bg-white text-pink-700 shadow-xs ring-1 ring-slate-200'
+                    : 'text-slate-600 hover:text-slate-800'
+                }`}
+              >
+                <span>🎂 មុខនំ & ភេសជ្ជៈ (Cakes & Drinks)</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  soundFx.playPop();
+                  setCategoryId('party');
+                  if (unit === 'នំ') setUnit('ដុំ');
+                }}
+                className={`flex-1 py-2 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                  isParty
+                    ? 'bg-gradient-to-r from-amber-500 to-rose-500 text-white shadow-xs'
+                    : 'text-slate-600 hover:text-slate-800'
+                }`}
+              >
+                <span>🎉 សម្ភារៈ & គ្រឿងតុបតែង (Party Supplies)</span>
+              </button>
+            </div>
+          )}
+
           {/* Multi-Image Upload Box */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <label className="block text-xs font-black text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
                 <Sparkles className="w-3.5 h-3.5 text-pink-500" />
-                <span>រូបភាពនំ (Cake Photos - អាចរើសច្រើនរូបក្នុងពេលតែមួយ) *</span>
+                <span>{isParty ? 'រូបភាពសម្ភារៈតុបតែង (Item Photos) *' : 'រូបភាពនំ / ទំនិញ (Item Photos) *'}</span>
               </label>
               {images.length > 0 && (
                 <span className="text-[11px] bg-pink-50 text-pink-700 font-bold px-2 py-0.5 rounded-lg border border-pink-200">
-                  {images.length} រូបភាព (ចលនាផ្លាស់ប្តូរស្វ័យប្រវត្តិ ✨)
+                  {images.length} រូបភាព
                 </span>
               )}
             </div>
@@ -288,7 +332,7 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
                   <Upload className="w-5 h-5" />
                 </div>
                 <p className="text-xs font-black text-slate-800">
-                  Upload រូបភាពនំ
+                  {isParty ? 'Upload រូបភាពសម្ភារៈ' : 'Upload រូបភាពនំ'}
                 </p>
                 <p className="text-[10px] text-slate-500 mt-0.5">
                   ជ្រើសរើសរូបភាពច្រើនសន្លឹកពី File
@@ -397,12 +441,12 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-1">
-                ឈ្មោះនំ (ភាសាខ្មែរ) *
+                {isParty ? 'ឈ្មោះសម្ភារៈ / គ្រឿងតុបតែង (ភាសាខ្មែរ) *' : 'ឈ្មោះនំ / ទំនិញ (ភាសាខ្មែរ) *'}
               </label>
               <input
                 type="text"
                 required
-                placeholder="ឧ. នំខេកសូកូឡាស្ត្រប៊ែរី"
+                placeholder={isParty ? 'ឧ. មួកខួបកំណើត, ទៀនលេខ 0-9, ស្ព្រាយបាញ់ព្រិល...' : 'ឧ. នំខេកសូកូឡាស្ត្រប៊ែរី'}
                 value={nameKh}
                 onChange={(e) => setNameKh(e.target.value)}
                 className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500 font-medium"
@@ -411,11 +455,11 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
 
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-1">
-                ឈ្មោះនំ (English)
+                {isParty ? 'ឈ្មោះសម្ភារៈ (English)' : 'ឈ្មោះនំ / ទំនិញ (English)'}
               </label>
               <input
                 type="text"
-                placeholder="e.g. Chocolate Strawberry Cake"
+                placeholder={isParty ? 'e.g. Birthday Party Hat, Number Candle...' : 'e.g. Chocolate Strawberry Cake'}
                 value={nameEn}
                 onChange={(e) => setNameEn(e.target.value)}
                 className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500"
@@ -427,18 +471,26 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-1">
-                ប្រភេទនំ / ទំនិញ (Category)
+                {isParty ? 'ប្រភេទសម្ភារៈ (Category)' : 'ប្រភេទនំ / ទំនិញ (Category)'}
               </label>
               <select
                 value={categoryId}
-                onChange={(e) => setCategoryId(e.target.value)}
+                onChange={(e) => {
+                  const newCat = e.target.value;
+                  setCategoryId(newCat);
+                  if (newCat === 'party' && unit === 'នំ') {
+                    setUnit('ដុំ');
+                  }
+                }}
                 className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500 font-semibold"
               >
                 {categories
-                  .filter((c) => c.id !== 'all' && c.id !== 'party')
+                  .filter((c) => c.id !== 'all')
                   .map((c) => (
                     <option key={c.id} value={c.id}>
-                      {lang === 'km' ? c.nameKh : c.nameEn}
+                      {c.id === 'party'
+                        ? '🎉 សម្ភារៈ & គ្រឿងតុបតែង (Party Supplies)'
+                        : (lang === 'km' ? c.nameKh : c.nameEn)}
                     </option>
                   ))}
               </select>
@@ -451,8 +503,12 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
                 onChange={(e) => setUnit(e.target.value)}
                 className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500"
               >
-                <option value="នំ">នំ (Cake)</option>
                 <option value="ដុំ">ដុំ (Piece / Pastry)</option>
+                <option value="ប្រអប់">ប្រអប់ (Box)</option>
+                <option value="កញ្ចប់">កញ្ចប់ (Pack)</option>
+                <option value="ដើម">ដើម (Candle / Stem)</option>
+                <option value="សន្លឹក">សន្លឹក (Card / Topper)</option>
+                <option value="នំ">នំ (Cake)</option>
                 <option value="ចំណិត">ចំណិត (Slice)</option>
                 <option value="កែវ">កែវ (Cup / Drink)</option>
                 <option value="ឈុត">ឈុត (Set)</option>
@@ -606,7 +662,7 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
               ) : (
                 <>
                   <Plus className="w-4 h-4 stroke-[3]" />
-                  <span>រក្សាទុកមុខនំថ្មី</span>
+                  <span>{isParty ? '✨ រក្សាទុកសម្ភារៈតុបតែង' : '✨ រក្សាទុកមុខនំថ្មី'}</span>
                 </>
               )}
             </button>

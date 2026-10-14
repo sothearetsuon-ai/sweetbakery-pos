@@ -482,16 +482,15 @@ export const PosTerminal: React.FC = () => {
                 className="px-3.5 sm:px-4 py-2 sm:py-2.5 bg-gradient-to-r from-[#FF6F68] to-[#E6514D] hover:brightness-105 text-white font-black rounded-2xl text-xs transition-all shadow-md shadow-[#E6514D]/25 flex items-center gap-1.5 active:scale-95 cursor-pointer"
               >
                 <Plus className="w-4 h-4 stroke-[3]" />
-                <span className="hidden sm:inline">+ Upload រូបភាពនំថ្មី</span>
-                <span className="sm:hidden">+ នំថ្មី</span>
+                <span className="hidden sm:inline">+ បញ្ចូលទំនិញ / នំថ្មី</span>
+                <span className="sm:hidden">+ ទំនិញថ្មី</span>
               </button>
             </div>
           </div>
 
-          {/* Category Tabs Bar (Excludes decoration/party category) */}
+          {/* Category Tabs Bar (Includes all categories including party/decorations) */}
           <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
             {categories
-              .filter((cat) => cat.id !== 'party')
               .map((cat) => {
                 const isActive = selectedCategory === cat.id;
                 const catName = lang === 'km' ? cat.nameKh : cat.nameEn;

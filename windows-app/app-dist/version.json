@@ -1,11 +1,12 @@
 {
-  "version": "1.2.4",
+  "version": "1.2.5",
   "releaseDate": "2026-10-14",
   "releaseNotes": [
-    "កែសម្រួលស្តុកគ្រឿងបន្ថែមពិធី (Party Accessories) មិនឱ្យបង្ហាញស្មើ ០ ដោយស្វ័យប្រវត្តិ",
-    "បន្ថែមប៊ូតុងកាត់ស្តុកគ្រឿងបន្ថែមពិធីពីការលក់កន្លងមក (Sync Past Sales since 08-10-2026)",
-    "កាត់ស្តុកគ្រឿងបន្ថែមពិធីដោយស្វ័យប្រវត្តិតាមការលក់ និងស្តារស្តុកមកវិញពេល Refund",
-    "បង្ហាញចំនួនស្តុកជាក់ស្តែងលើផ្ទាំង POS និងប៊ូតុងថែមស្តុក (+10, +20, +50) ភ្លាមៗ"
+    "បន្ថែមប្រភេទ «🎉 សម្ភារៈ & គ្រឿងតុបតែង» ក្នុងផ្ទាំងបញ្ចូលទំនិញថ្មី",
+    "ប៊ូតុងប្តូររវាង «🎂 មុខនំ/ភេសជ្ជៈ» និង «🎉 សម្ភារៈ & គ្រឿងតុបតែង» យ៉ាងងាយស្រួល",
+    "បន្ថែមខ្នាតសម្ភារៈ៖ ដុំ, ប្រអប់, កញ្ចប់, ដើម, សន្លឹក",
+    "បង្ហាញផ្ទាំង Category «🎉 សម្ភារៈពិធី» លើអេក្រង់លក់ POS ផ្ទាល់",
+    "កែសម្រួលស្តុកគ្រឿងបន្ថែមមិនឱ្យធ្លាក់សូន្យដោយស្វ័យប្រវត្តិ"
   ],
   "apkDownloadUrl": "https://raw.githubusercontent.com/sothearetsuon-ai/sweetbakery-pos/main/SweetBakery-Android.apk",
   "windowsInstallerUrl": "https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/latest/download/SweetBakery-POS-Setup.exe",
