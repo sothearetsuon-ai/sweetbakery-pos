@@ -245,18 +245,16 @@ ipcMain.on('start-desktop-silent-update', async (event, downloadUrl) => {
       mainWindow.webContents.send('desktop-update-complete');
     }
 
-    // Launch Inno Setup in silent mode (/VERYSILENT /SUPPRESSMSGBOXES) and restart app seamlessly!
-    const currentExe = app.getPath('exe');
-    const restartCmd = `timeout /t 2 /nobreak >nul & "${tempPath}" /VERYSILENT /SUPPRESSMSGBOXES & start "" "${currentExe}"`;
-
-    spawn('cmd.exe', ['/c', restartCmd], {
+    // Launch Inno Setup directly in silent mode (/VERYSILENT /SUPPRESSMSGBOXES)
+    // Inno Setup itself handles closing old app, updating files, and auto-relaunching!
+    spawn(tempPath, ['/VERYSILENT', '/SUPPRESSMSGBOXES'], {
       detached: true,
       stdio: 'ignore'
     }).unref();
 
     setTimeout(() => {
       app.quit();
-    }, 1200);
+    }, 800);
 
   } catch (err) {
     console.error('Desktop Update Failed:', err);
