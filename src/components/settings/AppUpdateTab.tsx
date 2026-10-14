@@ -121,14 +121,14 @@ export const AppUpdateTab: React.FC = () => {
       customApkUrl.trim() ||
       (isWindows
         ? (updateInfo?.windowsDownloadUrl || 'https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/latest/download/SweetBakery-POS-Windows.zip')
-        : (updateInfo?.apkDownloadUrl || 'https://raw.githubusercontent.com/sothearetsuon-ai/sweetbakery-pos/main/SweetBakery-Android.apk'));
+        : (updateInfo?.apkDownloadUrl || 'https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.2.6/SweetBakery-Android.apk'));
 
     if (isAndroid) {
       setIsDownloading(true);
       setDownloadProgress(0);
       const started = triggerInAppAndroidUpdate(downloadUrl);
       if (!started) {
-        window.open(downloadUrl, '_blank');
+        window.location.href = downloadUrl;
       }
     } else {
       handleOneClickDesktopUpdate();
@@ -196,22 +196,11 @@ export const AppUpdateTab: React.FC = () => {
     soundFx.playSuccess();
     const apkUrl =
       updateInfo?.apkDownloadUrl ||
-      'https://raw.githubusercontent.com/sothearetsuon-ai/sweetbakery-pos/main/SweetBakery-Android.apk';
+      'https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.2.6/SweetBakery-Android.apk';
     if (isAndroid) {
       handleStartUpdate(apkUrl);
     } else {
-      const link = document.createElement('a');
-      link.href = apkUrl;
-      link.target = '_blank';
-      link.rel = 'noreferrer';
-      link.download = 'SweetBakery-Android.apk';
-      document.body.appendChild(link);
-      link.click();
-      setTimeout(() => {
-        if (document.body.contains(link)) {
-          document.body.removeChild(link);
-        }
-      }, 200);
+      window.location.href = apkUrl;
     }
   };
 

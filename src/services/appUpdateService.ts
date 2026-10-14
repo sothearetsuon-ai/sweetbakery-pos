@@ -107,9 +107,10 @@ export const isVersionNewer = (latest: string, current: string): boolean => {
 export const checkForAppUpdates = async (): Promise<AppUpdateInfo> => {
   const currentVer = getNativeAppVersion();
   const manifestUrl = getStoredUpdateUrl();
+  const cacheBuster = manifestUrl.includes('?') ? `&_t=${Date.now()}` : `?_t=${Date.now()}`;
 
   try {
-    const response = await fetch(manifestUrl, {
+    const response = await fetch(`${manifestUrl}${cacheBuster}`, {
       cache: 'no-cache',
       headers: { 'Cache-Control': 'no-cache' },
     });
@@ -131,7 +132,7 @@ export const checkForAppUpdates = async (): Promise<AppUpdateInfo> => {
         ],
         apkDownloadUrl:
           data.apkDownloadUrl ||
-          'https://raw.githubusercontent.com/sothearetsuon-ai/sweetbakery-pos/main/SweetBakery-Android.apk',
+          'https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.2.6/SweetBakery-Android.apk',
         windowsDownloadUrl: data.windowsDownloadUrl || data.windowsInstallerUrl,
         windowsInstallerUrl: data.windowsInstallerUrl || data.windowsDownloadUrl,
         mandatory: Boolean(data.mandatory),
@@ -153,7 +154,7 @@ export const checkForAppUpdates = async (): Promise<AppUpdateInfo> => {
       'ដំណើរការលឿន និងសន្សំសំចៃទិន្នន័យ',
     ],
     apkDownloadUrl:
-      'https://raw.githubusercontent.com/sothearetsuon-ai/sweetbakery-pos/main/SweetBakery-Android.apk',
+      'https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.2.6/SweetBakery-Android.apk',
     windowsDownloadUrl:
       'https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/latest/download/SweetBakery-POS-Setup.exe',
     windowsInstallerUrl:
