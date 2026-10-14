@@ -140,10 +140,27 @@ const GOLDFISH_PRESETS = {
   },
 };
 
-export const ButterflyEffect: React.FC<{
+export interface ButterflyEffectProps {
+  butterflyEnabled?: boolean;
+  goldfishEnabled?: boolean;
+  butterflyCount?: number;
+  goldfishCount?: number;
   enabled?: boolean;
   count?: number;
-}> = ({ enabled = true, count = 14 }) => {
+}
+
+export const ButterflyEffect: React.FC<ButterflyEffectProps> = ({
+  butterflyEnabled,
+  goldfishEnabled,
+  butterflyCount: propButterflyCount,
+  goldfishCount: propGoldfishCount,
+  enabled = true,
+  count = 14,
+}) => {
+  const isButterflyActive = butterflyEnabled !== undefined ? butterflyEnabled : enabled;
+  const isGoldfishActive = goldfishEnabled !== undefined ? goldfishEnabled : enabled;
+  const isAnyActive = isButterflyActive || isGoldfishActive;
+
   const containerRef = useRef<HTMLDivElement>(null);
   const butterfliesRef = useRef<ButterflyData[]>([]);
   const goldfishRef = useRef<GoldfishData[]>([]);
@@ -156,14 +173,17 @@ export const ButterflyEffect: React.FC<{
     (window.innerWidth < 768 || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent));
 
   // Increased counts for phone: 8 butterflies & 5 swimming lucky goldfish
-  const butterflyCount = isMobile ? 8 : count;
-  const goldfishCount = isMobile ? 5 : 7;
+  const butterflyCount = propButterflyCount || (isMobile ? 8 : count);
+  const goldfishCount = propGoldfishCount || (isMobile ? 5 : 7);
 
   const [, setRenderTrigger] = useState(0);
 
-  // Initialize Butterflies
+  // Initialize Butterflies (when enabled)
   useEffect(() => {
-    if (!enabled) return;
+    if (!isButterflyActive) {
+      butterfliesRef.current = [];
+      return;
+    }
 
     const width = typeof window !== 'undefined' ? window.innerWidth : 1200;
     const height = typeof window !== 'undefined' ? window.innerHeight : 800;
@@ -197,11 +217,14 @@ export const ButterflyEffect: React.FC<{
     });
 
     butterfliesRef.current = initialButterflies;
-  }, [enabled, butterflyCount, isMobile]);
+  }, [isButterflyActive, butterflyCount, isMobile]);
 
   // Initialize Lucky Goldfish (Swimming gracefully across the lower-to-middle screen)
   useEffect(() => {
-    if (!enabled) return;
+    if (!isGoldfishActive) {
+      goldfishRef.current = [];
+      return;
+    }
 
     const width = typeof window !== 'undefined' ? window.innerWidth : 1200;
     const height = typeof window !== 'undefined' ? window.innerHeight : 800;
@@ -212,13 +235,13 @@ export const ButterflyEffect: React.FC<{
       // Alternate swimming mostly left-to-right or right-to-left
       const isHeadingRight = i % 2 === 0;
       const baseAngle = isHeadingRight ? 0 : Math.PI;
-      const heading = baseAngle + (Math.random() - 0.5) * 0.5;
-      const speed = 0.7 + Math.random() * 0.8; // graceful gentle swimming
-      const size = (isMobile ? 42 : 54) + Math.random() * (isMobile ? 18 : 26);
-      const depthScale = 0.8 + Math.random() * 0.35;
+      const heading = baseAngle + (Math.random() - 0.5) * 0.4;
+      const speed = 0.75 + Math.random() * 0.75; // graceful gentle swimming
+      const size = (isMobile ? 46 : 58) + Math.random() * (isMobile ? 16 : 24);
+      const depthScale = 0.82 + Math.random() * 0.35;
 
       // Position across the lower 65% of the screen where a serene pond would be
-      const y = height * 0.35 + Math.random() * (height * 0.6);
+      const y = height * 0.3 + Math.random() * (height * 0.62);
 
       return {
         id: i,
@@ -229,23 +252,23 @@ export const ButterflyEffect: React.FC<{
         speed,
         size,
         colorType: fishTypes[i % fishTypes.length],
-        tailSpeed: 0.28 + Math.random() * 0.12,
+        tailSpeed: 0.32 + Math.random() * 0.14,
         tailPhase: Math.random() * Math.PI * 2,
         finPhase: Math.random() * Math.PI * 2,
         heading,
         targetHeading: heading,
-        opacity: 0.88 + Math.random() * 0.12,
+        opacity: 0.9 + Math.random() * 0.1,
         depthScale,
         swimTurnAngle: 0,
       };
     });
 
     goldfishRef.current = initialGoldfish;
-  }, [enabled, goldfishCount, isMobile]);
+  }, [isGoldfishActive, goldfishCount, isMobile]);
 
   // Track cursor / touch for interactive water ripples and butterfly avoidance
   useEffect(() => {
-    if (!enabled) return;
+    if (!isAnyActive) return;
 
     const handlePointerMove = (e: MouseEvent | TouchEvent) => {
       let clientX = 0;
@@ -275,11 +298,11 @@ export const ButterflyEffect: React.FC<{
       window.removeEventListener('touchmove', handlePointerMove);
       window.removeEventListener('touchend', handlePointerEnd);
     };
-  }, [enabled]);
+  }, [isAnyActive]);
 
   // Main 30-40 FPS Optimized Animation Loop
   useEffect(() => {
-    if (!enabled) return;
+    if (!isAnyActive) return;
 
     let lastSparkleTime = Date.now();
     let lastBubbleTime = Date.now();
@@ -425,12 +448,14 @@ export const ButterflyEffect: React.FC<{
         if (fish.y < -pad) fish.y = height + pad;
         if (fish.y > height + pad) fish.y = -pad;
 
-        // Spawn occasional lucky air bubbles behind the fish tail
+        // Spawn occasional lucky air bubbles near mouth
         if (shouldSpawnBubbles && Math.random() < 0.45) {
+          const isFacingRight = Math.cos(fish.heading) >= 0;
+          const mouthOffset = isFacingRight ? fish.size * 0.65 : -fish.size * 0.65;
           particlesRef.current.push({
             id: Math.random(),
-            x: fish.x - Math.cos(fish.heading) * (fish.size * 0.5) + (Math.random() - 0.5) * 6,
-            y: fish.y - Math.sin(fish.heading) * (fish.size * 0.5) + (Math.random() - 0.5) * 6,
+            x: fish.x + mouthOffset + (Math.random() - 0.5) * 6,
+            y: fish.y + (Math.random() - 0.5) * 6,
             size: 3 + Math.random() * 4,
             opacity: 0.75,
             color: 'rgba(255, 255, 255, 0.7)',
@@ -466,9 +491,9 @@ export const ButterflyEffect: React.FC<{
 
     animFrameRef.current = requestAnimationFrame(update);
     return () => cancelAnimationFrame(animFrameRef.current);
-  }, [enabled]);
+  }, [isAnyActive]);
 
-  if (!enabled) return null;
+  if (!isAnyActive) return null;
 
   return (
     <div
@@ -496,29 +521,37 @@ export const ButterflyEffect: React.FC<{
         />
       ))}
 
-      {/* 2. Swimming Lucky Goldfish (ត្រីមាសហែលនាំសំណាង) */}
+      {/* 2. Swimming Lucky Goldfish (ត្រីមាសហែលនាំសំណាង - មើលពីចំហៀង Side Profile) */}
       {goldfishRef.current.map((fish) => {
         const preset = GOLDFISH_PRESETS[fish.colorType];
-        // Calculate swimming orientation
-        const isFacingLeft = Math.cos(fish.heading) < 0;
-        const angleDeg = (fish.heading * 180) / Math.PI;
+        // Calculate swimming direction (Left or Right)
+        const isFacingRight = Math.cos(fish.heading) >= 0;
+        // Natural gentle vertical swimming tilt (-12deg to +12deg)
+        const tiltDeg = Math.sin(fish.heading) * 10 * (isFacingRight ? 1 : -1);
 
         return (
           <div
             key={`fish-${fish.id}`}
             style={{
-              transform: `translate3d(${fish.x}px, ${fish.y}px, 0) scale(${fish.depthScale}) rotate(${angleDeg}deg)`,
-              width: `${fish.size * 1.5}px`,
-              height: `${fish.size * 0.8}px`,
+              transform: `translate3d(${fish.x}px, ${fish.y}px, 0) scale(${fish.depthScale})`,
+              width: `${fish.size * 1.65}px`,
+              height: `${fish.size * 0.95}px`,
               opacity: fish.opacity,
-              filter: `drop-shadow(0 6px 12px ${preset.glow})`,
+              filter: `drop-shadow(0 6px 14px ${preset.glow})`,
             }}
-            className="absolute -top-6 -left-10 pointer-events-none will-change-transform"
+            className="absolute -top-8 -left-12 pointer-events-none will-change-transform"
           >
-            <div className="relative w-full h-full flex items-center justify-center">
+            <div
+              className="relative w-full h-full flex items-center justify-center transform-gpu"
+              style={{
+                transform: `scaleX(${isFacingRight ? 1 : -1}) rotate(${tiltDeg}deg)`,
+                transformOrigin: 'center center',
+                transition: 'transform 0.4s ease-out',
+              }}
+            >
               <svg
-                viewBox="0 0 160 80"
-                className="w-full h-full transform-gpu"
+                viewBox="0 0 170 95"
+                className="w-full h-full overflow-visible"
                 fill="none"
                 xmlns="http://www.w3.org/2000/svg"
               >
@@ -526,110 +559,151 @@ export const ButterflyEffect: React.FC<{
                   {/* Body Shimmer Gradient */}
                   <linearGradient id={`fish-body-${fish.id}`} x1="0%" y1="0%" x2="100%" y2="0%">
                     <stop offset="0%" stopColor={preset.primary} />
-                    <stop offset="45%" stopColor={preset.secondary} />
-                    <stop offset="85%" stopColor={preset.accent} />
+                    <stop offset="35%" stopColor={preset.secondary} />
+                    <stop offset="75%" stopColor={preset.accent} />
                     <stop offset="100%" stopColor="#FFFFFF" />
                   </linearGradient>
 
-                  {/* Translucent Flowing Tail Gradient */}
-                  <linearGradient id={`fish-fin-${fish.id}`} x1="0%" y1="50%" x2="100%" y2="50%">
-                    <stop offset="0%" stopColor={preset.primary} stopOpacity="0.8" />
-                    <stop offset="60%" stopColor={preset.secondary} stopOpacity="0.6" />
-                    <stop offset="100%" stopColor="#FFFFFF" stopOpacity="0.2" />
+                  {/* Belly Highlight Gradient */}
+                  <linearGradient id={`fish-belly-${fish.id}`} x1="0%" y1="0%" x2="0%" y2="100%">
+                    <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.8" />
+                    <stop offset="100%" stopColor={preset.accent} stopOpacity="0.2" />
+                  </linearGradient>
+
+                  {/* Translucent Flowing Tail / Fin Gradient */}
+                  <linearGradient id={`fish-fin-${fish.id}`} x1="100%" y1="50%" x2="0%" y2="50%">
+                    <stop offset="0%" stopColor={preset.primary} stopOpacity="0.85" />
+                    <stop offset="50%" stopColor={preset.secondary} stopOpacity="0.65" />
+                    <stop offset="100%" stopColor="#FFFFFF" stopOpacity="0.25" />
                   </linearGradient>
                 </defs>
 
-                {/* Animated Flowing Tail Fin (Caudal Fin) with Smooth Undulation */}
-                <g className="origin-left" style={{ animation: `fishTailUndulate ${fish.tailSpeed}s ease-in-out infinite alternate` }}>
-                  {/* Upper Tail Petal */}
+                {/* --- 1. Magnificent Dorsal Fin (Top Spine Fin) --- */}
+                <g style={{ animation: `fishDorsalWave ${fish.tailSpeed * 1.2}s ease-in-out infinite alternate`, transformOrigin: '75px 28px' }}>
                   <path
-                    d="M38 40 C20 25, 0 10, -5 2 C-2 18, 12 32, 32 38 Z"
+                    d="M55 32 C60 14, 75 4, 92 6 C105 8, 114 18, 118 27 C100 24, 78 26, 55 32 Z"
                     fill={`url(#fish-fin-${fish.id})`}
-                    filter="blur(0.4px)"
+                    opacity="0.9"
                   />
-                  {/* Lower Tail Petal (Longer Graceful Veil) */}
+                  {/* Dorsal fin soft rays */}
                   <path
-                    d="M38 40 C15 50, -8 65, -15 78 C-5 60, 10 46, 32 42 Z"
-                    fill={`url(#fish-fin-${fish.id})`}
-                    filter="blur(0.4px)"
-                  />
-                  {/* Main Flowing Veil Tail */}
-                  <path
-                    d="M36 40 C12 32, -18 36, -30 48 C-18 56, 8 48, 36 41 Z"
-                    fill={`url(#fish-fin-${fish.id})`}
-                    opacity="0.85"
-                  />
-                  {/* Delicate tail fin rays */}
-                  <path
-                    d="M36 40 Q8 30 -20 20 M36 40 Q5 44 -25 50 M36 40 Q10 58 -10 70"
-                    stroke="rgba(255, 255, 255, 0.45)"
+                    d="M68 28 Q75 16 85 8 M82 26 Q90 14 98 10 M98 25 Q106 18 112 16"
+                    stroke="rgba(255, 255, 255, 0.55)"
                     strokeWidth="0.8"
                     strokeLinecap="round"
                   />
                 </g>
 
-                {/* Ventral & Anal Fins */}
+                {/* --- 2. Majestic Flowing Veil Caudal Fin (Tail) --- */}
+                <g style={{ animation: `fishTailWave ${fish.tailSpeed}s ease-in-out infinite alternate`, transformOrigin: '46px 52px' }}>
+                  {/* Upper Floating Ribbon */}
+                  <path
+                    d="M46 48 C28 32, 10 14, -18 8 C-10 24, 8 38, 44 50 Z"
+                    fill={`url(#fish-fin-${fish.id})`}
+                    filter="blur(0.3px)"
+                  />
+                  {/* Lower Floating Ribbon */}
+                  <path
+                    d="M46 54 C26 66, 6 82, -15 92 C-5 76, 12 62, 44 52 Z"
+                    fill={`url(#fish-fin-${fish.id})`}
+                    filter="blur(0.3px)"
+                  />
+                  {/* Main Broad Silk Veil Tail */}
+                  <path
+                    d="M45 50 C20 40, -14 38, -32 52 C-14 65, 18 60, 45 53 Z"
+                    fill={`url(#fish-fin-${fish.id})`}
+                    opacity="0.88"
+                  />
+                  {/* Fine Shimmer Rays in the Tail */}
+                  <path
+                    d="M44 50 Q16 35 -10 18 M44 51 Q10 48 -24 50 M44 52 Q18 64 -8 82"
+                    stroke="rgba(255, 255, 255, 0.6)"
+                    strokeWidth="0.85"
+                    strokeLinecap="round"
+                  />
+                </g>
+
+                {/* --- 3. Ventral / Pelvic Fin (Underbelly) --- */}
+                <g style={{ animation: `fishPectoralFlutter ${fish.tailSpeed * 0.8}s ease-in-out infinite alternate`, transformOrigin: '78px 72px' }}>
+                  <path
+                    d="M78 70 C72 82, 60 90, 52 93 C58 84, 68 76, 78 70 Z"
+                    fill={`url(#fish-fin-${fish.id})`}
+                    opacity="0.8"
+                  />
+                </g>
+
+                {/* --- 4. Anal Fin (Near Peduncle) --- */}
                 <path
-                  d="M65 48 C52 60, 42 66, 38 68 C44 58, 55 52, 65 48 Z"
+                  d="M58 64 C50 74, 42 78, 36 80 C40 72, 48 66, 58 64 Z"
                   fill={`url(#fish-fin-${fish.id})`}
-                  style={{ animation: `fishFinFlutter 0.35s ease-in-out infinite alternate` }}
+                  opacity="0.75"
                 />
 
-                {/* Main Torpedo-shaped Koi/Goldfish Body */}
+                {/* --- 5. Main Plump Side-Profile Fish Body (Oranda / Ryukin shape) --- */}
                 <path
-                  d="M142 40 C138 28, 115 18, 85 20 C56 22, 36 34, 34 40 C36 46, 56 58, 85 60 C115 62, 138 52, 142 40 Z"
+                  d="M142 50 C138 38, 120 22, 92 22 C65 22, 50 40, 44 50 C50 62, 66 76, 94 76 C124 76, 138 62, 142 50 Z"
                   fill={`url(#fish-body-${fish.id})`}
-                  stroke="rgba(255, 215, 0, 0.3)"
-                  strokeWidth="0.8"
+                  stroke="rgba(255, 215, 0, 0.45)"
+                  strokeWidth="0.9"
                 />
 
-                {/* Lucky Spot Markings (Kohaku / Koi Spots) */}
-                <ellipse cx="108" cy="34" rx="10" ry="6" fill={preset.scaleSpot} opacity="0.65" />
-                <ellipse cx="78" cy="45" rx="14" ry="7" fill={preset.scaleSpot} opacity="0.55" />
-                <circle cx="54" cy="38" r="4.5" fill={preset.scaleSpot} opacity="0.6" />
-
-                {/* Dorsal Fin (Spine fin) */}
+                {/* Belly Round Shimmer */}
                 <path
-                  d="M102 20 C88 12, 70 12, 58 18 C70 16, 88 16, 102 20 Z"
-                  fill={`url(#fish-fin-${fish.id})`}
-                  opacity="0.9"
+                  d="M132 54 C124 68, 108 74, 88 74 C66 74, 52 64, 46 54 C54 62, 70 70, 92 70 C114 70, 126 62, 132 54 Z"
+                  fill={`url(#fish-belly-${fish.id})`}
+                  opacity="0.85"
                 />
 
-                {/* Top Pectoral Fin (Fluttering with swimming strokes) */}
-                <g style={{ animation: `fishFinFlutter ${fish.tailSpeed * 0.9}s ease-in-out infinite alternate`, transformOrigin: '115px 32px' }}>
-                  <path
-                    d="M115 30 C125 15, 138 8, 148 4 C138 16, 126 26, 115 30 Z"
-                    fill={`url(#fish-fin-${fish.id})`}
-                  />
-                </g>
+                {/* Kohaku / Gold spots on side flank */}
+                <ellipse cx="98" cy="40" rx="12" ry="7" fill={preset.scaleSpot} opacity="0.65" transform="rotate(-10 98 40)" />
+                <ellipse cx="72" cy="50" rx="9" ry="5.5" fill={preset.scaleSpot} opacity="0.55" transform="rotate(5 72 50)" />
+                <circle cx="114" cy="46" r="4" fill={preset.scaleSpot} opacity="0.6" />
 
-                {/* Bottom Pectoral Fin */}
-                <g style={{ animation: `fishFinFlutter ${fish.tailSpeed * 0.9}s ease-in-out infinite alternate-reverse`, transformOrigin: '115px 48px' }}>
-                  <path
-                    d="M115 50 C125 65, 138 72, 148 76 C138 64, 126 54, 115 50 Z"
-                    fill={`url(#fish-fin-${fish.id})`}
-                  />
-                </g>
-
-                {/* Head, Cute Eyes & Whiskers (Barbels) */}
-                <circle cx="134" cy="34" r="2.8" fill="#1A1A1A" />
-                <circle cx="134.8" cy="33.2" r="1.1" fill="#FFFFFF" />
-                <circle cx="134" cy="46" r="2.8" fill="#1A1A1A" />
-                <circle cx="134.8" cy="45.2" r="1.1" fill="#FFFFFF" />
-
-                {/* Golden Mouth & Whisker */}
+                {/* Gill Plate Curve (Operculum) */}
                 <path
-                  d="M142 40 Q146 38 149 39 M142 40 Q146 42 149 41"
-                  stroke="#FFA000"
+                  d="M120 38 C124 45, 124 55, 118 62"
+                  stroke="rgba(255, 200, 100, 0.7)"
                   strokeWidth="1.2"
                   strokeLinecap="round"
                 />
 
-                {/* Light Reflection Belly Shimmer */}
+                {/* Pectoral Fin on Side (Fluttering) */}
+                <g style={{ animation: `fishPectoralFlutter ${fish.tailSpeed * 0.7}s ease-in-out infinite alternate`, transformOrigin: '112px 55px' }}>
+                  <path
+                    d="M112 55 C108 64, 96 72, 85 75 C95 68, 106 60, 112 55 Z"
+                    fill={`url(#fish-fin-${fish.id})`}
+                    opacity="0.92"
+                    stroke="rgba(255, 255, 255, 0.4)"
+                    strokeWidth="0.6"
+                  />
+                </g>
+
+                {/* --- 6. Cute Side Eye (Single expressive eye looking at you) --- */}
+                <g>
+                  {/* Outer Gold/White Ring */}
+                  <circle cx="128" cy="42" r="5" fill="#FFE082" />
+                  <circle cx="128" cy="42" r="4.2" fill="#FFFFFF" />
+                  {/* Dark Iris */}
+                  <circle cx="128" cy="42" r="3.2" fill="#211814" />
+                  {/* Sparkling Catchlight */}
+                  <circle cx="129.2" cy="40.8" r="1.3" fill="#FFFFFF" />
+                  <circle cx="126.8" cy="43.2" r="0.7" fill="#FFFFFF" opacity="0.85" />
+                </g>
+
+                {/* --- 7. Cute Pouty Lips / Mouth --- */}
                 <path
-                  d="M125 38 Q90 28 55 38"
-                  stroke="rgba(255, 255, 255, 0.65)"
-                  strokeWidth="1.5"
+                  d="M141 48 C144 48, 145 49, 143 50 C145 51, 144 52, 141 52"
+                  stroke="#FF8F00"
+                  strokeWidth="1.3"
+                  strokeLinecap="round"
+                  fill="#FFA000"
+                />
+
+                {/* Top Arched Spine Shimmer */}
+                <path
+                  d="M130 35 C116 26, 95 24, 75 27"
+                  stroke="rgba(255, 255, 255, 0.55)"
+                  strokeWidth="1.2"
                   strokeLinecap="round"
                 />
               </svg>
@@ -792,20 +866,28 @@ export const ButterflyEffect: React.FC<{
             transform: rotateY(-74deg) rotateZ(6deg);
           }
         }
-        @keyframes fishTailUndulate {
+        @keyframes fishTailWave {
           0% {
-            transform: skewY(-16deg) rotateZ(-12deg);
+            transform: rotateZ(-14deg) skewY(-8deg);
           }
           100% {
-            transform: skewY(16deg) rotateZ(12deg);
+            transform: rotateZ(14deg) skewY(8deg);
           }
         }
-        @keyframes fishFinFlutter {
+        @keyframes fishDorsalWave {
           0% {
-            transform: rotateZ(-8deg) scaleX(0.92);
+            transform: rotateZ(-4deg) scaleY(0.95);
           }
           100% {
-            transform: rotateZ(14deg) scaleX(1.08);
+            transform: rotateZ(5deg) scaleY(1.04);
+          }
+        }
+        @keyframes fishPectoralFlutter {
+          0% {
+            transform: rotateZ(-12deg) scaleX(0.9);
+          }
+          100% {
+            transform: rotateZ(16deg) scaleX(1.1);
           }
         }
       `}</style>

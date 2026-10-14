@@ -11,6 +11,8 @@ interface ThemePickerModalProps {
   onSelectTheme: (theme: AppTheme) => void;
   isButterflyEnabled?: boolean;
   onToggleButterfly?: () => void;
+  isGoldfishEnabled?: boolean;
+  onToggleGoldfish?: () => void;
 }
 
 export const ThemePickerModal: React.FC<ThemePickerModalProps> = ({
@@ -20,6 +22,8 @@ export const ThemePickerModal: React.FC<ThemePickerModalProps> = ({
   onSelectTheme,
   isButterflyEnabled,
   onToggleButterfly,
+  isGoldfishEnabled,
+  onToggleGoldfish,
 }) => {
   const [activeCategory, setActiveCategory] = useState<ThemeCategory>('all');
 
@@ -260,13 +264,32 @@ export const ThemePickerModal: React.FC<ThemePickerModalProps> = ({
                 }}
                 className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all flex items-center gap-1.5 cursor-pointer font-battambang ${
                   isButterflyEnabled
-                    ? 'bg-gradient-to-r from-pink-500 to-purple-600 text-white border-pink-400 shadow-2xs'
+                    ? 'bg-gradient-to-r from-pink-500 to-rose-500 text-white border-pink-400 shadow-2xs'
                     : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100'
                 }`}
-                title="បើក/បិទ សត្វមេអំបៅហើរលើអេក្រង់"
+                title="បើក/បិទ សត្វមេអំបៅហើរ 3D លើអេក្រង់"
               >
-                <span>🦋🐠</span>
-                <span>មេអំបៅ & ត្រីមាស៖ {isButterflyEnabled ? 'បើក (ON)' : 'បិទ (OFF)'}</span>
+                <span>🦋</span>
+                <span>មេអំបៅ៖ {isButterflyEnabled ? 'បើក' : 'បិទ'}</span>
+              </button>
+            )}
+
+            {onToggleGoldfish && (
+              <button
+                type="button"
+                onClick={() => {
+                  soundFx.playPop();
+                  onToggleGoldfish();
+                }}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all flex items-center gap-1.5 cursor-pointer font-battambang ${
+                  isGoldfishEnabled
+                    ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white border-amber-400 shadow-2xs'
+                    : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100'
+                }`}
+                title="បើក/បិទ ត្រីមាសហែលនាំសំណាងលើអេក្រង់"
+              >
+                <span>🐠</span>
+                <span>ត្រីមាស៖ {isGoldfishEnabled ? 'បើក' : 'បិទ'}</span>
               </button>
             )}
 

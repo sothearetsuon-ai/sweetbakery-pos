@@ -48,17 +48,32 @@ export const App: React.FC = () => {
   const [isThemePickerOpen, setIsThemePickerOpen] = useState(false);
   const [dismissedBannerThemeId, setDismissedBannerThemeId] = useState<string | null>(null);
 
-  // Flying Butterflies & Lucky Goldfish Effect State (Enabled by default on all devices)
+  // Flying Butterflies Effect State (Independent control)
   const [isButterflyEnabled, setIsButterflyEnabled] = useState<boolean>(() => {
     const saved = localStorage.getItem('bakery_butterfly_effect');
     if (saved !== null) return saved === 'true';
-    return true; // Enabled by default for all users to enjoy
+    return true; // Enabled by default
   });
 
   const handleToggleButterfly = () => {
     setIsButterflyEnabled((prev) => {
       const next = !prev;
       localStorage.setItem('bakery_butterfly_effect', next ? 'true' : 'false');
+      return next;
+    });
+  };
+
+  // Swimming Lucky Goldfish Effect State (Independent control)
+  const [isGoldfishEnabled, setIsGoldfishEnabled] = useState<boolean>(() => {
+    const saved = localStorage.getItem('bakery_goldfish_effect');
+    if (saved !== null) return saved === 'true';
+    return true; // Enabled by default
+  });
+
+  const handleToggleGoldfish = () => {
+    setIsGoldfishEnabled((prev) => {
+      const next = !prev;
+      localStorage.setItem('bakery_goldfish_effect', next ? 'true' : 'false');
       return next;
     });
   };
@@ -307,6 +322,8 @@ export const App: React.FC = () => {
         onOpenContact={() => setIsContactModalOpen(true)}
         isButterflyEnabled={isButterflyEnabled}
         onToggleButterfly={handleToggleButterfly}
+        isGoldfishEnabled={isGoldfishEnabled}
+        onToggleGoldfish={handleToggleGoldfish}
       />
 
       {/* Main Workspace with Sidebar & Content */}
@@ -366,8 +383,13 @@ export const App: React.FC = () => {
       <MusicPlayerModal />
       <MiniMusicPlayer />
 
-      {/* Flying 3D Butterflies Effect (Lively background atmosphere) */}
-      <ButterflyEffect enabled={isButterflyEnabled} count={16} />
+      {/* Flying 3D Butterflies & Swimming Lucky Goldfish Effect (Independent toggles) */}
+      <ButterflyEffect
+        butterflyEnabled={isButterflyEnabled}
+        goldfishEnabled={isGoldfishEnabled}
+        butterflyCount={14}
+        goldfishCount={7}
+      />
 
       {/* Background Theme Customizer Modal */}
       <ThemePickerModal
@@ -377,6 +399,8 @@ export const App: React.FC = () => {
         onSelectTheme={handleSelectTheme}
         isButterflyEnabled={isButterflyEnabled}
         onToggleButterfly={handleToggleButterfly}
+        isGoldfishEnabled={isGoldfishEnabled}
+        onToggleGoldfish={handleToggleGoldfish}
       />
 
       {/* 35-Day Expiration Lock Modal */}

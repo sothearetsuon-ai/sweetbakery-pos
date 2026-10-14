@@ -52,6 +52,8 @@ interface NavbarProps {
   onOpenContact?: () => void;
   isButterflyEnabled?: boolean;
   onToggleButterfly?: () => void;
+  isGoldfishEnabled?: boolean;
+  onToggleGoldfish?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -67,6 +69,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenContact,
   isButterflyEnabled = true,
   onToggleButterfly,
+  isGoldfishEnabled = true,
+  onToggleGoldfish,
 }) => {
   const {
     lang,
@@ -473,29 +477,64 @@ export const Navbar: React.FC<NavbarProps> = ({
                         soundFx.playPop();
                         onToggleButterfly();
                       }}
-                      className="w-full flex items-center justify-between p-2.5 rounded-2xl hover:bg-purple-50 text-slate-800 transition-colors cursor-pointer group text-left border border-transparent hover:border-purple-100"
+                      className="w-full flex items-center justify-between p-2.5 rounded-2xl hover:bg-pink-50 text-slate-800 transition-colors cursor-pointer group text-left border border-transparent hover:border-pink-100"
                     >
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-pink-500 via-purple-500 to-amber-500 text-white flex items-center justify-center shadow-xs group-hover:scale-105 transition-transform shrink-0 text-sm">
-                          🦋🐠
+                        <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-pink-500 via-rose-500 to-purple-500 text-white flex items-center justify-center shadow-xs group-hover:scale-105 transition-transform shrink-0 text-sm">
+                          🦋
                         </div>
                         <div>
-                          <div className="text-xs font-black text-slate-800 group-hover:text-purple-700">
-                            មេអំបៅ & ត្រីមាសហុងស៊ុយ
+                          <div className="text-xs font-black text-slate-800 group-hover:text-pink-600">
+                            មេអំបៅហោះហើរ 3D
                           </div>
                           <div className="text-[10px] text-slate-400">
-                            មេអំបៅហើរ & ត្រីមាសហែលនាំសំណាងលើអេក្រង់
+                            សត្វមេអំបៅហើរលើអេក្រង់បង្កើតភាពរស់រវើក
                           </div>
                         </div>
                       </div>
                       <span
                         className={`text-[10px] font-black px-2 py-0.5 rounded-full ${
                           isButterflyEnabled
-                            ? 'bg-purple-100 text-purple-700 border border-purple-200'
+                            ? 'bg-pink-100 text-pink-700 border border-pink-200'
                             : 'bg-slate-100 text-slate-500'
                         }`}
                       >
                         {isButterflyEnabled ? 'បើក (ON)' : 'បិទ (OFF)'}
+                      </span>
+                    </button>
+                  )}
+
+                  {/* 5. Swimming Lucky Goldfish Effect Toggle */}
+                  {onToggleGoldfish && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        soundFx.playPop();
+                        onToggleGoldfish();
+                      }}
+                      className="w-full flex items-center justify-between p-2.5 rounded-2xl hover:bg-amber-50 text-slate-800 transition-colors cursor-pointer group text-left border border-transparent hover:border-amber-100"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-amber-500 via-orange-500 to-red-500 text-white flex items-center justify-center shadow-xs group-hover:scale-105 transition-transform shrink-0 text-sm">
+                          🐠
+                        </div>
+                        <div>
+                          <div className="text-xs font-black text-slate-800 group-hover:text-amber-700">
+                            ត្រីមាសហែលនាំសំណាង
+                          </div>
+                          <div className="text-[10px] text-slate-400">
+                            ត្រីមាសហែលមើលពីចំហៀងនាំលាភហុងស៊ុយ
+                          </div>
+                        </div>
+                      </div>
+                      <span
+                        className={`text-[10px] font-black px-2 py-0.5 rounded-full ${
+                          isGoldfishEnabled
+                            ? 'bg-amber-100 text-amber-700 border border-amber-200'
+                            : 'bg-slate-100 text-slate-500'
+                        }`}
+                      >
+                        {isGoldfishEnabled ? 'បើក (ON)' : 'បិទ (OFF)'}
                       </span>
                     </button>
                   )}
