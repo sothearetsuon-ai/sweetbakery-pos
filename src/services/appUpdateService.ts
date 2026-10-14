@@ -67,6 +67,11 @@ export const isIOSDevice = (): boolean => {
   return /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 };
 
+export const isAndroidDevice = (): boolean => {
+  if (typeof window === 'undefined') return false;
+  return isAndroidNativeApp() || /android/i.test(navigator.userAgent || '');
+};
+
 
 export const getNativeAppVersion = (): string => {
   if (isAndroidNativeApp() && (window as any).SweetBakeryNative?.getAppVersion) {

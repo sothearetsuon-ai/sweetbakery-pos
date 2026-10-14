@@ -28,6 +28,7 @@ import {
   isElectronWindowsApp,
   isWindowsPlatform,
   isIOSDevice,
+  isAndroidDevice,
   getNativeAppVersion,
   checkForAppUpdates,
   triggerInAppAndroidUpdate,
@@ -52,7 +53,8 @@ export const AppUpdateTab: React.FC = () => {
   const [manifestUrlInput, setManifestUrlInput] = useState(getStoredUpdateUrl());
   const [copiedUrl, setCopiedUrl] = useState(false);
 
-  const isAndroid = isAndroidNativeApp();
+  const isAndroidNative = isAndroidNativeApp();
+  const isAndroid = isAndroidDevice();
   const isDesktop = isDesktopElectronApp();
   const isWindows = isWindowsPlatform();
   const isIOS = isIOSDevice();
@@ -116,22 +118,25 @@ export const AppUpdateTab: React.FC = () => {
 
   const handleStartUpdate = (urlToUse?: string) => {
     soundFx.playPop();
-    const downloadUrl =
+    const apkUrl =
       urlToUse ||
       customApkUrl.trim() ||
-      (isWindows
-        ? (updateInfo?.windowsDownloadUrl || 'https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/latest/download/SweetBakery-POS-Windows.zip')
-        : (updateInfo?.apkDownloadUrl || 'https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.2.6/SweetBakery-Android.apk'));
+      updateInfo?.apkDownloadUrl ||
+      'https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.2.6/SweetBakery-Android.apk';
 
-    if (isAndroid) {
+    if (isAndroidNative) {
       setIsDownloading(true);
       setDownloadProgress(0);
-      const started = triggerInAppAndroidUpdate(downloadUrl);
+      const started = triggerInAppAndroidUpdate(apkUrl);
       if (!started) {
-        window.location.href = downloadUrl;
+        window.location.href = apkUrl;
       }
-    } else {
+    } else if (isAndroid) {
+      window.location.href = apkUrl;
+    } else if (isDesktop) {
       handleOneClickDesktopUpdate();
+    } else {
+      handleDownloadWindows();
     }
   };
 
@@ -178,18 +183,7 @@ export const AppUpdateTab: React.FC = () => {
       updateInfo?.windowsInstallerUrl ||
       updateInfo?.windowsDownloadUrl ||
       'https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/latest/download/SweetBakery-POS-Setup.exe';
-    const link = document.createElement('a');
-    link.href = winUrl;
-    link.target = '_blank';
-    link.rel = 'noreferrer';
-    link.download = 'SweetBakery-POS-Setup.exe';
-    document.body.appendChild(link);
-    link.click();
-    setTimeout(() => {
-      if (document.body.contains(link)) {
-        document.body.removeChild(link);
-      }
-    }, 200);
+    window.location.href = winUrl;
   };
 
   const handleDownloadAndroid = () => {
@@ -197,7 +191,7 @@ export const AppUpdateTab: React.FC = () => {
     const apkUrl =
       updateInfo?.apkDownloadUrl ||
       'https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.2.6/SweetBakery-Android.apk';
-    if (isAndroid) {
+    if (isAndroidNative) {
       handleStartUpdate(apkUrl);
     } else {
       window.location.href = apkUrl;
@@ -246,10 +240,12 @@ export const AppUpdateTab: React.FC = () => {
                 <h5 className="text-sm sm:text-base font-black text-slate-800">
                   {isIOS
                     ? '🍎 ទូរសព្ទ iPhone / iPad (Apple iOS PWA)'
+                    : isAndroidNative
+                    ? '📱 កម្មវិធីទូរសព្ទ Android (Native In-App Update)'
                     : isAndroid
-                    ? '📱 កម្មវិធីទូរសព្ទ Android (Native App)'
+                    ? '📱 ទូរសព្ទ Android (Chrome / Web Browser)'
                     : isDesktop
-                    ? '💻 កម្មវិធីកុំព្យូទ័រ Windows (Desktop App)'
+                    ? '💻 កម្មវិធីកុំព្យូទ័រ Windows (Desktop 1-Click Update)'
                     : isWindows
                     ? '💻 កុំព្យូទ័រ Windows (Web App)'
                     : '🌐 កម្មវិធី Web App / PWA'}

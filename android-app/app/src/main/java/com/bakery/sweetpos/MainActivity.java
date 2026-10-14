@@ -2,9 +2,14 @@ package com.bakery.sweetpos;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
+import android.app.DownloadManager;
 import android.content.ActivityNotFoundException;
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.pm.PackageManager;
+import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.net.Uri;
 import android.os.Build;
@@ -43,6 +48,9 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.Locale;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 import android.speech.tts.TextToSpeech;
 import android.media.MediaPlayer;
 import android.media.AudioAttributes;
@@ -65,6 +73,14 @@ public class MainActivity extends AppCompatActivity {
     private TextToSpeech textToSpeech;
     private MediaPlayer mediaPlayer;
 
+    // Standard Android In-App Update Engine
+    private DownloadManager downloadManager;
+    private long currentDownloadId = -1;
+    private File pendingInstallFile = null;
+    private BroadcastReceiver downloadCompleteReceiver;
+    private ScheduledFuture<?> progressFuture;
+    private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
+
     @SuppressLint("SetJavaScriptEnabled")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -83,6 +99,10 @@ public class MainActivity extends AppCompatActivity {
         } catch (Exception e) {
             e.printStackTrace();
         }
+
+        // Initialize Android System DownloadManager
+        downloadManager = (DownloadManager) getSystemService(Context.DOWNLOAD_SERVICE);
+        setupDownloadCompleteReceiver();
 
         webView = findViewById(R.id.webView);
         progressBar = findViewById(R.id.progressBar);
@@ -445,128 +465,299 @@ public class MainActivity extends AppCompatActivity {
                 return;
             }
 
-            Executors.newSingleThreadExecutor().execute(() -> {
-                File outputFile = null;
-                try {
-                    runOnUiThread(() -> {
-                        Toast.makeText(MainActivity.this, "កំពុងទាញយកកំណែអាប់ដែតថ្មី...", Toast.LENGTH_SHORT).show();
-                        webView.evaluateJavascript("window.onUpdateDownloadStart && window.onUpdateDownloadStart()", null);
-                    });
+            final String cleanUrl = downloadUrl.trim();
 
-                    File dir = getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS);
-                    if (dir == null) dir = getCacheDir();
-                    outputFile = new File(dir, "SweetBakery-Update.apk");
-                    if (outputFile.exists()) {
-                        outputFile.delete();
-                    }
-
-                    URL currentUrl = new URL(downloadUrl);
-                    HttpURLConnection connection = null;
-                    int responseCode = 0;
-                    int redirectCount = 0;
-
-                    while (redirectCount < 6) {
-                        connection = (HttpURLConnection) currentUrl.openConnection();
-                        connection.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android) SweetBakeryApp/1.0");
-                        connection.setConnectTimeout(25000);
-                        connection.setReadTimeout(60000);
-                        connection.setInstanceFollowRedirects(true);
-                        connection.connect();
-
-                        responseCode = connection.getResponseCode();
-                        if (responseCode == HttpURLConnection.HTTP_MOVED_PERM ||
-                            responseCode == HttpURLConnection.HTTP_MOVED_TEMP ||
-                            responseCode == HttpURLConnection.HTTP_SEE_OTHER ||
-                            responseCode == 307 || responseCode == 308) {
-                            String newUrl = connection.getHeaderField("Location");
-                            if (newUrl != null && !newUrl.isEmpty()) {
-                                currentUrl = new URL(newUrl);
-                                redirectCount++;
-                                continue;
-                            }
-                        }
-                        break;
-                    }
-
-                    if (responseCode != HttpURLConnection.HTTP_OK) {
-                        final int finalResponseCode = responseCode;
-                        final String errMsg = "Download failed: Server returned HTTP " + finalResponseCode;
-                        runOnUiThread(() -> {
-                            Toast.makeText(MainActivity.this, "ការទាញយកបានបរាជ័យ (HTTP " + finalResponseCode + ")", Toast.LENGTH_LONG).show();
-                            webView.evaluateJavascript("window.onUpdateDownloadError && window.onUpdateDownloadError('" + errMsg + "')", null);
-                        });
-                        return;
-                    }
-
-                    int fileLength = connection.getContentLength();
-                    InputStream input = connection.getInputStream();
-                    FileOutputStream output = new FileOutputStream(outputFile);
-
-                    byte[] data = new byte[8192];
-                    long total = 0;
-                    int count;
-                    long lastReportTime = 0;
-
-                    while ((count = input.read(data)) != -1) {
-                        total += count;
-                        output.write(data, 0, count);
-
-                        long now = System.currentTimeMillis();
-                        if (fileLength > 0 && (now - lastReportTime > 250)) {
-                            lastReportTime = now;
-                            final int progress = (int) (total * 100 / fileLength);
-                            runOnUiThread(() -> {
-                                webView.evaluateJavascript("window.onUpdateDownloadProgress && window.onUpdateDownloadProgress(" + progress + ")", null);
-                            });
-                        }
-                    }
-
-                    output.flush();
-                    output.close();
-                    input.close();
-
-                    final File finalFile = outputFile;
-                    runOnUiThread(() -> {
-                        webView.evaluateJavascript("window.onUpdateDownloadComplete && window.onUpdateDownloadComplete()", null);
-                        installApk(finalFile);
-                    });
-
-                } catch (Exception e) {
-                    final String err = e.getMessage() != null ? e.getMessage() : "Unknown error";
-                    runOnUiThread(() -> {
-                        Toast.makeText(MainActivity.this, "កំហុសពេលទាញយក: " + err, Toast.LENGTH_LONG).show();
-                        webView.evaluateJavascript("window.onUpdateDownloadError && window.onUpdateDownloadError('" + err.replace("'", "\\'") + "')", null);
-                    });
-                }
+            runOnUiThread(() -> {
+                Toast.makeText(MainActivity.this, "កំពុងទាញយកកំណែអាប់ដេតតាមរយៈប្រព័ន្ធ Android...", Toast.LENGTH_SHORT).show();
+                webView.evaluateJavascript("window.onUpdateDownloadStart && window.onUpdateDownloadStart()", null);
             });
+
+            try {
+                File dir = getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS);
+                if (dir != null && !dir.exists()) dir.mkdirs();
+                File targetFile = new File(dir, "SweetBakery-Update.apk");
+                if (targetFile.exists()) {
+                    targetFile.delete();
+                }
+
+                DownloadManager.Request request = new DownloadManager.Request(Uri.parse(cleanUrl));
+                request.setTitle("SweetBakery POS Update");
+                request.setDescription("កំពុងទាញយកកំណែអាប់ដេតស្វ័យប្រវត្តិ...");
+                request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
+                request.setDestinationInExternalFilesDir(MainActivity.this, Environment.DIRECTORY_DOWNLOADS, "SweetBakery-Update.apk");
+                request.setAllowedOverMetered(true);
+                request.setAllowedOverRoaming(true);
+
+                if (downloadManager != null) {
+                    currentDownloadId = downloadManager.enqueue(request);
+                    startProgressPolling(currentDownloadId);
+                    return;
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+
+            // Fallback to direct stream if DownloadManager is unavailable
+            downloadViaDirectStream(cleanUrl);
         }
     }
 
-    private void installApk(File apkFile) {
-        try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                if (!getPackageManager().canRequestPackageInstalls()) {
-                    Toast.makeText(this, "សូមអនុញ្ញាតសិទ្ធិដំឡើង App ពី SweetBakery POS", Toast.LENGTH_LONG).show();
-                    Intent permissionIntent = new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES);
-                    permissionIntent.setData(Uri.parse("package:" + getPackageName()));
-                    startActivity(permissionIntent);
-                    return;
+    private void setupDownloadCompleteReceiver() {
+        downloadCompleteReceiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                if (DownloadManager.ACTION_DOWNLOAD_COMPLETE.equals(intent.getAction())) {
+                    long id = intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1);
+                    if (id != -1 && id == currentDownloadId) {
+                        checkDownloadStatusAndInstall(id);
+                    }
                 }
             }
+        };
 
-            Uri apkUri = FileProvider.getUriForFile(
-                    this,
-                    getPackageName() + ".provider",
-                    apkFile
-            );
+        IntentFilter filter = new IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(downloadCompleteReceiver, filter, Context.RECEIVER_EXPORTED);
+        } else {
+            registerReceiver(downloadCompleteReceiver, filter);
+        }
+    }
 
-            Intent intent = new Intent(Intent.ACTION_VIEW);
-            intent.setDataAndType(apkUri, "application/vnd.android.package-archive");
-            intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            startActivity(intent);
+    private void checkDownloadStatusAndInstall(long downloadId) {
+        if (progressFuture != null) {
+            progressFuture.cancel(false);
+        }
+        try {
+            DownloadManager.Query query = new DownloadManager.Query();
+            query.setFilterById(downloadId);
+            Cursor cursor = downloadManager.query(query);
+            if (cursor != null && cursor.moveToFirst()) {
+                int statusIndex = cursor.getColumnIndex(DownloadManager.COLUMN_STATUS);
+                int status = statusIndex != -1 ? cursor.getInt(statusIndex) : DownloadManager.STATUS_FAILED;
+                cursor.close();
+
+                if (status == DownloadManager.STATUS_SUCCESSFUL) {
+                    File apkFile = new File(getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS), "SweetBakery-Update.apk");
+                    runOnUiThread(() -> {
+                        Toast.makeText(this, "ទាញយករួចរាល់! កំពុងបើកកម្មវិធីដំឡើង...", Toast.LENGTH_SHORT).show();
+                        webView.evaluateJavascript("window.onUpdateDownloadProgress && window.onUpdateDownloadProgress(100)", null);
+                        webView.evaluateJavascript("window.onUpdateDownloadComplete && window.onUpdateDownloadComplete()", null);
+                    });
+                    installApk(apkFile);
+                } else {
+                    runOnUiThread(() -> {
+                        Toast.makeText(this, "ការទាញយកមិនជោគជ័យឡើយ", Toast.LENGTH_LONG).show();
+                        webView.evaluateJavascript("window.onUpdateDownloadError && window.onUpdateDownloadError('Download failed')", null);
+                    });
+                }
+            }
         } catch (Exception e) {
-            Toast.makeText(this, "មិនអាចបើកកម្មវិធីដំឡើងបានទេ: " + e.getMessage(), Toast.LENGTH_LONG).show();
+            e.printStackTrace();
+        }
+    }
+
+    private void startProgressPolling(long downloadId) {
+        if (progressFuture != null && !progressFuture.isDone()) {
+            progressFuture.cancel(true);
+        }
+
+        progressFuture = scheduler.scheduleWithFixedDelay(() -> {
+            try {
+                DownloadManager.Query q = new DownloadManager.Query();
+                q.setFilterById(downloadId);
+                Cursor c = downloadManager.query(q);
+                if (c != null && c.moveToFirst()) {
+                    int bytesDownloadedCol = c.getColumnIndex(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR);
+                    int totalCol = c.getColumnIndex(DownloadManager.COLUMN_TOTAL_SIZE_BYTES);
+                    int statusCol = c.getColumnIndex(DownloadManager.COLUMN_STATUS);
+
+                    int downloaded = bytesDownloadedCol != -1 ? c.getInt(bytesDownloadedCol) : 0;
+                    int total = totalCol != -1 ? c.getInt(totalCol) : 0;
+                    int status = statusCol != -1 ? c.getInt(statusCol) : 0;
+                    c.close();
+
+                    if (total > 0) {
+                        final int progress = (int) ((downloaded * 100L) / total);
+                        runOnUiThread(() -> {
+                            webView.evaluateJavascript("window.onUpdateDownloadProgress && window.onUpdateDownloadProgress(" + progress + ")", null);
+                        });
+                    }
+
+                    if (status == DownloadManager.STATUS_SUCCESSFUL || status == DownloadManager.STATUS_FAILED) {
+                        if (progressFuture != null) progressFuture.cancel(false);
+                    }
+                }
+            } catch (Exception ignored) {}
+        }, 200, 300, TimeUnit.MILLISECONDS);
+    }
+
+    private void downloadViaDirectStream(String downloadUrl) {
+        Executors.newSingleThreadExecutor().execute(() -> {
+            File outputFile = null;
+            try {
+                File dir = getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS);
+                if (dir == null) dir = getCacheDir();
+                outputFile = new File(dir, "SweetBakery-Update.apk");
+                if (outputFile.exists()) {
+                    outputFile.delete();
+                }
+
+                URL currentUrl = new URL(downloadUrl);
+                HttpURLConnection connection = null;
+                int responseCode = 0;
+                int redirectCount = 0;
+
+                while (redirectCount < 6) {
+                    connection = (HttpURLConnection) currentUrl.openConnection();
+                    connection.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android) SweetBakeryApp/1.0");
+                    connection.setConnectTimeout(25000);
+                    connection.setReadTimeout(60000);
+                    connection.setInstanceFollowRedirects(true);
+                    connection.connect();
+
+                    responseCode = connection.getResponseCode();
+                    if (responseCode == HttpURLConnection.HTTP_MOVED_PERM ||
+                        responseCode == HttpURLConnection.HTTP_MOVED_TEMP ||
+                        responseCode == HttpURLConnection.HTTP_SEE_OTHER ||
+                        responseCode == 307 || responseCode == 308) {
+                        String newUrl = connection.getHeaderField("Location");
+                        if (newUrl != null && !newUrl.isEmpty()) {
+                            currentUrl = new URL(newUrl);
+                            redirectCount++;
+                            continue;
+                        }
+                    }
+                    break;
+                }
+
+                if (responseCode != HttpURLConnection.HTTP_OK) {
+                    final int finalResponseCode = responseCode;
+                    final String errMsg = "Download failed: Server returned HTTP " + finalResponseCode;
+                    runOnUiThread(() -> {
+                        Toast.makeText(MainActivity.this, "ការទាញយកបានបរាជ័យ (HTTP " + finalResponseCode + ")", Toast.LENGTH_LONG).show();
+                        webView.evaluateJavascript("window.onUpdateDownloadError && window.onUpdateDownloadError('" + errMsg + "')", null);
+                    });
+                    return;
+                }
+
+                int fileLength = connection.getContentLength();
+                InputStream input = connection.getInputStream();
+                FileOutputStream output = new FileOutputStream(outputFile);
+
+                byte[] data = new byte[8192];
+                long total = 0;
+                int count;
+                long lastReportTime = 0;
+
+                while ((count = input.read(data)) != -1) {
+                    total += count;
+                    output.write(data, 0, count);
+
+                    long now = System.currentTimeMillis();
+                    if (fileLength > 0 && (now - lastReportTime > 250)) {
+                        lastReportTime = now;
+                        final int progress = (int) (total * 100 / fileLength);
+                        runOnUiThread(() -> {
+                            webView.evaluateJavascript("window.onUpdateDownloadProgress && window.onUpdateDownloadProgress(" + progress + ")", null);
+                        });
+                    }
+                }
+
+                output.flush();
+                output.close();
+                input.close();
+
+                final File finalFile = outputFile;
+                runOnUiThread(() -> {
+                    webView.evaluateJavascript("window.onUpdateDownloadComplete && window.onUpdateDownloadComplete()", null);
+                    installApk(finalFile);
+                });
+
+            } catch (Exception e) {
+                final String err = e.getMessage() != null ? e.getMessage() : "Unknown error";
+                runOnUiThread(() -> {
+                    Toast.makeText(MainActivity.this, "កំហុសពេលទាញយក: " + err, Toast.LENGTH_LONG).show();
+                    webView.evaluateJavascript("window.onUpdateDownloadError && window.onUpdateDownloadError('" + err.replace("'", "\\'") + "')", null);
+                });
+            }
+        });
+    }
+
+    private void installApk(File apkFile) {
+        if (apkFile == null || !apkFile.exists()) {
+            runOnUiThread(() -> Toast.makeText(this, "រកមិនឃើញឯកសារអាប់ដេតឡើយ", Toast.LENGTH_SHORT).show());
+            return;
+        }
+
+        pendingInstallFile = apkFile;
+
+        runOnUiThread(() -> {
+            try {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    if (!getPackageManager().canRequestPackageInstalls()) {
+                        Toast.makeText(this, "សូមបើកសិទ្ធិ «អនុញ្ញាតពីប្រភពនេះ» ដើម្បីបន្តការដំឡើង", Toast.LENGTH_LONG).show();
+                        Intent permIntent = new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES);
+                        permIntent.setData(Uri.parse("package:" + getPackageName()));
+                        startActivity(permIntent);
+                        return;
+                    }
+                }
+
+                Uri apkUri = FileProvider.getUriForFile(
+                        this,
+                        getPackageName() + ".provider",
+                        apkFile
+                );
+
+                Intent intent = new Intent(Intent.ACTION_VIEW);
+                intent.setDataAndType(apkUri, "application/vnd.android.package-archive");
+                intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                startActivity(intent);
+                pendingInstallFile = null;
+            } catch (Exception e) {
+                e.printStackTrace();
+                Toast.makeText(this, "មិនអាចបើកកម្មវិធីដំឡើងបានទេ: " + e.getMessage(), Toast.LENGTH_LONG).show();
+            }
+        });
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (pendingInstallFile != null && pendingInstallFile.exists()) {
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O || getPackageManager().canRequestPackageInstalls()) {
+                File toInstall = pendingInstallFile;
+                pendingInstallFile = null;
+                installApk(toInstall);
+            }
+        }
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        if (progressFuture != null) {
+            try {
+                progressFuture.cancel(true);
+            } catch (Exception ignored) {}
+        }
+        if (downloadCompleteReceiver != null) {
+            try {
+                unregisterReceiver(downloadCompleteReceiver);
+            } catch (Exception ignored) {}
+        }
+        if (textToSpeech != null) {
+            try {
+                textToSpeech.stop();
+                textToSpeech.shutdown();
+            } catch (Exception ignored) {}
+        }
+        if (mediaPlayer != null) {
+            try {
+                mediaPlayer.stop();
+                mediaPlayer.release();
+            } catch (Exception ignored) {}
         }
     }
 

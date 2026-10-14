@@ -245,9 +245,9 @@ ipcMain.on('start-desktop-silent-update', async (event, downloadUrl) => {
       mainWindow.webContents.send('desktop-update-complete');
     }
 
-    // Launch Inno Setup directly in silent mode (/VERYSILENT /SUPPRESSMSGBOXES)
+    // Launch Inno Setup directly in silent mode (/VERYSILENT /SUPPRESSMSGBOXES /FORCECLOSEAPPLICATIONS)
     // Inno Setup itself handles closing old app, updating files, and auto-relaunching!
-    spawn(tempPath, ['/VERYSILENT', '/SUPPRESSMSGBOXES'], {
+    spawn(tempPath, ['/VERYSILENT', '/SUPPRESSMSGBOXES', '/FORCECLOSEAPPLICATIONS'], {
       detached: true,
       stdio: 'ignore'
     }).unref();
