@@ -101,6 +101,8 @@ export interface PartyAddon {
   nameEn?: string;
   priceUsd: number;
   priceKhr?: number;
+  stockQty?: number;
+  minAlertStock?: number;
 }
 
 export interface Ingredient {

@@ -793,8 +793,23 @@ export const CartPanel: React.FC<CartPanelProps> = ({
                 const qty = cartItem ? cartItem.quantity : 0;
                 const isSelected = qty > 0;
                 const addonKhr = addon.priceKhr ?? Math.round(addon.priceUsd * exchangeRate);
+                const currentStock = addon.stockQty ?? 0;
+                const isOutOfStock = currentStock <= 0;
+                const minAlert = addon.minAlertStock ?? 10;
+                const isLowStock = currentStock > 0 && currentStock <= minAlert;
 
                 const handleCardClick = () => {
+                  if (isOutOfStock) {
+                    soundFx.playWarning();
+                    alert(`⚠️ មុខទំនិញ "${addon.nameKh}" អស់ស្តុកក្នុងហាងហើយ!`);
+                    return;
+                  }
+                  if (qty >= currentStock) {
+                    soundFx.playWarning();
+                    alert(`⚠️ ស្តុកក្នុងហាងនៅសល់តែ ${currentStock} ប៉ុណ្ណោះ មិនអាចថែមទៀតបានទេ!`);
+                    return;
+                  }
+
                   soundFx.playPop();
                   if (cartIndex > -1) {
                     // Increment existing item in cart
@@ -809,7 +824,7 @@ export const CartPanel: React.FC<CartPanelProps> = ({
                       priceUsd: addon.priceUsd,
                       priceKhr: addonKhr,
                       costPriceUsd: 0,
-                      stockQty: 999,
+                      stockQty: currentStock,
                       unit: 'pcs',
                       imageUrl: 'https://images.unsplash.com/photo-1530103862676-de8c9debad1d?w=400',
                       isCustom: false,
@@ -836,18 +851,32 @@ export const CartPanel: React.FC<CartPanelProps> = ({
                     key={addon.id}
                     onClick={handleCardClick}
                     className={`p-2 rounded-2xl border text-left text-xs transition-all flex flex-col justify-between gap-1.5 cursor-pointer relative select-none group ${
-                      isSelected
+                      isOutOfStock
+                        ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed opacity-75'
+                        : isSelected
                         ? 'bg-gradient-to-br from-pink-600 to-rose-500 text-white border-pink-700 shadow-md shadow-pink-500/20 ring-2 ring-pink-400/50 scale-[1.02]'
+                        : isLowStock
+                        ? 'bg-amber-50/60 hover:bg-amber-100/80 text-slate-700 border-amber-300 shadow-2xs hover:border-amber-400'
                         : 'bg-white hover:bg-amber-50/90 text-slate-700 border-amber-200/80 shadow-2xs hover:border-amber-400'
                     }`}
-                    title={isSelected ? 'ចុចលើម្តងទៀតដើម្បីបូកបន្ថែម (+1) ឬប្រើប៊ូតុង + / -' : 'ចុចដើម្បីទិញថែម (+1)'}
+                    title={
+                      isOutOfStock
+                        ? 'អស់ស្តុកក្នុងហាង'
+                        : isSelected
+                        ? 'ចុចលើម្តងទៀតដើម្បីបូកបន្ថែម (+1) ឬប្រើប៊ូតុង + / -'
+                        : 'ចុចដើម្បីទិញថែម (+1)'
+                    }
                   >
                     <div className="flex items-start justify-between gap-1">
                       <div className="font-bold text-[11px] leading-tight line-clamp-1">
                         {addon.nameKh}
                       </div>
                       <div className="flex items-center gap-1 shrink-0">
-                        {isSelected ? (
+                        {isOutOfStock ? (
+                          <span className="bg-rose-100 text-rose-700 text-[9px] font-black px-1.5 py-0.2 rounded-full border border-rose-200">
+                            អស់ស្តុក
+                          </span>
+                        ) : isSelected ? (
                           <span className="bg-white text-pink-700 text-[10px] font-black px-1.5 py-0.2 rounded-full shadow-2xs">
                             x{qty}
                           </span>
@@ -881,10 +910,17 @@ export const CartPanel: React.FC<CartPanelProps> = ({
 
                     <div className="flex items-end justify-between gap-1 pt-0.5">
                       <div className={`text-[10px] ${isSelected ? 'text-pink-100 font-medium' : 'text-slate-500'}`}>
-                        <span>+{addonKhr.toLocaleString()} ៛</span>
+                        <div className="flex items-center gap-1.5">
+                          <span>+{addonKhr.toLocaleString()} ៛</span>
+                          {!isSelected && (
+                            <span className={`text-[9px] font-bold ${isOutOfStock ? 'text-rose-600' : isLowStock ? 'text-amber-700 font-black' : 'text-slate-400'}`}>
+                              • ស្តុក: {currentStock}
+                            </span>
+                          )}
+                        </div>
                         {qty > 1 && (
                           <div className="font-black text-white text-[10px]">
-                            = {(addonKhr * qty).toLocaleString()} ៛
+                            = {(addonKhr * qty).toLocaleString()} ៛ (សល់: {Math.max(0, currentStock - qty)})
                           </div>
                         )}
                       </div>

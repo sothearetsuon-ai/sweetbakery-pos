@@ -125,6 +125,30 @@ class SoundEffects {
       osc2.stop(t1 + 0.5);
     } catch (e) {}
   }
+
+  // Soft warning buzzer for stock limit or invalid entry
+  playWarning() {
+    if (!this.enabled) return;
+    try {
+      this.initCtx();
+      if (!this.ctx) return;
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(220, this.ctx.currentTime);
+      osc.frequency.linearRampToValueAtTime(160, this.ctx.currentTime + 0.15);
+
+      gain.gain.setValueAtTime(0.12, this.ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.15);
+
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+
+      osc.start();
+      osc.stop(this.ctx.currentTime + 0.15);
+    } catch (e) {}
+  }
 }
 
 export const soundFx = new SoundEffects();

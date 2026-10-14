@@ -32,7 +32,7 @@ export const AddPartyAddonsToSaleModal: React.FC<AddPartyAddonsToSaleModalProps>
   sale,
   onSuccess,
 }) => {
-  const { partyAddons, exchangeRate, updateSale, customOrders, updateCustomOrder } = useBakery();
+  const { partyAddons, exchangeRate, updateSale, customOrders, updateCustomOrder, restockPartyAddon } = useBakery();
 
   // Quantities for each party addon: { [addonId]: quantity }
   const [selectedQuantities, setSelectedQuantities] = useState<Record<string, number>>({});
@@ -50,6 +50,21 @@ export const AddPartyAddonsToSaleModal: React.FC<AddPartyAddonsToSaleModalProps>
   if (!isOpen || !sale) return null;
 
   const handleIncrement = (addonId: string) => {
+    const addon = partyAddons.find((a) => a.id === addonId);
+    const maxStock = addon?.stockQty ?? 0;
+    const currentSelected = selectedQuantities[addonId] || 0;
+
+    if (maxStock <= 0) {
+      soundFx.playWarning();
+      alert(`⚠️ មុខទំនិញ "${addon?.nameKh || addonId}" អស់ស្តុកក្នុងហាងហើយ!`);
+      return;
+    }
+    if (currentSelected >= maxStock) {
+      soundFx.playWarning();
+      alert(`⚠️ ស្តុកក្នុងហាងនៅសល់ត្រឹម ${maxStock} ប៉ុណ្ណោះ!`);
+      return;
+    }
+
     soundFx.playPop();
     setSelectedQuantities((prev) => ({
       ...prev,
@@ -189,7 +204,14 @@ export const AddPartyAddonsToSaleModal: React.FC<AddPartyAddonsToSaleModalProps>
       notes: note.trim() ? `${updatedNotes} (${note.trim()})` : updatedNotes,
     };
 
-    // 3. Save to BakeryContext
+    // 3. Deduct stock for selected party addons
+    Object.entries(selectedQuantities).forEach(([id, qty]) => {
+      if (qty > 0) {
+        restockPartyAddon(id, -qty);
+      }
+    });
+
+    // 4. Save to BakeryContext
     updateSale(updatedSale);
 
     // 4. If linked to a custom order, sync total and notes to custom order as well
@@ -273,20 +295,43 @@ export const AddPartyAddonsToSaleModal: React.FC<AddPartyAddonsToSaleModalProps>
                 const qty = selectedQuantities[addon.id] || 0;
                 const priceKhr = addon.priceKhr ?? Math.round(addon.priceUsd * exchangeRate);
                 const isSelected = qty > 0;
+                const currentStock = addon.stockQty ?? 0;
+                const isOutOfStock = currentStock <= 0;
+                const minAlert = addon.minAlertStock ?? 10;
+                const isLowStock = currentStock > 0 && currentStock <= minAlert;
 
                 return (
                   <div
                     key={addon.id}
                     onClick={() => handleIncrement(addon.id)}
                     className={`p-3 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between ${
-                      isSelected
+                      isOutOfStock
+                        ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed opacity-70'
+                        : isSelected
                         ? 'border-pink-500 bg-pink-50/70 shadow-xs ring-1 ring-pink-500/30'
+                        : isLowStock
+                        ? 'border-amber-300 bg-amber-50/30 hover:border-amber-400'
                         : 'border-slate-200 hover:border-pink-300 hover:bg-slate-50/60 bg-white'
                     }`}
                   >
                     <div className="flex items-start justify-between gap-1 mb-2">
                       <div className="font-bold text-xs text-slate-800 leading-tight">
-                        {addon.nameKh}
+                        <div>{addon.nameKh}</div>
+                        <div className="mt-1">
+                          {isOutOfStock ? (
+                            <span className="text-[10px] font-black text-rose-600 bg-rose-50 px-1.5 py-0.5 rounded-full border border-rose-200">
+                              ⚠️ អស់ស្តុក
+                            </span>
+                          ) : isLowStock ? (
+                            <span className="text-[10px] font-bold text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded-full border border-amber-200">
+                              ⚡ ស្តុកសល់: {currentStock}
+                            </span>
+                          ) : (
+                            <span className="text-[10px] font-semibold text-slate-400">
+                              ស្តុក: {currentStock} {addon.stockQty ? `(នៅសល់ ${Math.max(0, currentStock - qty)})` : ''}
+                            </span>
+                          )}
+                        </div>
                       </div>
                       {isSelected && (
                         <span className="w-5 h-5 rounded-full bg-pink-600 text-white text-[10px] font-black flex items-center justify-center shrink-0 shadow-xs">

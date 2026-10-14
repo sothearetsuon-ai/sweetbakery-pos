@@ -214,12 +214,12 @@ export const defaultStoreInfo: StoreInfo = {
 };
 
 export const initialPartyAddons: PartyAddon[] = [
-  { id: 'hat', nameKh: '🎩 មួកខួបកំណើត (Pack 5)', priceUsd: 2.0, priceKhr: 8000 },
-  { id: 'num-candle', nameKh: '🕯️ ទៀនលេខ 0-9 ពណ៌មាស', priceUsd: 0.75, priceKhr: 3000 },
-  { id: 'sparkler', nameKh: '🎆 ទៀនកាំជ្រួចភ្លើង (Fountain)', priceUsd: 1.5, priceKhr: 6000 },
-  { id: 'spray', nameKh: '❄️ ស្ព្រាយបាញ់ព្រិល/ខ្សែពណ៌', priceUsd: 1.5, priceKhr: 6000 },
-  { id: 'topper', nameKh: '✨ ស្លាក Happy Birthday Acrylic', priceUsd: 1.2, priceKhr: 4800 },
-  { id: 'card', nameKh: '💌 កាតជូនពរប្រណិត', priceUsd: 1.0, priceKhr: 4000 },
+  { id: 'hat', nameKh: '🎩 មួកខួបកំណើត (Pack 5)', priceUsd: 2.0, priceKhr: 8000, stockQty: 50, minAlertStock: 10 },
+  { id: 'num-candle', nameKh: '🕯️ ទៀនលេខ 0-9 ពណ៌មាស', priceUsd: 0.75, priceKhr: 3000, stockQty: 100, minAlertStock: 20 },
+  { id: 'sparkler', nameKh: '🎆 ទៀនកាំជ្រួចភ្លើង (Fountain)', priceUsd: 1.5, priceKhr: 6000, stockQty: 60, minAlertStock: 15 },
+  { id: 'spray', nameKh: '❄️ ស្ព្រាយបាញ់ព្រិល/ខ្សែពណ៌', priceUsd: 1.5, priceKhr: 6000, stockQty: 40, minAlertStock: 10 },
+  { id: 'topper', nameKh: '✨ ស្លាក Happy Birthday Acrylic', priceUsd: 1.2, priceKhr: 4800, stockQty: 80, minAlertStock: 15 },
+  { id: 'card', nameKh: '💌 កាតជូនពរប្រណិត', priceUsd: 1.0, priceKhr: 4000, stockQty: 120, minAlertStock: 25 },
 ];
 
 export const seedDemoDataIfMissing = () => {
@@ -450,8 +450,9 @@ interface BakeryContextType {
   deleteFlavor: (flavorName: string) => void;
 
   partyAddons: PartyAddon[];
-  addPartyAddon: (nameKh: string, priceKhr: number, priceUsd?: number) => PartyAddon;
-  updatePartyAddon: (id: string, nameKh: string, priceKhr: number, priceUsd?: number) => void;
+  addPartyAddon: (nameKh: string, priceKhr: number, priceUsd?: number, stockQty?: number, minAlertStock?: number) => PartyAddon;
+  updatePartyAddon: (id: string, nameKh: string, priceKhr: number, priceUsd?: number, stockQty?: number, minAlertStock?: number) => void;
+  restockPartyAddon: (id: string, additionalStock: number) => void;
   deletePartyAddon: (id: string) => void;
 
   cart: CartItem[];
@@ -1148,13 +1149,22 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   // Dynamic Party Add-ons list
   const initialPartyAddons: PartyAddon[] = [
-    { id: 'hat', nameKh: '🎩 មួកខួបកំណើត (Pack 5)', priceUsd: 2.0, priceKhr: 8000 },
-    { id: 'num-candle', nameKh: '🕯️ ទៀនលេខ 0-9 ពណ៌មាស', priceUsd: 0.75, priceKhr: 3000 },
-    { id: 'sparkler', nameKh: '🎆 ទៀនកាំជ្រួចភ្លើង (Fountain)', priceUsd: 1.5, priceKhr: 6000 },
-    { id: 'spray', nameKh: '❄️ ស្ព្រាយបាញ់ព្រិល/ខ្សែពណ៌', priceUsd: 1.5, priceKhr: 6000 },
-    { id: 'topper', nameKh: '✨ ស្លាក Happy Birthday Acrylic', priceUsd: 1.2, priceKhr: 4800 },
-    { id: 'card', nameKh: '💌 កាតជូនពរប្រណិត', priceUsd: 1.0, priceKhr: 4000 },
+    { id: 'hat', nameKh: '🎩 មួកខួបកំណើត (Pack 5)', priceUsd: 2.0, priceKhr: 8000, stockQty: 50, minAlertStock: 10 },
+    { id: 'num-candle', nameKh: '🕯️ ទៀនលេខ 0-9 ពណ៌មាស', priceUsd: 0.75, priceKhr: 3000, stockQty: 100, minAlertStock: 20 },
+    { id: 'sparkler', nameKh: '🎆 ទៀនកាំជ្រួចភ្លើង (Fountain)', priceUsd: 1.5, priceKhr: 6000, stockQty: 60, minAlertStock: 15 },
+    { id: 'spray', nameKh: '❄️ ស្ព្រាយបាញ់ព្រិល/ខ្សែពណ៌', priceUsd: 1.5, priceKhr: 6000, stockQty: 40, minAlertStock: 10 },
+    { id: 'topper', nameKh: '✨ ស្លាក Happy Birthday Acrylic', priceUsd: 1.2, priceKhr: 4800, stockQty: 80, minAlertStock: 15 },
+    { id: 'card', nameKh: '💌 កាតជូនពរប្រណិត', priceUsd: 1.0, priceKhr: 4000, stockQty: 120, minAlertStock: 25 },
   ];
+
+  const ensurePartyAddonDefaults = (list: any[]): PartyAddon[] => {
+    if (!Array.isArray(list)) return initialPartyAddons;
+    return list.map((item) => ({
+      ...item,
+      stockQty: typeof item.stockQty === 'number' ? item.stockQty : 50,
+      minAlertStock: typeof item.minAlertStock === 'number' ? item.minAlertStock : 10,
+    }));
+  };
 
   const [partyAddons, setPartyAddons] = useState<PartyAddon[]>(() => {
     if (globalIsDemoMode) {
@@ -1162,7 +1172,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       const saved = localStorage.getItem('demo_bakery_party_addons');
       if (saved) {
         try {
-          return JSON.parse(saved);
+          return ensurePartyAddonDefaults(JSON.parse(saved));
         } catch (e) {}
       }
       return initialPartyAddons;
@@ -1170,7 +1180,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     const saved = localStorage.getItem('bakery_party_addons');
     if (saved) {
       try {
-        return JSON.parse(saved);
+        return ensurePartyAddonDefaults(JSON.parse(saved));
       } catch (e) {}
     }
     return initialPartyAddons;
@@ -3385,7 +3395,13 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   };
 
   // Party Addon actions
-  const addPartyAddon = (nameKh: string, priceKhr: number, priceUsd?: number) => {
+  const addPartyAddon = (
+    nameKh: string,
+    priceKhr: number,
+    priceUsd?: number,
+    stockQty: number = 50,
+    minAlertStock: number = 10
+  ) => {
     const validKhr = Math.max(0, Number(priceKhr) || 0);
     const validUsd = priceUsd !== undefined ? Number(priceUsd) : Number((validKhr / exchangeRate).toFixed(2));
     const newAddon: PartyAddon = {
@@ -3393,6 +3409,8 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       nameKh: nameKh.trim(),
       priceKhr: validKhr,
       priceUsd: validUsd,
+      stockQty: Math.max(0, Number(stockQty) || 0),
+      minAlertStock: Math.max(0, Number(minAlertStock) || 0),
     };
     setPartyAddons((prev) => {
       const updated = [...prev, newAddon];
@@ -3404,7 +3422,14 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     return newAddon;
   };
 
-  const updatePartyAddon = (id: string, nameKh: string, priceKhr: number, priceUsd?: number) => {
+  const updatePartyAddon = (
+    id: string,
+    nameKh: string,
+    priceKhr: number,
+    priceUsd?: number,
+    stockQty?: number,
+    minAlertStock?: number
+  ) => {
     const validKhr = Math.max(0, Number(priceKhr) || 0);
     const validUsd = priceUsd !== undefined ? Number(priceUsd) : Number((validKhr / exchangeRate).toFixed(2));
     setPartyAddons((prev) => {
@@ -3415,7 +3440,25 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
               nameKh: nameKh.trim() || a.nameKh,
               priceKhr: validKhr,
               priceUsd: validUsd,
+              stockQty: stockQty !== undefined ? Math.max(0, Number(stockQty) || 0) : (a.stockQty ?? 50),
+              minAlertStock: minAlertStock !== undefined ? Math.max(0, Number(minAlertStock) || 0) : (a.minAlertStock ?? 10),
             }
+          : a
+      );
+      safeSetStorage('bakery_party_addons', JSON.stringify(updated));
+      saveToLanSync({ partyAddons: updated });
+      syncSaveDoc('settings', 'partyAddons', { items: updated });
+      return updated;
+    });
+  };
+
+  const restockPartyAddon = (id: string, additionalStock: number) => {
+    const addQty = Number(additionalStock) || 0;
+    if (addQty === 0) return;
+    setPartyAddons((prev) => {
+      const updated = prev.map((a) =>
+        a.id === id
+          ? { ...a, stockQty: Math.max(0, (a.stockQty ?? 0) + addQty) }
           : a
       );
       safeSetStorage('bakery_party_addons', JSON.stringify(updated));
@@ -3788,6 +3831,30 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       return p;
     });
 
+    // Deduct stock for party accessories/addons sold
+    const soldPartyAddonsMap: Record<string, number> = {};
+    (saleData.items || []).forEach((item) => {
+      if (!item.productId) return;
+      const rawAddonId = item.productId.startsWith('addon-') ? item.productId.slice(6) : item.productId;
+      const matched = partyAddons.find((a) => a.id === rawAddonId || `addon-${a.id}` === item.productId);
+      if (matched) {
+        soldPartyAddonsMap[matched.id] = (soldPartyAddonsMap[matched.id] || 0) + item.quantity;
+      }
+    });
+
+    let updatedPartyAddons = partyAddons;
+    if (Object.keys(soldPartyAddonsMap).length > 0) {
+      updatedPartyAddons = partyAddons.map((a) => {
+        if (soldPartyAddonsMap[a.id]) {
+          return { ...a, stockQty: Math.max(0, (a.stockQty ?? 0) - soldPartyAddonsMap[a.id]) };
+        }
+        return a;
+      });
+      setPartyAddons(updatedPartyAddons);
+      safeSetStorage('bakery_party_addons', JSON.stringify(updatedPartyAddons));
+      syncSaveDoc('settings', 'partyAddons', { items: updatedPartyAddons });
+    }
+
     // 1. Immediately atomic save to server
     fetch('/api/save-sale', {
       method: 'POST',
@@ -3801,6 +3868,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       safeSetStorage('bakery_sales', JSON.stringify(updated));
       saveToLanSync({
         products: updatedProducts,
+        partyAddons: updatedPartyAddons,
         sales: updated,
         customOrders,
         expenses,
@@ -3939,6 +4007,32 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ products: updatedProducts }),
       }).catch(() => {});
+
+      // Restore party addons stock
+      const restorePartyAddonsMap: Record<string, number> = {};
+      saleToDelete.items.forEach((item) => {
+        if (!item.productId || item.quantity <= 0) return;
+        const rawAddonId = item.productId.startsWith('addon-') ? item.productId.slice(6) : item.productId;
+        const matched = partyAddons.find((a) => a.id === rawAddonId || `addon-${a.id}` === item.productId);
+        if (matched) {
+          restorePartyAddonsMap[matched.id] = (restorePartyAddonsMap[matched.id] || 0) + item.quantity;
+        }
+      });
+
+      if (Object.keys(restorePartyAddonsMap).length > 0) {
+        setPartyAddons((prev) => {
+          const updated = prev.map((a) => {
+            if (restorePartyAddonsMap[a.id]) {
+              return { ...a, stockQty: (a.stockQty ?? 0) + restorePartyAddonsMap[a.id] };
+            }
+            return a;
+          });
+          safeSetStorage('bakery_party_addons', JSON.stringify(updated));
+          saveToLanSync({ partyAddons: updated });
+          syncSaveDoc('settings', 'partyAddons', { items: updated });
+          return updated;
+        });
+      }
     }
 
     // 2. Optimistically update local React state & LocalStorage + IndexedDB
@@ -4023,6 +4117,36 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ products: updatedProducts }),
         }).catch(() => {});
+      }
+
+      // Restore party addons stock
+      const partyStockRestoreMap: Record<string, number> = {};
+      toDelete.forEach((sale) => {
+        if (sale.items && Array.isArray(sale.items)) {
+          sale.items.forEach((item) => {
+            if (!item.productId || item.quantity <= 0) return;
+            const rawAddonId = item.productId.startsWith('addon-') ? item.productId.slice(6) : item.productId;
+            const matched = partyAddons.find((a) => a.id === rawAddonId || `addon-${a.id}` === item.productId);
+            if (matched) {
+              partyStockRestoreMap[matched.id] = (partyStockRestoreMap[matched.id] || 0) + item.quantity;
+            }
+          });
+        }
+      });
+
+      if (Object.keys(partyStockRestoreMap).length > 0) {
+        setPartyAddons((prev) => {
+          const updated = prev.map((a) => {
+            if (partyStockRestoreMap[a.id]) {
+              return { ...a, stockQty: (a.stockQty ?? 0) + partyStockRestoreMap[a.id] };
+            }
+            return a;
+          });
+          safeSetStorage('bakery_party_addons', JSON.stringify(updated));
+          saveToLanSync({ partyAddons: updated });
+          syncSaveDoc('settings', 'partyAddons', { items: updated });
+          return updated;
+        });
       }
     }
 
@@ -5051,6 +5175,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         partyAddons,
         addPartyAddon,
         updatePartyAddon,
+        restockPartyAddon,
         deletePartyAddon,
         cart,
         addToCart,
