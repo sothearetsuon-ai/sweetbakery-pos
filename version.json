@@ -1,14 +1,14 @@
 {
-  "version": "1.2.7",
-  "releaseDate": "2026-10-14",
+  "version": "1.2.8",
+  "releaseDate": "2026-10-15",
   "releaseNotes": [
-    "បំបែកប៊ូតុងបើក/បិទមេអំបៅ និងត្រីមាសដាច់ដោយឡែកពីគ្នា (Independent Controls)",
-    "រចនាត្រីមាសជាទិដ្ឋភាពចំហៀងពិតៗ ជាមួយកន្ទុយសំពត់សូត្រ និងព្រុយរលាស់ស្អាត (Realistic Side-Profile Goldfish)",
-    "បន្ថែមពពុះខ្យល់ហើរចេញពីមាត់ត្រី និងចលនាត្រឡប់ទិសដៅហែលទឹកតាមធម្មជាតិ",
-    "កែលម្អប្រព័ន្ធទាញយក និងដំឡើងអាប់ដេតស្វ័យប្រវត្តិកាន់តែលឿន និងរលូន"
+    "ជួសជុល Font និងអក្សរខ្មែរដែលធ្លាប់ចេញខូច (Mojibake) ឱ្យត្រឡប់មកជាអក្សរខ្មែរស្អាតត្រឹមត្រូវ ១០០% ដោយស្វ័យប្រវត្តិតាមរយៈ Khmer UTF-8 Auto-Healer",
+    "បង្កើនល្បឿន Refresh និងដំណើរការកម្មវិធីលឿនរលូន ដោយលុបបំបាត់ Network Request Loop និងកែលម្អ Service Worker",
+    "កែលម្អតារាងប្រវត្តិការលក់ (Sales History) ឱ្យមានអក្សរធំច្បាស់ងាយមើល លែងកៀបតូចទំហំ 50px អាចរំកិលចុះឡើងស្រួល មាន Sticky Header និងជម្រើសប្ដូររវាង «តារាង» និង «ប័ណ្ណ (Cards)»",
+    "ធានាការតម្រង់ទិន្នន័យផលិតផល និងខ្នាតស្វ័យប្រវត្តិក្នង LocalStorage, IndexedDB និង Cloud Sync"
   ],
-  "apkDownloadUrl": "https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.2.7/SweetBakery-Android.apk",
-  "windowsInstallerUrl": "https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.2.7/SweetBakery-POS-Setup.exe",
-  "windowsDownloadUrl": "https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.2.7/SweetBakery-POS-Setup.exe",
+  "apkDownloadUrl": "https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.2.8/SweetBakery-Android.apk",
+  "windowsInstallerUrl": "https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.2.8/SweetBakery-POS-Setup.exe",
+  "windowsDownloadUrl": "https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.2.8/SweetBakery-POS-Setup.exe",
   "mandatory": false
 }

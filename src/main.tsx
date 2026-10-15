@@ -5,9 +5,9 @@ import { BakeryProvider } from './context/BakeryContext';
 import { MusicProvider } from './context/MusicContext';
 import './index.css';
 
-// Service Worker registration: only for Web (HTTP/HTTPS), never for Electron (file:) or native WebView
+// Service Worker registration: only for Web Production builds, NEVER in Vite dev mode or Electron
 if ('serviceWorker' in navigator) {
-  if (window.location.protocol === 'http:' || window.location.protocol === 'https:') {
+  if (import.meta.env.PROD && (window.location.protocol === 'http:' || window.location.protocol === 'https:')) {
     window.addEventListener('load', () => {
       const serviceWorkerUrl = new URL('sw.js', document.baseURI).toString();
       navigator.serviceWorker.register(serviceWorkerUrl).then((registration) => {
@@ -29,7 +29,7 @@ if ('serviceWorker' in navigator) {
       });
     });
   } else {
-    // When running inside Electron / local file protocol, proactively unregister any stale SW
+    // In dev mode (localhost:3000) or Electron, proactively unregister any stale SW to prevent hanging
     navigator.serviceWorker.getRegistrations().then((registrations) => {
       for (const reg of registrations) {
         reg.unregister();

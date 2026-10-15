@@ -6,6 +6,7 @@ import { t } from '../../utils/translations';
 import { soundFx } from '../../utils/audio';
 import { getProductImageUrl } from '../../utils/imagePath';
 import { roundKhr } from '../../utils/currencyUtils';
+import { fixKhmerMojibake } from '../../utils/khmerEncoding';
 
 interface ProductCardProps {
   product: Product;
@@ -33,7 +34,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart }
     setTimeout(() => setJustAdded(false), 600);
   };
 
-  const name = lang === 'km' ? product.nameKh : product.nameEn;
+  const rawName = lang === 'km' ? product.nameKh : product.nameEn;
+  const name = fixKhmerMojibake(rawName) || rawName;
   const priceKhr = roundKhr(product.priceKhr ?? (product.priceUsd * exchangeRate));
   const priceUsd = product.priceKhr ? Number((priceKhr / exchangeRate).toFixed(2)) : product.priceUsd;
 
@@ -117,7 +119,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart }
               title="ចុចដើម្បីបន្ថែមស្តុក"
               className="absolute bottom-1.5 left-2 bg-rose-600 hover:bg-rose-700 text-white text-[10px] font-black px-2 py-0.5 rounded-md shadow-sm flex items-center gap-1 active:scale-95 cursor-pointer z-10"
             >
-              <span>សល់ {product.stockQty} {product.unit}</span>
+              <span>សល់ {product.stockQty} {fixKhmerMojibake(product.unit) || product.unit}</span>
               <span className="underline opacity-90">+ថែមស្តុក</span>
             </button>
           )}
@@ -150,7 +152,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart }
           </h3>
           {product.description && (
             <p className="text-[11px] text-slate-500 font-medium line-clamp-1">
-              {product.description}
+              {fixKhmerMojibake(product.description)}
             </p>
           )}
           {product.barcode && (

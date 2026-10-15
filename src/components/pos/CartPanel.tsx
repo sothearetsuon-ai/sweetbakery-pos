@@ -36,6 +36,7 @@ import { Product, PartyAddon } from '../../types';
 import { getProductImageUrl } from '../../utils/imagePath';
 import { PartyAccessoriesModal } from './PartyAccessoriesModal';
 import { formatDateDMY } from '../../utils/dateUtils';
+import { fixKhmerMojibake } from '../../utils/khmerEncoding';
 
 interface CartPanelProps {
   onCheckout: (options?: {
@@ -428,7 +429,8 @@ export const CartPanel: React.FC<CartPanelProps> = ({
             </div>
           ) : (
             cart.map((item, index) => {
-              const name = lang === 'km' ? item.product.nameKh : item.product.nameEn;
+              const rawName = lang === 'km' ? item.product.nameKh : item.product.nameEn;
+              const name = fixKhmerMojibake(rawName) || rawName;
               const itemPriceKhr = item.product.priceKhr ?? Math.round(item.product.priceUsd * exchangeRate);
               const itemPriceUsd = item.product.priceKhr ? Number((item.product.priceKhr / exchangeRate).toFixed(2)) : item.product.priceUsd;
               const itemTotalKhr = itemPriceKhr * item.quantity;

@@ -1,13 +1,14 @@
 {
-  "version": "1.2.0",
-  "releaseDate": "2026-10-13",
+  "version": "1.2.8",
+  "releaseDate": "2026-10-15",
   "releaseNotes": [
-    "ប្រព័ន្ធសំឡេងប្រកាស KHQR Soundbox ភាសាខ្មែរភ្ជាប់មកស្រាប់ (Offline Natural Voice)",
-    "ប៊ូតុងទាញយកឯកសារ APK និង Setup ផ្ទាល់ក្នុង App (Direct In-App Downloads)",
-    "ប្រព័ន្ធ In-App Auto Update (អាប់ដែតក្នុង App ផ្ទាល់)",
-    "ពង្រីកទំហំអេក្រង់ និងប៊ូតុងឱ្យធំទូលាយលើទូរសព្ទដៃ"
+    "ជួសជុល Font និងអក្សរខ្មែរដែលធ្លាប់ចេញខូច (Mojibake) ឱ្យត្រឡប់មកជាអក្សរខ្មែរស្អាតត្រឹមត្រូវ ១០០% ដោយស្វ័យប្រវត្តិតាមរយៈ Khmer UTF-8 Auto-Healer",
+    "បង្កើនល្បឿន Refresh និងដំណើរការកម្មវិធីលឿនរលូន ដោយលុបបំបាត់ Network Request Loop និងកែលម្អ Service Worker",
+    "កែលម្អតារាងប្រវត្តិការលក់ (Sales History) ឱ្យមានអក្សរធំច្បាស់ងាយមើល លែងកៀបតូចទំហំ 50px អាចរំកិលចុះឡើងស្រួល មាន Sticky Header និងជម្រើសប្ដូររវាង «តារាង» និង «ប័ណ្ណ (Cards)»",
+    "ធានាការតម្រង់ទិន្នន័យផលិតផល និងខ្នាតស្វ័យប្រវត្តិក្នង LocalStorage, IndexedDB និង Cloud Sync"
   ],
-  "apkDownloadUrl": "https://raw.githubusercontent.com/sothearetsuon-ai/sweetbakery-pos/main/SweetBakery-Android.apk",
-  "windowsDownloadUrl": "https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/latest/download/SweetBakery-POS-Windows.zip",
+  "apkDownloadUrl": "https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.2.8/SweetBakery-Android.apk",
+  "windowsInstallerUrl": "https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.2.8/SweetBakery-POS-Setup.exe",
+  "windowsDownloadUrl": "https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.2.8/SweetBakery-POS-Setup.exe",
   "mandatory": false
 }

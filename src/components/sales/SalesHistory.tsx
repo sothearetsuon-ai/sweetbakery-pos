@@ -75,6 +75,16 @@ export const SalesHistory: React.FC = () => {
   const [cleanupOlderDays, setCleanupOlderDays] = useState<number>(30);
   const [cleanupRestoreStock, setCleanupRestoreStock] = useState<boolean>(true);
 
+  // Table view density/text size toggle ('comfortable' = large & clear font, 'compact' = standard)
+  const [tableDensity, setTableDensity] = useState<'comfortable' | 'compact'>(() => {
+    return (localStorage.getItem('sweetbakery_sales_density') as 'comfortable' | 'compact') || 'comfortable';
+  });
+
+  // View mode toggle ('table' = full uncompressed table, 'cards' = list of cards)
+  const [viewMode, setViewMode] = useState<'table' | 'cards'>(() => {
+    return (localStorage.getItem('sweetbakery_sales_view_mode') as 'table' | 'cards') || 'table';
+  });
+
   // Helper to extract local YYYY-MM-DD
   const getLocalDateStr = (d?: string | Date) => {
     if (!d) return '';
@@ -256,9 +266,9 @@ export const SalesHistory: React.FC = () => {
   };
 
   return (
-    <div className="flex-1 min-h-0 min-w-0 flex flex-col p-3 sm:p-6 overflow-y-auto space-y-3.5 sm:space-y-6 pb-28 md:pb-8 overscroll-contain">
+    <div className="flex-1 min-h-0 min-w-0 flex flex-col p-3 sm:p-6 overflow-y-auto space-y-4 sm:space-y-6 pb-36 overscroll-contain">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+      <div className="shrink-0 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
         <div>
           <h2 className="text-lg sm:text-xl font-black text-slate-800 tracking-tight flex items-center gap-2">
             <span>🧾</span>
@@ -309,7 +319,7 @@ export const SalesHistory: React.FC = () => {
       </div>
 
       {/* Summary Cards - KHR ៛ FIRST (Responsive 2 cols on mobile, 3 cols on tablet/desktop) */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 sm:gap-4">
+      <div className="shrink-0 grid grid-cols-2 sm:grid-cols-3 gap-2.5 sm:gap-4">
         <div className="bg-white p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl border border-rose-100 shadow-xs space-y-1 sm:space-y-2">
           <div className="flex items-center justify-between">
             <span className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-slate-400">
@@ -367,7 +377,7 @@ export const SalesHistory: React.FC = () => {
       </div>
 
       {/* Filters & Search */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div className="shrink-0 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-center gap-1.5 bg-white/90 p-1.5 rounded-2xl border border-rose-100 shadow-2xs flex-wrap">
           {[
             { id: 'month', label: '🗓️ ខែនេះ' },
@@ -383,7 +393,7 @@ export const SalesHistory: React.FC = () => {
                 soundFx.playPop();
                 setDateFilter(tab.id as any);
               }}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              className={`px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
                 dateFilter === tab.id
                   ? 'bg-gradient-to-r from-pink-600 to-rose-500 text-white shadow-xs'
                   : 'text-slate-600 hover:text-slate-900'
@@ -397,9 +407,9 @@ export const SalesHistory: React.FC = () => {
           <div className={`flex items-center gap-2 pl-2 border-l border-slate-200 flex-wrap py-0.5 ${
             dateFilter === 'custom' ? 'bg-pink-50/60 rounded-xl px-2 py-1' : ''
           }`}>
-            <Calendar className="w-3.5 h-3.5 text-pink-500 shrink-0" />
-            <div className="flex items-center gap-1">
-              <span className="text-[11px] font-bold text-slate-600">ចាប់ពីថ្ងៃទី៖</span>
+            <Calendar className="w-4 h-4 text-pink-500 shrink-0" />
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs font-bold text-slate-600">ចាប់ពីថ្ងៃទី៖</span>
               <input
                 type="date"
                 value={customStartDate}
@@ -411,15 +421,15 @@ export const SalesHistory: React.FC = () => {
                     setDateFilter('custom');
                   }
                 }}
-                className="px-2 py-1 rounded-xl text-xs font-bold border border-slate-200 bg-white text-slate-800 hover:border-pink-300 focus:outline-none focus:ring-2 focus:ring-pink-500/20 cursor-pointer"
+                className="px-2.5 py-1.5 rounded-xl text-xs sm:text-sm font-bold border border-slate-200 bg-white text-slate-800 hover:border-pink-300 focus:outline-none focus:ring-2 focus:ring-pink-500/20 cursor-pointer"
                 title="ចាប់ពីថ្ងៃទី"
               />
             </div>
 
             <span className="text-slate-300 text-xs hidden sm:inline">➔</span>
 
-            <div className="flex items-center gap-1">
-              <span className="text-[11px] font-bold text-slate-600">ដល់ថ្ងៃទី៖</span>
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs font-bold text-slate-600">ដល់ថ្ងៃទី៖</span>
               <input
                 type="date"
                 value={customEndDate}
@@ -431,7 +441,7 @@ export const SalesHistory: React.FC = () => {
                     setDateFilter('custom');
                   }
                 }}
-                className="px-2 py-1 rounded-xl text-xs font-bold border border-slate-200 bg-white text-slate-800 hover:border-pink-300 focus:outline-none focus:ring-2 focus:ring-pink-500/20 cursor-pointer"
+                className="px-2.5 py-1.5 rounded-xl text-xs sm:text-sm font-bold border border-slate-200 bg-white text-slate-800 hover:border-pink-300 focus:outline-none focus:ring-2 focus:ring-pink-500/20 cursor-pointer"
                 title="ដល់ថ្ងៃទី"
               />
             </div>
@@ -443,7 +453,7 @@ export const SalesHistory: React.FC = () => {
                   soundFx.playPop();
                   setDateFilter('all');
                 }}
-                className="text-xs text-rose-500 hover:text-rose-700 font-bold px-1.5 py-0.5 hover:bg-rose-100 rounded-md cursor-pointer transition-colors"
+                className="text-xs text-rose-500 hover:text-rose-700 font-bold px-2 py-1 hover:bg-rose-100 rounded-lg cursor-pointer transition-colors"
                 title="បង្ហាញទាំងអស់"
               >
                 ✕ ទាំងអស់
@@ -452,33 +462,108 @@ export const SalesHistory: React.FC = () => {
           </div>
         </div>
 
-        <div className="relative w-full sm:w-72">
+        <div className="relative w-full sm:w-80">
           <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
           <input
             type="text"
             placeholder="ស្វែងរកតាមលេខវិក្កយបត្រ, អតិថិជន..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-3 py-2 bg-white border border-slate-200 rounded-2xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-pink-500/20 shadow-2xs"
+            className="w-full pl-10 pr-3.5 py-2.5 bg-white border border-slate-200 rounded-2xl text-xs sm:text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-pink-500/20 shadow-2xs"
           />
         </div>
       </div>
 
-      {/* Section Header: Sales Records Count */}
-      <div className="flex items-center justify-between pt-1">
-        <div className="flex items-center gap-2">
-          <span className="text-xs sm:text-sm font-black text-slate-800">
-            បញ្ជីវិក្កយបត្រលក់ ({filteredSales.length})
+      {/* Section Header: Sales Records Count & Controls */}
+      <div className="shrink-0 flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
+        <div className="flex items-center gap-2.5">
+          <span className="text-sm sm:text-base font-black text-slate-800 tracking-tight">
+            📋 បញ្ជីវិក្កយបត្រលក់ ({filteredSales.length})
           </span>
-          <span className="text-[10px] font-bold text-pink-600 bg-pink-50 px-2 py-0.5 rounded-full border border-pink-100">
+          <span className="text-xs font-bold text-pink-600 bg-pink-50 px-2.5 py-1 rounded-full border border-pink-100 shadow-2xs">
             {periodLabelKh}
           </span>
+        </div>
+
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* View Mode Toggle: Table vs Cards */}
+          <div className="flex items-center gap-1 bg-slate-100/90 p-1 rounded-2xl border border-slate-200 shadow-2xs">
+            <button
+              type="button"
+              onClick={() => {
+                soundFx.playPop();
+                setViewMode('table');
+                localStorage.setItem('sweetbakery_sales_view_mode', 'table');
+              }}
+              className={`px-3 py-1.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                viewMode === 'table'
+                  ? 'bg-gradient-to-r from-pink-600 to-rose-500 text-white shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+              title="ទម្រង់តារាងពេញ (Full Table View)"
+            >
+              <span>📋 តារាង (Table)</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                soundFx.playPop();
+                setViewMode('cards');
+                localStorage.setItem('sweetbakery_sales_view_mode', 'cards');
+              }}
+              className={`px-3 py-1.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                viewMode === 'cards'
+                  ? 'bg-gradient-to-r from-pink-600 to-rose-500 text-white shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+              title="ទម្រង់ប័ណ្ណរាយនីមួយៗ ងាយស្រួលមើល មិនចង្អៀត (Cards View)"
+            >
+              <span>🗂️ ប័ណ្ណ (Cards)</span>
+            </button>
+          </div>
+
+          {/* View Size Toggle */}
+          <div className="flex items-center gap-1 bg-slate-100/90 p-1 rounded-2xl border border-slate-200 shadow-2xs">
+            <span className="text-xs font-bold text-slate-500 pl-1.5 hidden xl:inline">ទំហំ៖</span>
+            <button
+              type="button"
+              onClick={() => {
+                soundFx.playPop();
+                setTableDensity('comfortable');
+                localStorage.setItem('sweetbakery_sales_density', 'comfortable');
+              }}
+              className={`px-3 py-1.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                tableDensity === 'comfortable'
+                  ? 'bg-gradient-to-r from-pink-600 to-rose-500 text-white shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+              title="ទំហំអក្សរធំច្បាស់ ងាយស្រួលមើល"
+            >
+              <span>🔍 ធំច្បាស់</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                soundFx.playPop();
+                setTableDensity('compact');
+                localStorage.setItem('sweetbakery_sales_density', 'compact');
+              }}
+              className={`px-3 py-1.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                tableDensity === 'compact'
+                  ? 'bg-gradient-to-r from-pink-600 to-rose-500 text-white shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+              title="ទំហំធម្មតា"
+            >
+              <span>ធម្មតា</span>
+            </button>
+          </div>
         </div>
       </div>
 
       {/* Empty State */}
       {filteredSales.length === 0 ? (
-        <div className="bg-white rounded-3xl border border-rose-100/90 shadow-sm p-8 sm:p-12 text-center text-slate-400">
+        <div className="bg-white rounded-3xl border border-rose-100/90 shadow-sm p-8 sm:p-12 text-center text-slate-400 shrink-0">
           <FileText className="w-10 h-10 text-rose-300 mx-auto mb-2.5" />
           <p className="font-black text-slate-700 text-sm">គ្មានទិន្នន័យការលក់ក្នុងចន្លោះពេលនេះទេ</p>
           <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
@@ -497,47 +582,47 @@ export const SalesHistory: React.FC = () => {
         </div>
       ) : (
         <>
-          {/* Mobile Cards View (Visible on Small Screens / Phones < 768px) */}
-          <div className="space-y-3 block md:hidden">
+          {/* Cards View (Visible on Small Screens / Phones < 768px OR when viewMode === 'cards') */}
+          <div className={`${viewMode === 'cards' ? 'block' : 'block md:hidden'} space-y-3.5 shrink-0`}>
             {filteredSales.map((sale) => {
               const formattedDate = formatDateTimeDMY(sale.createdAt);
 
               return (
                 <div
                   key={sale.id}
-                  className="bg-white rounded-2xl p-3.5 border border-rose-100/90 shadow-xs space-y-2.5 hover:border-pink-300 transition-all"
+                  className="bg-white rounded-2xl p-4 sm:p-5 border border-rose-100 shadow-xs space-y-3 hover:border-pink-300 transition-all"
                 >
                   {/* Card Header: Order Number, Date, Payment Badge */}
-                  <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+                  <div className="flex items-center justify-between pb-2.5 border-b border-slate-100">
                     <div>
-                      <div className="font-mono font-black text-xs text-pink-600">
+                      <div className="font-mono font-black text-sm sm:text-base text-pink-600">
                         {sale.orderNumber}
                       </div>
-                      <div className="text-[10px] text-slate-400 mt-0.5">
+                      <div className="text-xs text-slate-500 mt-0.5 font-medium">
                         {formattedDate}
                       </div>
                     </div>
                     <div className="text-right">
-                      <span className="inline-block text-[10px] font-bold px-2 py-0.5 rounded-lg bg-pink-50 text-pink-700 border border-pink-200">
+                      <span className="inline-block text-xs font-bold px-2.5 py-1 rounded-lg bg-pink-50 text-pink-700 border border-pink-200">
                         {sale.paymentMethod || 'CASH'}
                       </span>
-                      <div className="text-[10px] text-slate-400 mt-0.5 truncate max-w-[100px]">
+                      <div className="text-xs text-slate-500 mt-1 truncate max-w-[140px] font-medium">
                         👤 {sale.cashierName}
                       </div>
                     </div>
                   </div>
 
                   {/* Card Body: Customer & Items */}
-                  <div className="space-y-1.5 text-xs">
+                  <div className="space-y-2 text-sm">
                     <div className="flex items-center justify-between text-slate-700">
-                      <span className="text-slate-400 text-[11px]">អតិថិជន៖</span>
-                      <span className="font-bold text-slate-800">
+                      <span className="text-slate-500 text-xs font-bold">អតិថិជន៖</span>
+                      <span className="font-bold text-slate-900 text-sm sm:text-base">
                         {sale.customerName || 'អតិថិជនទូទៅ'}
                       </span>
                     </div>
 
-                    <div className="bg-slate-50/80 rounded-xl p-2 text-[11px] text-slate-600 border border-slate-100">
-                      <span className="font-semibold text-slate-500">មុខទំនិញ៖ </span>
+                    <div className="bg-slate-50/90 rounded-xl p-3 text-xs sm:text-sm text-slate-700 border border-slate-100 leading-relaxed">
+                      <span className="font-bold text-slate-600">មុខទំនិញ៖ </span>
                       <span>
                         {sale.items.map((i) => `${i.nameKh} (x${i.quantity})`).join(', ')}
                       </span>
@@ -545,12 +630,12 @@ export const SalesHistory: React.FC = () => {
                   </div>
 
                   {/* Card Footer: Total Price (KHR First) & Actions */}
-                  <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
+                  <div className="pt-2.5 border-t border-slate-100 flex items-center justify-between gap-2 flex-wrap">
                     <div>
-                      <div className="text-base font-black text-pink-600 leading-tight">
+                      <div className="text-lg sm:text-xl font-black text-pink-600 leading-tight">
                         {sale.totalKhr.toLocaleString()} ៛
                       </div>
-                      <div className="text-[11px] text-slate-500 font-bold">
+                      <div className="text-xs sm:text-sm text-slate-500 font-bold mt-0.5">
                         ${sale.totalUsd.toFixed(2)} USD
                       </div>
                     </div>
@@ -563,7 +648,7 @@ export const SalesHistory: React.FC = () => {
                           soundFx.playPop();
                           setPartyAddonSale(sale);
                         }}
-                        className="px-2 py-1.5 bg-gradient-to-r from-amber-500/10 via-rose-500/10 to-pink-500/10 hover:from-amber-500/20 hover:to-pink-500/20 text-pink-700 border border-pink-200/80 rounded-xl transition-all shadow-2xs inline-flex items-center gap-1 text-[11px] font-bold cursor-pointer"
+                        className="px-2.5 py-1.5 bg-gradient-to-r from-amber-500/10 via-rose-500/10 to-pink-500/10 hover:from-amber-500/20 hover:to-pink-500/20 text-pink-700 border border-pink-200/80 rounded-xl transition-all shadow-2xs inline-flex items-center gap-1 text-xs font-bold cursor-pointer"
                         title="ថែម Party Add-ons លើការលក់នេះ"
                       >
                         <Sparkles className="w-3.5 h-3.5 text-amber-500" />
@@ -576,7 +661,7 @@ export const SalesHistory: React.FC = () => {
                           soundFx.playPop();
                           setViewingReceiptSale(sale);
                         }}
-                        className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl transition-all shadow-2xs inline-flex items-center gap-1 text-[11px] font-bold cursor-pointer"
+                        className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl transition-all shadow-2xs inline-flex items-center gap-1 text-xs font-bold cursor-pointer"
                         title="មើលវិក្កយបត្រ"
                       >
                         <Printer className="w-3.5 h-3.5 text-slate-600" />
@@ -589,7 +674,7 @@ export const SalesHistory: React.FC = () => {
                           soundFx.playPop();
                           setEditingSale(sale);
                         }}
-                        className="p-1.5 bg-pink-50 hover:bg-pink-100 text-pink-700 rounded-xl transition-all shadow-2xs inline-flex items-center gap-1 text-[11px] font-bold cursor-pointer"
+                        className="p-2 bg-pink-50 hover:bg-pink-100 text-pink-700 rounded-xl transition-all shadow-2xs inline-flex items-center gap-1 text-xs font-bold cursor-pointer"
                         title="កែប្រែ"
                       >
                         <Edit3 className="w-3.5 h-3.5 text-pink-600" />
@@ -602,7 +687,7 @@ export const SalesHistory: React.FC = () => {
                           setRestoreStockOnDelete(true);
                           setSaleToDelete(sale);
                         }}
-                        className="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-500 hover:text-rose-700 rounded-xl transition-colors cursor-pointer border border-rose-200/60"
+                        className="p-2 bg-rose-50 hover:bg-rose-100 text-rose-500 hover:text-rose-700 rounded-xl transition-colors cursor-pointer border border-rose-200/60"
                         title="លុប"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
@@ -614,127 +699,139 @@ export const SalesHistory: React.FC = () => {
             })}
           </div>
 
-          {/* Desktop Table View (Visible on Tablet/Desktop Screens >= 768px) */}
-          <div className="hidden md:flex bg-white rounded-3xl border border-rose-100/90 shadow-sm overflow-hidden flex-col">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs text-slate-600 min-w-[760px]">
-                <thead className="bg-slate-50 text-slate-700 font-black border-b border-slate-200">
-                  <tr>
-                    <th className="p-4">លេខវិក្កយបត្រ</th>
-                    <th className="p-4">កាលបរិច្ឆេទ & ម៉ោង (DD/MM/YYYY)</th>
-                    <th className="p-4">អតិថិជន</th>
-                    <th className="p-4">មុខទំនិញ</th>
-                    <th className="p-4">តម្លៃសរុប (៛ KHR)</th>
-                    <th className="p-4">តម្លៃសរុប ($ USD)</th>
-                    <th className="p-4">ទូទាត់ & បេឡាធិការ</th>
-                    <th className="p-4 text-center">សកម្មភាព</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 font-medium">
-                  {filteredSales.map((sale) => {
-                    const formattedDate = formatDateTimeDMY(sale.createdAt);
+          {/* Desktop Table View (Visible on Tablet/Desktop Screens >= 768px when viewMode === 'table') */}
+          <div className={`${viewMode === 'table' ? 'hidden md:block' : 'hidden'} w-full shrink-0 bg-white rounded-2xl sm:rounded-3xl border border-rose-100/90 shadow-sm overflow-x-auto`}>
+            <table className={`w-full text-left text-slate-700 min-w-[1000px] border-collapse ${
+              tableDensity === 'comfortable' ? 'text-sm' : 'text-xs'
+            }`}>
+              <thead className="sticky top-0 z-10 bg-slate-100/95 backdrop-blur-xs text-slate-800 font-black border-b border-slate-200 shadow-2xs">
+                <tr>
+                  <th className={tableDensity === 'comfortable' ? 'py-4 px-4 font-black whitespace-nowrap' : 'p-3 font-black whitespace-nowrap'}>លេខវិក្កយបត្រ</th>
+                  <th className={tableDensity === 'comfortable' ? 'py-4 px-4 font-black whitespace-nowrap' : 'p-3 font-black whitespace-nowrap'}>កាលបរិច្ឆេទ & ម៉ោង</th>
+                  <th className={tableDensity === 'comfortable' ? 'py-4 px-4 font-black whitespace-nowrap' : 'p-3 font-black whitespace-nowrap'}>អតិថិជន</th>
+                  <th className={tableDensity === 'comfortable' ? 'py-4 px-4 font-black' : 'p-3 font-black'}>មុខទំនិញ</th>
+                  <th className={tableDensity === 'comfortable' ? 'py-4 px-4 font-black whitespace-nowrap' : 'p-3 font-black whitespace-nowrap'}>តម្លៃសរុប (៛ KHR)</th>
+                  <th className={tableDensity === 'comfortable' ? 'py-4 px-4 font-black whitespace-nowrap' : 'p-3 font-black whitespace-nowrap'}>តម្លៃ ($ USD)</th>
+                  <th className={tableDensity === 'comfortable' ? 'py-4 px-4 font-black whitespace-nowrap' : 'p-3 font-black whitespace-nowrap'}>ទូទាត់ & បេឡា</th>
+                  <th className={tableDensity === 'comfortable' ? 'py-4 px-4 text-center font-black whitespace-nowrap' : 'p-3 text-center font-black whitespace-nowrap'}>សកម្មភាព</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 font-medium">
+                {filteredSales.map((sale) => {
+                  const formattedDate = formatDateTimeDMY(sale.createdAt);
 
-                    return (
-                      <tr key={sale.id} className="hover:bg-rose-50/40 transition-colors">
-                        <td className="p-4 font-mono font-black text-slate-900">
+                  return (
+                    <tr key={sale.id} className="hover:bg-rose-50/40 transition-colors">
+                      <td className={`${tableDensity === 'comfortable' ? 'py-4 px-4 text-sm' : 'p-3 text-xs'} font-mono font-black text-slate-900 whitespace-nowrap`}>
+                        <span className="bg-slate-100/90 text-pink-700 px-2.5 py-1 rounded-lg border border-slate-200">
                           {sale.orderNumber}
-                        </td>
+                        </span>
+                      </td>
 
-                        <td className="p-4 text-slate-600">
-                          {formattedDate}
-                        </td>
+                      <td className={`${tableDensity === 'comfortable' ? 'py-4 px-4 text-sm' : 'p-3 text-xs'} text-slate-600 font-medium whitespace-nowrap`}>
+                        {formattedDate}
+                      </td>
 
-                        <td className="p-4">
-                          <div className="font-bold text-slate-800">
-                            {sale.customerName || 'អតិថិជនទូទៅ'}
-                          </div>
-                        </td>
+                      <td className={`${tableDensity === 'comfortable' ? 'py-4 px-4 text-sm font-bold' : 'p-3 text-xs font-bold'} text-slate-900`}>
+                        {sale.customerName || 'អតិថិជនទូទៅ'}
+                      </td>
 
-                        <td className="p-4 max-w-xs truncate">
-                          {sale.items.map((i) => `${i.nameKh} (x${i.quantity})`).join(', ')}
-                        </td>
+                      <td className={`${tableDensity === 'comfortable' ? 'py-4 px-4 text-sm' : 'p-3 text-xs'} max-w-sm text-slate-700 leading-snug`}>
+                        {sale.items.map((i) => `${i.nameKh} (x${i.quantity})`).join(', ')}
+                      </td>
 
-                        {/* KHR FIRST in prominent bold */}
-                        <td className="p-4 font-black text-pink-600 text-sm">
-                          {sale.totalKhr.toLocaleString()} ៛
-                        </td>
+                      {/* KHR FIRST in prominent bold */}
+                      <td className={`${tableDensity === 'comfortable' ? 'py-4 px-4 text-base sm:text-lg' : 'p-3 text-sm'} font-black text-pink-600 whitespace-nowrap`}>
+                        {sale.totalKhr.toLocaleString()} ៛
+                      </td>
 
-                        {/* USD SECOND */}
-                        <td className="p-4 text-slate-500 font-bold">
-                          ${sale.totalUsd.toFixed(2)}
-                        </td>
+                      {/* USD SECOND */}
+                      <td className={`${tableDensity === 'comfortable' ? 'py-4 px-4 text-sm font-bold' : 'p-3 text-xs font-bold'} text-slate-500 whitespace-nowrap`}>
+                        ${sale.totalUsd.toFixed(2)}
+                      </td>
 
-                        <td className="p-4">
-                          <div className="font-semibold text-slate-800">{sale.paymentMethod}</div>
-                          <div className="text-[10px] text-slate-400">{sale.cashierName}</div>
-                        </td>
+                      <td className={`${tableDensity === 'comfortable' ? 'py-4 px-4' : 'p-3'} whitespace-nowrap`}>
+                        <span className="inline-block px-2.5 py-1 rounded-lg text-xs font-bold bg-pink-50 text-pink-700 border border-pink-200">
+                          {sale.paymentMethod || 'CASH'}
+                        </span>
+                        <div className={`${tableDensity === 'comfortable' ? 'text-xs mt-1' : 'text-[10px] mt-0.5'} text-slate-500 font-medium`}>
+                          👤 {sale.cashierName}
+                        </div>
+                      </td>
 
-                        {/* Actions: Add Party, View/Print, Edit, Delete */}
-                        <td className="p-4 text-center">
-                          <div className="flex items-center justify-center gap-1.5 flex-wrap">
-                            {/* Add Party Add-ons button */}
-                            <button
-                              type="button"
-                              title="ថែម Party Add-ons លើការលក់នេះ"
-                              onClick={() => {
-                                soundFx.playPop();
-                                setPartyAddonSale(sale);
-                              }}
-                              className="p-1.5 bg-gradient-to-r from-amber-500/10 via-rose-500/10 to-pink-500/10 hover:from-amber-500/20 hover:to-pink-500/20 text-pink-700 border border-pink-200/80 rounded-xl transition-all shadow-2xs inline-flex items-center gap-1 text-[11px] font-bold cursor-pointer"
-                            >
-                              <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-                              <span>+ ថែម Party</span>
-                            </button>
+                      {/* Actions: Add Party, View/Print, Edit, Delete */}
+                      <td className={`${tableDensity === 'comfortable' ? 'py-4 px-4' : 'p-3'} text-center whitespace-nowrap`}>
+                        <div className="flex items-center justify-center gap-1.5">
+                          {/* Add Party Add-ons button */}
+                          <button
+                            type="button"
+                            title="ថែម Party Add-ons លើការលក់នេះ"
+                            onClick={() => {
+                              soundFx.playPop();
+                              setPartyAddonSale(sale);
+                            }}
+                            className={`bg-gradient-to-r from-amber-500/10 via-rose-500/10 to-pink-500/10 hover:from-amber-500/20 hover:to-pink-500/20 text-pink-700 border border-pink-200/80 rounded-xl transition-all shadow-2xs inline-flex items-center gap-1 font-bold cursor-pointer active:scale-95 ${
+                              tableDensity === 'comfortable' ? 'px-3 py-2 text-xs sm:text-sm' : 'p-1.5 text-[11px]'
+                            }`}
+                          >
+                            <Sparkles className={tableDensity === 'comfortable' ? 'w-4 h-4 text-amber-500' : 'w-3.5 h-3.5 text-amber-500'} />
+                            <span>+ ថែម Party</span>
+                          </button>
 
-                            {/* View/Print Receipt */}
-                            <button
-                              type="button"
-                              title="មើលវិក្កយបត្រ"
-                              onClick={() => {
-                                soundFx.playPop();
-                                setViewingReceiptSale(sale);
-                              }}
-                              className="p-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl transition-all shadow-2xs inline-flex items-center gap-1 text-[11px] font-bold cursor-pointer"
-                            >
-                              <Printer className="w-3.5 h-3.5 text-slate-600" />
-                              <span>វិក្កយបត្រ</span>
-                            </button>
+                          {/* View/Print Receipt */}
+                          <button
+                            type="button"
+                            title="មើលវិក្កយបត្រ"
+                            onClick={() => {
+                              soundFx.playPop();
+                              setViewingReceiptSale(sale);
+                            }}
+                            className={`bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl transition-all shadow-2xs inline-flex items-center gap-1 font-bold cursor-pointer active:scale-95 ${
+                              tableDensity === 'comfortable' ? 'px-3 py-2 text-xs sm:text-sm' : 'p-1.5 text-[11px]'
+                            }`}
+                          >
+                            <Printer className={tableDensity === 'comfortable' ? 'w-4 h-4 text-slate-600' : 'w-3.5 h-3.5 text-slate-600'} />
+                            <span>វិក្កយបត្រ</span>
+                          </button>
 
-                            {/* Edit Sale */}
-                            <button
-                              type="button"
-                              title="កែប្រែការលក់"
-                              onClick={() => {
-                                soundFx.playPop();
-                                setEditingSale(sale);
-                              }}
-                              className="p-1.5 bg-pink-50 hover:bg-pink-100 text-pink-700 rounded-xl transition-all shadow-2xs inline-flex items-center gap-1 text-[11px] font-bold cursor-pointer"
-                            >
-                              <Edit3 className="w-3.5 h-3.5 text-pink-600" />
-                              <span>កែប្រែ</span>
-                            </button>
+                          {/* Edit Sale */}
+                          <button
+                            type="button"
+                            title="កែប្រែការលក់"
+                            onClick={() => {
+                              soundFx.playPop();
+                              setEditingSale(sale);
+                            }}
+                            className={`bg-pink-50 hover:bg-pink-100 text-pink-700 rounded-xl transition-all shadow-2xs inline-flex items-center gap-1 font-bold cursor-pointer active:scale-95 ${
+                              tableDensity === 'comfortable' ? 'px-3 py-2 text-xs sm:text-sm' : 'p-1.5 text-[11px]'
+                            }`}
+                          >
+                            <Edit3 className={tableDensity === 'comfortable' ? 'w-4 h-4 text-pink-600' : 'w-3.5 h-3.5 text-pink-600'} />
+                            <span>កែប្រែ</span>
+                          </button>
 
-                            {/* Delete Sale */}
-                            <button
-                              type="button"
-                              title="លុបការលក់"
-                              onClick={() => {
-                                soundFx.playPop();
-                                setRestoreStockOnDelete(true);
-                                setSaleToDelete(sale);
-                              }}
-                              className="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-500 hover:text-rose-700 rounded-xl transition-colors cursor-pointer border border-rose-200/60 shrink-0"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+                          {/* Delete Sale */}
+                          <button
+                            type="button"
+                            title="លុបការលក់"
+                            onClick={() => {
+                              soundFx.playPop();
+                              setRestoreStockOnDelete(true);
+                              setSaleToDelete(sale);
+                            }}
+                            className={`bg-rose-50 hover:bg-rose-100 text-rose-500 hover:text-rose-700 rounded-xl transition-colors cursor-pointer border border-rose-200/60 shrink-0 active:scale-95 ${
+                              tableDensity === 'comfortable' ? 'p-2' : 'p-1.5'
+                            }`}
+                          >
+                            <Trash2 className={tableDensity === 'comfortable' ? 'w-4 h-4' : 'w-3.5 h-3.5'} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         </>
       )}

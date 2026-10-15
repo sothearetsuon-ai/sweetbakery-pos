@@ -15,8 +15,8 @@ export interface AppUpdateInfo {
   mandatory?: boolean;
 }
 
-export const CURRENT_APP_VERSION = '1.2.7';
-export const CURRENT_BUILD_DATE = '2026-10-14';
+export const CURRENT_APP_VERSION = '1.2.8';
+export const CURRENT_BUILD_DATE = '2026-10-15';
 
 // Storage key for custom update server URL if configured
 const STORAGE_KEY_UPDATE_URL = 'sweetbakery_update_manifest_url';

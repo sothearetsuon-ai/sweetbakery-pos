@@ -38,6 +38,7 @@ import {
 } from '../data/mockData';
 import { sortProductsNewestFirst } from '../utils/productUtils';
 import { roundKhr, usdToKhr, formatKhr } from '../utils/currencyUtils';
+import { isKhmerMojibake, fixKhmerMojibake } from '../utils/khmerEncoding';
 import { idbGet, idbSet } from '../utils/idbStorage';
 import {
   getStoredFirebaseConfig,
@@ -233,7 +234,31 @@ export const ensurePartyAddonDefaults = (list: any[]): PartyAddon[] => {
 
 export const seedDemoDataIfMissing = () => {
   if (typeof window === 'undefined') return;
-  
+
+  const demoKeys = [
+    'demo_bakery_products',
+    'demo_bakery_sales',
+    'demo_bakery_custom_orders',
+    'demo_bakery_expenses',
+    'demo_bakery_ingredients',
+    'demo_bakery_recipes',
+    'demo_bakery_party_addons',
+    'demo_bakery_flavors',
+    'demo_bakery_shift',
+    'demo_bakery_store_info',
+    'demo_bakery_staff_members',
+  ];
+
+  // Purge any corrupted mojibake keys so they cleanly reseed with pristine Khmer Unicode
+  demoKeys.forEach((key) => {
+    try {
+      const raw = localStorage.getItem(key);
+      if (raw && (raw.includes('áž') || raw.includes('áŸ') || raw.includes('Ã'))) {
+        localStorage.removeItem(key);
+      }
+    } catch (e) {}
+  });
+
   const checkIsEmpty = (key: string) => {
     const raw = localStorage.getItem(key);
     if (!raw || raw === '[]' || raw === 'null' || raw === '{}') return true;
@@ -860,40 +885,91 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   const [categories] = useState<Category[]>(initialCategories);
 
-  // Helper to repair missing images or convert base64/broken images to official upload paths
+  // Helper to repair missing images or convert base64/broken images to official upload paths & heal Khmer text mojibake
   const healProductItem = (p: Product): { product: Product; changed: boolean } => {
-    const match = initialProducts.find((ip: Product) => ip.id === p.id);
-    if (!match) return { product: p, changed: false };
+    let changed = false;
+    const updated = { ...p };
 
-    const currentImg = (p.imageUrl || '').trim();
-    const needsImageFix =
-      !currentImg ||
-      currentImg.startsWith('data:') ||
-      currentImg.length < 5 ||
-      (match.imageUrl && match.imageUrl.startsWith('/uploads/products/') && currentImg !== match.imageUrl);
+    // 1. Text repair (Khmer Mojibake auto-healing)
+    const match =
+      initialProducts.find((ip: Product) => ip.id === p.id) ||
+      initialProducts.find(
+        (ip: Product) =>
+          ip.imageUrl &&
+          (ip.imageUrl === p.imageUrl || (p.images && p.images.includes(ip.imageUrl)))
+      );
 
-    if (needsImageFix && match.imageUrl) {
-      return {
-        product: {
-          ...p,
-          imageUrl: match.imageUrl,
-          images: match.images && match.images.length > 0 ? match.images : [match.imageUrl],
-        },
-        changed: true,
-      };
+    if (match) {
+      if (isKhmerMojibake(updated.nameKh) || !updated.nameKh) {
+        updated.nameKh = match.nameKh;
+        changed = true;
+      }
+      if (isKhmerMojibake(updated.nameEn) || !updated.nameEn) {
+        updated.nameEn = match.nameEn;
+        changed = true;
+      }
+      if (isKhmerMojibake(updated.unit) || !updated.unit) {
+        updated.unit = match.unit || 'នំ';
+        changed = true;
+      }
+      if (isKhmerMojibake(updated.description)) {
+        updated.description = match.description || '';
+        changed = true;
+      }
     }
 
-    if ((!p.images || p.images.length === 0) && currentImg) {
-      return {
-        product: {
-          ...p,
-          images: [currentImg],
-        },
-        changed: true,
-      };
+    // Fallback algorithmic repair if still corrupted
+    if (isKhmerMojibake(updated.nameKh)) {
+      const fixed = fixKhmerMojibake(updated.nameKh);
+      if (fixed && fixed !== updated.nameKh) {
+        updated.nameKh = fixed;
+        changed = true;
+      }
+    }
+    if (isKhmerMojibake(updated.nameEn)) {
+      const fixed = fixKhmerMojibake(updated.nameEn);
+      if (fixed && fixed !== updated.nameEn) {
+        updated.nameEn = fixed;
+        changed = true;
+      }
+    }
+    if (isKhmerMojibake(updated.unit)) {
+      const fixed = fixKhmerMojibake(updated.unit);
+      if (fixed && fixed !== updated.unit) {
+        updated.unit = fixed;
+        changed = true;
+      }
+    }
+    if (isKhmerMojibake(updated.description)) {
+      const fixed = fixKhmerMojibake(updated.description);
+      if (fixed && fixed !== updated.description) {
+        updated.description = fixed;
+        changed = true;
+      }
     }
 
-    return { product: p, changed: false };
+    // 2. Image repair
+    if (match) {
+      const currentImg = (updated.imageUrl || '').trim();
+      const needsImageFix =
+        !currentImg ||
+        currentImg.startsWith('data:') ||
+        currentImg.length < 5 ||
+        (match.imageUrl && match.imageUrl.startsWith('/uploads/products/') && currentImg !== match.imageUrl);
+
+      if (needsImageFix && match.imageUrl) {
+        updated.imageUrl = match.imageUrl;
+        updated.images = match.images && match.images.length > 0 ? match.images : [match.imageUrl];
+        changed = true;
+      }
+    }
+
+    if ((!updated.images || updated.images.length === 0) && updated.imageUrl) {
+      updated.images = [updated.imageUrl];
+      changed = true;
+    }
+
+    return { product: updated, changed };
   };
 
   // Products with seamless merge for party supplies & cake items (newest images/products first)
@@ -905,7 +981,8 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         try {
           const parsed = JSON.parse(savedDemo);
           if (Array.isArray(parsed) && parsed.length > 0) {
-            return sortProductsNewestFirst(parsed);
+            const healed = parsed.map((p) => healProductItem(p).product);
+            return sortProductsNewestFirst(healed);
           }
         } catch (e) {}
       }
@@ -947,10 +1024,33 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
   }, [products.length]);
 
-  // Auto-heal products in localStorage on mount
+  // Auto-heal products in localStorage and IndexedDB on mount
   useEffect(() => {
-    if (globalIsDemoMode) return;
     try {
+      // 1. Heal demo products
+      const savedDemo = localStorage.getItem('demo_bakery_products');
+      if (savedDemo) {
+        try {
+          const parsedDemo: Product[] = JSON.parse(savedDemo);
+          if (Array.isArray(parsedDemo)) {
+            let changedDemo = false;
+            const healedDemo = parsedDemo.map((p) => {
+              const res = healProductItem(p);
+              if (res.changed) changedDemo = true;
+              return res.product;
+            });
+            if (changedDemo) {
+              const sortedDemo = sortProductsNewestFirst(healedDemo);
+              localStorage.setItem('demo_bakery_products', JSON.stringify(sortedDemo));
+              if (globalIsDemoMode) {
+                setProducts(sortedDemo);
+              }
+            }
+          }
+        } catch (e) {}
+      }
+
+      // 2. Heal real bakery products
       const saved = localStorage.getItem('bakery_products');
       if (saved) {
         const parsed: Product[] = JSON.parse(saved);
@@ -967,8 +1067,11 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
         if (changed) {
           const sorted = sortProductsNewestFirst([...healed, ...missingItems]);
-          setProducts(sorted);
+          if (!globalIsDemoMode) {
+            setProducts(sorted);
+          }
           localStorage.setItem('bakery_products', JSON.stringify(sorted));
+          idbSet('bakery_products', JSON.stringify(sorted));
         }
       }
     } catch (e) {}
@@ -2344,7 +2447,9 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       if (globalIsDemoMode) return;
       if (Array.isArray(cloudProducts) && cloudProducts.length > 0) {
         const filtered = sortProductsNewestFirst(
-          cloudProducts.filter((p) => p && p.id && !deletedProductIds.current.has(p.id))
+          cloudProducts
+            .filter((p) => p && p.id && !deletedProductIds.current.has(p.id))
+            .map((p) => healProductItem(p).product)
         );
         if (filtered.length > 0) {
           setProducts((prev) => {
