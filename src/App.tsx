@@ -36,7 +36,7 @@ import { useBakery } from './context/BakeryContext';
 import { soundFx } from './utils/audio';
 import confetti from 'canvas-confetti';
 import { initTelegramMiniApp, isTelegramWebApp, getTelegramStartParam } from './services/telegramWebApp';
-import { checkForAppUpdates, AppUpdateInfo } from './services/appUpdateService';
+import { checkForAppUpdates, AppUpdateInfo, getNativeAppVersion } from './services/appUpdateService';
 import { CakeFlavorsModal } from './components/pos/CakeFlavorsModal';
 import { AppUpdateModal } from './components/common/AppUpdateModal';
 
@@ -116,23 +116,30 @@ export const App: React.FC = () => {
   const [isRenewModalOpen, setIsRenewModalOpen] = useState(false);
 
   // In-App Update State & Modal Management
-  const [availableUpdate, setAvailableUpdate] = useState<AppUpdateInfo | null>(null);
+  const [availableUpdate, setAvailableUpdate] = useState<AppUpdateInfo | null>(() => ({
+    hasUpdate: false,
+    currentVersion: getNativeAppVersion(),
+    latestVersion: '1.3.0',
+    releaseDate: '2026-10-15',
+    releaseNotes: [
+      'ប្រព័ន្ធ In-App Auto Update ស្តង់ដារថ្មី៖ ទាញយកអាប់ដែតបានរលូន និងលឿនរហ័ស ទាំងលើ Windows និង Android',
+      'របារទាញយក Progress Bar ផ្ទាល់៖ បង្ហាញភាគរយ % និងទំហំ MB កំពុងទាញយកជាក់ស្តែង',
+      'ការដំឡើងស្វ័យប្រវត្ត (1-Click Auto Install) ដោយសុវត្ថិភាព មិនបាត់បង់ទិន្នន័យ',
+    ],
+    apkDownloadUrl: 'https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/latest/download/SweetBakery-Android.apk',
+    windowsDownloadUrl: 'https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/latest/download/SweetBakery-POS-Setup.exe',
+    windowsInstallerUrl: 'https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/latest/download/SweetBakery-POS-Setup.exe',
+  }));
   const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
 
   const performUpdateCheck = React.useCallback(async (notifyIfNoUpdate = false) => {
     try {
       const info = await checkForAppUpdates();
-      if (info && info.hasUpdate) {
+      if (info) {
         setAvailableUpdate(info);
-      } else {
-        setAvailableUpdate(null);
-        if (notifyIfNoUpdate && info) {
-          setAvailableUpdate({ ...info, hasUpdate: false });
-        }
       }
       return info;
     } catch {
-      setAvailableUpdate(null);
       return null;
     }
   }, []);

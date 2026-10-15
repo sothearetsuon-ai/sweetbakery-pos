@@ -27,6 +27,9 @@ import {
   triggerInAppAndroidUpdate,
   triggerInAppDesktopUpdate,
   openExternalUrl,
+  getNativeAppVersion,
+  isVersionNewer,
+  CURRENT_BUILD_DATE,
 } from '../../services/appUpdateService';
 
 interface AppUpdateModalProps {
@@ -91,12 +94,21 @@ export const AppUpdateModal: React.FC<AppUpdateModalProps> = ({
     };
   }, []);
 
-  if (!isOpen || !updateInfo) return null;
+  // Auto-check for updates if modal is opened without updateInfo
+  useEffect(() => {
+    if (isOpen && !updateInfo && onCheckAgain) {
+      onCheckAgain();
+    }
+  }, [isOpen, updateInfo, onCheckAgain]);
 
-  const currentVersion = updateInfo.currentVersion || '1.2.9';
-  const latestVersion = updateInfo.latestVersion || '1.3.0';
-  const releaseDate = updateInfo.releaseDate || '2026-10-15';
-  const releaseNotes = updateInfo.releaseNotes?.length
+  if (!isOpen) return null;
+
+  const currentVersion = updateInfo?.currentVersion || getNativeAppVersion();
+  const latestVersion = updateInfo?.latestVersion || '1.3.0';
+  const releaseDate = updateInfo?.releaseDate || CURRENT_BUILD_DATE;
+  const hasUpdate = updateInfo ? updateInfo.hasUpdate : isVersionNewer(latestVersion, currentVersion);
+
+  const releaseNotes = updateInfo?.releaseNotes?.length
     ? updateInfo.releaseNotes
     : [
         'ប្រព័ន្ធអាប់ដេតស្វ័យប្រវត្តិកម្រិតស្តង់ដារ (Standard In-App Auto-Update)',
@@ -105,11 +117,11 @@ export const AppUpdateModal: React.FC<AppUpdateModalProps> = ({
       ];
 
   const apkUrl =
-    updateInfo.apkDownloadUrl ||
+    updateInfo?.apkDownloadUrl ||
     'https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/latest/download/SweetBakery-Android.apk';
   const winUrl =
-    updateInfo.windowsInstallerUrl ||
-    updateInfo.windowsDownloadUrl ||
+    updateInfo?.windowsInstallerUrl ||
+    updateInfo?.windowsDownloadUrl ||
     'https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/latest/download/SweetBakery-POS-Setup.exe';
 
   const handleStartUpdate = () => {
@@ -219,10 +231,12 @@ export const AppUpdateModal: React.FC<AppUpdateModalProps> = ({
               <div>
                 <div className="flex items-center gap-2">
                   <h3 className="text-base sm:text-lg font-black tracking-tight text-white font-battambang">
-                    មានកំណែអាប់ដេតថ្មី!
+                    {hasUpdate ? 'មានកំណែអាប់ដេតថ្មី!' : 'ប្រព័ន្ធដំណើរការកំណែចុងក្រោយ'}
                   </h3>
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-300 text-amber-950 shadow-xs uppercase tracking-wider">
-                    New Update
+                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-black shadow-xs uppercase tracking-wider ${
+                    hasUpdate ? 'bg-amber-300 text-amber-950' : 'bg-emerald-300 text-emerald-950'
+                  }`}>
+                    {hasUpdate ? 'New Update' : 'Up to Date'}
                   </span>
                 </div>
                 <p className="text-xs text-pink-100/90 font-medium mt-0.5 flex items-center gap-1.5">
@@ -253,13 +267,20 @@ export const AppUpdateModal: React.FC<AppUpdateModalProps> = ({
                 v{currentVersion}
               </span>
             </div>
-            <div className="flex items-center gap-2">
-              <span className="text-pink-200 font-black">➔</span>
-              <span className="text-[11px] text-pink-100">កំណែថ្មី៖</span>
-              <span className="px-2.5 py-0.5 rounded-lg bg-white text-rose-600 font-mono font-black text-xs shadow-md">
-                v{latestVersion}
-              </span>
-            </div>
+            {hasUpdate ? (
+              <div className="flex items-center gap-2">
+                <span className="text-pink-200 font-black">➔</span>
+                <span className="text-[11px] text-pink-100">កំណែថ្មី៖</span>
+                <span className="px-2.5 py-0.5 rounded-lg bg-white text-rose-600 font-mono font-black text-xs shadow-md">
+                  v{latestVersion}
+                </span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-1 text-emerald-200 font-bold text-[11px]">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-300" />
+                <span>កំណែចុងក្រោយបំផុត (v{currentVersion})</span>
+              </div>
+            )}
           </div>
         </div>
 
@@ -400,11 +421,17 @@ export const AppUpdateModal: React.FC<AppUpdateModalProps> = ({
                 <>
                   <Download className="w-4 h-4" />
                   <span>
-                    {isDesktop
-                      ? '🚀 អាប់ដេតស្វ័យប្រវត្តិ (1-Click)'
+                    {hasUpdate
+                      ? isDesktop
+                        ? '🚀 អាប់ដេតស្វ័យប្រវត្តិ (1-Click)'
+                        : isAndroid
+                        ? '🚀 ទាញយក & ដំឡើង APK'
+                        : '🚀 អាប់ដេតឥឡូវនេះ'
+                      : isDesktop
+                      ? '🚀 ទាញយក Setup (EXE) ឡើងវិញ'
                       : isAndroid
-                      ? '🚀 ទាញយក & ដំឡើង APK'
-                      : '🚀 អាប់ដេតឥឡូវនេះ'}
+                      ? '🚀 ទាញយក APK ឡើងវិញ'
+                      : '🚀 ទាញយកកំណែចុងក្រោយ'}
                   </span>
                 </>
               )}
