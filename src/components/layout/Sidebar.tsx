@@ -49,6 +49,7 @@ interface SidebarProps {
   onOpenThemePicker?: () => void;
   onOpenContact?: () => void;
   onOpenCustomerOrderLinkModal?: () => void;
+  onOpenCakeFlavors?: () => void;
   currentTheme?: AppTheme;
   isMobileOpen?: boolean;
   onCloseMobile?: () => void;
@@ -61,6 +62,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onOpenThemePicker,
   onOpenContact,
   onOpenCustomerOrderLinkModal,
+  onOpenCakeFlavors,
   currentTheme,
   isMobileOpen = false,
   onCloseMobile,
@@ -445,6 +447,36 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </div>
             <span className="text-[10px] font-black bg-pink-600 text-white px-2 py-0.5 rounded-full shadow-2xs">
               QR
+            </span>
+          </button>
+        )}
+
+        {/* Cake Flavors & Stock Button */}
+        {onOpenCakeFlavors && (
+          <button
+            type="button"
+            onClick={() => {
+              soundFx.playPop();
+              onOpenCakeFlavors();
+              onCloseMobile?.();
+            }}
+            className="w-full flex items-center justify-between p-3 rounded-2xl bg-gradient-to-r from-purple-500/10 via-pink-500/10 to-indigo-500/10 hover:from-purple-500/20 hover:to-pink-500/20 border border-purple-300/80 shadow-2xs transition-all active:scale-95 cursor-pointer group"
+          >
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-purple-600 to-pink-600 text-white flex items-center justify-center text-sm shadow-sm shadow-purple-500/25 group-hover:scale-105 transition-transform">
+                🧁
+              </div>
+              <div className="text-left">
+                <div className="text-xs font-black text-purple-950 flex items-center gap-1.5 font-battambang">
+                  <span>រសជាតិនំ & ស្តុក</span>
+                </div>
+                <div className="text-[10px] text-purple-700/80 font-medium">
+                  កំណត់រសជាតិមាន ឬអស់ស្តុក
+                </div>
+              </div>
+            </div>
+            <span className="text-[10px] font-black bg-purple-600 text-white px-2 py-0.5 rounded-full shadow-2xs">
+              ស្តុក
             </span>
           </button>
         )}

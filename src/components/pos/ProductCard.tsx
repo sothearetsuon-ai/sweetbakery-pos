@@ -13,7 +13,7 @@ interface ProductCardProps {
   onAddToCart: (product: Product) => void;
 }
 
-export const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart }) => {
+const ProductCardComponent: React.FC<ProductCardProps> = ({ product, onAddToCart }) => {
   const { lang, exchangeRate, restockProduct, isDemoMode, hideDemoPrices } = useBakery();
   const text = t[lang];
   const [justAdded, setJustAdded] = useState(false);
@@ -319,3 +319,5 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart }
     </div>
   );
 };
+
+export const ProductCard = React.memo(ProductCardComponent);

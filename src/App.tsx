@@ -37,22 +37,24 @@ import { soundFx } from './utils/audio';
 import confetti from 'canvas-confetti';
 import { initTelegramMiniApp, isTelegramWebApp, getTelegramStartParam } from './services/telegramWebApp';
 import { checkForAppUpdates, AppUpdateInfo } from './services/appUpdateService';
+import { CakeFlavorsModal } from './components/pos/CakeFlavorsModal';
 
 export const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabType>('pos');
   const [isShiftModalOpen, setIsShiftModalOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
+  const [isCakeFlavorsModalOpen, setIsCakeFlavorsModalOpen] = useState(false);
   const [settingsTab, setSettingsTab] = useState<SettingsTab>('store');
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
   const [currentTheme, setCurrentTheme] = useState<AppTheme>(() => getSavedTheme());
   const [isThemePickerOpen, setIsThemePickerOpen] = useState(false);
   const [dismissedBannerThemeId, setDismissedBannerThemeId] = useState<string | null>(null);
 
-  // Flying Butterflies Effect State (Independent control)
+  // Flying Butterflies Effect State (Independent control - disabled by default for maximum performance)
   const [isButterflyEnabled, setIsButterflyEnabled] = useState<boolean>(() => {
     const saved = localStorage.getItem('bakery_butterfly_effect');
     if (saved !== null) return saved === 'true';
-    return true; // Enabled by default
+    return false; // Disabled by default for maximum speed
   });
 
   const handleToggleButterfly = () => {
@@ -63,11 +65,11 @@ export const App: React.FC = () => {
     });
   };
 
-  // Swimming Lucky Goldfish Effect State (Independent control)
+  // Swimming Lucky Goldfish Effect State (Independent control - disabled by default for maximum performance)
   const [isGoldfishEnabled, setIsGoldfishEnabled] = useState<boolean>(() => {
     const saved = localStorage.getItem('bakery_goldfish_effect');
     if (saved !== null) return saved === 'true';
-    return true; // Enabled by default
+    return false; // Disabled by default for maximum speed
   });
 
   const handleToggleGoldfish = () => {
@@ -319,6 +321,7 @@ export const App: React.FC = () => {
         isSuperAdmin={isSuperAdmin}
         onOpenSuperAdminPortal={() => setIsSuperAdminModalOpen(true)}
         onOpenCustomerOrderLinkModal={() => setIsCustomerOrderLinkModalOpen(true)}
+        onOpenCakeFlavors={() => setIsCakeFlavorsModalOpen(true)}
         onOpenContact={() => setIsContactModalOpen(true)}
         isButterflyEnabled={isButterflyEnabled}
         onToggleButterfly={handleToggleButterfly}
@@ -335,6 +338,7 @@ export const App: React.FC = () => {
           onOpenThemePicker={() => setIsThemePickerOpen(true)}
           onOpenContact={() => setIsContactModalOpen(true)}
           onOpenCustomerOrderLinkModal={() => setIsCustomerOrderLinkModalOpen(true)}
+          onOpenCakeFlavors={() => setIsCakeFlavorsModalOpen(true)}
           currentTheme={currentTheme}
           isMobileOpen={isMobileDrawerOpen}
           onCloseMobile={() => setIsMobileDrawerOpen(false)}
@@ -438,6 +442,12 @@ export const App: React.FC = () => {
           setIsCustomerPortalOpen(true);
           window.history.pushState({}, '', '?order=true');
         }}
+      />
+
+      {/* Global Cake Flavors & Stock Modal */}
+      <CakeFlavorsModal
+        isOpen={isCakeFlavorsModalOpen}
+        onClose={() => setIsCakeFlavorsModalOpen(false)}
       />
 
       {/* Floating Auto-Update Available Toast */}

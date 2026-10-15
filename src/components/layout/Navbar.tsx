@@ -49,6 +49,7 @@ interface NavbarProps {
   isSuperAdmin?: boolean;
   onOpenSuperAdminPortal?: () => void;
   onOpenCustomerOrderLinkModal?: () => void;
+  onOpenCakeFlavors?: () => void;
   onOpenContact?: () => void;
   isButterflyEnabled?: boolean;
   onToggleButterfly?: () => void;
@@ -66,10 +67,11 @@ export const Navbar: React.FC<NavbarProps> = ({
   isSuperAdmin = false,
   onOpenSuperAdminPortal,
   onOpenCustomerOrderLinkModal,
+  onOpenCakeFlavors,
   onOpenContact,
-  isButterflyEnabled = true,
+  isButterflyEnabled = false,
   onToggleButterfly,
-  isGoldfishEnabled = true,
+  isGoldfishEnabled = false,
   onToggleGoldfish,
 }) => {
   const {
@@ -282,6 +284,22 @@ export const Navbar: React.FC<NavbarProps> = ({
             )}
           </button>
 
+          {/* Cake Flavors & Stock Direct Pill Button */}
+          {onOpenCakeFlavors && (
+            <button
+              type="button"
+              onClick={() => {
+                soundFx.playPop();
+                onOpenCakeFlavors();
+              }}
+              title="គ្រប់គ្រងរសជាតិនំ & ស្តុកមាន/អស់ (Cake Flavors & Stock)"
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-2xl bg-gradient-to-r from-purple-50 to-pink-50 hover:from-purple-100 hover:to-pink-100 border border-purple-200/90 text-purple-900 text-xs font-black transition-all shadow-2xs hover:scale-105 active:scale-95 cursor-pointer shrink-0"
+            >
+              <span className="text-sm">🧁</span>
+              <span className="hidden sm:inline font-battambang">រសជាតិនំ & ស្តុក</span>
+            </button>
+          )}
+
           {/* 2. Unified Quick Tools & Features Menu Dropdown (All Small Buttons Grouped Here) */}
           <div className="relative" ref={quickToolsRef}>
             <button
@@ -419,6 +437,36 @@ export const Navbar: React.FC<NavbarProps> = ({
                       </div>
                       <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-pink-100 text-pink-700">
                         Self-Order
+                      </span>
+                    </button>
+                  )}
+
+                  {/* Cake Flavors & Stock */}
+                  {onOpenCakeFlavors && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        soundFx.playPop();
+                        setIsQuickToolsOpen(false);
+                        onOpenCakeFlavors();
+                      }}
+                      className="w-full flex items-center justify-between p-2.5 rounded-2xl hover:bg-purple-50 text-slate-800 transition-colors cursor-pointer group text-left border border-transparent hover:border-purple-100"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-xl bg-purple-600 text-white flex items-center justify-center shadow-xs group-hover:scale-105 transition-transform shrink-0 text-sm">
+                          🧁
+                        </div>
+                        <div>
+                          <div className="text-xs font-black text-slate-800 group-hover:text-purple-600">
+                            គ្រប់គ្រងរសជាតិនំ & ស្តុក
+                          </div>
+                          <div className="text-[10px] text-slate-400">
+                            កំណត់រសជាតិមាន ឬអស់ស្តុក
+                          </div>
+                        </div>
+                      </div>
+                      <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-purple-100 text-purple-700">
+                        រសជាតិនំ
                       </span>
                     </button>
                   )}

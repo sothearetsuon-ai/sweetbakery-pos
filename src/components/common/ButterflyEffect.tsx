@@ -154,8 +154,8 @@ export const ButterflyEffect: React.FC<ButterflyEffectProps> = ({
   goldfishEnabled,
   butterflyCount: propButterflyCount,
   goldfishCount: propGoldfishCount,
-  enabled = true,
-  count = 14,
+  enabled = false,
+  count = 6,
 }) => {
   const isButterflyActive = butterflyEnabled !== undefined ? butterflyEnabled : enabled;
   const isGoldfishActive = goldfishEnabled !== undefined ? goldfishEnabled : enabled;
@@ -172,9 +172,9 @@ export const ButterflyEffect: React.FC<ButterflyEffectProps> = ({
     typeof window !== 'undefined' &&
     (window.innerWidth < 768 || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent));
 
-  // Increased counts for phone: 8 butterflies & 5 swimming lucky goldfish
-  const butterflyCount = propButterflyCount || (isMobile ? 8 : count);
-  const goldfishCount = propGoldfishCount || (isMobile ? 5 : 7);
+  // Ultra-lightweight counts for silky smooth 60fps performance
+  const butterflyCount = propButterflyCount || (isMobile ? 3 : count);
+  const goldfishCount = propGoldfishCount || (isMobile ? 2 : 3);
 
   const [, setRenderTrigger] = useState(0);
 
@@ -315,8 +315,8 @@ export const ButterflyEffect: React.FC<ButterflyEffectProps> = ({
       }
 
       const now = Date.now();
-      // Cap at ~35 FPS for silky-smooth visuals while keeping CPU/battery consumption near zero
-      if (now - lastRenderTime < 28) {
+      // Cap at ~15 FPS to keep CPU & battery consumption near zero
+      if (now - lastRenderTime < 65) {
         animFrameRef.current = requestAnimationFrame(update);
         return;
       }
