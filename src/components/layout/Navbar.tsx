@@ -38,6 +38,7 @@ import { StaffDropdown } from '../staff/StaffDropdown';
 import { MobileConnectModal } from './MobileConnectModal';
 import { SettingsTab } from '../settings/SettingsModal';
 import { AppTheme } from '../../utils/themeManager';
+import { AppUpdateInfo } from '../../services/appUpdateService';
 
 interface NavbarProps {
   onOpenShiftModal: () => void;
@@ -51,6 +52,8 @@ interface NavbarProps {
   onOpenCustomerOrderLinkModal?: () => void;
   onOpenCakeFlavors?: () => void;
   onOpenContact?: () => void;
+  availableUpdate?: AppUpdateInfo | null;
+  onOpenUpdateModal?: () => void;
   isButterflyEnabled?: boolean;
   onToggleButterfly?: () => void;
   isGoldfishEnabled?: boolean;
@@ -69,6 +72,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenCustomerOrderLinkModal,
   onOpenCakeFlavors,
   onOpenContact,
+  availableUpdate,
+  onOpenUpdateModal,
   isButterflyEnabled = false,
   onToggleButterfly,
   isGoldfishEnabled = false,
@@ -297,6 +302,29 @@ export const Navbar: React.FC<NavbarProps> = ({
             >
               <span className="text-sm">🧁</span>
               <span className="hidden sm:inline font-battambang">រសជាតិនំ & ស្តុក</span>
+            </button>
+          )}
+
+          {/* New Version Available Pulsing Pill Button */}
+          {availableUpdate && availableUpdate.hasUpdate && (
+            <button
+              type="button"
+              onClick={() => {
+                soundFx.playSuccess();
+                if (onOpenUpdateModal) {
+                  onOpenUpdateModal();
+                } else {
+                  onOpenSettingsModal('updates');
+                }
+              }}
+              title={`មានកំណែថ្មី v${availableUpdate.latestVersion}! ចុចដើម្បីអាប់ដេត`}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-2xl bg-gradient-to-r from-pink-600 via-rose-600 to-amber-500 hover:from-pink-700 hover:to-rose-700 text-white text-xs font-black shadow-md shadow-pink-500/30 transition-all hover:scale-105 active:scale-95 cursor-pointer shrink-0 animate-pulse font-battambang"
+            >
+              <Rocket className="w-3.5 h-3.5 animate-bounce text-amber-200" />
+              <span>កំណែថ្មី</span>
+              <span className="bg-white/25 text-white text-[10px] px-1.5 py-0.2 rounded-full font-mono">
+                v{availableUpdate.latestVersion}
+              </span>
             </button>
           )}
 

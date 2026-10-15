@@ -107,13 +107,18 @@ export const isVersionNewer = (latest: string, current: string): boolean => {
 };
 
 /**
- * Check for updates from remote manifest or Firebase
+ * Check for updates from remote manifest or GitHub Releases API
  */
 export const checkForAppUpdates = async (): Promise<AppUpdateInfo> => {
   const currentVer = getNativeAppVersion();
   const manifestUrl = getStoredUpdateUrl();
   const cacheBuster = manifestUrl.includes('?') ? `&_t=${Date.now()}` : `?_t=${Date.now()}`;
 
+  const defaultApkUrl = 'https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/latest/download/SweetBakery-Android.apk';
+  const defaultWinExeUrl = 'https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/latest/download/SweetBakery-POS-Setup.exe';
+  const defaultWinZipUrl = 'https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/latest/download/SweetBakery-POS-Windows.zip';
+
+  // 1. Try reading the primary version.json manifest
   try {
     const response = await fetch(`${manifestUrl}${cacheBuster}`, {
       cache: 'no-cache',
@@ -131,23 +136,53 @@ export const checkForAppUpdates = async (): Promise<AppUpdateInfo> => {
         latestVersion: latestVer,
         releaseDate: data.releaseDate || CURRENT_BUILD_DATE,
         releaseNotes: data.releaseNotes || [
-          'កែលម្អប្រព័ន្ធអាប់ដែតក្នុង App ផ្ទាល់ (In-App Auto Update)',
-          'ពង្រីកទំហំអេក្រង់ និងប៊ូតុងលើទូរសព្ទដៃឱ្យធំច្បាស់',
-          'បន្ថែមប៊ូតុង Quick Presets សម្រាប់អត្រាប្តូរប្រាក់',
+          'កែលម្អប្រព័ន្ធអាប់ដេតស្វ័យប្រវត្តិ (Standard In-App Auto-Update)',
+          'បង្ហាញដំណឹងកំណែថ្មីច្បាស់លាស់ទាំងលើ Windows និង Android',
+          'ដំណើរការទាញយករលូន និងសុវត្ថិភាពខ្ពស់',
         ],
-        apkDownloadUrl:
-          data.apkDownloadUrl ||
-          'https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.2.7/SweetBakery-Android.apk',
-        windowsDownloadUrl: data.windowsDownloadUrl || data.windowsInstallerUrl,
-        windowsInstallerUrl: data.windowsInstallerUrl || data.windowsDownloadUrl,
+        apkDownloadUrl: data.apkDownloadUrl || defaultApkUrl,
+        windowsDownloadUrl: data.windowsDownloadUrl || data.windowsInstallerUrl || defaultWinExeUrl,
+        windowsInstallerUrl: data.windowsInstallerUrl || data.windowsDownloadUrl || defaultWinExeUrl,
         mandatory: Boolean(data.mandatory),
       };
     }
   } catch (err) {
-    console.warn('Could not fetch remote version manifest, falling back:', err);
+    console.warn('Could not fetch remote version manifest, trying GitHub API fallback:', err);
   }
 
-  // Fallback demo/mock version info when offline or GitHub not connected yet
+  // 2. Fallback: Query GitHub Releases API directly if raw manifest was blocked or cached
+  try {
+    const ghRes = await fetch('https://api.github.com/repos/sothearetsuon-ai/sweetbakery-pos/releases/latest', {
+      headers: { Accept: 'application/vnd.github.v3+json' },
+    });
+    if (ghRes.ok) {
+      const ghData = await ghRes.json();
+      const tagVer = (ghData.tag_name || '').replace(/^v/i, '');
+      if (tagVer) {
+        const hasNew = isVersionNewer(tagVer, currentVer);
+        const apkAsset = ghData.assets?.find((a: any) => a.name?.endsWith('.apk'));
+        const exeAsset = ghData.assets?.find((a: any) => a.name?.endsWith('.exe'));
+
+        return {
+          hasUpdate: hasNew,
+          currentVersion: currentVer,
+          latestVersion: tagVer,
+          releaseDate: (ghData.published_at || '').slice(0, 10) || CURRENT_BUILD_DATE,
+          releaseNotes: ghData.body
+            ? ghData.body.split('\n').filter((l: string) => l.trim().startsWith('-') || l.trim().startsWith('*')).map((l: string) => l.replace(/^[-*]\s*/, ''))
+            : ['មានកំណែថ្មី និងការកែលម្អប្រព័ន្ធដំណើរការ'],
+          apkDownloadUrl: apkAsset?.browser_download_url || defaultApkUrl,
+          windowsDownloadUrl: exeAsset?.browser_download_url || defaultWinExeUrl,
+          windowsInstallerUrl: exeAsset?.browser_download_url || defaultWinExeUrl,
+          mandatory: false,
+        };
+      }
+    }
+  } catch (ghErr) {
+    console.warn('GitHub API fallback check failed:', ghErr);
+  }
+
+  // Fallback info when offline
   return {
     hasUpdate: false,
     currentVersion: currentVer,
@@ -158,12 +193,9 @@ export const checkForAppUpdates = async (): Promise<AppUpdateInfo> => {
       'គាំទ្រការអាប់ដែតក្នុង App ផ្ទាល់ ១០០%',
       'ដំណើរការលឿន និងសន្សំសំចៃទិន្នន័យ',
     ],
-    apkDownloadUrl:
-      'https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.2.7/SweetBakery-Android.apk',
-    windowsDownloadUrl:
-      'https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/latest/download/SweetBakery-POS-Setup.exe',
-    windowsInstallerUrl:
-      'https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/latest/download/SweetBakery-POS-Setup.exe',
+    apkDownloadUrl: defaultApkUrl,
+    windowsDownloadUrl: defaultWinExeUrl,
+    windowsInstallerUrl: defaultWinExeUrl,
   };
 };
 

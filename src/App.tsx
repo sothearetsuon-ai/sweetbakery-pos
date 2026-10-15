@@ -38,6 +38,7 @@ import confetti from 'canvas-confetti';
 import { initTelegramMiniApp, isTelegramWebApp, getTelegramStartParam } from './services/telegramWebApp';
 import { checkForAppUpdates, AppUpdateInfo } from './services/appUpdateService';
 import { CakeFlavorsModal } from './components/pos/CakeFlavorsModal';
+import { AppUpdateModal } from './components/common/AppUpdateModal';
 
 export const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabType>('pos');
@@ -114,18 +115,44 @@ export const App: React.FC = () => {
   const [licenseInfo, setLicenseInfo] = useState<LicenseInfo>(() => getLicenseInfo());
   const [isRenewModalOpen, setIsRenewModalOpen] = useState(false);
 
-  // In-App Update Alert State (Automatic Background Version Check)
+  // In-App Update State & Modal Management
   const [availableUpdate, setAvailableUpdate] = useState<AppUpdateInfo | null>(null);
+  const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
+
+  const performUpdateCheck = React.useCallback(async (notifyIfNoUpdate = false) => {
+    try {
+      const info = await checkForAppUpdates();
+      if (info && info.hasUpdate) {
+        setAvailableUpdate(info);
+      } else if (notifyIfNoUpdate) {
+        setAvailableUpdate(info);
+      }
+      return info;
+    } catch {
+      return null;
+    }
+  }, []);
 
   React.useEffect(() => {
-    checkForAppUpdates()
-      .then((info) => {
-        if (info && info.hasUpdate) {
-          setAvailableUpdate(info);
-        }
-      })
-      .catch(() => {});
-  }, []);
+    // Check for updates on startup
+    performUpdateCheck();
+
+    // Check periodically every 20 minutes
+    const interval = setInterval(() => {
+      performUpdateCheck();
+    }, 20 * 60 * 1000);
+
+    // Also check when window regains focus
+    const handleFocus = () => {
+      performUpdateCheck();
+    };
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [performUpdateCheck]);
 
   // Customer Self-Order Link & Portal Mode
   const [isCustomerPortalOpen, setIsCustomerPortalOpen] = useState(() => {
@@ -243,9 +270,15 @@ export const App: React.FC = () => {
       <DemoModeBanner />
 
       {/* Auto In-App Update Alert Banner (Prominently shows when a new version is published) */}
-      {availableUpdate && (
-        <div className="bg-gradient-to-r from-purple-700 via-indigo-600 to-pink-600 text-white px-3 sm:px-4 py-2 text-xs font-black flex items-center justify-between shadow-md shrink-0 animate-in slide-in-from-top duration-300 font-battambang z-30">
-          <div className="flex items-center gap-2 truncate">
+      {availableUpdate && availableUpdate.hasUpdate && (
+        <div className="bg-gradient-to-r from-pink-600 via-rose-600 to-purple-600 text-white px-3 sm:px-4 py-2 text-xs font-black flex items-center justify-between shadow-md shrink-0 animate-in slide-in-from-top duration-300 font-battambang z-30">
+          <div
+            className="flex items-center gap-2 truncate cursor-pointer hover:opacity-90 transition-opacity"
+            onClick={() => {
+              soundFx.playPop();
+              setIsUpdateModalOpen(true);
+            }}
+          >
             <span className="animate-bounce shrink-0 text-sm">🚀</span>
             <span className="truncate">
               មានកំណែអាប់ដែតថ្មី៖ <strong>SweetBakery POS v{availableUpdate.latestVersion}</strong> (ចុចដើម្បីដំឡើងភ្លាមៗ)
@@ -256,17 +289,17 @@ export const App: React.FC = () => {
               type="button"
               onClick={() => {
                 soundFx.playPop();
-                handleOpenSettings('updates');
+                setIsUpdateModalOpen(true);
               }}
-              className="bg-white text-indigo-700 hover:bg-white/90 px-3 py-1 rounded-xl text-xs font-black shadow-xs cursor-pointer active:scale-95 transition-all"
+              className="bg-white text-pink-700 hover:bg-white/95 px-3 py-1 rounded-xl text-xs font-black shadow-xs cursor-pointer active:scale-95 transition-all flex items-center gap-1"
             >
-              អាប់ដែតឥឡូវនេះ ✨
+              <span>អាប់ដែតឥឡូវនេះ 🚀</span>
             </button>
             <button
               type="button"
               onClick={() => setAvailableUpdate(null)}
               className="text-white/80 hover:text-white px-1.5 py-0.5 rounded cursor-pointer"
-              title="បិទបដានេះ"
+              title="បិទបដានេះជាបណ្ដោះអាសន្ន"
             >
               ✕
             </button>
@@ -327,6 +360,8 @@ export const App: React.FC = () => {
         onToggleButterfly={handleToggleButterfly}
         isGoldfishEnabled={isGoldfishEnabled}
         onToggleGoldfish={handleToggleGoldfish}
+        availableUpdate={availableUpdate}
+        onOpenUpdateModal={() => setIsUpdateModalOpen(true)}
       />
 
       {/* Main Workspace with Sidebar & Content */}
@@ -342,6 +377,8 @@ export const App: React.FC = () => {
           currentTheme={currentTheme}
           isMobileOpen={isMobileDrawerOpen}
           onCloseMobile={() => setIsMobileDrawerOpen(false)}
+          availableUpdate={availableUpdate}
+          onOpenUpdateModal={() => setIsUpdateModalOpen(true)}
         />
 
         {/* Dynamic Views */}
@@ -450,6 +487,16 @@ export const App: React.FC = () => {
         onClose={() => setIsCakeFlavorsModalOpen(false)}
       />
 
+      {/* Dedicated Standard In-App Update Modal */}
+      <AppUpdateModal
+        isOpen={isUpdateModalOpen}
+        onClose={() => setIsUpdateModalOpen(false)}
+        updateInfo={availableUpdate}
+        onCheckAgain={async () => {
+          await performUpdateCheck(true);
+        }}
+      />
+
       {/* Floating Auto-Update Available Toast */}
       {availableUpdate && availableUpdate.hasUpdate && (
         <div className="fixed top-4 right-4 z-50 max-w-sm w-[calc(100vw-32px)] bg-white/95 backdrop-blur-md border-2 border-pink-400 rounded-3xl shadow-2xl p-4 animate-in slide-in-from-top duration-300">
@@ -481,9 +528,7 @@ export const App: React.FC = () => {
                   type="button"
                   onClick={() => {
                     soundFx.playSuccess();
-                    setSettingsTab('updates');
-                    setIsSettingsModalOpen(true);
-                    setAvailableUpdate(null);
+                    setIsUpdateModalOpen(true);
                   }}
                   className="flex-1 py-1.5 bg-gradient-to-r from-pink-600 to-rose-600 text-white text-xs font-black rounded-xl shadow-xs hover:from-pink-700 hover:to-rose-700 transition-all cursor-pointer flex items-center justify-center gap-1"
                 >

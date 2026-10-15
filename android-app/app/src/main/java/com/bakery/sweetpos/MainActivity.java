@@ -472,32 +472,7 @@ public class MainActivity extends AppCompatActivity {
                 webView.evaluateJavascript("window.onUpdateDownloadStart && window.onUpdateDownloadStart()", null);
             });
 
-            try {
-                File dir = getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS);
-                if (dir != null && !dir.exists()) dir.mkdirs();
-                File targetFile = new File(dir, "SweetBakery-Update.apk");
-                if (targetFile.exists()) {
-                    targetFile.delete();
-                }
-
-                DownloadManager.Request request = new DownloadManager.Request(Uri.parse(cleanUrl));
-                request.setTitle("SweetBakery POS Update");
-                request.setDescription("កំពុងទាញយកកំណែអាប់ដេតស្វ័យប្រវត្តិ...");
-                request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
-                request.setDestinationInExternalFilesDir(MainActivity.this, Environment.DIRECTORY_DOWNLOADS, "SweetBakery-Update.apk");
-                request.setAllowedOverMetered(true);
-                request.setAllowedOverRoaming(true);
-
-                if (downloadManager != null) {
-                    currentDownloadId = downloadManager.enqueue(request);
-                    startProgressPolling(currentDownloadId);
-                    return;
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-
-            // Fallback to direct stream if DownloadManager is unavailable
+            // Use robust direct stream downloader with automatic 302/307 redirect resolution & live progress
             downloadViaDirectStream(cleanUrl);
         }
     }
