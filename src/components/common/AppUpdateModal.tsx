@@ -26,6 +26,7 @@ import {
   isAndroidDevice,
   triggerInAppAndroidUpdate,
   triggerInAppDesktopUpdate,
+  openExternalUrl,
 } from '../../services/appUpdateService';
 
 interface AppUpdateModalProps {
@@ -142,12 +143,12 @@ export const AppUpdateModal: React.FC<AppUpdateModalProps> = ({
           setIsDownloading(false);
           setDownloadProgress(null);
           setStatusMessage(`ការទាញយកស្វ័យប្រវត្តិមានបញ្ហា។ កំពុងបើក Browser...`);
-          window.open(winUrl, '_blank');
+          openExternalUrl(winUrl);
         }
       );
 
       if (!started) {
-        window.open(winUrl, '_blank');
+        openExternalUrl(winUrl);
         setIsDownloading(false);
       }
     } else if (isAndroidNative) {
@@ -158,14 +159,14 @@ export const AppUpdateModal: React.FC<AppUpdateModalProps> = ({
 
       const started = triggerInAppAndroidUpdate(apkUrl);
       if (!started) {
-        window.location.href = apkUrl;
+        openExternalUrl(apkUrl);
         setIsDownloading(false);
       }
     } else if (isAndroid) {
       // Android Browser / PWA
       setIsDownloading(true);
       setStatusMessage('កំពុងបញ្ជូនទៅទាញយកឯកសារ APK តាម Browser...');
-      window.location.href = apkUrl;
+      openExternalUrl(apkUrl);
       setTimeout(() => {
         setIsDownloading(false);
         setStatusMessage('សូមចុចលើ File APK ដែលបានទាញយកដើម្បីដំឡើង!');
@@ -174,7 +175,7 @@ export const AppUpdateModal: React.FC<AppUpdateModalProps> = ({
       // Windows Browser / Web
       setIsDownloading(true);
       setStatusMessage('កំពុងទាញយក SweetBakery-POS-Setup.exe...');
-      window.location.href = winUrl;
+      openExternalUrl(winUrl);
       setTimeout(() => {
         setIsDownloading(false);
         setStatusMessage('សូមបើកឯកសារ SweetBakery-POS-Setup.exe ដើម្បីដំឡើង!');

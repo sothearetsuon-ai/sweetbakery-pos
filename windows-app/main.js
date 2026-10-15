@@ -33,9 +33,20 @@ function createWindow() {
   // Load the bundled local application (100% offline ready)
   loadAppUrl();
 
+  // Handle in-app navigation so downloading EXE or navigating to external web opens user browser safely
+  mainWindow.webContents.on('will-navigate', (event, url) => {
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      event.preventDefault();
+      shell.openExternal(url);
+    }
+  });
+
   // If loading fails (e.g. offline or DNS error), show friendly Khmer offline screen
   mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription, validatedURL) => {
     if (errorCode === -3) return; // Aborted load (e.g. during reload)
+    if (validatedURL && (validatedURL.startsWith('http://') || validatedURL.startsWith('https://'))) {
+      return; // Don't show offline screen if an external link / download failed to load inside browser view
+    }
     console.warn(`Failed to load ${validatedURL}: [${errorCode}] ${errorDescription}`);
     mainWindow.loadFile(path.join(__dirname, 'offline.html'));
   });
@@ -171,6 +182,13 @@ if (!gotTheLock) {
     }
   });
 }
+
+// Open external link safely via user's default Windows browser (Chrome, Edge, etc.)
+ipcMain.on('open-external-url', (event, url) => {
+  if (url && (url.startsWith('http://') || url.startsWith('https://'))) {
+    shell.openExternal(url);
+  }
+});
 
 // ==========================================
 // 1-Click Telegram-Style Silent Auto-Updater

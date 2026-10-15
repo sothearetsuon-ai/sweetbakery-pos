@@ -36,6 +36,7 @@ import {
   getStoredUpdateUrl,
   setStoredUpdateUrl,
   AppUpdateInfo,
+  openExternalUrl,
 } from '../../services/appUpdateService';
 
 export const AppUpdateTab: React.FC = () => {
@@ -184,18 +185,18 @@ export const AppUpdateTab: React.FC = () => {
       updateInfo?.windowsInstallerUrl ||
       updateInfo?.windowsDownloadUrl ||
       'https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/latest/download/SweetBakery-POS-Setup.exe';
-    window.location.href = winUrl;
+    openExternalUrl(winUrl);
   };
 
   const handleDownloadAndroid = () => {
     soundFx.playSuccess();
     const apkUrl =
       updateInfo?.apkDownloadUrl ||
-      'https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.2.6/SweetBakery-Android.apk';
+      'https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/latest/download/SweetBakery-Android.apk';
     if (isAndroidNative) {
       handleStartUpdate(apkUrl);
     } else {
-      window.location.href = apkUrl;
+      openExternalUrl(apkUrl);
     }
   };
 

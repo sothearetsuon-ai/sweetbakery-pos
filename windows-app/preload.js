@@ -3,6 +3,9 @@ const { contextBridge, ipcRenderer } = require('electron');
 contextBridge.exposeInMainWorld('SweetBakeryDesktop', {
   isDesktop: true,
   platform: 'win32',
+  openExternal: (url) => {
+    ipcRenderer.send('open-external-url', url);
+  },
   startSilentUpdate: (downloadUrl) => {
     ipcRenderer.send('start-desktop-silent-update', downloadUrl);
   },

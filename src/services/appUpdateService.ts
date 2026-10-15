@@ -240,3 +240,30 @@ export const triggerInAppDesktopUpdate = (
   return false;
 };
 
+/**
+ * Safely open download or external links across Desktop Electron and standard browsers
+ */
+export const openExternalUrl = (url: string) => {
+  if (typeof window === 'undefined') return;
+  const desktop = (window as any).SweetBakeryDesktop;
+  if (desktop && typeof desktop.openExternal === 'function') {
+    desktop.openExternal(url);
+    return;
+  }
+  // Standard Web / Mobile Browser
+  try {
+    const a = document.createElement('a');
+    a.href = url;
+    a.target = '_blank';
+    a.rel = 'noopener noreferrer';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => {
+      try { document.body.removeChild(a); } catch (e) {}
+    }, 100);
+  } catch {
+    window.open(url, '_blank', 'noopener,noreferrer');
+  }
+};
+
+

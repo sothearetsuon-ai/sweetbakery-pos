@@ -223,9 +223,35 @@ export const sendTelegramMessage = async (
       }),
     });
 
-    const data = await response.json();
+    let data = await response.json();
 
     if (!response.ok || !data.ok) {
+      // If Telegram failed due to HTML parsing entities, retry immediately with plain text
+      if (data.description && (data.description.includes('parse entities') || data.description.includes('Bad Request'))) {
+        try {
+          const plainText = text.replace(/<[^>]*>/g, '');
+          const retryRes = await fetch(`https://api.telegram.org/bot${cleanToken}/sendMessage`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              chat_id: cleanChatId,
+              text: plainText,
+              disable_web_page_preview: true,
+            }),
+          });
+          const retryData = await retryRes.json();
+          if (retryRes.ok && retryData.ok) {
+            return {
+              success: true,
+              message: 'សារត្រូវបានផ្ញើ (Plain text fallback) ជោគជ័យ!',
+              data: retryData.result,
+            };
+          }
+        } catch (retryErr) {
+          console.warn('[Telegram Retry Failed]:', retryErr);
+        }
+      }
+
       let errDesc = data.description || 'កំហុសមិនស្គាល់';
       if (errDesc.includes('Unauthorized') || errDesc.includes('Not Found')) {
         errDesc = 'Bot Token មិនត្រឹមត្រូវ (Invalid Bot Token)';
@@ -647,17 +673,24 @@ export const notifyTelegramExpense = async (
 ): Promise<void> => {
   if (isDemoModeActive()) return;
 
+  const config = await getStoredTelegramConfigAsync();
+  if (!config.enabled || config.notifyExpenses === false || !config.botToken || !config.chatId) {
+    console.warn('[Telegram Alert] Expense notification skipped (disabled or missing token/chatId):', {
+      enabled: config.enabled,
+      notifyExpenses: config.notifyExpenses,
+      hasToken: !!config.botToken,
+      hasChatId: !!config.chatId,
+    });
+    return;
+  }
+
   const expenseKey = `expense_${expense.id}`;
   if (hasTelegramEventFired(expenseKey)) {
     console.warn('[Telegram Alert] Expense notification skipped (already sent):', expense.id);
     return;
   }
-  markTelegramEventFired(expenseKey);
 
-  const config = await getStoredTelegramConfigAsync();
-  if (!config.enabled || !config.notifyExpenses || !config.botToken || !config.chatId) return;
-
-  const storeTitle = storeInfo?.nameKh || 'ហាងនំ SweetBakery';
+  const storeTitle = escapeHtml(storeInfo?.nameKh || 'ហាងនំ SweetBakery');
   const amountKhr = expense.amountKhr ?? Math.round(expense.amountUsd * exchangeRate);
 
   const isIng = expense.expenseType === 'INGREDIENT' || expense.category === 'INGREDIENTS';
@@ -665,23 +698,44 @@ export const notifyTelegramExpense = async (
   const isUnpaid = expense.paymentStatus === 'UNPAID';
   const paymentStatusText = isUnpaid ? '⏳ មិនទាន់បង់ / ជំពាក់' : '✅ បង់រួចរាល់';
 
+  const safeTitle = escapeHtml(expense.title);
+  const safePaidBy = escapeHtml(expense.paidBy);
+  const safeSupplier = escapeHtml(expense.supplier);
+  const safeNotes = escapeHtml(expense.notes);
+
   const text =
     `💸 <b>[${storeTitle}] — កត់ត្រាការចំណាយថ្មី</b>\n` +
     `━━━━━━━━━━━━━━━━━━\n` +
     `🏷️ <b>ផ្នែកចំណាយ៖</b> <b>${typeBadge}</b>\n` +
-    `📦 <b>មុខទំនិញ/ការចំណាយ៖</b> <b>${expense.title}</b>\n` +
-    (expense.quantity ? `🔢 <b>ចំនួន៖</b> ${expense.quantity} ${expense.unit || ''}\n` : '') +
+    `📦 <b>មុខទំនិញ/ការចំណាយ៖</b> <b>${safeTitle}</b>\n` +
+    (expense.quantity ? `🔢 <b>ចំនួន៖</b> ${expense.quantity} ${escapeHtml(expense.unit || '')}\n` : '') +
+    (safeSupplier ? `🏪 <b>អ្នកផ្គត់ផ្គង់៖</b> ${safeSupplier}\n` : '') +
     `💰 <b>ទឹកប្រាក់ចំណាយ៖</b> <b>${amountKhr.toLocaleString()} ៛</b> <i>($${expense.amountUsd.toFixed(2)})</i>\n` +
     `💳 <b>ស្ថានភាព៖</b> <b>${paymentStatusText}</b>\n` +
     (expense.dueDate ? `📅 <b>ថ្ងៃផុតកំណត់${isUnpaid ? 'បង់' : ''}៖</b> <b>${formatDateDMY(expense.dueDate)}</b>\n` : '') +
-    `👤 <b>អ្នកចំណាយ/ទទួលបន្ទុក៖</b> ${expense.paidBy}\n` +
-    (expense.notes ? `📝 <b>កំណត់សម្គាល់៖</b> ${expense.notes}\n` : '') +
+    `👤 <b>អ្នកចំណាយ/ទទួលបន្ទុក៖</b> ${safePaidBy}\n` +
+    (safeNotes ? `📝 <b>កំណត់សម្គាល់៖</b> ${safeNotes}\n` : '') +
     `⏰ <b>កាលបរិច្ឆេទកត់ត្រា៖</b> ${formatDateDMY(expense.date)}`;
 
-  if (expense.receiptImage) {
-    await sendTelegramPhoto(expense.receiptImage, text, config);
+  let res: { success: boolean; message: string };
+  if (expense.receiptImage && expense.receiptImage.length < 5000000) {
+    try {
+      res = await sendTelegramPhoto(expense.receiptImage, text, config);
+      if (!res.success) {
+        res = await sendTelegramMessage(text, config);
+      }
+    } catch {
+      res = await sendTelegramMessage(text, config);
+    }
   } else {
-    await sendTelegramMessage(text, config);
+    res = await sendTelegramMessage(text, config);
+  }
+
+  if (res.success) {
+    markTelegramEventFired(expenseKey);
+    console.log('[Telegram Alert] Expense notification sent successfully:', expense.id);
+  } else {
+    console.warn('[Telegram Alert] Failed to send expense notification:', res.message);
   }
 };
 
@@ -714,15 +768,15 @@ export const notifyTelegramExpenseDueAlert = async (
   }
 
   const text =
-    `🔔 <b>[${storeTitle}] — រំលឹកបង់ប្រាក់ចំណាយទូទៅ!</b>\n` +
+    `🔔 <b>[${escapeHtml(storeTitle)}] — រំលឹកបង់ប្រាក់ចំណាយទូទៅ!</b>\n` +
     `━━━━━━━━━━━━━━━━━━\n` +
     `${statusHeader}\n\n` +
-    `🏢 <b>ការចំណាយ៖</b> <b>${expense.title}</b>\n` +
-    (expense.supplier ? `🏪 <b>អ្នកផ្គត់ផ្គង់/ម្ចាស់ទីតាំង៖</b> ${expense.supplier}\n` : '') +
+    `🏢 <b>ការចំណាយ៖</b> <b>${escapeHtml(expense.title)}</b>\n` +
+    (expense.supplier ? `🏪 <b>អ្នកផ្គត់ផ្គង់/ម្ចាស់ទីតាំង៖</b> ${escapeHtml(expense.supplier)}\n` : '') +
     `💰 <b>ទឹកប្រាក់ត្រូវបង់៖</b> <b>${amountKhr.toLocaleString()} ៛</b> <i>($${expense.amountUsd.toFixed(2)})</i>\n` +
     `📅 <b>ថ្ងៃផុតកំណត់៖</b> <b>${formatDateDMY(expense.dueDate)}</b>\n` +
-    `👤 <b>អ្នកទទួលបន្ទុក៖</b> ${expense.paidBy}\n` +
-    (expense.notes ? `📝 <b>សម្គាល់៖</b> ${expense.notes}\n` : '') +
+    `👤 <b>អ្នកទទួលបន្ទុក៖</b> ${escapeHtml(expense.paidBy)}\n` +
+    (expense.notes ? `📝 <b>សម្គាល់៖</b> ${escapeHtml(expense.notes)}\n` : '') +
     `━━━━━━━━━━━━━━━━━━\n` +
     `💡 <i>សូមកុំភ្លេចទូទាត់ និងចូលទៅផ្ទាំងចំណាយដើម្បីចុច «បង់ប្រាក់រួច»</i>`;
 
@@ -760,9 +814,9 @@ export const notifyTelegramShiftClose = async (
   const totalSalesKhr = Math.round(shift.totalSalesUsd * exchangeRate);
 
   const text =
-    `🏁 <b>[${storeTitle}] — របាយការណ៍បិទវេនលក់ (Shift Closed)</b>\n` +
+    `🏁 <b>[${escapeHtml(storeTitle)}] — របាយការណ៍បិទវេនលក់ (Shift Closed)</b>\n` +
     `━━━━━━━━━━━━━━━━━━\n` +
-    `👤 <b>អ្នកគិតប្រាក់៖</b> <b>${shift.cashierName}</b>\n` +
+    `👤 <b>អ្នកគិតប្រាក់៖</b> <b>${escapeHtml(shift.cashierName)}</b>\n` +
     `⏱️ <b>ពេលដំណើរការ៖</b> ${startStr} ដល់ ${endStr}\n` +
     `🧾 <b>ចំនួនវិក្កយបត្រសរុប៖</b> <b>${shift.totalOrdersCount} វិក្កយបត្រ</b>\n` +
     `💰 <b>ចំណូលលក់សរុប៖</b> <b>${totalSalesKhr.toLocaleString()} ៛</b> <i>($${shift.totalSalesUsd.toFixed(2)})</i>\n\n` +
