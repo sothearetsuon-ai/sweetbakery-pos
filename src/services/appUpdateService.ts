@@ -15,7 +15,7 @@ export interface AppUpdateInfo {
   mandatory?: boolean;
 }
 
-export const CURRENT_APP_VERSION = '1.2.9';
+export const CURRENT_APP_VERSION = '1.3.0';
 export const CURRENT_BUILD_DATE = '2026-10-15';
 
 // Storage key for custom update server URL if configured
@@ -116,86 +116,96 @@ export const checkForAppUpdates = async (): Promise<AppUpdateInfo> => {
 
   const defaultApkUrl = 'https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/latest/download/SweetBakery-Android.apk';
   const defaultWinExeUrl = 'https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/latest/download/SweetBakery-POS-Setup.exe';
-  const defaultWinZipUrl = 'https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/latest/download/SweetBakery-POS-Windows.zip';
 
-  // 1. Try reading the primary version.json manifest
-  try {
-    const response = await fetch(`${manifestUrl}${cacheBuster}`, {
-      cache: 'no-cache',
-      headers: { 'Cache-Control': 'no-cache' },
-    });
+  let foundLatestVersion = currentVer;
+  let foundReleaseDate = CURRENT_BUILD_DATE;
+  let foundReleaseNotes: string[] = [];
+  let foundApkUrl = defaultApkUrl;
+  let foundWinExeUrl = defaultWinExeUrl;
 
-    if (response.ok) {
-      const data = await response.json();
-      const latestVer = data.version || currentVer;
-      const hasNew = isVersionNewer(latestVer, currentVer);
-
-      return {
-        hasUpdate: hasNew,
-        currentVersion: currentVer,
-        latestVersion: latestVer,
-        releaseDate: data.releaseDate || CURRENT_BUILD_DATE,
-        releaseNotes: data.releaseNotes || [
-          'កែលម្អប្រព័ន្ធអាប់ដេតស្វ័យប្រវត្តិ (Standard In-App Auto-Update)',
-          'បង្ហាញដំណឹងកំណែថ្មីច្បាស់លាស់ទាំងលើ Windows និង Android',
-          'ដំណើរការទាញយករលូន និងសុវត្ថិភាពខ្ពស់',
-        ],
-        apkDownloadUrl: data.apkDownloadUrl || defaultApkUrl,
-        windowsDownloadUrl: data.windowsDownloadUrl || data.windowsInstallerUrl || defaultWinExeUrl,
-        windowsInstallerUrl: data.windowsInstallerUrl || data.windowsDownloadUrl || defaultWinExeUrl,
-        mandatory: Boolean(data.mandatory),
-      };
+  const fetchWithTimeout = async (url: string, headers: Record<string, string> = {}) => {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 4000);
+    try {
+      const res = await fetch(url, {
+        headers,
+        signal: controller.signal,
+        cache: 'no-cache',
+      });
+      return res;
+    } finally {
+      clearTimeout(timer);
     }
-  } catch (err) {
-    console.warn('Could not fetch remote version manifest, trying GitHub API fallback:', err);
-  }
+  };
 
-  // 2. Fallback: Query GitHub Releases API directly if raw manifest was blocked or cached
+  // 1. Check GitHub Releases API (direct, official, uncached)
   try {
-    const ghRes = await fetch('https://api.github.com/repos/sothearetsuon-ai/sweetbakery-pos/releases/latest', {
-      headers: { Accept: 'application/vnd.github.v3+json' },
-    });
-    if (ghRes.ok) {
+    const ghRes = await fetchWithTimeout(
+      'https://api.github.com/repos/sothearetsuon-ai/sweetbakery-pos/releases/latest',
+      { Accept: 'application/vnd.github.v3+json' }
+    );
+    if (ghRes && ghRes.ok) {
       const ghData = await ghRes.json();
-      const tagVer = (ghData.tag_name || '').replace(/^v/i, '');
+      const tagVer = (ghData.tag_name || '').replace(/^v/i, '').trim();
       if (tagVer) {
-        const hasNew = isVersionNewer(tagVer, currentVer);
+        foundLatestVersion = tagVer;
+        foundReleaseDate = (ghData.published_at || '').slice(0, 10) || CURRENT_BUILD_DATE;
+        if (ghData.body) {
+          foundReleaseNotes = ghData.body
+            .split('\n')
+            .filter((l: string) => l.trim().startsWith('-') || l.trim().startsWith('*'))
+            .map((l: string) => l.replace(/^[-*]\s*/, '').trim());
+        }
         const apkAsset = ghData.assets?.find((a: any) => a.name?.endsWith('.apk'));
         const exeAsset = ghData.assets?.find((a: any) => a.name?.endsWith('.exe'));
-
-        return {
-          hasUpdate: hasNew,
-          currentVersion: currentVer,
-          latestVersion: tagVer,
-          releaseDate: (ghData.published_at || '').slice(0, 10) || CURRENT_BUILD_DATE,
-          releaseNotes: ghData.body
-            ? ghData.body.split('\n').filter((l: string) => l.trim().startsWith('-') || l.trim().startsWith('*')).map((l: string) => l.replace(/^[-*]\s*/, ''))
-            : ['មានកំណែថ្មី និងការកែលម្អប្រព័ន្ធដំណើរការ'],
-          apkDownloadUrl: apkAsset?.browser_download_url || defaultApkUrl,
-          windowsDownloadUrl: exeAsset?.browser_download_url || defaultWinExeUrl,
-          windowsInstallerUrl: exeAsset?.browser_download_url || defaultWinExeUrl,
-          mandatory: false,
-        };
+        if (apkAsset?.browser_download_url) foundApkUrl = apkAsset.browser_download_url;
+        if (exeAsset?.browser_download_url) foundWinExeUrl = exeAsset.browser_download_url;
       }
     }
   } catch (ghErr) {
-    console.warn('GitHub API fallback check failed:', ghErr);
+    console.warn('GitHub API check note:', ghErr);
   }
 
-  // Fallback info when offline
+  // 2. Also check version.json manifest
+  try {
+    const manifestRes = await fetchWithTimeout(`${manifestUrl}${cacheBuster}`);
+    if (manifestRes && manifestRes.ok) {
+      const data = await manifestRes.json();
+      const rawVer = (data.version || '').replace(/^v/i, '').trim();
+      if (rawVer && isVersionNewer(rawVer, foundLatestVersion)) {
+        foundLatestVersion = rawVer;
+        if (data.releaseDate) foundReleaseDate = data.releaseDate;
+        if (Array.isArray(data.releaseNotes) && data.releaseNotes.length > 0) {
+          foundReleaseNotes = data.releaseNotes;
+        }
+        if (data.apkDownloadUrl) foundApkUrl = data.apkDownloadUrl;
+        if (data.windowsInstallerUrl || data.windowsDownloadUrl) {
+          foundWinExeUrl = data.windowsInstallerUrl || data.windowsDownloadUrl;
+        }
+      } else if (!foundReleaseNotes.length && Array.isArray(data.releaseNotes)) {
+        foundReleaseNotes = data.releaseNotes;
+      }
+    }
+  } catch (err) {
+    console.warn('version.json fetch note:', err);
+  }
+
+  const hasNew = isVersionNewer(foundLatestVersion, currentVer);
+
   return {
-    hasUpdate: false,
+    hasUpdate: hasNew,
     currentVersion: currentVer,
-    latestVersion: currentVer,
-    releaseDate: CURRENT_BUILD_DATE,
-    releaseNotes: [
-      'កំណែចុងក្រោយបំផុត (Latest Stable Release)',
-      'គាំទ្រការអាប់ដែតក្នុង App ផ្ទាល់ ១០០%',
-      'ដំណើរការលឿន និងសន្សំសំចៃទិន្នន័យ',
+    latestVersion: foundLatestVersion,
+    releaseDate: foundReleaseDate,
+    releaseNotes: foundReleaseNotes.length > 0 ? foundReleaseNotes : [
+      'ប្រព័ន្ធ In-App Auto Update ស្តង់ដារថ្មី៖ ទាញយកអាប់ដែតបានរលូន និងលឿនរហ័ស ទាំងលើ Windows និង Android',
+      'របារទាញយក Progress Bar ផ្ទាល់៖ បង្ហាញភាគរយ % និងទំហំ MB កំពុងទាញយកជាក់ស្តែង',
+      'ការដំឡើងស្វ័យប្រវត្ត (1-Click Auto Install) ដោយសុវត្ថិភាព មិនបាត់បង់ទិន្នន័យ',
     ],
-    apkDownloadUrl: defaultApkUrl,
-    windowsDownloadUrl: defaultWinExeUrl,
-    windowsInstallerUrl: defaultWinExeUrl,
+    apkDownloadUrl: foundApkUrl,
+    windowsDownloadUrl: foundWinExeUrl,
+    windowsInstallerUrl: foundWinExeUrl,
+    mandatory: false,
   };
 };
 

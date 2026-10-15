@@ -124,11 +124,15 @@ export const App: React.FC = () => {
       const info = await checkForAppUpdates();
       if (info && info.hasUpdate) {
         setAvailableUpdate(info);
-      } else if (notifyIfNoUpdate) {
-        setAvailableUpdate(info);
+      } else {
+        setAvailableUpdate(null);
+        if (notifyIfNoUpdate && info) {
+          setAvailableUpdate({ ...info, hasUpdate: false });
+        }
       }
       return info;
     } catch {
+      setAvailableUpdate(null);
       return null;
     }
   }, []);
