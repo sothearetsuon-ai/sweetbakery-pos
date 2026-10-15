@@ -97,10 +97,12 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
   const [receivedKhr, setReceivedKhr] = useState<string>('');
   const [receivedUsd, setReceivedUsd] = useState<string>('');
   const [isStandeeOpen, setIsStandeeOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Sync state when opened or props change
   useEffect(() => {
     if (isOpen) {
+      setIsSubmitting(false);
       const activeDeposit = initialIsDeposit ?? false;
       setIsDeposit(activeDeposit);
       const depKhr = initialDepositKhr || defaultDeposit50Pct;
@@ -217,6 +219,9 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
   };
 
   const handleConfirm = () => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+
     soundFx.playSuccess();
     confetti({
       particleCount: 80,
@@ -879,8 +884,13 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
           </button>
           <button
             type="button"
+            disabled={isSubmitting}
             onClick={handleConfirm}
-            className={`px-6 py-2.5 text-white text-xs font-black rounded-2xl shadow-lg flex items-center gap-2 transition-all active:scale-95 cursor-pointer ${
+            className={`px-6 py-2.5 text-white text-xs font-black rounded-2xl shadow-lg flex items-center gap-2 transition-all cursor-pointer ${
+              isSubmitting
+                ? 'opacity-60 cursor-not-allowed scale-100'
+                : 'active:scale-95'
+            } ${
               isDeposit
                 ? 'bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 shadow-amber-500/25'
                 : 'bg-gradient-to-r from-pink-600 to-rose-500 hover:from-pink-700 hover:to-rose-600 shadow-pink-600/25'
@@ -888,7 +898,9 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
           >
             <CheckCircle className="w-4 h-4" />
             <span>
-              {isDeposit
+              {isSubmitting
+                ? 'កំពុងដំណើរការ...'
+                : isDeposit
                 ? `បញ្ជាក់ការកក់ប្រាក់ (${dueNowKhr.toLocaleString()} ៛)`
                 : `${text.confirmPayment} (${cartTotalKhr.toLocaleString()} ៛)`}
             </span>

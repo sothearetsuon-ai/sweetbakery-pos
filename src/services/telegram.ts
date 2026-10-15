@@ -93,6 +93,78 @@ export const saveStoredTelegramConfig = (config: TelegramConfig, syncToCloud = t
 };
 
 /**
+ * Deduplication Store: Prevents repeated spam or loops of Telegram notifications
+ * Stores up to 600 recent event keys in localStorage & memory
+ */
+const SENT_EVENTS_STORAGE_KEY = 'bakery_sent_telegram_events';
+const sentEventCache = new Set<string>();
+
+const loadSentEvents = (): Set<string> => {
+  if (typeof window === 'undefined') return sentEventCache;
+  try {
+    const raw = localStorage.getItem(SENT_EVENTS_STORAGE_KEY);
+    if (raw) {
+      const arr = JSON.parse(raw);
+      if (Array.isArray(arr)) {
+        arr.forEach((k: string) => {
+          if (typeof k === 'string') sentEventCache.add(k);
+        });
+      }
+    } else {
+      // First-time seed: Pre-seed all existing sales and orders into sentEventCache so past history is never spammed
+      try {
+        const rawSales = localStorage.getItem('bakery_sales');
+        if (rawSales) {
+          const salesList = JSON.parse(rawSales);
+          if (Array.isArray(salesList)) {
+            salesList.slice(0, 300).forEach((s: any) => {
+              if (s?.id) {
+                sentEventCache.add(`sale_id_${s.id}_deposit`);
+                sentEventCache.add(`sale_id_${s.id}_final`);
+              }
+              if (s?.orderNumber) {
+                sentEventCache.add(`sale_ord_${s.orderNumber}_deposit`);
+                sentEventCache.add(`sale_ord_${s.orderNumber}_final`);
+              }
+            });
+          }
+        }
+        const rawOrders = localStorage.getItem('bakery_custom_orders');
+        if (rawOrders) {
+          const ordersList = JSON.parse(rawOrders);
+          if (Array.isArray(ordersList)) {
+            ordersList.slice(0, 100).forEach((o: any) => {
+              if (o?.id) sentEventCache.add(`custom_id_${o.id}`);
+              if (o?.orderNumber) sentEventCache.add(`custom_ord_${o.orderNumber}`);
+            });
+          }
+        }
+        const arr = Array.from(sentEventCache).slice(-600);
+        localStorage.setItem(SENT_EVENTS_STORAGE_KEY, JSON.stringify(arr));
+      } catch (seedErr) {}
+    }
+  } catch (e) {}
+  return sentEventCache;
+};
+
+export const hasTelegramEventFired = (key: string): boolean => {
+  if (!key) return false;
+  loadSentEvents();
+  return sentEventCache.has(key);
+};
+
+export const markTelegramEventFired = (key: string): void => {
+  if (!key) return;
+  loadSentEvents();
+  sentEventCache.add(key);
+  if (typeof window === 'undefined') return;
+  try {
+    const arr = Array.from(sentEventCache).slice(-600);
+    localStorage.setItem(SENT_EVENTS_STORAGE_KEY, JSON.stringify(arr));
+  } catch (e) {}
+};
+
+/**
  * Retrieve saved Telegram config (with fallback to LAN sync / server for mobile devices)
  */
 export const getStoredTelegramConfigAsync = async (): Promise<TelegramConfig> => {
@@ -408,6 +480,28 @@ export const notifyTelegramSale = async (
   storeInfo?: StoreInfo,
   exchangeRate = 4100
 ): Promise<void> => {
+  if (isDemoModeActive()) return;
+
+  // Deduplication check: Guarantee each sale invoice is sent to Telegram exactly ONCE
+  const saleIdKey = sale.id ? `id_${sale.id}` : '';
+  const orderNumKey = sale.orderNumber ? `ord_${sale.orderNumber}` : '';
+  const stateKey = sale.isDeposit ? 'deposit' : 'final';
+
+  if (
+    (saleIdKey && hasTelegramEventFired(`sale_${saleIdKey}_${stateKey}`)) ||
+    (orderNumKey && hasTelegramEventFired(`sale_${orderNumKey}_${stateKey}`))
+  ) {
+    console.warn('[Telegram Alert] Sale notification skipped (already sent):', {
+      orderNumber: sale.orderNumber,
+      isDeposit: sale.isDeposit,
+    });
+    return;
+  }
+
+  // Pre-mark immediately to prevent race conditions or double-taps
+  if (saleIdKey) markTelegramEventFired(`sale_${saleIdKey}_${stateKey}`);
+  if (orderNumKey) markTelegramEventFired(`sale_${orderNumKey}_${stateKey}`);
+
   const config = await getStoredTelegramConfigAsync();
   if (!config.enabled || !config.notifySales || !config.botToken || !config.chatId) {
     console.warn('[Telegram Alert] Sale notification skipped:', {
@@ -481,6 +575,22 @@ export const notifyTelegramCustomOrder = async (
   storeInfo?: StoreInfo,
   exchangeRate = 4100
 ): Promise<void> => {
+  if (isDemoModeActive()) return;
+
+  const orderIdKey = order.id ? `id_${order.id}` : '';
+  const orderNumKey = order.orderNumber ? `ord_${order.orderNumber}` : '';
+
+  if (
+    (orderIdKey && hasTelegramEventFired(`custom_${orderIdKey}`)) ||
+    (orderNumKey && hasTelegramEventFired(`custom_${orderNumKey}`))
+  ) {
+    console.warn('[Telegram Alert] Custom order notification skipped (already sent):', order.orderNumber);
+    return;
+  }
+
+  if (orderIdKey) markTelegramEventFired(`custom_${orderIdKey}`);
+  if (orderNumKey) markTelegramEventFired(`custom_${orderNumKey}`);
+
   const config = await getStoredTelegramConfigAsync();
   if (!config.enabled || !config.notifyCustomOrders || !config.botToken || !config.chatId) {
     console.warn('[Telegram Alert] Order notification skipped:', {
@@ -535,6 +645,15 @@ export const notifyTelegramExpense = async (
   storeInfo?: StoreInfo,
   exchangeRate = 4100
 ): Promise<void> => {
+  if (isDemoModeActive()) return;
+
+  const expenseKey = `expense_${expense.id}`;
+  if (hasTelegramEventFired(expenseKey)) {
+    console.warn('[Telegram Alert] Expense notification skipped (already sent):', expense.id);
+    return;
+  }
+  markTelegramEventFired(expenseKey);
+
   const config = await getStoredTelegramConfigAsync();
   if (!config.enabled || !config.notifyExpenses || !config.botToken || !config.chatId) return;
 
@@ -623,6 +742,14 @@ export const notifyTelegramShiftClose = async (
   exchangeRate = 4100
 ): Promise<void> => {
   if (isDemoModeActive()) return;
+
+  const shiftKey = `shift_${shift.id || shift.startTime}`;
+  if (hasTelegramEventFired(shiftKey)) {
+    console.warn('[Telegram Alert] Shift close notification skipped (already sent):', shiftKey);
+    return;
+  }
+  markTelegramEventFired(shiftKey);
+
   const config = await getStoredTelegramConfigAsync();
   if (!config.enabled || !config.notifyShiftClose || !config.botToken || !config.chatId) return;
 

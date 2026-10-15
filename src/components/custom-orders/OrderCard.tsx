@@ -80,8 +80,11 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, onAdvanceStatus, on
     }
   };
 
+  const [isAdvancing, setIsAdvancing] = useState(false);
+
   const handleAdvance = () => {
-    if (!nextStatus) return;
+    if (!nextStatus || isAdvancing) return;
+    setIsAdvancing(true);
 
     if (nextStatus === 'READY' || nextStatus === 'DELIVERED') {
       soundFx.playSuccess();
@@ -95,6 +98,9 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, onAdvanceStatus, on
     }
 
     onAdvanceStatus(order.id, nextStatus);
+    setTimeout(() => {
+      setIsAdvancing(false);
+    }, 1500);
   };
 
   const remainingUsd = order.totalUsd - order.depositUsd;
@@ -364,11 +370,17 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, onAdvanceStatus, on
       {/* Advance Status Button */}
       {nextStatus && (
         <button
+          type="button"
+          disabled={isAdvancing}
           onClick={handleAdvance}
-          className="w-full py-2.5 bg-slate-900 hover:bg-pink-600 text-white rounded-2xl text-xs font-black transition-all duration-300 shadow-md flex items-center justify-center gap-1.5 active:scale-95 group-hover:bg-gradient-to-r group-hover:from-pink-600 group-hover:to-rose-500"
+          className={`w-full py-2.5 text-white rounded-2xl text-xs font-black transition-all duration-300 shadow-md flex items-center justify-center gap-1.5 ${
+            isAdvancing
+              ? 'bg-slate-400 cursor-not-allowed opacity-75'
+              : 'bg-slate-900 hover:bg-pink-600 active:scale-95 group-hover:bg-gradient-to-r group-hover:from-pink-600 group-hover:to-rose-500 cursor-pointer'
+          }`}
         >
-          <span>{getNextStatusLabel(nextStatus)}</span>
-          <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+          <span>{isAdvancing ? 'កំពុងដំណើរការ...' : getNextStatusLabel(nextStatus)}</span>
+          {!isAdvancing && <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />}
         </button>
       )}
 
