@@ -34,6 +34,7 @@ import {
   Building2,
   Copy,
   Rocket,
+  ChevronRight,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { useBakery } from '../../context/BakeryContext';
@@ -48,6 +49,7 @@ import { TelegramSettingsTab } from './TelegramSettingsTab';
 import { NotificationSettingsTab } from './NotificationSettingsTab';
 import { AppUpdateTab } from './AppUpdateTab';
 import { CameraCaptureModal } from '../common/CameraCaptureModal';
+import { CakeFlavorsModal } from '../pos/CakeFlavorsModal';
 import { isSuperAdminAuthenticated } from '../../utils/superAdminAuth';
 import { getStoreId, setStoreId } from '../../services/firebase';
 
@@ -134,6 +136,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
   const [isUploadingKhqr, setIsUploadingKhqr] = useState(false);
   const [cameraTarget, setCameraTarget] = useState<'logo' | 'khqr' | null>(null);
+  const [isCakeFlavorsModalOpen, setIsCakeFlavorsModalOpen] = useState(false);
 
   const isInitializedRef = useRef(false);
 
@@ -1047,6 +1050,37 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       </div>
                     </div>
                   </div>
+
+                  {/* Cake Flavors & Stock Management Section */}
+                  <div className="p-4 sm:p-5 rounded-3xl bg-purple-50/70 border-2 border-purple-100 space-y-3 shadow-2xs">
+                    <div className="flex items-center justify-between gap-3 flex-wrap">
+                      <div className="flex items-center gap-3">
+                        <span className="w-10 h-10 rounded-2xl bg-purple-600 text-white flex items-center justify-center text-xl shadow-xs">
+                          🧁
+                        </span>
+                        <div>
+                          <h4 className="font-black text-xs sm:text-sm text-slate-800">
+                            គ្រប់គ្រងរសជាតិនំ & ស្តុក (Cake Flavors & Stock)
+                          </h4>
+                          <p className="text-[11px] text-slate-500">
+                            កំណត់រសជាតិមាន ឬអស់ស្តុក និងបន្ថែមរសជាតិថ្មីៗសម្រាប់បង្ហាញលើផ្ទាំងភ្ញៀវកុម្មង់
+                          </p>
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          soundFx.playPop();
+                          setIsCakeFlavorsModalOpen(true);
+                        }}
+                        className="px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white rounded-xl text-xs font-black transition-all shadow-md shadow-purple-500/20 active:scale-95 flex items-center gap-1.5 cursor-pointer"
+                      >
+                        <span>បើកតារាងរសជាតិ</span>
+                        <ChevronRight className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
                 </>
               )}
 
@@ -1455,6 +1489,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         }}
         title={cameraTarget === 'logo' ? 'ថតរូប Logo ហាង (Store Logo)' : 'ថតរូបភាព KHQR ធនាគារ'}
         subtitle="ថតរូបភាពពីកាម៉េរ៉ាដើម្បីបញ្ចូលក្នុងប្រព័ន្ធភ្លាមៗ"
+      />
+
+      {/* Cake Flavors & Stock Modal */}
+      <CakeFlavorsModal
+        isOpen={isCakeFlavorsModalOpen}
+        onClose={() => setIsCakeFlavorsModalOpen(false)}
       />
     </div>
   );

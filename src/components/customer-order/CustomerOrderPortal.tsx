@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Cake,
   Calendar,
@@ -7,6 +7,7 @@ import {
   User,
   Image as ImageIcon,
   CheckCircle2,
+  XCircle,
   Sparkles,
   QrCode,
   Copy,
@@ -46,12 +47,26 @@ const CAKE_SIZES = [
   { id: '2 ជាន់', label: '2 ជាន់ (2-Tier)', desc: 'សម្រាប់កម្មវិធីធំ / 20+ នាក់', priceUsd: 45 },
 ];
 
+export const CUSTOMER_PRICE_PRESETS_KHR = [
+  { khr: 20000, labelKh: '២០,០០០ ៛', sizeHint: '1.5 ទឹក (~15cm)' },
+  { khr: 30000, labelKh: '៣០,០០០ ៛', sizeHint: '1.5 - 2 ទឹក' },
+  { khr: 40000, labelKh: '៤០,០០០ ៛', sizeHint: '2 ទឹក (~20cm) ពេញនិយម' },
+  { khr: 50000, labelKh: '៥០,០០០ ៛', sizeHint: '2 - 2.5 ទឹក' },
+  { khr: 60000, labelKh: '៦០,០០០ ៛', sizeHint: '2.5 ទឹក (~25cm)' },
+  { khr: 80000, labelKh: '៨០,០០០ ៛', sizeHint: '2.5 - 3 ទឹក' },
+  { khr: 100000, labelKh: '១០០,០០០ ៛', sizeHint: '3 ទឹក (~30cm)' },
+  { khr: 120000, labelKh: '១២០,០០០ ៛', sizeHint: '3 ទឹក តុបតែងពិសេស' },
+  { khr: 150000, labelKh: '១៥០,០០០ ៛', sizeHint: 'នំ ២ ជាន់ (2-Tier)' },
+  { khr: 200000, labelKh: '២០០,០០០ ៛', sizeHint: 'នំ ២-៣ ជាន់ កម្មវិធីធំ' },
+];
+
 export interface CakeFlavorItem {
   id: string;
   nameKh: string;
   nameEn: string;
   icon: string;
   label: string;
+  isAvailable?: boolean;
 }
 
 export const PRESET_CAKE_FLAVORS: CakeFlavorItem[] = [
@@ -73,6 +88,7 @@ export const CustomerOrderPortal: React.FC = () => {
     products,
     categories,
     flavors,
+    unavailableFlavors = [],
     partyAddons,
     storeInfo,
     exchangeRate,
@@ -90,9 +106,9 @@ export const CustomerOrderPortal: React.FC = () => {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [customCakeName, setCustomCakeName] = useState('នំខួបកំណើតម៉ូដពិសេស (Custom Cake)');
 
-  // Customization State
-  const [selectedSize, setSelectedSize] = useState('ស្តង់ដារ');
-  const [selectedSizePrice, setSelectedSizePrice] = useState(16);
+  // Customization State (Cake Price / Budget & Size)
+  const [selectedSize, setSelectedSize] = useState('2 ទឹក (~20cm)');
+  const [cakePriceKhrStr, setCakePriceKhrStr] = useState('40000');
   const [selectedFlavor, setSelectedFlavor] = useState<string>(PRESET_CAKE_FLAVORS[0].label);
   const [isOtherFlavor, setIsOtherFlavor] = useState(false);
   const [customFlavorText, setCustomFlavorText] = useState('');
@@ -101,7 +117,38 @@ export const CustomerOrderPortal: React.FC = () => {
   const [referenceImage, setReferenceImage] = useState<string>('');
   const [isUploadingRefImage, setIsUploadingRefImage] = useState(false);
 
-  // Computed list of cake flavors
+  // Parse cake budget price in KHR and convert to USD
+  const cakePriceKhr = useMemo(() => {
+    const cleanStr = cakePriceKhrStr
+      .replace(/[០-៩]/g, (d) => String('០១២៣៤៥៦៧៨៩'.indexOf(d)))
+      .replace(/[^0-9]/g, '');
+    const val = Number(cleanStr);
+    return isNaN(val) ? 0 : val;
+  }, [cakePriceKhrStr]);
+
+  const cakePriceUsd = useMemo(() => {
+    return Number((cakePriceKhr / exchangeRate).toFixed(2));
+  }, [cakePriceKhr, exchangeRate]);
+
+  // Dynamic estimate of cake size & portion based on budget
+  const estimatedSizeText = useMemo(() => {
+    if (cakePriceKhr <= 0) return 'កំណត់តាមការចរចាជាក់ស្តែង';
+    if (cakePriceKhr <= 25000) return '1.5 ទឹក (~15cm) - សម្រាប់ 2-4 នាក់';
+    if (cakePriceKhr <= 35000) return '1.5 - 2 ទឹក (~18cm) - សម្រាប់ 4-6 នាក់';
+    if (cakePriceKhr <= 65000) return '2 ទឹក (~20cm) - សម្រាប់ 6-8 នាក់ (ពេញនិយម)';
+    if (cakePriceKhr <= 95000) return '2.5 ទឹក (~25cm) - សម្រាប់ 10-14 នាក់';
+    if (cakePriceKhr <= 135000) return '3 ទឹក (~30cm) - សម្រាប់ 15-20 នាក់';
+    return 'នំ ២ ជាន់ ឬទំហំធំពិសេស (2-Tier / Special) - សម្រាប់ 20+ នាក់';
+  }, [cakePriceKhr]);
+
+  const finalSize = useMemo(() => {
+    if (selectedSize && selectedSize !== 'ស្តង់ដារ') {
+      return selectedSize;
+    }
+    return estimatedSizeText.split(' - ')[0];
+  }, [selectedSize, estimatedSizeText]);
+
+  // Computed list of cake flavors with in-stock / out-of-stock status
   const cakeFlavorList = useMemo(() => {
     const list: CakeFlavorItem[] = PRESET_CAKE_FLAVORS.filter((f) => f.id !== 'other');
 
@@ -126,16 +173,39 @@ export const CustomerOrderPortal: React.FC = () => {
       });
     }
 
-    list.push({
+    const mapped = list.map((item) => {
+      const isUnavailable =
+        unavailableFlavors.includes(item.label) ||
+        unavailableFlavors.includes(item.id) ||
+        unavailableFlavors.includes(item.nameKh);
+      return {
+        ...item,
+        isAvailable: !isUnavailable,
+      };
+    });
+
+    mapped.push({
       id: 'other',
       nameKh: 'ផ្សេងៗ',
       nameEn: 'Other...',
       icon: '✨',
       label: 'ផ្សេងៗ (Other)',
+      isAvailable: true,
     });
 
-    return list;
-  }, [flavors]);
+    return mapped;
+  }, [flavors, unavailableFlavors]);
+
+  // Auto fallback if currently selected flavor is out of stock
+  useEffect(() => {
+    const current = cakeFlavorList.find((f) => f.label === selectedFlavor);
+    if (current && current.isAvailable === false && !isOtherFlavor) {
+      const firstAvail = cakeFlavorList.find((f) => f.isAvailable !== false && f.id !== 'other');
+      if (firstAvail) {
+        setSelectedFlavor(firstAvail.label);
+      }
+    }
+  }, [cakeFlavorList, selectedFlavor, isOtherFlavor]);
 
   const finalFlavor = useMemo(() => {
     if (isOtherFlavor) {
@@ -224,12 +294,10 @@ export const CustomerOrderPortal: React.FC = () => {
     }, 0);
   }, [selectedAddons, availableAddons]);
 
-  const basePriceUsd = selectedProduct
-    ? (selectedProduct.priceUsd > 0 ? selectedProduct.priceUsd : selectedSizePrice)
-    : selectedSizePrice;
+  const basePriceUsd = cakePriceUsd;
 
   const totalUsd = Number((basePriceUsd + addonsTotalUsd).toFixed(2));
-  const totalKhr = Math.round(totalUsd * exchangeRate);
+  const totalKhr = Math.round(cakePriceKhr + (addonsTotalUsd * exchangeRate));
 
   const depositUsd = useMemo(() => {
     if (depositOption === '100%') return totalUsd;
@@ -251,9 +319,13 @@ export const CustomerOrderPortal: React.FC = () => {
     if (product.unit) {
       setSelectedSize(product.unit);
     }
-    if (product.priceUsd > 0) {
-      setSelectedSizePrice(product.priceUsd);
-    }
+    const defaultKhr =
+      product.priceKhr && product.priceKhr > 0
+        ? product.priceKhr
+        : product.priceUsd > 0
+        ? Math.round(product.priceUsd * exchangeRate)
+        : 40000;
+    setCakePriceKhrStr(defaultKhr.toString());
     if (product.imageUrl) {
       setReferenceImage(product.imageUrl);
     }
@@ -266,8 +338,8 @@ export const CustomerOrderPortal: React.FC = () => {
     soundFx.playPop();
     setSelectedProduct(null);
     setCustomCakeName('នំខួបកំណើតម៉ូដពិសេស (Custom Cake)');
-    setSelectedSize('ស្តង់ដារ');
-    setSelectedSizePrice(16);
+    setSelectedSize('2 ទឹក (~20cm)');
+    setCakePriceKhrStr('40000');
     setStep(2);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -360,7 +432,7 @@ export const CustomerOrderPortal: React.FC = () => {
         pickupDate,
         pickupTime,
         cakeName: customCakeName,
-        size: selectedSize,
+        size: finalSize,
         flavor: finalFlavor,
         inscription: inscription.trim(),
         themeNotes: combinedNotes || undefined,
@@ -771,6 +843,102 @@ export const CustomerOrderPortal: React.FC = () => {
               </div>
             </div>
 
+            {/* Cake Price / Budget Selection */}
+            <div className="p-4 sm:p-5 bg-gradient-to-br from-amber-50/80 via-pink-50/50 to-rose-50/70 rounded-3xl border border-amber-200/90 shadow-sm space-y-4 animate-in fade-in duration-200">
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <label className="text-xs sm:text-sm font-black text-slate-800 flex items-center gap-2">
+                  <span className="w-7 h-7 rounded-xl bg-gradient-to-tr from-amber-500 to-yellow-400 text-white flex items-center justify-center text-xs font-black shadow-xs">
+                    ៛
+                  </span>
+                  <span>កំណត់តម្លៃនំ ឬថវិកាកុម្មង់ (Cake Price / Budget) *</span>
+                </label>
+
+                <div className="flex items-center gap-2">
+                  <span className="text-xs sm:text-sm font-black text-pink-700 bg-white px-3 py-1 rounded-full border border-pink-200 shadow-2xs">
+                    {cakePriceKhr > 0 ? `${cakePriceKhr.toLocaleString()} ៛` : '០ ៛'}
+                    <span className="text-slate-400 font-semibold ml-1 text-xs">
+                      (${cakePriceUsd.toFixed(2)})
+                    </span>
+                  </span>
+                </div>
+              </div>
+
+              {/* Quick Presets Grid */}
+              <div className="space-y-1.5">
+                <div className="text-[11px] font-bold text-slate-600 flex items-center gap-1">
+                  <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                  <span>ជ្រើសរើសតម្លៃពេញនិយម (Popular Presets)៖</span>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                  {CUSTOMER_PRICE_PRESETS_KHR.map((pr) => {
+                    const isSelected = cakePriceKhr === pr.khr;
+                    const usdEquivalent = (pr.khr / exchangeRate).toFixed(2);
+                    return (
+                      <button
+                        key={pr.khr}
+                        type="button"
+                        onClick={() => {
+                          soundFx.playPop();
+                          setCakePriceKhrStr(pr.khr.toString());
+                        }}
+                        className={`p-2 sm:p-2.5 rounded-2xl border text-center transition-all cursor-pointer active:scale-95 flex flex-col items-center justify-center ${
+                          isSelected
+                            ? 'bg-gradient-to-r from-pink-600 to-rose-500 text-white border-pink-500 shadow-md shadow-pink-500/25 ring-2 ring-pink-300 scale-102'
+                            : 'bg-white border-rose-100 hover:border-pink-300 hover:bg-pink-50/30 text-slate-700 shadow-2xs'
+                        }`}
+                      >
+                        <div className="font-black text-xs sm:text-sm tracking-tight">
+                          {pr.labelKh}
+                        </div>
+                        <div className={`text-[10px] ${isSelected ? 'text-pink-100 font-semibold' : 'text-slate-400'}`}>
+                          ${usdEquivalent}
+                        </div>
+                        <div className={`text-[9px] truncate max-w-full mt-0.5 ${isSelected ? 'text-yellow-200 font-bold' : 'text-pink-600 font-medium'}`}>
+                          {pr.sizeHint.split(' ')[0]} {pr.sizeHint.split(' ')[1] || ''}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Custom Input Field */}
+              <div className="p-3 bg-white/90 rounded-2xl border border-amber-200/70 shadow-2xs space-y-1.5">
+                <label className="text-xs font-black text-slate-700 flex items-center justify-between">
+                  <span>✍️ ឬវាយបញ្ចូលតម្លៃដែលអ្នកចង់ទិញ (Or Enter Your Budget)៖</span>
+                  <span className="text-[10px] text-pink-600 font-bold">គិតជាប្រាក់រៀល (៛)</span>
+                </label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    placeholder="ឧទាហរណ៍៖ 20000, 35000, 40000, 70000..."
+                    value={cakePriceKhrStr}
+                    onChange={(e) => setCakePriceKhrStr(e.target.value)}
+                    className="w-full pl-3.5 pr-24 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-black text-slate-800 focus:outline-none focus:bg-white focus:border-pink-500 focus:ring-2 focus:ring-pink-500/20 shadow-inner"
+                  />
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5 text-xs font-bold text-slate-500 pointer-events-none">
+                    <span className="font-black text-pink-600">៛</span>
+                    <span>|</span>
+                    <span className="text-slate-400">${cakePriceUsd.toFixed(2)}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Size & Portion Estimation Hint */}
+              <div className="p-3 bg-white/70 rounded-2xl border border-pink-100 flex items-start gap-2.5 text-slate-700 text-xs">
+                <span className="text-base shrink-0">📏</span>
+                <div className="space-y-0.5">
+                  <div className="font-black text-pink-700">
+                    ទំហំប្រហាក់ប្រហែល៖ {estimatedSizeText}
+                  </div>
+                  <p className="text-[11px] text-slate-500">
+                    * ជាងនំនឹងរៀបចំទំហំ និងតុបតែងម៉ូដនំឱ្យស្រស់ស្អាតសមស្របទៅតាមកញ្ចប់ថវិការបស់លោកអ្នក។
+                  </p>
+                </div>
+              </div>
+            </div>
+
             {/* Flavor Selector */}
             <div className="space-y-3">
               <div className="flex items-center justify-between">
@@ -783,15 +951,21 @@ export const CustomerOrderPortal: React.FC = () => {
                 </span>
               </div>
 
-              {/* Grid of flavors with emojis & clear labels */}
+              {/* Grid of flavors with emojis, stock status & clear labels */}
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                 {cakeFlavorList.map((fl) => {
-                  const isSel = fl.id === 'other' ? isOtherFlavor : (!isOtherFlavor && selectedFlavor === fl.label);
+                  const outOfStock = fl.isAvailable === false;
+                  const isSel =
+                    !outOfStock &&
+                    (fl.id === 'other' ? isOtherFlavor : (!isOtherFlavor && selectedFlavor === fl.label));
+
                   return (
                     <button
                       key={fl.id}
                       type="button"
+                      disabled={outOfStock}
                       onClick={() => {
+                        if (outOfStock) return;
                         soundFx.playPop();
                         if (fl.id === 'other') {
                           setIsOtherFlavor(true);
@@ -800,20 +974,31 @@ export const CustomerOrderPortal: React.FC = () => {
                           setSelectedFlavor(fl.label);
                         }
                       }}
-                      className={`p-2.5 rounded-2xl border text-left transition-all active:scale-95 cursor-pointer flex items-center gap-2.5 ${
-                        isSel
-                          ? 'bg-gradient-to-r from-pink-500 to-rose-500 text-white border-pink-500 shadow-md shadow-pink-500/20 ring-2 ring-pink-300'
-                          : 'bg-white border-rose-100 hover:border-pink-300 hover:bg-pink-50/30 text-slate-700 shadow-2xs'
+                      className={`p-2.5 rounded-2xl border text-left transition-all relative flex items-center gap-2.5 ${
+                        outOfStock
+                          ? 'bg-slate-50 border-slate-200 text-slate-400 opacity-60 cursor-not-allowed select-none'
+                          : isSel
+                          ? 'bg-gradient-to-r from-pink-500 to-rose-500 text-white border-pink-500 shadow-md shadow-pink-500/20 ring-2 ring-pink-300 active:scale-95 cursor-pointer'
+                          : 'bg-white border-rose-100 hover:border-pink-300 hover:bg-pink-50/30 text-slate-700 shadow-2xs active:scale-95 cursor-pointer'
                       }`}
                     >
-                      <span className="text-xl shrink-0 p-1 bg-white/20 rounded-xl flex items-center justify-center">
+                      <span className={`text-xl shrink-0 p-1 rounded-xl flex items-center justify-center ${outOfStock ? 'grayscale opacity-60' : 'bg-white/20'}`}>
                         {fl.icon}
                       </span>
                       <div className="min-w-0 flex-1">
-                        <div className="font-black text-xs truncate leading-tight">{fl.nameKh}</div>
-                        <div className={`text-[10px] truncate ${isSel ? 'text-pink-100 font-semibold' : 'text-slate-400'}`}>
+                        <div className="flex items-center gap-1 flex-wrap">
+                          <span className={`font-black text-xs truncate leading-tight ${outOfStock ? 'line-through text-slate-400' : ''}`}>
+                            {fl.nameKh}
+                          </span>
+                        </div>
+                        <div className={`text-[10px] truncate ${outOfStock ? 'text-slate-400' : isSel ? 'text-pink-100 font-semibold' : 'text-slate-400'}`}>
                           {fl.nameEn}
                         </div>
+                        {outOfStock && (
+                          <span className="inline-block mt-0.5 text-[9px] font-black text-rose-600 bg-rose-50 px-1.5 py-0.2 rounded border border-rose-200">
+                            អស់ស្តុក
+                          </span>
+                        )}
                       </div>
                       {isSel && <CheckCircle2 className="w-4 h-4 shrink-0 text-white" />}
                     </button>
@@ -1197,7 +1382,7 @@ export const CustomerOrderPortal: React.FC = () => {
             <div className="bg-white rounded-3xl p-5 border border-rose-100 shadow-sm space-y-3">
               <div className="flex items-center justify-between text-xs pb-2 border-b border-slate-100">
                 <span className="text-slate-500 font-bold">នំកុម្ម៉ង់៖</span>
-                <span className="font-black text-slate-800">{customCakeName}{selectedSize && selectedSize !== 'ស្តង់ដារ' ? ` (${selectedSize})` : ''}</span>
+                <span className="font-black text-slate-800">{customCakeName}{finalSize ? ` (${finalSize})` : ''}</span>
               </div>
 
               <div className="flex items-center justify-between text-xs pb-2 border-b border-slate-100">

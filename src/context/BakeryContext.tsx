@@ -479,9 +479,12 @@ interface BakeryContextType {
   restockProduct: (productId: string, additionalStock: number) => void;
 
   flavors: string[];
+  unavailableFlavors: string[];
   addFlavor: (flavorName: string) => void;
   updateFlavor: (oldFlavor: string, newFlavor: string) => void;
   deleteFlavor: (flavorName: string) => void;
+  toggleFlavorAvailability: (flavorIdOrLabel: string) => void;
+  setFlavorAvailability: (flavorIdOrLabel: string, isAvailable: boolean) => void;
 
   partyAddons: PartyAddon[];
   addPartyAddon: (nameKh: string, priceKhr: number, priceUsd?: number, stockQty?: number, minAlertStock?: number) => PartyAddon;
@@ -1264,6 +1267,22 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     const saved = localStorage.getItem('bakery_flavors');
     return saved ? JSON.parse(saved) : initialFlavors;
   });
+
+  // Out of stock / unavailable flavors
+  const [unavailableFlavors, setUnavailableFlavors] = useState<string[]>(() => {
+    try {
+      const key = globalIsDemoMode ? 'demo_bakery_unavailable_flavors' : 'bakery_unavailable_flavors';
+      const saved = localStorage.getItem(key);
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  useEffect(() => {
+    const key = globalIsDemoMode ? 'demo_bakery_unavailable_flavors' : 'bakery_unavailable_flavors';
+    safeSetStorage(key, JSON.stringify(unavailableFlavors));
+  }, [unavailableFlavors]);
 
   const [partyAddons, setPartyAddons] = useState<PartyAddon[]>(() => {
     if (globalIsDemoMode) {
@@ -2145,6 +2164,15 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         return data.flavors;
       });
     }
+    if (Array.isArray(data.unavailableFlavors)) {
+      setUnavailableFlavors((prev) => {
+        if (data.unavailableFlavors.length === prev.length && data.unavailableFlavors.every((f: any, idx: number) => f === prev[idx])) {
+          return prev;
+        }
+        try { localStorage.setItem('bakery_unavailable_flavors', JSON.stringify(data.unavailableFlavors)); } catch (e) {}
+        return data.unavailableFlavors;
+      });
+    }
     if (data.telegramConfig && data.telegramConfig.botToken) {
       saveStoredTelegramConfig(data.telegramConfig);
     }
@@ -2736,7 +2764,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     });
 
     // Subscribe to shared Flavors across all devices (PC & Phone sync automatically)
-    const unsubFlavors = subscribeToFirestoreDoc<{ list?: string[] }>('settings', 'flavors', (cloudData) => {
+    const unsubFlavors = subscribeToFirestoreDoc<{ list?: string[]; unavailable?: string[] }>('settings', 'flavors', (cloudData) => {
       if (globalIsDemoMode || !cloudData) return;
       const list = cloudData.list;
       if (Array.isArray(list) && list.length > 0) {
@@ -2749,6 +2777,19 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           }
           safeSetStorage('bakery_flavors', JSON.stringify(list));
           return list;
+        });
+      }
+      const unavailable = cloudData.unavailable;
+      if (Array.isArray(unavailable)) {
+        setUnavailableFlavors((prev) => {
+          if (
+            unavailable.length === prev.length &&
+            unavailable.every((f, idx) => f === prev[idx])
+          ) {
+            return prev;
+          }
+          safeSetStorage('bakery_unavailable_flavors', JSON.stringify(unavailable));
+          return unavailable;
         });
       }
     });
@@ -3490,7 +3531,36 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       const updated = prev.filter((f) => f !== flavorName);
       try { localStorage.setItem('bakery_flavors', JSON.stringify(updated)); } catch (e) {}
       saveToLanSync({ flavors: updated });
-      syncSaveDoc('settings', 'flavors', { list: updated });
+      syncSaveDoc('settings', 'flavors', { list: updated, unavailable: unavailableFlavors });
+      return updated;
+    });
+  };
+
+  const toggleFlavorAvailability = (flavorIdOrLabel: string) => {
+    const key = flavorIdOrLabel.trim();
+    if (!key) return;
+    setUnavailableFlavors((prev) => {
+      const isUnavailable = prev.includes(key);
+      const updated = isUnavailable ? prev.filter((f) => f !== key) : [...prev, key];
+      const storageKey = globalIsDemoMode ? 'demo_bakery_unavailable_flavors' : 'bakery_unavailable_flavors';
+      try { localStorage.setItem(storageKey, JSON.stringify(updated)); } catch (e) {}
+      saveToLanSync({ unavailableFlavors: updated });
+      syncSaveDoc('settings', 'flavors', { list: flavors, unavailable: updated });
+      return updated;
+    });
+  };
+
+  const setFlavorAvailability = (flavorIdOrLabel: string, isAvailable: boolean) => {
+    const key = flavorIdOrLabel.trim();
+    if (!key) return;
+    setUnavailableFlavors((prev) => {
+      const updated = isAvailable
+        ? prev.filter((f) => f !== key)
+        : prev.includes(key) ? prev : [...prev, key];
+      const storageKey = globalIsDemoMode ? 'demo_bakery_unavailable_flavors' : 'bakery_unavailable_flavors';
+      try { localStorage.setItem(storageKey, JSON.stringify(updated)); } catch (e) {}
+      saveToLanSync({ unavailableFlavors: updated });
+      syncSaveDoc('settings', 'flavors', { list: flavors, unavailable: updated });
       return updated;
     });
   };
@@ -5371,9 +5441,12 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         deleteProduct,
         restockProduct,
         flavors,
+        unavailableFlavors,
         addFlavor,
         updateFlavor,
         deleteFlavor,
+        toggleFlavorAvailability,
+        setFlavorAvailability,
         partyAddons,
         addPartyAddon,
         updatePartyAddon,

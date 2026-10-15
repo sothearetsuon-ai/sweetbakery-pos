@@ -72,6 +72,7 @@ export const NewCustomOrderModal: React.FC<NewCustomOrderModalProps> = ({ isOpen
     lang,
     addCustomOrder,
     flavors,
+    unavailableFlavors = [],
     addFlavor,
     partyAddons,
     addPartyAddon,
@@ -916,11 +917,14 @@ export const NewCustomOrderModal: React.FC<NewCustomOrderModalProps> = ({ isOpen
                       onChange={(e) => setFlavor(e.target.value)}
                       className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500 font-semibold text-slate-800"
                     >
-                      {flavors.map((f, i) => (
-                        <option key={i} value={f}>
-                          {f}
-                        </option>
-                      ))}
+                      {flavors.map((f, i) => {
+                        const isOut = unavailableFlavors.includes(f);
+                        return (
+                          <option key={i} value={f} className={isOut ? 'text-slate-400' : 'text-slate-800'}>
+                            {f} {isOut ? '❌ (អស់ស្តុក)' : ''}
+                          </option>
+                        );
+                      })}
                     </select>
                   )}
                 </div>

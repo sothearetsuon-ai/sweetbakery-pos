@@ -7,6 +7,7 @@ import { NewCustomOrderModal } from './NewCustomOrderModal';
 import { AddDepositModal } from './AddDepositModal';
 import { ReceiptModal } from '../pos/ReceiptModal';
 import { CustomerOrderLinkModal } from '../customer-order/CustomerOrderLinkModal';
+import { CakeFlavorsModal } from '../pos/CakeFlavorsModal';
 import { OrderStatus, CustomCakeOrder, CompletedSale } from '../../types';
 import { soundFx } from '../../utils/audio';
 
@@ -16,6 +17,7 @@ export const CustomOrderPipeline: React.FC = () => {
 
   const [isNewOrderModalOpen, setIsNewOrderModalOpen] = useState(false);
   const [isCustomerLinkModalOpen, setIsCustomerLinkModalOpen] = useState(false);
+  const [isFlavorsModalOpen, setIsFlavorsModalOpen] = useState(false);
   const [selectedOrderForDeposit, setSelectedOrderForDeposit] = useState<CustomCakeOrder | null>(null);
   const [receiptSale, setReceiptSale] = useState<CompletedSale | null>(null);
   const [orderToDelete, setOrderToDelete] = useState<CustomCakeOrder | null>(null);
@@ -425,6 +427,20 @@ export const CustomOrderPipeline: React.FC = () => {
             <span className="sm:hidden">លីងភ្ញៀវ</span>
           </button>
 
+          {/* Cake Flavors & Stock Button */}
+          <button
+            onClick={() => {
+              soundFx.playPop();
+              setIsFlavorsModalOpen(true);
+            }}
+            className="px-3 py-2 bg-gradient-to-r from-purple-500/10 to-pink-500/10 hover:bg-purple-500/20 text-purple-700 border border-purple-300 text-xs font-black rounded-2xl flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer shadow-2xs"
+            title="គ្រប់គ្រងរសជាតិនំ & ស្តុកមាន/អស់"
+          >
+            <span className="text-sm">🧁</span>
+            <span className="hidden sm:inline">រសជាតិនំ & ស្តុក</span>
+            <span className="sm:hidden">រសជាតិ</span>
+          </button>
+
           {/* New Order Button */}
           <button
             onClick={() => {
@@ -746,6 +762,12 @@ export const CustomOrderPipeline: React.FC = () => {
       <CustomerOrderLinkModal
         isOpen={isCustomerLinkModalOpen}
         onClose={() => setIsCustomerLinkModalOpen(false)}
+      />
+
+      {/* Cake Flavors & Stock Modal */}
+      <CakeFlavorsModal
+        isOpen={isFlavorsModalOpen}
+        onClose={() => setIsFlavorsModalOpen(false)}
       />
     </div>
   );

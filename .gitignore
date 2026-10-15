@@ -17,3 +17,5 @@ android-app/build/
 android-app/.gradle/
 *.zip
 *.exe
+scratch/
+.vscode/
