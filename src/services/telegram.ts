@@ -965,3 +965,32 @@ export const setTelegramMenuButton = async (
     return { success: false, message: err?.message || 'Error connecting to Telegram API' };
   }
 };
+
+/**
+ * Reset Telegram Bot Chat Menu Button back to default standard menu
+ */
+export const resetTelegramMenuButton = async (
+  botToken: string
+): Promise<{ success: boolean; message: string }> => {
+  if (!botToken) return { success: false, message: 'សូមបញ្ចូល Bot Token!' };
+
+  try {
+    const res = await fetch(`https://api.telegram.org/bot${botToken}/setChatMenuButton`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        menu_button: {
+          type: 'default',
+        },
+      }),
+    });
+    const data = await res.json();
+    if (data.ok) {
+      return { success: true, message: 'បានកំណត់ Menu Button ទៅជា Default ធម្មតាវិញដោយជោគជ័យ!' };
+    }
+    return { success: false, message: data.description || 'បរាជ័យក្នុងការកំណត់ Menu Button' };
+  } catch (err: any) {
+    return { success: false, message: err?.message || 'Error connecting to Telegram API' };
+  }
+};
+

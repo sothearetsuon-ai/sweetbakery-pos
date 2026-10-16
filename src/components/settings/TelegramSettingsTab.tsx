@@ -24,6 +24,7 @@ import {
   saveStoredTelegramConfig,
   testTelegramConnection,
   setTelegramMenuButton,
+  resetTelegramMenuButton,
 } from '../../services/telegram';
 import { useBakery } from '../../context/BakeryContext';
 import { soundFx } from '../../utils/audio';
@@ -92,6 +93,23 @@ export const TelegramSettingsTab: React.FC = () => {
       try {
         confetti({ particleCount: 50, spread: 60, origin: { y: 0.6 } });
       } catch (e) {}
+    }
+  };
+
+  const handleResetMenu = async () => {
+    if (!config.botToken) {
+      alert('សូមបញ្ចូល Bot Token ជាមុនសិន!');
+      return;
+    }
+    setIsConnectingMenu(true);
+    setMenuConnectResult(null);
+    soundFx.playPop();
+
+    const res = await resetTelegramMenuButton(config.botToken);
+    setIsConnectingMenu(false);
+    setMenuConnectResult(res);
+    if (res.success) {
+      soundFx.playSuccess();
     }
   };
 
@@ -566,25 +584,61 @@ export const TelegramSettingsTab: React.FC = () => {
           </div>
         </div>
 
-        {/* 1-Click Auto Connect Button */}
+        {/* 1-Click Auto Connect Button & Reset Button */}
         <div className="p-3.5 bg-white rounded-2xl border border-sky-100 flex flex-wrap items-center justify-between gap-3 shadow-2xs">
           <div>
             <p className="text-xs font-black text-slate-800 flex items-center gap-1.5">
               <span>⚡ ភ្ជាប់ប៊ូតុង Menu ទៅ Telegram Bot ដោយស្វ័យប្រវត្តិ</span>
             </p>
             <p className="text-[11px] text-slate-500 mt-0.5">
-              ចុចប៊ូតុងនេះដើម្បីកំណត់ប៊ូតុង Menu ក្នុង Bot របស់លោកអ្នកភ្លាមៗ មិនបាច់ចូល BotFather ឡើយ
+              កំណត់ប៊ូតុង Menu ក្នុង Bot របស់លោកអ្នកភ្លាមៗ មិនបាច់ចូល BotFather ឡើយ
             </p>
           </div>
-          <button
-            type="button"
-            onClick={handleAutoConnectMenu}
-            disabled={isConnectingMenu}
-            className="px-4 py-2 bg-gradient-to-r from-sky-600 to-blue-600 hover:from-sky-700 hover:to-blue-700 text-white rounded-xl text-xs font-black flex items-center gap-2 shadow-sm transition-all active:scale-95 disabled:opacity-50 cursor-pointer"
-          >
-            <RotateCw className={`w-3.5 h-3.5 ${isConnectingMenu ? 'animate-spin' : ''}`} />
-            <span>{isConnectingMenu ? 'កំពុងភ្ជាប់...' : '⚡ ភ្ជាប់ប៊ូតុង Menu ឥឡូវនេះ'}</span>
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleResetMenu}
+              disabled={isConnectingMenu}
+              title="កំណត់ត្រឡប់ទៅជាប៊ូតុងធម្មតាវិញ"
+              className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-all active:scale-95 disabled:opacity-50 cursor-pointer"
+            >
+              🔄 Reset Default
+            </button>
+            <button
+              type="button"
+              onClick={handleAutoConnectMenu}
+              disabled={isConnectingMenu}
+              className="px-4 py-2 bg-gradient-to-r from-sky-600 to-blue-600 hover:from-sky-700 hover:to-blue-700 text-white rounded-xl text-xs font-black flex items-center gap-2 shadow-sm transition-all active:scale-95 disabled:opacity-50 cursor-pointer"
+            >
+              <RotateCw className={`w-3.5 h-3.5 ${isConnectingMenu ? 'animate-spin' : ''}`} />
+              <span>{isConnectingMenu ? 'កំពុងភ្ជាប់...' : '⚡ ភ្ជាប់ប៊ូតុង Menu'}</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Warning & Solution for Android Google Play Store Telegram */}
+        <div className="p-4 bg-amber-50/90 border border-amber-200/90 rounded-2xl space-y-2">
+          <div className="flex items-center gap-2 text-amber-900 font-black text-xs">
+            <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+            <span>ដំណោះស្រាយពេលទូរសព្ទ Android បង្ហាញ៖ «This bot can't be displayed on Telegram apps downloaded from the Google Play Store»</span>
+          </div>
+          <p className="text-[11px] text-amber-800 leading-relaxed">
+            នេះជា<b>គោលការណ៍រឹតត្បិតរបស់ Google Play Store</b> លើកម្មវិធី Telegram (ដោយសារកម្មវិធីមានមុខងារទូទាត់ប្រាក់ KHQR និងការលក់ទំនិញ)។ ដើម្បីបើកប្រើប្រាស់បាន ១០០%៖
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1 text-[11px]">
+            <div className="bg-white/80 p-2.5 rounded-xl border border-amber-200 space-y-1">
+              <p className="font-bold text-slate-800">✅ វិធីទី ១៖ ប្រើ Telegram Direct APK (ផ្លូវការ)</p>
+              <p className="text-slate-600 leading-relaxed">
+                ទាញយក Telegram ផ្លូវការដោយផ្ទាល់ពី <a href="https://telegram.org/android" target="_blank" rel="noreferrer" className="text-sky-600 font-bold underline">telegram.org/android</a> ជំនួស Telegram ពី Play Store (គ្មានការរឹតត្បិត បើក Mini App បាន ១០០%)។
+              </p>
+            </div>
+            <div className="bg-white/80 p-2.5 rounded-xl border border-amber-200 space-y-1">
+              <p className="font-bold text-slate-800">🌐 វិធីទី ២៖ ឱ្យអតិថិជនបើកតាម Web Browser</p>
+              <p className="text-slate-600 leading-relaxed">
+                ផ្ញើតំណភ្ជាប់ <code className="bg-slate-100 px-1 py-0.5 rounded text-[10px]">?order=true</code> ខាងលើឱ្យអតិថិជនបើកតាម Chrome, Safari ឬតាម <a href="https://web.telegram.org" target="_blank" rel="noreferrer" className="text-sky-600 font-bold underline">web.telegram.org</a> ដោយផ្ទាល់។
+              </p>
+            </div>
+          </div>
         </div>
 
         {menuConnectResult && (
