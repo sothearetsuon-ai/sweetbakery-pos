@@ -4083,8 +4083,18 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     isUpdatingFromLan.current = false;
     if (lanSyncTimer.current) clearTimeout(lanSyncTimer.current);
 
-    const randomSuffix = String(sales.length + 1).padStart(3, '0');
-    const orderNumber = `POS-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${randomSuffix}`;
+    const todayStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+    const todayPrefix = `POS-${todayStr}-`;
+    let maxSuffix = 0;
+    sales.forEach((s) => {
+      if (s.orderNumber && s.orderNumber.startsWith(todayPrefix)) {
+        const numPart = parseInt(s.orderNumber.slice(todayPrefix.length), 10);
+        if (!isNaN(numPart) && numPart > maxSuffix) {
+          maxSuffix = numPart;
+        }
+      }
+    });
+    const orderNumber = `${todayPrefix}${String(maxSuffix + 1).padStart(3, '0')}`;
     const rawSale: CompletedSale = {
       ...saleData,
       id: `sale-${Date.now()}`,
@@ -4157,7 +4167,9 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
     syncSaveDoc('sales', newSale.id, newSale);
     clearCart();
-    notifyTelegramSale(newSale, storeInfo, exchangeRate);
+    notifyTelegramSale(newSale, storeInfo, exchangeRate).catch((err) => {
+      console.error('[BakeryContext] notifyTelegramSale error:', err);
+    });
 
     // Update shift sales
     if (currentShift && currentShift.status === 'OPEN') {

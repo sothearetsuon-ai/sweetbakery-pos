@@ -53,7 +53,37 @@ export const getStoredTelegramConfig = (): TelegramConfig => {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
       const parsed = JSON.parse(saved);
-      return { ...DEFAULT_TELEGRAM_CONFIG, ...parsed };
+      const merged: TelegramConfig = { ...DEFAULT_TELEGRAM_CONFIG, ...parsed };
+
+      // Auto-heal 1: Ensure bot token is the official default if missing or previous default
+      if (!merged.botToken || merged.botToken === DEFAULT_TELEGRAM_CONFIG.botToken || merged.botToken.startsWith('8544004471:')) {
+        merged.botToken = DEFAULT_TELEGRAM_CONFIG.botToken;
+        merged.enabled = true;
+        merged.notifySales = true;
+        merged.notifyCustomOrders = true;
+        merged.notifyExpenses = true;
+        merged.notifyShiftClose = true;
+      }
+
+      // Auto-heal 2: Ensure group -5528089668 is always present in chatId
+      if (!merged.chatId) {
+        merged.chatId = DEFAULT_TELEGRAM_CONFIG.chatId;
+      } else if (!merged.chatId.includes('-5528089668')) {
+        merged.chatId = `-5528089668, ${merged.chatId}`;
+      }
+
+      // Auto-heal 3: If bot credentials exist, ensure alerts are enabled
+      if (merged.botToken && merged.chatId && !merged.enabled) {
+        merged.enabled = true;
+        merged.notifySales = true;
+      }
+
+      // Write back healed config to localStorage
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
+      } catch (e) {}
+
+      return merged;
     }
   } catch (e) {
     console.error('Error loading Telegram config:', e);
@@ -119,6 +149,8 @@ export const parseTelegramChatIds = (chatIdStr?: string, botToken?: string): str
  */
 const SENT_EVENTS_STORAGE_KEY = 'bakery_sent_telegram_events';
 const sentEventCache = new Set<string>();
+const inFlightSaleEvents = new Set<string>();
+const inFlightCustomOrderEvents = new Set<string>();
 
 const loadSentEvents = (): Set<string> => {
   if (typeof window === 'undefined') return sentEventCache;
@@ -131,46 +163,6 @@ const loadSentEvents = (): Set<string> => {
           if (typeof k === 'string') sentEventCache.add(k);
         });
       }
-    } else {
-      // First-time seed: Pre-seed historical sales and orders into sentEventCache so past history is never spammed
-      // CRITICAL FIX: Only pre-seed sales older than 2 minutes so fresh sales are NEVER accidentally marked as sent!
-      try {
-        const now = Date.now();
-        const rawSales = localStorage.getItem('bakery_sales');
-        if (rawSales) {
-          const salesList = JSON.parse(rawSales);
-          if (Array.isArray(salesList)) {
-            salesList.slice(0, 300).forEach((s: any) => {
-              const saleTime = new Date(s?.timestamp || s?.createdAt || 0).getTime();
-              if (now - saleTime > 120000) {
-                if (s?.id) {
-                  sentEventCache.add(`sale_id_${s.id}_deposit`);
-                  sentEventCache.add(`sale_id_${s.id}_final`);
-                }
-                if (s?.orderNumber) {
-                  sentEventCache.add(`sale_ord_${s.orderNumber}_deposit`);
-                  sentEventCache.add(`sale_ord_${s.orderNumber}_final`);
-                }
-              }
-            });
-          }
-        }
-        const rawOrders = localStorage.getItem('bakery_custom_orders');
-        if (rawOrders) {
-          const ordersList = JSON.parse(rawOrders);
-          if (Array.isArray(ordersList)) {
-            ordersList.slice(0, 100).forEach((o: any) => {
-              const orderTime = new Date(o?.createdAt || o?.orderDate || 0).getTime();
-              if (now - orderTime > 120000) {
-                if (o?.id) sentEventCache.add(`custom_id_${o.id}`);
-                if (o?.orderNumber) sentEventCache.add(`custom_ord_${o.orderNumber}`);
-              }
-            });
-          }
-        }
-        const arr = Array.from(sentEventCache).slice(-600);
-        localStorage.setItem(SENT_EVENTS_STORAGE_KEY, JSON.stringify(arr));
-      } catch (seedErr) {}
     }
   } catch (e) {}
   return sentEventCache;
@@ -201,7 +193,7 @@ export const getStoredTelegramConfigAsync = async (): Promise<TelegramConfig> =>
   if (isDemoModeActive()) {
     return config;
   }
-  if (config.botToken && config.chatId) {
+  if (config.botToken && config.chatId && config.enabled && config.notifySales) {
     return config;
   }
 
@@ -211,8 +203,14 @@ export const getStoredTelegramConfigAsync = async (): Promise<TelegramConfig> =>
     if (res.ok) {
       const data = await res.json();
       if (data?.telegramConfig?.botToken && data?.telegramConfig?.chatId) {
-        saveStoredTelegramConfig(data.telegramConfig);
-        return { ...DEFAULT_TELEGRAM_CONFIG, ...data.telegramConfig };
+        const merged = { ...DEFAULT_TELEGRAM_CONFIG, ...data.telegramConfig };
+        if (!merged.chatId.includes('-5528089668')) {
+          merged.chatId = `-5528089668, ${merged.chatId}`;
+        }
+        merged.enabled = true;
+        merged.notifySales = true;
+        saveStoredTelegramConfig(merged);
+        return merged;
       }
     }
   } catch (e) {
@@ -581,89 +579,106 @@ export const notifyTelegramSale = async (
 ): Promise<void> => {
   if (isDemoModeActive()) return;
 
-  // Deduplication check: Guarantee each sale invoice is sent to Telegram exactly ONCE
-  const saleIdKey = sale.id ? `id_${sale.id}` : '';
-  const orderNumKey = sale.orderNumber ? `ord_${sale.orderNumber}` : '';
   const stateKey = sale.isDeposit ? 'deposit' : 'final';
+  // Use unique sale ID as primary key (fallback to orderNumber if no id)
+  const eventKey = sale.id ? `sale_id_${sale.id}_${stateKey}` : `sale_ord_${sale.orderNumber}_${stateKey}`;
 
-  if (
-    (saleIdKey && hasTelegramEventFired(`sale_${saleIdKey}_${stateKey}`)) ||
-    (orderNumKey && hasTelegramEventFired(`sale_${orderNumKey}_${stateKey}`))
-  ) {
-    console.warn('[Telegram Alert] Sale notification skipped (already sent):', {
+  // Check if already sent or currently in-flight
+  if (hasTelegramEventFired(eventKey) || inFlightSaleEvents.has(eventKey)) {
+    console.warn('[Telegram Alert] Sale notification skipped (already sent or in-flight):', {
+      eventKey,
       orderNumber: sale.orderNumber,
       isDeposit: sale.isDeposit,
     });
     return;
   }
 
-  // Pre-mark immediately to prevent race conditions or double-taps
-  if (saleIdKey) markTelegramEventFired(`sale_${saleIdKey}_${stateKey}`);
-  if (orderNumKey) markTelegramEventFired(`sale_${orderNumKey}_${stateKey}`);
+  inFlightSaleEvents.add(eventKey);
 
-  const config = await getStoredTelegramConfigAsync();
-  if (!config.enabled || !config.notifySales || !config.botToken || !config.chatId) {
-    console.warn('[Telegram Alert] Sale notification skipped:', {
-      enabled: config.enabled,
-      notifySales: config.notifySales,
-      hasBotToken: Boolean(config.botToken),
-      hasChatId: Boolean(config.chatId),
-    });
-    return;
+  try {
+    const config = await getStoredTelegramConfigAsync();
+    if (!config.enabled || !config.notifySales || !config.botToken || !config.chatId) {
+      console.warn('[Telegram Alert] Sale notification skipped (disabled or missing token/chatId):', {
+        enabled: config.enabled,
+        notifySales: config.notifySales,
+        hasBotToken: Boolean(config.botToken),
+        hasChatId: Boolean(config.chatId),
+      });
+      return;
+    }
+
+    const storeTitle = storeInfo?.nameKh || 'ហាងនំ SweetBakery';
+    const totalKhr = sale.totalKhr ?? Math.round(sale.totalUsd * exchangeRate);
+    const now = new Date(sale.createdAt || Date.now());
+    const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+    const dateStr = formatDateDMY(sale.createdAt || Date.now());
+
+    const paymentText =
+      sale.paymentMethod === 'KHQR_BAKONG'
+        ? '📲 KHQR Bakong / ធនាគារ'
+        : sale.paymentMethod === 'CASH_KHR'
+        ? '💵 សាច់ប្រាក់ (៛ រៀល)'
+        : '💵 សាច់ប្រាក់ ($ ដុល្លារ)';
+
+    const itemsList = (sale.items || [])
+      .map(
+        (item) =>
+          `• <b>${escapeHtml(item.nameKh)}</b> × ${item.quantity}  <i>($${(item.priceUsd * item.quantity).toFixed(2)})</i>`
+      )
+      .join('\n');
+
+    const text =
+      `🍰 <b>[${escapeHtml(storeTitle)}] — វិក្កយបត្រលក់ថ្មី!</b>\n` +
+      `━━━━━━━━━━━━━━━━━━\n` +
+      `🧾 <b>លេខវិក្កយបត្រ៖</b> <code>#${sale.orderNumber}</code>\n` +
+      `⏰ <b>ម៉ោង៖</b> ${timeStr} • ${dateStr}\n` +
+      `👤 <b>អ្នកគិតប្រាក់៖</b> ${escapeHtml(sale.cashierName || 'Cashier')}\n` +
+      (sale.customerName ? `🧑‍💼 <b>អតិថិជន៖</b> <b>${escapeHtml(sale.customerName)}</b>\n` : '') +
+      (sale.customerPhone ? `📞 <b>ទូរស័ព្ទ៖</b> <a href="tel:${sale.customerPhone}">${sale.customerPhone}</a>\n` : '') +
+      (sale.pickupDate ? `📅 <b>ថ្ងៃ & ម៉ោងមកយក៖</b> <b>${formatDateDMY(sale.pickupDate)} ${sale.pickupTime ? `វេលាម៉ោង ${sale.pickupTime}` : ''}</b>\n` : '') +
+      (sale.notes ? `✍️ <b>ចំណាំ/សរសេរលើនំ៖</b> <i>"${escapeHtml(sale.notes)}"</i>\n` : '') +
+      `\n🛒 <b>មុខទំនិញដែលបានលក់៖</b>\n` +
+      `${itemsList}\n` +
+      `━━━━━━━━━━━━━━━━━━\n` +
+      `💰 <b>ទឹកប្រាក់សរុប៖</b> <b>${totalKhr.toLocaleString()} ៛</b>  <i>($${sale.totalUsd.toFixed(2)})</i>\n` +
+      (sale.isDeposit
+        ? `👛 <b>បានកក់ប្រាក់៖</b> <b>${(sale.depositKhr || 0).toLocaleString()} ៛</b>\n⚠️ <b>នៅខ្វះពេលមកយក៖</b> <b>${(sale.remainingKhr || 0).toLocaleString()} ៛</b>\n`
+        : '') +
+      `💳 <b>វិធីទូទាត់៖</b> ${paymentText}\n` +
+      `✨ <i>សូមអរគុណ! សូមហាងរកស៊ីកាន់តែមានបាន!</i>`;
+
+    const itemWithImage = sale.items?.find((item) => Boolean(item.image));
+    const photoUrl = itemWithImage?.image;
+
+    console.log('[Telegram Alert] Sending sale notification for invoice:', sale.orderNumber, 'hasPhoto:', Boolean(photoUrl));
+
+    let res: { success: boolean; message: string; data?: any } = { success: false, message: '' };
+
+    if (photoUrl && (photoUrl.startsWith('data:') || photoUrl.startsWith('http://') || photoUrl.startsWith('https://'))) {
+      try {
+        res = await sendTelegramPhoto(photoUrl, text, config);
+      } catch (photoErr) {
+        console.warn('[Telegram Alert] sendTelegramPhoto failed, will fallback to text:', photoErr);
+      }
+    }
+
+    if (!res.success) {
+      res = await sendTelegramMessage(text, config);
+    }
+
+    console.log('[Telegram Alert] Sale send result:', res);
+
+    if (res.success) {
+      markTelegramEventFired(eventKey);
+      if (sale.orderNumber) {
+        markTelegramEventFired(`sale_ord_${sale.orderNumber}_${stateKey}`);
+      }
+    }
+  } catch (error: any) {
+    console.error('[Telegram Alert] Error in notifyTelegramSale:', error);
+  } finally {
+    inFlightSaleEvents.delete(eventKey);
   }
-
-  const storeTitle = storeInfo?.nameKh || 'ហាងនំ SweetBakery';
-  const totalKhr = sale.totalKhr ?? Math.round(sale.totalUsd * exchangeRate);
-  const now = new Date(sale.createdAt || Date.now());
-  const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-  const dateStr = formatDateDMY(sale.createdAt || Date.now());
-
-  const paymentText =
-    sale.paymentMethod === 'KHQR_BAKONG'
-      ? '📲 KHQR Bakong / ធនាគារ'
-      : sale.paymentMethod === 'CASH_KHR'
-      ? '💵 សាច់ប្រាក់ (៛ រៀល)'
-      : '💵 សាច់ប្រាក់ ($ ដុល្លារ)';
-
-  const itemsList = sale.items
-    .map(
-      (item) =>
-        `• <b>${escapeHtml(item.nameKh)}</b> × ${item.quantity}  <i>($${(item.priceUsd * item.quantity).toFixed(2)})</i>`
-    )
-    .join('\n');
-
-  const text =
-    `🍰 <b>[${escapeHtml(storeTitle)}] — វិក្កយបត្រលក់ថ្មី!</b>\n` +
-    `━━━━━━━━━━━━━━━━━━\n` +
-    `🧾 <b>លេខវិក្កយបត្រ៖</b> <code>#${sale.orderNumber}</code>\n` +
-    `⏰ <b>ម៉ោង៖</b> ${timeStr} • ${dateStr}\n` +
-    `👤 <b>អ្នកគិតប្រាក់៖</b> ${escapeHtml(sale.cashierName || 'Cashier')}\n` +
-    (sale.customerName ? `🧑‍💼 <b>អតិថិជន៖</b> <b>${escapeHtml(sale.customerName)}</b>\n` : '') +
-    (sale.customerPhone ? `📞 <b>ទូរស័ព្ទ៖</b> <a href="tel:${sale.customerPhone}">${sale.customerPhone}</a>\n` : '') +
-    (sale.pickupDate ? `📅 <b>ថ្ងៃ & ម៉ោងមកយក៖</b> <b>${formatDateDMY(sale.pickupDate)} ${sale.pickupTime ? `វេលាម៉ោង ${sale.pickupTime}` : ''}</b>\n` : '') +
-    (sale.notes ? `✍️ <b>ចំណាំ/សរសេរលើនំ៖</b> <i>"${escapeHtml(sale.notes)}"</i>\n` : '') +
-    `\n🛒 <b>មុខទំនិញដែលបានលក់៖</b>\n` +
-    `${itemsList}\n` +
-    `━━━━━━━━━━━━━━━━━━\n` +
-    `💰 <b>ទឹកប្រាក់សរុប៖</b> <b>${totalKhr.toLocaleString()} ៛</b>  <i>($${sale.totalUsd.toFixed(2)})</i>\n` +
-    (sale.isDeposit
-      ? `👛 <b>បានកក់ប្រាក់៖</b> <b>${(sale.depositKhr || 0).toLocaleString()} ៛</b>\n⚠️ <b>នៅខ្វះពេលមកយក៖</b> <b>${(sale.remainingKhr || 0).toLocaleString()} ៛</b>\n`
-      : '') +
-    `💳 <b>វិធីទូទាត់៖</b> ${paymentText}\n` +
-    `✨ <i>សូមអរគុណ! សូមហាងរកស៊ីកាន់តែមានបាន!</i>`;
-
-  // Find if any item in this sale has an image
-  const itemWithImage = sale.items.find((item) => Boolean(item.image));
-  const photoUrl = itemWithImage?.image;
-
-  console.log('[Telegram Alert] Sending sale notification for invoice:', sale.orderNumber, 'hasPhoto:', Boolean(photoUrl));
-  let res;
-  if (photoUrl && (photoUrl.startsWith('data:') || photoUrl.startsWith('http://') || photoUrl.startsWith('https://'))) {
-    res = await sendTelegramPhoto(photoUrl, text, config);
-  } else {
-    res = await sendTelegramMessage(text, config);
-  }
-  console.log('[Telegram Alert] Sale send result:', res);
 };
 
 /**
@@ -676,63 +691,78 @@ export const notifyTelegramCustomOrder = async (
 ): Promise<void> => {
   if (isDemoModeActive()) return;
 
-  const orderIdKey = order.id ? `id_${order.id}` : '';
-  const orderNumKey = order.orderNumber ? `ord_${order.orderNumber}` : '';
+  const eventKey = order.id ? `custom_id_${order.id}` : `custom_ord_${order.orderNumber}`;
 
-  if (
-    (orderIdKey && hasTelegramEventFired(`custom_${orderIdKey}`)) ||
-    (orderNumKey && hasTelegramEventFired(`custom_${orderNumKey}`))
-  ) {
-    console.warn('[Telegram Alert] Custom order notification skipped (already sent):', order.orderNumber);
+  if (hasTelegramEventFired(eventKey) || inFlightCustomOrderEvents.has(eventKey)) {
+    console.warn('[Telegram Alert] Custom order notification skipped (already sent or in-flight):', order.orderNumber);
     return;
   }
 
-  if (orderIdKey) markTelegramEventFired(`custom_${orderIdKey}`);
-  if (orderNumKey) markTelegramEventFired(`custom_${orderNumKey}`);
+  inFlightCustomOrderEvents.add(eventKey);
 
-  const config = await getStoredTelegramConfigAsync();
-  if (!config.enabled || !config.notifyCustomOrders || !config.botToken || !config.chatId) {
-    console.warn('[Telegram Alert] Order notification skipped:', {
-      enabled: config.enabled,
-      notifyCustomOrders: config.notifyCustomOrders,
-      hasBotToken: Boolean(config.botToken),
-      hasChatId: Boolean(config.chatId),
-    });
-    return;
-  }
+  try {
+    const config = await getStoredTelegramConfigAsync();
+    if (!config.enabled || !config.notifyCustomOrders || !config.botToken || !config.chatId) {
+      console.warn('[Telegram Alert] Order notification skipped:', {
+        enabled: config.enabled,
+        notifyCustomOrders: config.notifyCustomOrders,
+        hasBotToken: Boolean(config.botToken),
+        hasChatId: Boolean(config.chatId),
+      });
+      return;
+    }
 
-  const storeTitle = storeInfo?.nameKh || 'ហាងនំ SweetBakery';
-  const totalKhr = order.totalKhr ?? Math.round(order.totalUsd * exchangeRate);
-  const depositKhr = order.depositKhr ?? Math.round(order.depositUsd * exchangeRate);
-  const remainingUsd = Math.max(0, order.totalUsd - order.depositUsd);
-  const remainingKhr = Math.round(remainingUsd * exchangeRate);
+    const storeTitle = storeInfo?.nameKh || 'ហាងនំ SweetBakery';
+    const totalKhr = order.totalKhr ?? Math.round(order.totalUsd * exchangeRate);
+    const depositKhr = order.depositKhr ?? Math.round(order.depositUsd * exchangeRate);
+    const remainingUsd = Math.max(0, order.totalUsd - order.depositUsd);
+    const remainingKhr = Math.round(remainingUsd * exchangeRate);
 
-  const text =
-    `🎂 <b>[${escapeHtml(storeTitle)}] — មានភ្ញៀវកុម្ម៉ង់នំខួបកំណើតថ្មី!</b>\n` +
-    `━━━━━━━━━━━━━━━━━━\n` +
-    `🏷️ <b>កូដកុម្ម៉ង់៖</b> <code>#${order.orderNumber}</code>\n` +
-    `👤 <b>អតិថិជន៖</b> <b>${escapeHtml(order.customerName)}</b>\n` +
-    `📞 <b>ទូរស័ព្ទ៖</b> <a href="tel:${order.phone}">${order.phone}</a>\n\n` +
-    `🎂 <b>ឈ្មោះនំ៖</b> <b>${escapeHtml(order.cakeName)}</b>\n` +
-    `📏 <b>ទំហំ៖</b> ${escapeHtml(order.size)}\n` +
-    `🍓 <b>រសជាតិ៖</b> ${escapeHtml(order.flavor)}\n` +
-    (order.inscription ? `✍️ <b>អក្សរលើនំ៖</b> <i>"${escapeHtml(order.inscription)}"</i>\n` : '') +
-    (order.themeNotes ? `📝 <b>ចំណាំ៖</b> ${escapeHtml(order.themeNotes)}\n` : '') +
-    `━━━━━━━━━━━━━━━━━━\n` +
-    `⏰ <b>ថ្ងៃ & ម៉ោងមកយក៖</b> <b>${formatDateDMY(order.pickupDate)} វេលាម៉ោង ${order.pickupTime}</b>\n\n` +
-    `💵 <b>តម្លៃសរុប៖</b> <b>${totalKhr.toLocaleString()} ៛</b> ($${order.totalUsd.toFixed(2)})\n` +
-    `👛 <b>បានកក់រួច៖</b> <b>${depositKhr.toLocaleString()} ៛ ($${order.depositUsd.toFixed(2)})</b>\n` +
-    (remainingUsd > 0
-      ? `⚠️ <b>នៅខ្វះពេលមកយក៖</b> <b>${remainingKhr.toLocaleString()} ៛</b> ($${remainingUsd.toFixed(2)})\n`
-      : `✅ <b>បានបង់ប្រាក់គ្រប់ ១០០%</b>\n`);
+    const text =
+      `🎂 <b>[${escapeHtml(storeTitle)}] — មានភ្ញៀវកុម្ម៉ង់នំខួបកំណើតថ្មី!</b>\n` +
+      `━━━━━━━━━━━━━━━━━━\n` +
+      `🏷️ <b>កូដកុម្ម៉ង់៖</b> <code>#${order.orderNumber}</code>\n` +
+      `👤 <b>អតិថិជន៖</b> <b>${escapeHtml(order.customerName)}</b>\n` +
+      `📞 <b>ទូរស័ព្ទ៖</b> <a href="tel:${order.phone}">${order.phone}</a>\n\n` +
+      `🎂 <b>ឈ្មោះនំ៖</b> <b>${escapeHtml(order.cakeName)}</b>\n` +
+      `📏 <b>ទំហំ៖</b> ${escapeHtml(order.size)}\n` +
+      `🍓 <b>រសជាតិ៖</b> ${escapeHtml(order.flavor)}\n` +
+      (order.inscription ? `✍️ <b>អក្សរលើនំ៖</b> <i>"${escapeHtml(order.inscription)}"</i>\n` : '') +
+      (order.themeNotes ? `📝 <b>ចំណាំ៖</b> ${escapeHtml(order.themeNotes)}\n` : '') +
+      `━━━━━━━━━━━━━━━━━━\n` +
+      `⏰ <b>ថ្ងៃ & ម៉ោងមកយក៖</b> <b>${formatDateDMY(order.pickupDate)} វេលាម៉ោង ${order.pickupTime}</b>\n\n` +
+      `💵 <b>តម្លៃសរុប៖</b> <b>${totalKhr.toLocaleString()} ៛</b> ($${order.totalUsd.toFixed(2)})\n` +
+      `👛 <b>បានកក់រួច៖</b> <b>${depositKhr.toLocaleString()} ៛ ($${order.depositUsd.toFixed(2)})</b>\n` +
+      (remainingUsd > 0
+        ? `⚠️ <b>នៅខ្វះពេលមកយក៖</b> <b>${remainingKhr.toLocaleString()} ៛</b> ($${remainingUsd.toFixed(2)})\n`
+        : `✅ <b>បានបង់ប្រាក់គ្រប់ ១០០%</b>\n`);
 
-  console.log('[Telegram Alert] Sending custom order notification for:', order.orderNumber, 'hasPhoto:', Boolean(order.referenceImage));
-  if (order.referenceImage) {
-    const res = await sendTelegramPhoto(order.referenceImage, text, config);
-    console.log('[Telegram Alert] Photo send result:', res);
-  } else {
-    const res = await sendTelegramMessage(text, config);
-    console.log('[Telegram Alert] Text send result:', res);
+    console.log('[Telegram Alert] Sending custom order notification for:', order.orderNumber, 'hasPhoto:', Boolean(order.referenceImage));
+
+    let res: { success: boolean; message: string; data?: any } = { success: false, message: '' };
+
+    if (order.referenceImage) {
+      try {
+        res = await sendTelegramPhoto(order.referenceImage, text, config);
+      } catch (photoErr) {
+        console.warn('[Telegram Alert] sendTelegramPhoto failed, will fallback to text:', photoErr);
+      }
+    }
+
+    if (!res.success) {
+      res = await sendTelegramMessage(text, config);
+    }
+
+    if (res.success) {
+      markTelegramEventFired(eventKey);
+      if (order.orderNumber) {
+        markTelegramEventFired(`custom_ord_${order.orderNumber}`);
+      }
+    }
+  } catch (error: any) {
+    console.error('[Telegram Alert] Error in notifyTelegramCustomOrder:', error);
+  } finally {
+    inFlightCustomOrderEvents.delete(eventKey);
   }
 };
 
