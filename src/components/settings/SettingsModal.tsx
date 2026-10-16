@@ -35,6 +35,7 @@ import {
   Copy,
   Rocket,
   ChevronRight,
+  Lock,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { useBakery } from '../../context/BakeryContext';
@@ -82,6 +83,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     expenses,
     ingredients,
     staffMembers,
+    currentStaff,
+    hasPermission,
     downloadBackupFile,
     importBackupData,
     exportSalesCsv,
@@ -90,8 +93,22 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   } = useBakery();
   const text = t[lang];
 
+  const isTabAllowedForCurrentStaff = (tabId?: SettingsTab): boolean => {
+    if (!tabId) return true;
+    if (isDemoMode && (tabId === 'staff' || tabId === 'telegram' || tabId === 'firebase')) {
+      return false;
+    }
+    if (currentStaff.role !== 'ADMIN' && (tabId === 'telegram' || tabId === 'firebase')) {
+      return false;
+    }
+    if (tabId === 'staff' && currentStaff.role !== 'ADMIN' && !hasPermission('canAccessSettings')) {
+      return false;
+    }
+    return true;
+  };
+
   const [activeTab, setActiveTab] = useState<SettingsTab>(() => {
-    if (isDemoMode && (initialTab === 'staff' || initialTab === 'telegram' || initialTab === 'firebase')) {
+    if (!isTabAllowedForCurrentStaff(initialTab)) {
       return 'store';
     }
     return initialTab;
@@ -99,13 +116,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
   useEffect(() => {
     if (isOpen && initialTab) {
-      if (isDemoMode && (initialTab === 'staff' || initialTab === 'telegram' || initialTab === 'firebase')) {
+      if (!isTabAllowedForCurrentStaff(initialTab)) {
         setActiveTab('store');
       } else {
         setActiveTab(initialTab);
       }
     }
-  }, [isOpen, initialTab, isDemoMode]);
+  }, [isOpen, initialTab, isDemoMode, currentStaff]);
 
   const [rateInput, setRateInput] = useState(exchangeRate.toString());
   const [storeIdInput, setStoreIdInput] = useState(() => getStoreId());
@@ -413,10 +430,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   ];
 
   const tabs = allTabs.filter((tab) => {
-    if (isDemoMode && (tab.id === 'staff' || tab.id === 'telegram' || tab.id === 'firebase')) {
-      return false;
-    }
-    return true;
+    return isTabAllowedForCurrentStaff(tab.id);
   });
 
   return (
@@ -722,7 +736,19 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             </div>
           ) : activeTab === 'firebase' ? (
             /* Google Firebase Cloud Tab */
-            isDemoMode ? (
+            currentStaff.role !== 'ADMIN' ? (
+              <div className="p-8 text-center bg-white rounded-3xl border border-rose-100 shadow-sm space-y-4 my-6">
+                <div className="w-16 h-16 bg-rose-50 text-rose-600 rounded-full flex items-center justify-center mx-auto shadow-inner">
+                  <Lock className="w-8 h-8" />
+                </div>
+                <h3 className="text-lg font-black text-rose-900">
+                  សិទ្ធិត្រូវបានកំណត់ (Admin Only) 🔒
+                </h3>
+                <p className="text-sm text-rose-700 max-w-md mx-auto">
+                  សម្រាប់តែគណនីម្ចាស់ហាង (Admin) ប៉ុណ្ណោះដែលអាចចូលមើល និងកែប្រែការកំណត់ Google Firebase Cloud បាន។ គណនី «{currentStaff.name} ({currentStaff.role})» គ្មានសិទ្ធិឡើយ។
+                </p>
+              </div>
+            ) : isDemoMode ? (
               <div className="p-8 text-center bg-white rounded-3xl border border-amber-100 shadow-sm space-y-4 my-6">
                 <div className="w-16 h-16 bg-amber-50 text-amber-600 rounded-full flex items-center justify-center mx-auto shadow-inner">
                   <ShieldCheck className="w-8 h-8" />
@@ -739,7 +765,19 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             )
           ) : activeTab === 'telegram' ? (
             /* Telegram Bot Tab */
-            isDemoMode ? (
+            currentStaff.role !== 'ADMIN' ? (
+              <div className="p-8 text-center bg-white rounded-3xl border border-rose-100 shadow-sm space-y-4 my-6">
+                <div className="w-16 h-16 bg-rose-50 text-rose-600 rounded-full flex items-center justify-center mx-auto shadow-inner">
+                  <Lock className="w-8 h-8" />
+                </div>
+                <h3 className="text-lg font-black text-rose-900">
+                  សិទ្ធិត្រូវបានកំណត់ (Admin Only) 🔒
+                </h3>
+                <p className="text-sm text-rose-700 max-w-md mx-auto">
+                  សម្រាប់តែគណនីម្ចាស់ហាង (Admin) ប៉ុណ្ណោះដែលអាចចូលមើល និងកែប្រែការកំណត់ Telegram Bot បាន។ គណនី «{currentStaff.name} ({currentStaff.role})» គ្មានសិទ្ធិឡើយ។
+                </p>
+              </div>
+            ) : isDemoMode ? (
               <div className="p-8 text-center bg-white rounded-3xl border border-blue-100 shadow-sm space-y-4 my-6">
                 <div className="w-16 h-16 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto shadow-inner">
                   <ShieldCheck className="w-8 h-8" />

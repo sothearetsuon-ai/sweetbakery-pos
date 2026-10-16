@@ -15,6 +15,7 @@ import {
   HelpCircle,
   KeyRound,
   Database,
+  Lock,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import {
@@ -41,12 +42,29 @@ export const FirebaseSettingsTab: React.FC = () => {
     expenses,
     ingredients,
     staffMembers,
+    currentStaff,
     storeInfo,
     exchangeRate,
     exportBackupData,
     importBackupData,
     isDemoMode,
   } = useBakery();
+
+  if (currentStaff.role !== 'ADMIN') {
+    return (
+      <div className="p-8 text-center bg-white rounded-3xl border border-rose-100 shadow-sm space-y-4 my-6">
+        <div className="w-16 h-16 bg-rose-50 text-rose-600 rounded-full flex items-center justify-center mx-auto shadow-inner">
+          <Lock className="w-8 h-8" />
+        </div>
+        <h3 className="text-lg font-black text-rose-900">
+          សិទ្ធិត្រូវបានកំណត់ (Admin Only) 🔒
+        </h3>
+        <p className="text-sm text-rose-700 max-w-md mx-auto leading-relaxed">
+          សម្រាប់តែគណនីម្ចាស់ហាង (Admin) ប៉ុណ្ណោះដែលអាចមើល និងកែប្រែការកំណត់ Google Firebase Cloud បាន។
+        </p>
+      </div>
+    );
+  }
 
   if (isDemoMode) {
     return (

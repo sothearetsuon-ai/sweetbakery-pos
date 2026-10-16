@@ -1,15 +1,14 @@
 {
-  "version": "1.3.0",
-  "releaseDate": "2026-10-15",
+  "version": "1.3.1",
+  "releaseDate": "2026-10-16",
   "releaseNotes": [
-    "ប្រព័ន្ធ In-App Auto Update ស្តង់ដារថ្មី៖ ទាញយកអាប់ដែតបានរលូន និងលឿនរហ័ស ទាំងលើ Windows និង Android តាមស្តង់ដារ App លំដាប់កំពូល",
-    "ផ្ទាំងជូនដំណឹងកំណែថ្មីលេចធ្លោ៖ បង្ហាញសញ្ញាព្រមានកំណែថ្មីនៅលើរបារ Navbar ខាងលើ, បដា Top Banner និងប៊ូតុង Sidebar ភ្លាមៗពេលមាន Update ថ្មី",
-    "របារទាញយក Progress Bar ផ្ទាល់៖ បង្ហាញភាគរយ % និងចំនួនមេកាបៃ (MB) កំពុងទាញយកជាក់ស្តែងជាមួយចលនា Smooth Animation",
-    "ការដំឡើងស្វ័យប្រវត្ត (1-Click Auto Install)៖ បញ្ចប់ការទាញយករួច ប្រព័ន្ធនឹងបើកផ្ទាំងដំឡើងភ្លាមៗដោយសុវត្ថិភាព មិនគាំង មិនបាត់បង់ទិន្នន័យចាស់ឡើយ",
-    "ជម្រើសបម្រុងទុក (Fallback Downloads)៖ អាចចម្លង Link ឬទាញយកផ្ទាល់តាម Browser ប្រសិនបើឧបករណ៍រារាំង ឬមានបញ្ហាប្រព័ន្ធអ៊ីនធឺណិត"
+    "ជួសជុលបញ្ហាចូលគណនីបេឡាធិការ វិជ្ជតា (Vicheta) បង្ហាញត្រឹមត្រូវ ១០០%",
+    "កំណត់សិទ្ធិសុវត្ថិភាពកម្រិតខ្ពស់៖ រារាំងគណនីដែលមិនមែនជា Admin មិនឱ្យកែប្រែប្រព័ន្ធ Telegram Bot និង Google Firebase បានឡើយ",
+    "ពង្រឹងប្រព័ន្ធផ្ទៀងផ្ទាត់សិទ្ធិបុគ្គលិក និងការគ្រប់គ្រងវេនការងារក្នុង POS",
+    "ប្រព័ន្ធ In-App Auto Update ស្តង់ដារថ្មី៖ ទាញយកអាប់ដែតបានរលូន និងលឿនរហ័ស ទាំងលើ Windows និង Android"
   ],
-  "apkDownloadUrl": "https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.3.0/SweetBakery-Android.apk",
-  "windowsInstallerUrl": "https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.3.0/SweetBakery-POS-Setup.exe",
-  "windowsDownloadUrl": "https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.3.0/SweetBakery-POS-Setup.exe",
+  "apkDownloadUrl": "https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/latest/download/SweetBakery-Android.apk",
+  "windowsInstallerUrl": "https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/latest/download/SweetBakery-POS-Setup.exe",
+  "windowsDownloadUrl": "https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/latest/download/SweetBakery-POS-Setup.exe",
   "mandatory": false
 }

@@ -404,24 +404,35 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
         {/* Active Staff Quick Info */}
         <div className="p-2.5 rounded-2xl bg-white border border-purple-100 shadow-2xs flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <span className="text-xl">{currentStaff.avatar || '👤'}</span>
-            <div className="text-left">
-              <div className="text-xs font-black text-slate-800">{currentStaff.name}</div>
-              <div className="text-[10px] font-bold text-purple-600 uppercase tracking-wider">{currentStaff.role}</div>
+          <div className="flex items-center gap-2.5 min-w-0">
+            <span className="text-xl shrink-0">{currentStaff.avatar || '👤'}</span>
+            <div className="text-left min-w-0">
+              <div className="text-xs font-black text-slate-800 truncate">{currentStaff.name}</div>
+              <div className={`text-[10px] font-bold uppercase tracking-wider ${
+                currentStaff.role === 'ADMIN' ? 'text-amber-700' : 'text-purple-600'
+              }`}>
+                {currentStaff.role}
+              </div>
             </div>
           </div>
-          {!isDemoMode && (
+          {!isDemoMode && (currentStaff.role === 'ADMIN' || hasPermission('canAccessSettings')) ? (
             <button
               onClick={() => {
                 onOpenSettings('staff');
                 onCloseMobile?.();
               }}
-              className="p-1.5 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-700 transition-colors cursor-pointer"
+              className="p-1.5 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-700 transition-colors cursor-pointer shrink-0"
               title="កំណត់សិទ្ធិបុគ្គលិកក្នុង Settings"
             >
               <Users className="w-3.5 h-3.5" />
             </button>
+          ) : (
+            <span
+              className="px-2 py-0.5 rounded-lg bg-pink-50 border border-pink-200 text-pink-700 text-[10px] font-bold shrink-0"
+              title="តួនាទីបច្ចុប្បន្ន"
+            >
+              {currentStaff.role === 'CASHIER' ? 'បេឡាធិការ' : currentStaff.role}
+            </span>
           )}
         </div>
 

@@ -437,7 +437,7 @@ interface BakeryContextType {
   setHideDemoPrices: React.Dispatch<React.SetStateAction<boolean>>;
   toggleHideDemoPrices: () => void;
   enterDemoMode: () => void;
-  exitDemoMode: () => void;
+  exitDemoMode: (targetStaff?: StaffMember) => void;
   requestExitDemoMode: () => void;
   lockRealStoreToDemo: () => void;
   resetDemoData: () => void;
@@ -446,9 +446,10 @@ interface BakeryContextType {
 
   // Real Store Passcode Authentication & Logout
   isRealStoreAuthModalOpen: boolean;
-  openRealStoreAuthModal: (onSuccessCallback?: () => void) => void;
+  openRealStoreAuthModal: (onSuccessCallback?: (authenticatedStaff?: StaffMember) => void) => void;
   closeRealStoreAuthModal: () => void;
   verifyRealStorePin: (pin: string) => boolean;
+  realStoreAuthSuccessCallback: ((authenticatedStaff?: StaffMember) => void) | null;
   logoutAndLock: () => void;
 
   isFirebaseConnected: boolean;
@@ -5216,7 +5217,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
   };
 
-  const exitDemoMode = async () => {
+  const exitDemoMode = async (targetStaff?: StaffMember) => {
     setGlobalIsDemoMode(false);
     localStorage.removeItem('bakery_is_demo_mode');
     setIsDemoMode(false);
@@ -5268,18 +5269,38 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       if (liveStore) setStoreInfo(JSON.parse(liveStore));
 
       const liveStaff = localStorage.getItem('bakery_staff_members');
+      let effectiveStaffList: StaffMember[] = initialStaffMembers;
       if (liveStaff) {
         try {
           const parsed = JSON.parse(liveStaff);
           if (Array.isArray(parsed) && parsed.length > 0) {
-            setStaffMembers(parsed);
-            setCurrentStaff(parsed[0]);
+            effectiveStaffList = parsed;
           }
         } catch (e) {}
-      } else {
-        setStaffMembers(initialStaffMembers);
-        setCurrentStaff(initialStaffMembers[0]);
       }
+      setStaffMembers(effectiveStaffList);
+
+      // Preserve the specific staff who logged in (e.g. Vicheta) rather than blindly resetting to Admin!
+      let staffToSet: StaffMember | undefined = targetStaff;
+      if (!staffToSet) {
+        const savedCurrent = localStorage.getItem('bakery_current_staff');
+        if (savedCurrent) {
+          try {
+            const parsedSaved = JSON.parse(savedCurrent);
+            if (parsedSaved?.id) {
+              staffToSet = effectiveStaffList.find(
+                (s) => s.id === parsedSaved.id || s.pinCode === parsedSaved.pinCode || s.name === parsedSaved.name
+              );
+            }
+          } catch (e) {}
+        }
+      }
+      if (!staffToSet && currentStaff) {
+        staffToSet = effectiveStaffList.find(
+          (s) => s.id === currentStaff.id || s.pinCode === currentStaff.pinCode || s.name === currentStaff.name
+        );
+      }
+      setCurrentStaff(staffToSet || effectiveStaffList[0]);
 
       setCart([]);
       setActiveReceipt(null);
@@ -5316,9 +5337,9 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   };
 
   const [isRealStoreAuthModalOpen, setIsRealStoreAuthModalOpen] = useState(false);
-  const [realStoreAuthSuccessCallback, setRealStoreAuthSuccessCallback] = useState<(() => void) | null>(null);
+  const [realStoreAuthSuccessCallback, setRealStoreAuthSuccessCallback] = useState<((authenticatedStaff?: StaffMember) => void) | null>(null);
 
-  const openRealStoreAuthModal = (onSuccess?: () => void) => {
+  const openRealStoreAuthModal = (onSuccess?: (authenticatedStaff?: StaffMember) => void) => {
     if (onSuccess) {
       setRealStoreAuthSuccessCallback(() => onSuccess);
     } else {
@@ -5336,9 +5357,23 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     const cleanPin = pin.trim();
     if (!cleanPin) return false;
 
+    // Load actual real store staff list (so PIN lookup works accurately even if in Demo mode)
+    let realStaffList: StaffMember[] = initialStaffMembers;
+    const savedStaff = localStorage.getItem('bakery_staff_members');
+    if (savedStaff) {
+      try {
+        const parsed = JSON.parse(savedStaff);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          realStaffList = parsed;
+        }
+      } catch (e) {}
+    } else if (staffMembers && staffMembers.length > 0 && !globalIsDemoMode) {
+      realStaffList = staffMembers;
+    }
+
     // 1. App Super Admin Master Keys (for emergency access only)
     if (cleanPin === '889977' || cleanPin === '999999' || cleanPin === 'admin@bakery2026') {
-      const adminStaff = staffMembers.find((s) => s.role === 'ADMIN') || currentStaff;
+      const adminStaff = realStaffList.find((s) => s.role === 'ADMIN') || realStaffList[0];
       setCurrentStaff(adminStaff);
       return true;
     }
@@ -5353,21 +5388,26 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       cleanPin === '660168' ||
       (storeInfo?.realStorePin && cleanPin === storeInfo.realStorePin.trim() && cleanPin !== '1111')
     ) {
-      const adminStaff = staffMembers.find((s) => s.role === 'ADMIN') || currentStaff;
+      const adminStaff = realStaffList.find((s) => s.role === 'ADMIN') || realStaffList[0];
       setCurrentStaff(adminStaff);
       return true;
     }
 
-    // 4. Cashier PIN: 0202 (Real Cashier PIN)
+    // 4. Cashier PIN: 0202 (Real Cashier PIN for វិជ្ជតា Vicheta)
     if (cleanPin === '0202') {
-      const cashierStaff = staffMembers.find((s) => s.role === 'CASHIER') || currentStaff;
-      setCurrentStaff(cashierStaff);
-      return true;
+      const cashierStaff =
+        realStaffList.find((s) => s.role === 'CASHIER' || s.pinCode === '0202') ||
+        realStaffList.find((s) => s.name?.includes('វិជ្ជតា')) ||
+        realStaffList.find((s) => s.role === 'CASHIER');
+      if (cashierStaff) {
+        setCurrentStaff(cashierStaff);
+        return true;
+      }
     }
 
     // 5. Match against any active staff member's actual saved/changed PIN (excluding 1111 & 2222)
     // This respects all custom staff PIN changes (3333, 4444, etc.)
-    const matchedStaff = staffMembers.find(
+    const matchedStaff = realStaffList.find(
       (s) => s.isActive !== false && s.pinCode === cleanPin && s.pinCode !== '1111' && s.pinCode !== '2222'
     );
     if (matchedStaff) {
@@ -5381,8 +5421,8 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const requestExitDemoMode = () => {
     // If PIN protection is enabled, require authentication
     if (storeInfo.requireRealStorePin !== false) {
-      openRealStoreAuthModal(() => {
-        exitDemoMode();
+      openRealStoreAuthModal((authenticatedStaff?: StaffMember) => {
+        exitDemoMode(authenticatedStaff);
       });
     } else {
       exitDemoMode();
@@ -5424,6 +5464,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         openRealStoreAuthModal,
         closeRealStoreAuthModal,
         verifyRealStorePin,
+        realStoreAuthSuccessCallback,
         storeInfo,
         updateStoreInfo,
         staffMembers,

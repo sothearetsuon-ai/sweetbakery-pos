@@ -1,15 +1,17 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { Lock, ShieldCheck, KeyRound, Eye, EyeOff, X, FlaskConical, ArrowRight, CheckCircle2, AlertCircle } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { useBakery } from '../../context/BakeryContext';
 import { soundFx } from '../../utils/audio';
 import { setStoreId, DEFAULT_STORE_ID } from '../../services/firebase';
+import { initialStaffMembers } from '../../data/mockData';
+import { StaffMember } from '../../types';
 
 interface RealStoreAuthModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSuccess?: () => void;
+  onSuccess?: (authenticatedStaff?: StaffMember) => void;
 }
 
 export const RealStoreAuthModal: React.FC<RealStoreAuthModalProps> = ({
@@ -25,6 +27,7 @@ export const RealStoreAuthModal: React.FC<RealStoreAuthModalProps> = ({
     staffMembers,
     currentStaff,
     setCurrentStaff,
+    storeInfo,
   } = useBakery();
   const [pinInput, setPinInput] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
@@ -32,6 +35,22 @@ export const RealStoreAuthModal: React.FC<RealStoreAuthModalProps> = ({
   const [showPin, setShowPin] = useState(false);
   const [isShaking, setIsShaking] = useState(false);
   const [selectedStaffId, setSelectedStaffId] = useState<string | null>(null);
+  const authenticatedStaffRef = useRef<StaffMember | null>(null);
+
+  // Real store staff members list (always reflects real store, not demo sandbox)
+  const realStaffList = useMemo(() => {
+    const saved = localStorage.getItem('bakery_staff_members');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed as StaffMember[];
+      } catch (e) {}
+    }
+    if (staffMembers && staffMembers.length > 0 && !isDemoMode) {
+      return staffMembers;
+    }
+    return initialStaffMembers;
+  }, [staffMembers, isDemoMode, isOpen]);
 
   useEffect(() => {
     if (isOpen) {
@@ -39,6 +58,7 @@ export const RealStoreAuthModal: React.FC<RealStoreAuthModalProps> = ({
       setErrorMessage('');
       setIsShaking(false);
       setSelectedStaffId(null);
+      authenticatedStaffRef.current = null;
     }
   }, [isOpen]);
 
@@ -71,7 +91,7 @@ export const RealStoreAuthModal: React.FC<RealStoreAuthModalProps> = ({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, pinInput, rememberDevice, selectedStaffId]);
+  }, [isOpen, pinInput, rememberDevice, selectedStaffId, realStaffList]);
 
   if (!isOpen) return null;
 
@@ -119,14 +139,51 @@ export const RealStoreAuthModal: React.FC<RealStoreAuthModalProps> = ({
     }
     // If a specific staff was clicked, check their PIN directly
     if (selectedStaffId) {
-      const targetStaff = staffMembers.find((s) => s.id === selectedStaffId && s.isActive !== false);
+      const targetStaff = realStaffList.find((s) => s.id === selectedStaffId && s.isActive !== false);
       if (targetStaff && targetStaff.pinCode === clean && clean !== '1111' && clean !== '2222') {
+        authenticatedStaffRef.current = targetStaff;
         setCurrentStaff(targetStaff);
         return true;
       }
     }
-    // Otherwise verify against store master PIN, any active staff PIN, or Super Admin master keys
-    return verifyRealStorePin(clean);
+
+    // Auto-detect Cashier PIN: 0202 (Real Cashier PIN for វិជ្ជតា Vicheta)
+    if (clean === '0202') {
+      const cashierStaff =
+        realStaffList.find((s) => s.role === 'CASHIER' || s.pinCode === '0202') ||
+        realStaffList.find((s) => s.name?.includes('វិជ្ជតា')) ||
+        realStaffList.find((s) => s.role === 'CASHIER');
+      if (cashierStaff) {
+        authenticatedStaffRef.current = cashierStaff;
+        setCurrentStaff(cashierStaff);
+        return true;
+      }
+    }
+
+    // Auto-detect Owner PIN: 660168
+    if (clean === '660168' || (storeInfo?.realStorePin && clean === storeInfo.realStorePin.trim() && clean !== '1111')) {
+      const adminStaff = realStaffList.find((s) => s.role === 'ADMIN') || realStaffList[0];
+      authenticatedStaffRef.current = adminStaff;
+      setCurrentStaff(adminStaff);
+      return true;
+    }
+
+    // Check against any other active staff member's actual saved/changed PIN (3333, etc.)
+    const matchedStaff = realStaffList.find(
+      (s) => s.isActive !== false && s.pinCode === clean && s.pinCode !== '1111' && s.pinCode !== '2222'
+    );
+    if (matchedStaff) {
+      authenticatedStaffRef.current = matchedStaff;
+      setCurrentStaff(matchedStaff);
+      return true;
+    }
+
+    // Fallback to store master verify
+    const ok = verifyRealStorePin(clean);
+    if (ok) {
+      authenticatedStaffRef.current = currentStaff;
+    }
+    return ok;
   };
 
   const triggerSuccess = () => {
@@ -143,10 +200,11 @@ export const RealStoreAuthModal: React.FC<RealStoreAuthModalProps> = ({
     }
     setStoreId(DEFAULT_STORE_ID);
 
+    const staffToPreserve = authenticatedStaffRef.current || currentStaff;
     if (onSuccess) {
-      onSuccess();
+      onSuccess(staffToPreserve);
     } else {
-      exitDemoMode();
+      exitDemoMode(staffToPreserve);
     }
     onClose();
   };
@@ -223,11 +281,11 @@ export const RealStoreAuthModal: React.FC<RealStoreAuthModalProps> = ({
         {/* Modal Scrollable Body */}
         <div className="p-3.5 sm:p-4 space-y-2.5 sm:space-y-3 overflow-y-auto flex-1">
           {/* Quick Staff Selection Chips (ម្ចាស់ហាង & បុគ្គលិកតាមតួនាទី) */}
-          {staffMembers.length > 0 && (
+          {realStaffList.length > 0 && (
             <div className="space-y-1 pb-1.5 border-b border-slate-100">
               <div className="flex items-center justify-between text-[11px]">
                 <span className="font-bold text-slate-600">ជ្រើសរើសគណនី ឬវាយ PIN ចូល៖</span>
-                <span className="text-[10px] text-slate-400">({staffMembers.filter((s) => s.isActive).length} នាក់)</span>
+                <span className="text-[10px] text-slate-400">({realStaffList.filter((s) => s.isActive).length} នាក់)</span>
               </div>
               <div className="flex items-center gap-1.5 overflow-x-auto pb-1 max-h-16 scrollbar-none">
                 <button
@@ -245,7 +303,7 @@ export const RealStoreAuthModal: React.FC<RealStoreAuthModalProps> = ({
                 >
                   ⚡ Auto Detect PIN
                 </button>
-                {staffMembers.filter((s) => s.isActive).map((staff) => {
+                {realStaffList.filter((s) => s.isActive).map((staff) => {
                   const isSelected = selectedStaffId === staff.id;
                   return (
                     <button

@@ -94,6 +94,7 @@ export const App: React.FC = () => {
     isRealStoreAuthModalOpen,
     closeRealStoreAuthModal,
     openRealStoreAuthModal,
+    realStoreAuthSuccessCallback,
     storeInfo,
   } = useBakery();
 
@@ -558,6 +559,7 @@ export const App: React.FC = () => {
       <RealStoreAuthModal
         isOpen={isRealStoreAuthModalOpen}
         onClose={closeRealStoreAuthModal}
+        onSuccess={realStoreAuthSuccessCallback || undefined}
       />
 
       {/* Floating System Contact Quick Pill (Only in Demo Mode) */}
