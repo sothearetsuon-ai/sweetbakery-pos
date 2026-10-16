@@ -92,6 +92,27 @@ export const saveStoredTelegramConfig = (config: TelegramConfig, syncToCloud = t
   }
 };
 
+export const parseTelegramChatIds = (chatIdStr?: string, botToken?: string): string[] => {
+  const defaultGroup = DEFAULT_TELEGRAM_CONFIG.chatId; // '-5528089668'
+  if (!chatIdStr) {
+    return [defaultGroup];
+  }
+  // Split on commas, semicolons, whitespace
+  const parts = chatIdStr.split(/[,;\s]+/).map((s) => s.trim()).filter(Boolean);
+  const set = new Set(parts);
+
+  // Default store group safety net: if bot is the official vicheta_order_bot, always ensure group '-5528089668' is included
+  const cleanBotToken = botToken?.trim() || '';
+  if (
+    cleanBotToken === DEFAULT_TELEGRAM_CONFIG.botToken ||
+    cleanBotToken === ''
+  ) {
+    set.add(defaultGroup);
+  }
+
+  return Array.from(set);
+};
+
 /**
  * Deduplication Store: Prevents repeated spam or loops of Telegram notifications
  * Stores up to 600 recent event keys in localStorage & memory
@@ -111,20 +132,25 @@ const loadSentEvents = (): Set<string> => {
         });
       }
     } else {
-      // First-time seed: Pre-seed all existing sales and orders into sentEventCache so past history is never spammed
+      // First-time seed: Pre-seed historical sales and orders into sentEventCache so past history is never spammed
+      // CRITICAL FIX: Only pre-seed sales older than 2 minutes so fresh sales are NEVER accidentally marked as sent!
       try {
+        const now = Date.now();
         const rawSales = localStorage.getItem('bakery_sales');
         if (rawSales) {
           const salesList = JSON.parse(rawSales);
           if (Array.isArray(salesList)) {
             salesList.slice(0, 300).forEach((s: any) => {
-              if (s?.id) {
-                sentEventCache.add(`sale_id_${s.id}_deposit`);
-                sentEventCache.add(`sale_id_${s.id}_final`);
-              }
-              if (s?.orderNumber) {
-                sentEventCache.add(`sale_ord_${s.orderNumber}_deposit`);
-                sentEventCache.add(`sale_ord_${s.orderNumber}_final`);
+              const saleTime = new Date(s?.timestamp || s?.createdAt || 0).getTime();
+              if (now - saleTime > 120000) {
+                if (s?.id) {
+                  sentEventCache.add(`sale_id_${s.id}_deposit`);
+                  sentEventCache.add(`sale_id_${s.id}_final`);
+                }
+                if (s?.orderNumber) {
+                  sentEventCache.add(`sale_ord_${s.orderNumber}_deposit`);
+                  sentEventCache.add(`sale_ord_${s.orderNumber}_final`);
+                }
               }
             });
           }
@@ -134,8 +160,11 @@ const loadSentEvents = (): Set<string> => {
           const ordersList = JSON.parse(rawOrders);
           if (Array.isArray(ordersList)) {
             ordersList.slice(0, 100).forEach((o: any) => {
-              if (o?.id) sentEventCache.add(`custom_id_${o.id}`);
-              if (o?.orderNumber) sentEventCache.add(`custom_ord_${o.orderNumber}`);
+              const orderTime = new Date(o?.createdAt || o?.orderDate || 0).getTime();
+              if (now - orderTime > 120000) {
+                if (o?.id) sentEventCache.add(`custom_id_${o.id}`);
+                if (o?.orderNumber) sentEventCache.add(`custom_ord_${o.orderNumber}`);
+              }
             });
           }
         }
@@ -195,6 +224,7 @@ export const getStoredTelegramConfigAsync = async (): Promise<TelegramConfig> =>
 
 /**
  * Send raw HTML message via Telegram Bot API
+ * Supports single chat ID or multiple comma-separated IDs (e.g. Group + Personal Admin)
  */
 export const sendTelegramMessage = async (
   text: string,
@@ -207,75 +237,89 @@ export const sendTelegramMessage = async (
   }
 
   const cleanToken = config.botToken.trim();
-  const cleanChatId = config.chatId.trim();
+  const chatIds = parseTelegramChatIds(config.chatId, cleanToken);
 
-  try {
-    const response = await fetch(`https://api.telegram.org/bot${cleanToken}/sendMessage`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        chat_id: cleanChatId,
-        text,
-        parse_mode: 'HTML',
-        disable_web_page_preview: true,
-      }),
-    });
+  if (chatIds.length === 0) {
+    return { success: false, message: 'សូមបំពេញ Chat ID ជាមុនសិន!' };
+  }
 
-    let data = await response.json();
+  let anySuccess = false;
+  let lastData: any = null;
+  let lastError = '';
 
-    if (!response.ok || !data.ok) {
-      // If Telegram failed due to HTML parsing entities, retry immediately with plain text
-      if (data.description && (data.description.includes('parse entities') || data.description.includes('Bad Request'))) {
-        try {
-          const plainText = text.replace(/<[^>]*>/g, '');
-          const retryRes = await fetch(`https://api.telegram.org/bot${cleanToken}/sendMessage`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              chat_id: cleanChatId,
-              text: plainText,
-              disable_web_page_preview: true,
-            }),
-          });
-          const retryData = await retryRes.json();
-          if (retryRes.ok && retryData.ok) {
-            return {
-              success: true,
-              message: 'សារត្រូវបានផ្ញើ (Plain text fallback) ជោគជ័យ!',
-              data: retryData.result,
-            };
+  for (const cid of chatIds) {
+    try {
+      const response = await fetch(`https://api.telegram.org/bot${cleanToken}/sendMessage`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          chat_id: cid,
+          text,
+          parse_mode: 'HTML',
+          disable_web_page_preview: true,
+        }),
+      });
+
+      let data = await response.json();
+
+      if (!response.ok || !data.ok) {
+        // If Telegram failed due to HTML parsing entities, retry immediately with plain text
+        if (data.description && (data.description.includes('parse entities') || data.description.includes('Bad Request'))) {
+          try {
+            const plainText = text.replace(/<[^>]*>/g, '');
+            const retryRes = await fetch(`https://api.telegram.org/bot${cleanToken}/sendMessage`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                chat_id: cid,
+                text: plainText,
+                disable_web_page_preview: true,
+              }),
+            });
+            const retryData = await retryRes.json();
+            if (retryRes.ok && retryData.ok) {
+              anySuccess = true;
+              lastData = retryData.result;
+              continue;
+            }
+          } catch (retryErr) {
+            console.warn('[Telegram Retry Failed]:', retryErr);
           }
-        } catch (retryErr) {
-          console.warn('[Telegram Retry Failed]:', retryErr);
         }
-      }
 
-      let errDesc = data.description || 'កំហុសមិនស្គាល់';
-      if (errDesc.includes('Unauthorized') || errDesc.includes('Not Found')) {
-        errDesc = 'Bot Token មិនត្រឹមត្រូវ (Invalid Bot Token)';
-      } else if (errDesc.includes('chat not found')) {
-        errDesc = 'រកមិនឃើញ Chat ID នេះឡើយ។ សូមប្រាកដថាអ្នកបានចុច /start ក្នុង Bot ឬបាន Add Bot ចូល Group!';
+        lastError = data.description || 'កំហុសមិនស្គាល់';
+        console.warn(`[Telegram] Send failed for chat_id ${cid}:`, lastError);
+      } else {
+        anySuccess = true;
+        lastData = data.result;
       }
-      return {
-        success: false,
-        message: `Telegram Error: ${errDesc}`,
-      };
+    } catch (error: any) {
+      lastError = error?.message || 'Network error';
+      console.error(`[Telegram] Exception for chat_id ${cid}:`, error);
     }
+  }
 
+  if (anySuccess) {
     return {
       success: true,
       message: 'សារត្រូវបានផ្ញើទៅកាន់ Telegram ជោគជ័យ!',
-      data: data.result,
-    };
-  } catch (error: any) {
-    console.error('Telegram API request failed:', error);
-    return {
-      success: false,
-      message: `មិនអាចភ្ជាប់ទៅ Telegram API បានទេ: ${error.message || 'សូមពិនិត្យអ៊ីនធឺណិត'}`,
+      data: lastData,
     };
   }
+
+  let errDesc = lastError || 'កំហុសមិនស្គាល់';
+  if (errDesc.includes('Unauthorized') || errDesc.includes('Not Found')) {
+    errDesc = 'Bot Token មិនត្រឹមត្រូវ (Invalid Bot Token)';
+  } else if (errDesc.includes('chat not found')) {
+    errDesc = 'រកមិនឃើញ Chat ID នេះឡើយ។ សូមប្រាកដថាអ្នកបានចុច /start ក្នុង Bot ឬបាន Add Bot ចូល Group!';
+  }
+
+  return {
+    success: false,
+    message: `Telegram Error: ${errDesc}`,
+  };
 };
 
 /**
@@ -329,98 +373,127 @@ export const sendTelegramPhoto = async (
   }
 
   const cleanToken = config.botToken.trim();
-  const cleanChatId = config.chatId.trim();
+  const chatIds = parseTelegramChatIds(config.chatId, cleanToken);
+
+  if (chatIds.length === 0) {
+    return { success: false, message: 'សូមបំពេញ Chat ID ជាមុនសិន!' };
+  }
 
   // Telegram photo caption maximum length is 1024 characters
   const isCaptionLong = caption.length > 1000;
   const photoCaption = isCaptionLong ? caption.slice(0, 990) + '...' : caption;
+
+  let anySuccess = false;
+  let lastData: any = null;
 
   try {
     // 1. If photo is a Base64 data URL, upload as binary multipart/form-data
     if (photo.startsWith('data:')) {
       const blob = dataURLtoBlob(photo);
       if (blob) {
-        const formData = new FormData();
-        formData.append('chat_id', cleanChatId);
-        formData.append('photo', blob, 'cake.jpg');
-        formData.append('caption', photoCaption);
-        formData.append('parse_mode', 'HTML');
+        for (const cid of chatIds) {
+          try {
+            const formData = new FormData();
+            formData.append('chat_id', cid);
+            formData.append('photo', blob, 'cake.jpg');
+            formData.append('caption', photoCaption);
+            formData.append('parse_mode', 'HTML');
 
-        const response = await fetch(`https://api.telegram.org/bot${cleanToken}/sendPhoto`, {
-          method: 'POST',
-          body: formData,
-        });
-
-        let data = await response.json();
-
-        // If HTML parsing failed, retry with plain text (strip tags)
-        if (!response.ok || !data.ok) {
-          if (data.description && data.description.includes('parse entities')) {
-            console.warn('[Telegram Photo] HTML parse failed, retrying plain text:', data.description);
-            const plainCaption = photoCaption.replace(/<[^>]*>/g, '');
-            const retryFormData = new FormData();
-            retryFormData.append('chat_id', cleanChatId);
-            retryFormData.append('photo', blob, 'cake.jpg');
-            retryFormData.append('caption', plainCaption);
-            const retryRes = await fetch(`https://api.telegram.org/bot${cleanToken}/sendPhoto`, {
+            const response = await fetch(`https://api.telegram.org/bot${cleanToken}/sendPhoto`, {
               method: 'POST',
-              body: retryFormData,
+              body: formData,
             });
-            data = await retryRes.json();
+
+            let data = await response.json();
+
+            // If HTML parsing failed, retry with plain text (strip tags)
+            if (!response.ok || !data.ok) {
+              if (data.description && data.description.includes('parse entities')) {
+                console.warn('[Telegram Photo] HTML parse failed, retrying plain text:', data.description);
+                const plainCaption = photoCaption.replace(/<[^>]*>/g, '');
+                const retryFormData = new FormData();
+                retryFormData.append('chat_id', cid);
+                retryFormData.append('photo', blob, 'cake.jpg');
+                retryFormData.append('caption', plainCaption);
+                const retryRes = await fetch(`https://api.telegram.org/bot${cleanToken}/sendPhoto`, {
+                  method: 'POST',
+                  body: retryFormData,
+                });
+                data = await retryRes.json();
+              }
+            }
+
+            if (data.ok) {
+              anySuccess = true;
+              lastData = data.result;
+            }
+          } catch (photoErr) {
+            console.warn(`[Telegram Photo] Failed sending to ${cid}:`, photoErr);
           }
         }
 
-        if (data.ok) {
+        if (anySuccess) {
           if (isCaptionLong) {
             await sendTelegramMessage(caption, config);
           }
-          return { success: true, message: 'ផ្ញើរូបភាពជោគជ័យ!', data: data.result };
+          return { success: true, message: 'ផ្ញើរូបភាពជោគជ័យ!', data: lastData };
         }
-        console.warn('sendPhoto with blob failed, falling back to text:', data.description);
+        console.warn('sendPhoto with blob failed for all recipients, falling back to text');
       }
     } else if (photo.startsWith('http://') || photo.startsWith('https://')) {
       // 2. If photo is a Web URL (e.g. Firebase Storage)
-      const response = await fetch(`https://api.telegram.org/bot${cleanToken}/sendPhoto`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          chat_id: cleanChatId,
-          photo,
-          caption: photoCaption,
-          parse_mode: 'HTML',
-        }),
-      });
-
-      let data = await response.json();
-
-      // If HTML parsing failed, retry with plain text
-      if (!response.ok || !data.ok) {
-        if (data.description && data.description.includes('parse entities')) {
-          console.warn('[Telegram Photo] URL HTML parse failed, retrying plain text:', data.description);
-          const plainCaption = photoCaption.replace(/<[^>]*>/g, '');
-          const retryRes = await fetch(`https://api.telegram.org/bot${cleanToken}/sendPhoto`, {
+      for (const cid of chatIds) {
+        try {
+          const response = await fetch(`https://api.telegram.org/bot${cleanToken}/sendPhoto`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              chat_id: cleanChatId,
+              chat_id: cid,
               photo,
-              caption: plainCaption,
+              caption: photoCaption,
+              parse_mode: 'HTML',
             }),
           });
-          data = await retryRes.json();
+
+          let data = await response.json();
+
+          // If HTML parsing failed, retry with plain text
+          if (!response.ok || !data.ok) {
+            if (data.description && data.description.includes('parse entities')) {
+              console.warn('[Telegram Photo] URL HTML parse failed, retrying plain text:', data.description);
+              const plainCaption = photoCaption.replace(/<[^>]*>/g, '');
+              const retryRes = await fetch(`https://api.telegram.org/bot${cleanToken}/sendPhoto`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  chat_id: cid,
+                  photo,
+                  caption: plainCaption,
+                }),
+              });
+              data = await retryRes.json();
+            }
+          }
+
+          if (data.ok) {
+            anySuccess = true;
+            lastData = data.result;
+          }
+        } catch (urlPhotoErr) {
+          console.warn(`[Telegram Photo URL] Failed sending to ${cid}:`, urlPhotoErr);
         }
       }
 
-      if (data.ok) {
+      if (anySuccess) {
         if (isCaptionLong) {
           await sendTelegramMessage(caption, config);
         }
-        return { success: true, message: 'ផ្ញើរូបភាពជោគជ័យ!', data: data.result };
+        return { success: true, message: 'ផ្ញើរូបភាពជោគជ័យ!', data: lastData };
       }
-      console.warn('sendPhoto with URL failed, falling back to text:', data.description);
+      console.warn('sendPhoto with URL failed for all recipients, falling back to text');
     }
 
-    // Fallback: If image fails or format not supported, send regular text message
+    // Fallback: If image fails or format not supported (e.g. local relative path), send regular text message
     return await sendTelegramMessage(caption, config);
   } catch (error: any) {
     console.error('sendTelegramPhoto exception, falling back to text:', error);
@@ -436,9 +509,9 @@ export const testTelegramConnection = async (
   chatId: string
 ): Promise<{ success: boolean; message: string; botUsername?: string }> => {
   const cleanToken = botToken.trim();
-  const cleanChatId = chatId.trim();
+  const chatIds = parseTelegramChatIds(chatId, cleanToken);
 
-  if (!cleanToken || !cleanChatId) {
+  if (!cleanToken || chatIds.length === 0) {
     return {
       success: false,
       message: 'សូមបញ្ចូល Bot Token និង Chat ID ឱ្យបានត្រឹមត្រូវ!',
@@ -470,7 +543,7 @@ export const testTelegramConnection = async (
 
     const sendRes = await sendTelegramMessage(testMsg, {
       botToken: cleanToken,
-      chatId: cleanChatId,
+      chatId: chatIds.join(', '),
       enabled: true,
       notifySales: true,
       notifyCustomOrders: true,
@@ -585,7 +658,7 @@ export const notifyTelegramSale = async (
 
   console.log('[Telegram Alert] Sending sale notification for invoice:', sale.orderNumber, 'hasPhoto:', Boolean(photoUrl));
   let res;
-  if (photoUrl) {
+  if (photoUrl && (photoUrl.startsWith('data:') || photoUrl.startsWith('http://') || photoUrl.startsWith('https://'))) {
     res = await sendTelegramPhoto(photoUrl, text, config);
   } else {
     res = await sendTelegramMessage(text, config);

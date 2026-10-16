@@ -261,7 +261,7 @@ export const TelegramSettingsTab: React.FC = () => {
             </label>
             <input
               type="text"
-              placeholder="ឧ. 987654321 ឬ -100123456789 (សម្រាប់ Group)"
+              placeholder="ឧ. -5528089668 ឬ -5528089668, 8970210109"
               value={config.chatId}
               onChange={(e) => {
                 const val = e.target.value.trim();
@@ -273,6 +273,47 @@ export const TelegramSettingsTab: React.FC = () => {
               }}
               className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-mono text-slate-800 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all"
             />
+            
+            {/* Quick Presets */}
+            <div className="pt-1 flex flex-wrap items-center gap-1.5">
+              <span className="text-[11px] font-bold text-slate-500 mr-1">ជម្រើសរហ័ស៖</span>
+              <button
+                type="button"
+                onClick={() => updateConfig({ ...config, chatId: '-5528089668', enabled: true })}
+                className={`text-[11px] px-2.5 py-1 rounded-xl font-bold transition-all border ${
+                  config.chatId === '-5528089668'
+                    ? 'bg-sky-600 text-white border-sky-600 shadow-xs'
+                    : 'bg-white text-slate-700 border-slate-200 hover:bg-sky-50 hover:border-sky-300'
+                }`}
+              >
+                👥 Group ហាង (-5528089668)
+              </button>
+              <button
+                type="button"
+                onClick={() => updateConfig({ ...config, chatId: '8970210109', enabled: true })}
+                className={`text-[11px] px-2.5 py-1 rounded-xl font-bold transition-all border ${
+                  config.chatId === '8970210109'
+                    ? 'bg-sky-600 text-white border-sky-600 shadow-xs'
+                    : 'bg-white text-slate-700 border-slate-200 hover:bg-sky-50 hover:border-sky-300'
+                }`}
+              >
+                👤 Admin ផ្ទាល់ខ្លួន (8970210109)
+              </button>
+              <button
+                type="button"
+                onClick={() => updateConfig({ ...config, chatId: '-5528089668, 8970210109', enabled: true })}
+                className={`text-[11px] px-2.5 py-1 rounded-xl font-bold transition-all border ${
+                  config.chatId.includes('-5528089668') && config.chatId.includes('8970210109')
+                    ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs'
+                    : 'bg-white text-slate-700 border-slate-200 hover:bg-emerald-50 hover:border-emerald-300'
+                }`}
+              >
+                ✨ ផ្ញើទាំងពីរ (Group + Admin)
+              </button>
+            </div>
+            <p className="text-[11px] text-slate-500 leading-relaxed pt-0.5">
+              💡 <b>ចំណាំ៖</b> អ្នកអាចដាក់ Chat ID ច្រើនដោយបំបែកដោយសញ្ញាក្បៀស (,) ដើម្បីឱ្យប្រព័ន្ធផ្ញើដំណឹងចូលទាំងក្នុង Group ហាង និងគណនីផ្ទាល់ខ្លួនក្នុងពេលតែមួយ។
+            </p>
           </div>
         </div>
 
