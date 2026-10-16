@@ -1,6 +1,6 @@
 {
   "name": "sweetbakery-pos-windows",
-  "version": "1.3.0",
+  "version": "1.3.1",
   "description": "SweetBakery POS - ប្រព័ន្ធគ្រប់គ្រងហាងនំខេកស្តង់ដារ",
   "main": "main.js",
   "scripts": {
