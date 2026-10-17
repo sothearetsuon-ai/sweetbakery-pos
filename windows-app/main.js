@@ -30,6 +30,18 @@ function createWindow() {
     }
   });
 
+  // Automatically grant media permissions (Camera, Microphone)
+  session.defaultSession.setPermissionRequestHandler((webContents, permission, callback) => {
+    if (permission === 'media') {
+      callback(true);
+      return;
+    }
+    callback(true);
+  });
+  session.defaultSession.setPermissionCheckHandler((webContents, permission) => {
+    return true;
+  });
+
   // Load the bundled local application (100% offline ready)
   loadAppUrl();
 

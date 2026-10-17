@@ -20,6 +20,7 @@ import {
   ArrowRight,
   MessageSquare,
   Flame,
+  AlertCircle,
 } from 'lucide-react';
 import {
   CustomerAiMessage,
@@ -84,6 +85,8 @@ export const CustomerAiGuideModal: React.FC<CustomerAiGuideModalProps> = ({
   const [isTyping, setIsTyping] = useState(false);
   const [isSpeakingId, setIsSpeakingId] = useState<string | null>(null);
   const [isListening, setIsListening] = useState(false);
+  const [voiceStatusText, setVoiceStatusText] = useState<string | null>(null);
+  const [voiceError, setVoiceError] = useState<string | null>(null);
   const [appliedActionKey, setAppliedActionKey] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
@@ -154,52 +157,146 @@ export const CustomerAiGuideModal: React.FC<CustomerAiGuideModalProps> = ({
   };
 
   // Speech Recognition (Voice Input)
-  const handleToggleVoiceInput = () => {
+  const handleToggleVoiceInput = async () => {
     if (typeof window === 'undefined') return;
+    setVoiceError(null);
+
+    // 1. Android Native App Voice Recognition
+    if (typeof (window as any).SweetBakeryNative?.startSpeechRecognition === 'function') {
+      try {
+        setIsListening(true);
+        setVoiceStatusText('🎙️ កំពុងស្តាប់តាម Android Voice Typing...');
+        soundFx.playPop();
+
+        (window as any).__onSweetBakerySpeechResult = (text: string) => {
+          setIsListening(false);
+          setVoiceStatusText(null);
+          if (text) {
+            setInputValue((prev) => (prev ? `${prev} ${text}` : text));
+            soundFx.playSuccess();
+          }
+        };
+
+        (window as any).__onSweetBakerySpeechError = (err: string) => {
+          setIsListening(false);
+          setVoiceStatusText(null);
+          if (err !== 'cancelled') {
+            setVoiceError('មិនបានទទួលសំឡេងទេ សូមសាកល្បងម្តងទៀត។');
+          }
+        };
+
+        (window as any).SweetBakeryNative.startSpeechRecognition();
+        return;
+      } catch (e) {
+        console.error('Android speech recognition error', e);
+      }
+    }
+
+    // 2. Stop if currently listening
+    if (isListening) {
+      if (speechRecognitionRef.current) {
+        try {
+          speechRecognitionRef.current.stop();
+        } catch (e) {}
+      }
+      setIsListening(false);
+      setVoiceStatusText(null);
+      return;
+    }
+
+    // 3. Web Speech API availability check
     const SpeechRecognition =
       (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
 
     if (!SpeechRecognition) {
-      alert('កម្មវិធីរុករករបស់អ្នកមិនទាន់គាំទ្រការនិយាយបញ្ចូលសំឡេងទេ (Web Speech API)');
+      setVoiceError(
+        'Browser ឬឧបករណ៍នេះមិនទាន់គាំទ្រការនិយាយបញ្ចូលសំឡេងទេ (Web Speech API)។ សូមប្រើប្រាស់ Google Chrome ឬចុចលើប៊ូតុងសំណួររហ័សខាងលើ។'
+      );
       return;
     }
 
-    if (isListening && speechRecognitionRef.current) {
-      speechRecognitionRef.current.stop();
-      setIsListening(false);
-      return;
+    // 4. Request microphone permission explicitly via getUserMedia if supported
+    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        stream.getTracks().forEach((track) => track.stop());
+      } catch (err: any) {
+        console.warn('Microphone permission check error:', err);
+        if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+          setVoiceError('សូមអនុញ្ញាតសិទ្ធិប្រើប្រាស់ Microphone (Allow Microphone) នៅក្នុង Browser Settings។');
+          return;
+        }
+      }
     }
 
     try {
       const recognition = new SpeechRecognition();
-      recognition.lang = 'km-KH';
-      recognition.interimResults = false;
       recognition.continuous = false;
+      recognition.interimResults = true;
+      recognition.maxAlternatives = 1;
+      recognition.lang = 'km-KH';
 
       recognition.onstart = () => {
         setIsListening(true);
+        setVoiceStatusText('🎙️ កំពុងស្តាប់សំឡេង... សូមនិយាយសំណួររបស់អ្នក...');
         soundFx.playPop();
       };
 
       recognition.onresult = (event: any) => {
-        const transcript = event.results?.[0]?.[0]?.transcript;
+        let interimTranscript = '';
+        let finalTranscript = '';
+
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+          const item = event.results[i];
+          if (item.isFinal) {
+            finalTranscript += item[0].transcript;
+          } else {
+            interimTranscript += item[0].transcript;
+          }
+        }
+
+        const transcript = finalTranscript || interimTranscript;
         if (transcript) {
-          setInputValue((prev) => (prev ? `${prev} ${transcript}` : transcript));
+          setInputValue(transcript);
         }
       };
 
-      recognition.onerror = () => {
+      recognition.onerror = (event: any) => {
+        console.warn('SpeechRecognition error:', event.error);
         setIsListening(false);
+        setVoiceStatusText(null);
+
+        if (event.error === 'not-allowed') {
+          setVoiceError('សូមអនុញ្ញាតសិទ្ធិប្រើ Microphone នៅក្នុងកម្មវិធីរុករករបស់អ្នក (Microphone Permission Blocked)។');
+        } else if (event.error === 'no-speech') {
+          setVoiceError('មិនបានឮសំឡេងនិយាយទេ សូមសាកល្បងចុចនិយាយម្តងទៀត។');
+        } else if (event.error === 'network') {
+          setVoiceError('មិនអាចភ្ជាប់ទៅកាន់សេវាបកប្រែសំឡេងបានទេ (Network Error) សូមពិនិត្យមើលអ៊ីនធឺណិត។');
+        } else if (event.error === 'language-not-supported') {
+          try {
+            recognition.lang = navigator.language || 'en-US';
+            recognition.start();
+            return;
+          } catch (e) {
+            setVoiceError('ភាសានេះមិនទាន់គាំទ្រលើឧបករណ៍របស់អ្នកទេ');
+          }
+        } else if (event.error !== 'aborted') {
+          setVoiceError(`បញ្ហា Microphone: ${event.error}`);
+        }
       };
 
       recognition.onend = () => {
         setIsListening(false);
+        setVoiceStatusText(null);
       };
 
       speechRecognitionRef.current = recognition;
       recognition.start();
-    } catch (e) {
+    } catch (e: any) {
+      console.error('Failed to start SpeechRecognition:', e);
       setIsListening(false);
+      setVoiceStatusText(null);
+      setVoiceError('មិនអាចបើក Microphone បានទេ: ' + (e?.message || 'សូមពិនិត្យមើលសិទ្ធិ'));
     }
   };
 
@@ -574,6 +671,40 @@ export const CustomerAiGuideModal: React.FC<CustomerAiGuideModalProps> = ({
 
           <div ref={messagesEndRef} />
         </div>
+
+        {/* Voice Listening Banner */}
+        {isListening && (
+          <div className="px-4 py-2.5 bg-gradient-to-r from-rose-500 via-pink-500 to-rose-600 text-white flex items-center justify-between gap-2 animate-in slide-in-from-bottom duration-150 shrink-0 shadow-md">
+            <div className="flex items-center gap-2.5 text-xs font-bold min-w-0">
+              <span className="w-2.5 h-2.5 rounded-full bg-white animate-ping shrink-0" />
+              <span className="truncate">{voiceStatusText || '🎙️ កំពុងស្តាប់សំឡេង... សូមនិយាយសំណួររបស់អ្នក'}</span>
+            </div>
+            <button
+              type="button"
+              onClick={handleToggleVoiceInput}
+              className="px-2.5 py-1 bg-white/20 hover:bg-white/30 text-white rounded-lg text-xs font-black shrink-0 cursor-pointer shadow-xs active:scale-95 transition-all"
+            >
+              បញ្ឈប់
+            </button>
+          </div>
+        )}
+
+        {/* Voice Error Notification */}
+        {voiceError && (
+          <div className="px-3.5 py-2.5 bg-amber-50 border-t border-amber-200 text-amber-900 flex items-center justify-between gap-2 animate-in fade-in shrink-0">
+            <div className="flex items-center gap-2 text-xs font-semibold min-w-0">
+              <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+              <span>{voiceError}</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setVoiceError(null)}
+              className="text-xs font-bold text-amber-700 hover:text-amber-900 px-2 py-0.5 rounded cursor-pointer shrink-0"
+            >
+              ✕
+            </button>
+          </div>
+        )}
 
         {/* ========================================================= */}
         {/* INPUT BAR */}

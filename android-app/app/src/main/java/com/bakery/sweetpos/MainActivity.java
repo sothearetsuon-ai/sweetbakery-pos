@@ -51,15 +51,19 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import android.speech.RecognizerIntent;
 import android.speech.tts.TextToSpeech;
 import android.media.MediaPlayer;
 import android.media.AudioAttributes;
+import java.util.ArrayList;
+import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
 
     private static final String APP_URL = "https://appassets.androidplatform.net/index.html";
     private static final int FILE_CHOOSER_REQUEST_CODE = 1001;
     private static final int CAMERA_PERMISSION_REQUEST_CODE = 2001;
+    private static final int SPEECH_REQUEST_CODE = 3001;
 
     private WebView webView;
     private ProgressBar progressBar;
@@ -243,13 +247,25 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onPermissionRequest(final PermissionRequest request) {
                 runOnUiThread(() -> {
-                    if (ContextCompat.checkSelfPermission(MainActivity.this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
-                        request.grant(request.getResources());
+                    String[] resources = request.getResources();
+                    boolean needsCamera = false;
+                    boolean needsAudio = false;
+                    for (String res : resources) {
+                        if (PermissionRequest.RESOURCE_VIDEO_CAPTURE.equals(res)) needsCamera = true;
+                        if (PermissionRequest.RESOURCE_AUDIO_CAPTURE.equals(res)) needsAudio = true;
+                    }
+
+                    boolean hasCamera = !needsCamera || ContextCompat.checkSelfPermission(MainActivity.this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED;
+                    boolean hasAudio = !needsAudio || ContextCompat.checkSelfPermission(MainActivity.this, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED;
+
+                    if (hasCamera && hasAudio) {
+                        request.grant(resources);
                     } else {
                         pendingWebPermissionRequest = request;
-                        ActivityCompat.requestPermissions(MainActivity.this,
-                                new String[]{Manifest.permission.CAMERA},
-                                CAMERA_PERMISSION_REQUEST_CODE);
+                        List<String> perms = new ArrayList<>();
+                        if (!hasCamera) perms.add(Manifest.permission.CAMERA);
+                        if (!hasAudio) perms.add(Manifest.permission.RECORD_AUDIO);
+                        ActivityCompat.requestPermissions(MainActivity.this, perms.toArray(new String[0]), CAMERA_PERMISSION_REQUEST_CODE);
                     }
                 });
             }
@@ -321,23 +337,39 @@ public class MainActivity extends AppCompatActivity {
                 uploadMessageCallback = null;
             }
         }
+        if (requestCode == SPEECH_REQUEST_CODE) {
+            if (resultCode == RESULT_OK && data != null) {
+                ArrayList<String> matches = data.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS);
+                if (matches != null && !matches.isEmpty()) {
+                    String recognizedText = matches.get(0);
+                    String escaped = recognizedText.replace("\\", "\\\\").replace("'", "\\'").replace("\n", " ");
+                    webView.evaluateJavascript("if (window.__onSweetBakerySpeechResult) window.__onSweetBakerySpeechResult('" + escaped + "');", null);
+                } else {
+                    webView.evaluateJavascript("if (window.__onSweetBakerySpeechError) window.__onSweetBakerySpeechError('no_speech');", null);
+                }
+            } else {
+                webView.evaluateJavascript("if (window.__onSweetBakerySpeechError) window.__onSweetBakerySpeechError('cancelled');", null);
+            }
+        }
     }
 
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (requestCode == CAMERA_PERMISSION_REQUEST_CODE) {
-            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                if (pendingWebPermissionRequest != null) {
-                    pendingWebPermissionRequest.grant(pendingWebPermissionRequest.getResources());
-                    pendingWebPermissionRequest = null;
+            boolean allGranted = true;
+            for (int res : grantResults) {
+                if (res != PackageManager.PERMISSION_GRANTED) {
+                    allGranted = false;
+                    break;
                 }
-            } else {
-                if (pendingWebPermissionRequest != null) {
-                    pendingWebPermissionRequest.deny();
-                    pendingWebPermissionRequest = null;
-                }
-                Toast.makeText(this, "សូមផ្តល់សិទ្ធិប្រើកាមេរ៉ា ដើម្បីថតរូបភាព", Toast.LENGTH_SHORT).show();
+            }
+            if (allGranted && pendingWebPermissionRequest != null) {
+                pendingWebPermissionRequest.grant(pendingWebPermissionRequest.getResources());
+                pendingWebPermissionRequest = null;
+            } else if (pendingWebPermissionRequest != null) {
+                pendingWebPermissionRequest.deny();
+                pendingWebPermissionRequest = null;
             }
         }
     }
@@ -347,6 +379,22 @@ public class MainActivity extends AppCompatActivity {
         @JavascriptInterface
         public boolean isNativeApp() {
             return true;
+        }
+
+        @JavascriptInterface
+        public void startSpeechRecognition() {
+            runOnUiThread(() -> {
+                try {
+                    Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
+                    intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
+                    intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, "km-KH");
+                    intent.putExtra(RecognizerIntent.EXTRA_PROMPT, "សូមនិយាយសំណួររបស់អ្នក (Speak your question)...");
+                    startActivityForResult(intent, SPEECH_REQUEST_CODE);
+                } catch (ActivityNotFoundException e) {
+                    Toast.makeText(MainActivity.this, "ឧបករណ៍នេះមិនទាន់មាន Google Voice Typing ទេ", Toast.LENGTH_SHORT).show();
+                    webView.evaluateJavascript("if (window.__onSweetBakerySpeechError) window.__onSweetBakerySpeechError('not_supported');", null);
+                }
+            });
         }
 
         @JavascriptInterface
