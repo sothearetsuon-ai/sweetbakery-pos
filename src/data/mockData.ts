@@ -11,17 +11,17 @@ export const initialCategories: Category[] = [
 
 export const initialFlavors: string[] = [
   'សូកូឡា (Chocolate Fudge Cake)',
-  'Red Velvet + Cream Cheese (រ៉េដវ៉េលវែត & ក្រីមឈីស)',
-  'Matcha Green Tea + Red Bean (តែបៃតងម៉ាត់ឆា)',
-  'Taro Coconut Mousse (ត្រាវដូងក្រអូប)',
-  'Durian Kampot Chiffon (ធុរេនកំពតពិសេស)',
-  'Lotus Biscoff Caramel (ខារ៉ាមែល ប៊ីស្គូហ្វ)',
-  'Mango Passionfruit Cream (ស្វាយ & ផាសិន)',
-  'Coffee Mocha Hazelnut (កាហ្វេម៉ូកា)',
-  'Classic Vanilla Bean (វ៉ានីឡាស្អាត)',
+  'វ៉ានីឡា (Vanilla Cake)',
   'ស្ត្រប៊ែរី (Strawberry Fresh Cream)',
   'ប៊្លូប៊ែរី (Blueberry Cream Cheese)',
+  'រ៉េដវ៉េលវែត (Red Velvet)',
+  'តែបៃតងម៉ាត់ឆា (Matcha Green Tea)',
+  'ត្រាវដូង (Taro Coconut)',
+  'ទុរេនកំពត (Durian Cake)',
   'តយដូង (Pandan Coconut)',
+  'កាហ្វេម៉ូកា (Coffee Mocha)',
+  'ខារ៉ាមែល ប៊ីស្គូហ្វ (Lotus Biscoff Caramel)',
+  'ស្វាយ & ផាសិន (Mango Passionfruit)',
 ];
 
 export const initialProducts: Product[] = [

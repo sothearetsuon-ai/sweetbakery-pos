@@ -14,8 +14,7 @@ import {
 import confetti from 'canvas-confetti';
 import { useBakery } from '../../context/BakeryContext';
 import { soundFx } from '../../utils/audio';
-import { PRESET_CAKE_FLAVORS, CakeFlavorItem } from '../customer-order/CustomerOrderPortal';
-import { getFlavorEmoji } from '../../utils/flavorUtils';
+import { PRESET_CAKE_FLAVORS, CakeFlavorItem, getFlavorEmoji, getUnifiedCakeFlavors } from '../../utils/flavorUtils';
 
 interface CakeFlavorsModalProps {
   isOpen: boolean;
@@ -50,75 +49,8 @@ export const CakeFlavorsModal: React.FC<CakeFlavorsModalProps> = ({ isOpen, onCl
 
   // Combine PRESET_CAKE_FLAVORS with custom store flavors, respecting deleted and overridden flavors
   const allFlavors = useMemo(() => {
-    const deletedSet = new Set((deletedFlavorIds || []).map((d) => d.toLowerCase().trim()));
-
-    // 1. Process PRESET_CAKE_FLAVORS
-    const list: (CakeFlavorItem & { isCustom?: boolean })[] = PRESET_CAKE_FLAVORS
-      .filter((f) => {
-        if (f.id === 'other') return false;
-        const idLower = f.id.toLowerCase().trim();
-        const khLower = f.nameKh.toLowerCase().trim();
-        const lblLower = f.label.toLowerCase().trim();
-        return !deletedSet.has(idLower) && !deletedSet.has(khLower) && !deletedSet.has(lblLower);
-      })
-      .map((f) => {
-        const idLower = f.id.toLowerCase().trim();
-        const khLower = f.nameKh.toLowerCase().trim();
-        const lblLower = f.label.toLowerCase().trim();
-        const override =
-          flavorOverrides[idLower] ||
-          flavorOverrides[khLower] ||
-          flavorOverrides[lblLower];
-
-        if (override) {
-          const nameKh = override.nameKh || f.nameKh;
-          const nameEn = override.nameEn !== undefined ? override.nameEn : f.nameEn;
-          return {
-            ...f,
-            nameKh,
-            nameEn,
-            label: nameEn ? `${nameKh} (${nameEn})` : nameKh,
-            icon: getFlavorEmoji(nameKh),
-            isCustom: false,
-          };
-        }
-        return {
-          ...f,
-          icon: f.icon || getFlavorEmoji(f.nameKh),
-          isCustom: false,
-        };
-      });
-
-    // 2. Process custom flavors from flavors array
-    if (flavors && flavors.length > 0) {
-      flavors.forEach((fl, idx) => {
-        const clean = fl.trim();
-        if (!clean) return;
-        const cleanLower = clean.toLowerCase();
-        if (deletedSet.has(cleanLower)) return;
-
-        const exists = list.some(
-          (item) =>
-            item.label.toLowerCase() === cleanLower ||
-            item.nameKh.toLowerCase() === cleanLower ||
-            cleanLower.includes(item.nameKh.toLowerCase())
-        );
-
-        if (!exists) {
-          list.push({
-            id: `store-fl-${idx}-${clean}`,
-            nameKh: clean,
-            nameEn: 'រសជាតិហាងថែម',
-            icon: getFlavorEmoji(clean),
-            label: clean,
-            isCustom: true,
-          });
-        }
-      });
-    }
-
-    return list;
-  }, [flavors, deletedFlavorIds, flavorOverrides]);
+    return getUnifiedCakeFlavors(flavors, unavailableFlavors, deletedFlavorIds, flavorOverrides);
+  }, [flavors, unavailableFlavors, deletedFlavorIds, flavorOverrides]);
 
   // Check if a flavor is unavailable
   const isOutOfStock = (item: CakeFlavorItem) => {

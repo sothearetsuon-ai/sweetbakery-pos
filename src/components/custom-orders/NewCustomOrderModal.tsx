@@ -31,7 +31,7 @@ import { PartyAddon } from '../../types';
 import { CameraCaptureModal } from '../common/CameraCaptureModal';
 import { PartyAccessoriesModal } from '../pos/PartyAccessoriesModal';
 import { CakeFlavorsModal } from '../pos/CakeFlavorsModal';
-import { PRESET_CAKE_FLAVORS } from '../customer-order/CustomerOrderPortal';
+import { getUnifiedCakeFlavors, UnifiedCakeFlavor, getFlavorEmoji } from '../../utils/flavorUtils';
 import { formatDateDMY } from '../../utils/dateUtils';
 import { roundKhr } from '../../utils/currencyUtils';
 
@@ -72,32 +72,6 @@ const PACKAGING_OPTIONS = [
   'វេចខ្ចប់ប្រអប់ធំសម្រាប់កម្មវិធី (Bulk Catering Box)',
 ];
 
-const getFlavorEmoji = (flavorName: string): string => {
-  const clean = (flavorName || '').trim().toLowerCase();
-  const matched = PRESET_CAKE_FLAVORS.find(
-    (p) =>
-      p.label.toLowerCase() === clean ||
-      p.nameKh.toLowerCase() === clean ||
-      p.nameEn.toLowerCase() === clean
-  );
-  if (matched) return matched.icon;
-
-  if (clean.includes('choco') || clean.includes('សូកូឡា') || clean.includes('fudge') || clean.includes('brownie')) return '🍫';
-  if (clean.includes('straw') || clean.includes('ស្ត្រប៊ែរី') || clean.includes('ស្ត្របឺរី') || clean.includes('berry') || clean.includes('ប៊ឺរី')) return '🍓';
-  if (clean.includes('blue') || clean.includes('ប៊្លូ')) return '🫐';
-  if (clean.includes('vanil') || clean.includes('វ៉ានីឡា') || clean.includes('custard')) return '🍦';
-  if (clean.includes('velvet') || clean.includes('រ៉េដ') || clean.includes('cheese') || clean.includes('ឈីស')) return '🧀';
-  if (clean.includes('matcha') || clean.includes('green tea') || clean.includes('តែបៃតង') || clean.includes('ម៉ាត់ឆា')) return '🍵';
-  if (clean.includes('coffee') || clean.includes('កាហ្វេ') || clean.includes('tiramisu') || clean.includes('mocha')) return '☕';
-  if (clean.includes('durian') || clean.includes('ទុរេន') || clean.includes('ធុរេន')) return '🍈';
-  if (clean.includes('taro') || clean.includes('ត្រាវ')) return '🍠';
-  if (clean.includes('coconut') || clean.includes('ដូង') || clean.includes('pandan') || clean.includes('តយ') || clean.includes('ស្លឹកតយ')) return '🥥';
-  if (clean.includes('mango') || clean.includes('ស្វាយ')) return '🥭';
-  if (clean.includes('orange') || clean.includes('ក្រូច') || clean.includes('lemon')) return '🍊';
-  if (clean.includes('caramel') || clean.includes('ការ៉ាមែល') || clean.includes('biscoff')) return '🍯';
-  return '🎂';
-};
-
 export const NewCustomOrderModal: React.FC<NewCustomOrderModalProps> = ({ isOpen, onClose, initialData }) => {
   const {
     lang,
@@ -105,6 +79,7 @@ export const NewCustomOrderModal: React.FC<NewCustomOrderModalProps> = ({ isOpen
     flavors,
     unavailableFlavors = [],
     deletedFlavorIds = [],
+    flavorOverrides = {},
     addFlavor,
     partyAddons,
     addPartyAddon,
@@ -119,13 +94,6 @@ export const NewCustomOrderModal: React.FC<NewCustomOrderModalProps> = ({ isOpen
 
   const [isCakeFlavorsModalOpen, setIsCakeFlavorsModalOpen] = useState(false);
 
-  const isOutOfStockFlavor = (f: string) => {
-    const clean = (f || '').trim().toLowerCase();
-    return unavailableFlavors.some((u) => u.trim().toLowerCase() === clean);
-  };
-  const outOfStockFlavorsCount = (flavors || []).filter((f) => isOutOfStockFlavor(f)).length;
-  const inStockFlavorsCount = Math.max(0, (flavors || []).length - outOfStockFlavorsCount);
-
   // Order Type: Cake vs Bread
   const [orderType, setOrderType] = useState<'CAKE' | 'BREAD'>('CAKE');
 
@@ -136,20 +104,56 @@ export const NewCustomOrderModal: React.FC<NewCustomOrderModalProps> = ({ isOpen
   // Cake specific state
   const [cakeName, setCakeName] = useState('Birthday Special Cake');
   const [size, setSize] = useState('1.5 kg');
-  const [flavor, setFlavor] = useState(flavors[0] || 'Chocolate Fudge + Fresh Strawberry');
-  const isSelectedFlavorOut = isOutOfStockFlavor(flavor);
-  const allDisplayedFlavors = React.useMemo(() => {
-    const deletedSet = new Set((deletedFlavorIds || []).map((d) => d.toLowerCase().trim()));
-    const base = (flavors && flavors.length > 0 ? [...flavors] : []).filter(
-      (f) => !deletedSet.has(f.toLowerCase().trim())
-    );
-    if (flavor && !base.some((f) => f.trim().toLowerCase() === flavor.trim().toLowerCase())) {
+  const [flavor, setFlavor] = useState(() => {
+    if (initialData?.flavor) return initialData.flavor;
+    const list = getUnifiedCakeFlavors(flavors, unavailableFlavors, deletedFlavorIds, flavorOverrides);
+    return list[0]?.nameKh || list[0]?.label || 'សូកូឡា';
+  });
+
+  // Unified Cake Flavors pulling 100% from Cake Flavors & Stock Management (CakeFlavorsModal)
+  const allCakeFlavors = React.useMemo(() => {
+    const list = getUnifiedCakeFlavors(flavors, unavailableFlavors, deletedFlavorIds, flavorOverrides);
+    // If an initial or selected flavor is custom and not already in the list, keep it visible
+    if (
+      flavor &&
+      !list.some(
+        (f) =>
+          f.label.toLowerCase() === flavor.toLowerCase().trim() ||
+          f.nameKh.toLowerCase() === flavor.toLowerCase().trim()
+      )
+    ) {
+      const deletedSet = new Set((deletedFlavorIds || []).map((d) => d.toLowerCase().trim()));
       if (!deletedSet.has(flavor.toLowerCase().trim())) {
-        base.push(flavor);
+        list.push({
+          id: `custom-selected-${flavor}`,
+          nameKh: flavor,
+          nameEn: 'រសជាតិហាងថែម',
+          icon: getFlavorEmoji(flavor),
+          label: flavor,
+          isCustom: true,
+          isAvailable: true,
+          isOutOfStock: false,
+        });
       }
     }
-    return base;
-  }, [flavors, flavor, deletedFlavorIds]);
+    return list;
+  }, [flavors, unavailableFlavors, deletedFlavorIds, flavorOverrides, flavor]);
+
+  const outOfStockFlavorsCount = allCakeFlavors.filter((f) => f.isOutOfStock).length;
+  const inStockFlavorsCount = allCakeFlavors.filter((f) => !f.isOutOfStock).length;
+
+  const isOutOfStockFlavor = (f: string) => {
+    const clean = (f || '').trim().toLowerCase();
+    const matched = allCakeFlavors.find(
+      (item) =>
+        item.label.toLowerCase() === clean ||
+        item.nameKh.toLowerCase() === clean ||
+        item.id.toLowerCase() === clean
+    );
+    if (matched) return !!matched.isOutOfStock;
+    return unavailableFlavors.some((u) => u.trim().toLowerCase() === clean);
+  };
+  const isSelectedFlavorOut = isOutOfStockFlavor(flavor);
   const [filling, setFilling] = useState('Fresh Cream');
   const [inscription, setInscription] = useState('');
   const [themeNotes, setThemeNotes] = useState('');
@@ -1055,18 +1059,21 @@ export const NewCustomOrderModal: React.FC<NewCustomOrderModalProps> = ({ isOpen
 
                 {/* Interactive Flavors Grid - Outside cards for easy viewing and 1-tap picking */}
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 sm:gap-2.5">
-                  {allDisplayedFlavors.map((f, i) => {
-                    const isOut = isOutOfStockFlavor(f);
-                    const isSel = flavor === f;
-                    const emoji = getFlavorEmoji(f);
+                  {allCakeFlavors.map((item) => {
+                    const isOut = !!item.isOutOfStock;
+                    const isSel =
+                      flavor === item.label ||
+                      flavor === item.nameKh ||
+                      (item.nameEn && flavor.toLowerCase().includes(item.nameEn.toLowerCase())) ||
+                      (item.nameKh && flavor.includes(item.nameKh));
 
                     return (
                       <button
-                        key={i}
+                        key={item.id}
                         type="button"
                         onClick={() => {
                           soundFx.playPop();
-                          setFlavor(f);
+                          setFlavor(item.label || item.nameKh);
                         }}
                         className={`group p-2.5 sm:p-3 rounded-2xl border text-left transition-all relative flex items-start gap-2.5 cursor-pointer ${
                           isSel
@@ -1079,15 +1086,23 @@ export const NewCustomOrderModal: React.FC<NewCustomOrderModalProps> = ({ isOpen
                         <span className={`text-xl shrink-0 p-1.5 rounded-xl flex items-center justify-center leading-none ${
                           isSel ? 'bg-white/20' : isOut ? 'bg-rose-100/80 grayscale opacity-80' : 'bg-pink-50 text-slate-800'
                         }`}>
-                          {emoji}
+                          {item.icon}
                         </span>
 
                         <div className="min-w-0 flex-1">
-                          <div className={`text-xs font-black leading-tight line-clamp-2 ${
-                            isSel ? 'text-white' : isOut ? 'text-slate-600' : 'text-slate-800'
+                          <div className={`text-xs font-black leading-tight line-clamp-1 ${
+                            isSel ? 'text-white' : isOut ? 'text-slate-700' : 'text-slate-800'
                           }`}>
-                            {f}
+                            {item.nameKh}
                           </div>
+
+                          {item.nameEn && (
+                            <div className={`text-[10px] leading-tight truncate mt-0.5 ${
+                              isSel ? 'text-white/80' : 'text-slate-400'
+                            }`}>
+                              {item.nameEn}
+                            </div>
+                          )}
 
                           {isOut && (
                             <span className={`inline-block mt-1 text-[9px] font-black px-1.5 py-0.5 rounded-md border ${
