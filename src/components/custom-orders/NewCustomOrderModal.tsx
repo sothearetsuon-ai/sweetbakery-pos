@@ -19,6 +19,9 @@ import {
   ShoppingBag,
   Info,
   Settings,
+  RotateCcw,
+  CheckCircle2,
+  AlertCircle,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { useBakery } from '../../context/BakeryContext';
@@ -27,6 +30,7 @@ import { soundFx } from '../../utils/audio';
 import { PartyAddon } from '../../types';
 import { CameraCaptureModal } from '../common/CameraCaptureModal';
 import { PartyAccessoriesModal } from '../pos/PartyAccessoriesModal';
+import { CakeFlavorsModal } from '../pos/CakeFlavorsModal';
 import { formatDateDMY } from '../../utils/dateUtils';
 import { roundKhr } from '../../utils/currencyUtils';
 
@@ -79,8 +83,20 @@ export const NewCustomOrderModal: React.FC<NewCustomOrderModalProps> = ({ isOpen
     updatePartyAddon,
     deletePartyAddon,
     exchangeRate,
+    setFlavorAvailability,
+    markAllFlavorsAvailable,
+    restoreDefaultFlavors,
   } = useBakery();
   const text = t[lang];
+
+  const [isCakeFlavorsModalOpen, setIsCakeFlavorsModalOpen] = useState(false);
+
+  const isOutOfStockFlavor = (f: string) => {
+    const clean = (f || '').trim().toLowerCase();
+    return unavailableFlavors.some((u) => u.trim().toLowerCase() === clean);
+  };
+  const outOfStockFlavorsCount = (flavors || []).filter((f) => isOutOfStockFlavor(f)).length;
+  const inStockFlavorsCount = Math.max(0, (flavors || []).length - outOfStockFlavorsCount);
 
   // Order Type: Cake vs Bread
   const [orderType, setOrderType] = useState<'CAKE' | 'BREAD'>('CAKE');
@@ -93,6 +109,7 @@ export const NewCustomOrderModal: React.FC<NewCustomOrderModalProps> = ({ isOpen
   const [cakeName, setCakeName] = useState('Birthday Special Cake');
   const [size, setSize] = useState('1.5 kg');
   const [flavor, setFlavor] = useState(flavors[0] || 'Chocolate Fudge + Fresh Strawberry');
+  const isSelectedFlavorOut = isOutOfStockFlavor(flavor);
   const [filling, setFilling] = useState('Fresh Cream');
   const [inscription, setInscription] = useState('');
   const [themeNotes, setThemeNotes] = useState('');
@@ -875,16 +892,71 @@ export const NewCustomOrderModal: React.FC<NewCustomOrderModalProps> = ({ isOpen
 
                 {/* Dynamic Flavor Selector */}
                 <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <label className="text-xs font-bold text-slate-700">រសជាតិនំ (Flavor)</label>
-                    <button
-                      type="button"
-                      onClick={() => setIsAddingNewFlavor(!isAddingNewFlavor)}
-                      className="text-[10px] font-bold text-pink-600 hover:text-pink-700 flex items-center gap-0.5 cursor-pointer"
-                    >
-                      <Plus className="w-3 h-3" />
-                      <span>{isAddingNewFlavor ? 'ជ្រើសរើស' : 'ថែមរសជាតិ'}</span>
-                    </button>
+                  <div className="flex items-center justify-between mb-1.5 flex-wrap gap-1">
+                    <div className="flex items-center gap-1.5">
+                      <label className="text-xs font-bold text-slate-700">រសជាតិនំ (Flavor)</label>
+                      {outOfStockFlavorsCount > 0 ? (
+                        <span className="text-[10px] bg-rose-100 text-rose-700 font-black px-2 py-0.5 rounded-full border border-rose-200">
+                          អស់ស្តុក {outOfStockFlavorsCount}
+                        </span>
+                      ) : (
+                        <span className="text-[10px] bg-emerald-100 text-emerald-800 font-black px-2 py-0.5 rounded-full border border-emerald-200">
+                          មានក្នុងស្តុក ({inStockFlavorsCount})
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-1">
+                      {outOfStockFlavorsCount > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            soundFx.playSuccess();
+                            markAllFlavorsAvailable();
+                          }}
+                          className="text-[10px] font-black text-emerald-700 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-2 py-0.5 rounded-lg flex items-center gap-1 cursor-pointer transition-all shadow-2xs active:scale-95"
+                          title="កំណត់ឱ្យរសជាតិទាំងអស់មានក្នុងស្តុកឡើងវិញភ្លាមៗ"
+                        >
+                          <RotateCcw className="w-3 h-3 text-emerald-600" />
+                          <span>ដាក់មានទាំងអស់</span>
+                        </button>
+                      )}
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          soundFx.playPop();
+                          setIsCakeFlavorsModalOpen(true);
+                        }}
+                        className="text-[10px] font-bold text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 px-1.5 py-0.5 rounded-lg flex items-center gap-0.5 cursor-pointer transition-all"
+                        title="គ្រប់គ្រងស្តុករសជាតិនំ & បិទ/បើកស្តុក"
+                      >
+                        <Settings className="w-3 h-3 text-slate-500" />
+                        <span>ស្តុក</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          soundFx.playSuccess();
+                          restoreDefaultFlavors();
+                        }}
+                        className="text-[10px] font-bold text-purple-700 hover:text-purple-800 bg-purple-50 hover:bg-purple-100 border border-purple-200 px-1.5 py-0.5 rounded-lg flex items-center gap-0.5 cursor-pointer transition-all shadow-2xs"
+                        title="ផ្ទុករសជាតិពេញលេញលំនាំដើម (12 មុខ) និងកំណត់មានក្នុងស្តុកទាំងអស់"
+                      >
+                        <Sparkles className="w-3 h-3 text-purple-600" />
+                        <span className="hidden sm:inline">ម៉ឺនុយពេញ</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setIsAddingNewFlavor(!isAddingNewFlavor)}
+                        className="text-[10px] font-bold text-pink-600 hover:text-pink-700 flex items-center gap-0.5 cursor-pointer"
+                      >
+                        <Plus className="w-3 h-3" />
+                        <span>{isAddingNewFlavor ? 'ជ្រើសរើស' : 'ថែមរសជាតិ'}</span>
+                      </button>
+                    </div>
                   </div>
 
                   {isAddingNewFlavor ? (
@@ -912,20 +984,73 @@ export const NewCustomOrderModal: React.FC<NewCustomOrderModalProps> = ({ isOpen
                       </button>
                     </div>
                   ) : (
-                    <select
-                      value={flavor}
-                      onChange={(e) => setFlavor(e.target.value)}
-                      className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500 font-semibold text-slate-800"
-                    >
-                      {flavors.map((f, i) => {
-                        const isOut = unavailableFlavors.includes(f);
-                        return (
-                          <option key={i} value={f} className={isOut ? 'text-slate-400' : 'text-slate-800'}>
-                            {f} {isOut ? '❌ (អស់ស្តុក)' : ''}
-                          </option>
-                        );
-                      })}
-                    </select>
+                    <>
+                      <select
+                        value={flavor}
+                        onChange={(e) => setFlavor(e.target.value)}
+                        className={`w-full px-3 py-2 text-sm border rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500 font-semibold ${
+                          isSelectedFlavorOut
+                            ? 'border-rose-300 bg-rose-50/20 text-slate-800'
+                            : 'border-slate-200 text-slate-800'
+                        }`}
+                      >
+                        {flavors.map((f, i) => {
+                          const isOut = isOutOfStockFlavor(f);
+                          return (
+                            <option
+                              key={i}
+                              value={f}
+                              className={isOut ? 'text-rose-600 font-bold' : 'text-slate-800'}
+                            >
+                              {f} {isOut ? '❌ (អស់ស្តុក)' : ''}
+                            </option>
+                          );
+                        })}
+                      </select>
+
+                      {isSelectedFlavorOut && (
+                        <div className="mt-1.5 p-2 bg-gradient-to-r from-amber-50 to-rose-50 border border-amber-200 rounded-xl flex items-center justify-between gap-2 animate-in fade-in">
+                          <div className="text-[11px] text-amber-900 font-bold flex items-center gap-1.5 min-w-0">
+                            <AlertCircle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                            <span className="truncate">
+                              រសជាតិ <b>"{flavor}"</b> កំពុងដាក់ថា <b>អស់ស្តុក</b>
+                            </span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              soundFx.playSuccess();
+                              setFlavorAvailability(flavor, true);
+                            }}
+                            className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-black shadow-xs active:scale-95 cursor-pointer shrink-0 flex items-center gap-1"
+                            title="ចុចដើម្បីកំណត់រសជាតិនេះថាមានក្នុងស្តុកវិញភ្លាមៗ"
+                          >
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                            <span>ដាក់មានក្នុងស្តុកវិញ</span>
+                          </button>
+                        </div>
+                      )}
+
+                      {flavors.length > 0 && outOfStockFlavorsCount === flavors.length && !isSelectedFlavorOut && (
+                        <div className="mt-1.5 p-2.5 bg-rose-50 border border-rose-200 rounded-xl flex items-center justify-between gap-2 animate-in fade-in">
+                          <div className="text-xs text-rose-800 font-bold flex items-center gap-1.5">
+                            <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                            <span>រសជាតិទាំងអស់កំពុងជាប់ "អស់ស្តុក"!</span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              soundFx.playSuccess();
+                              markAllFlavorsAvailable();
+                            }}
+                            className="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-black shadow-sm active:scale-95 cursor-pointer shrink-0 flex items-center gap-1"
+                          >
+                            <RotateCcw className="w-3.5 h-3.5" />
+                            <span>ដាក់មានស្តុកទាំងអស់ (1 ចុច)</span>
+                          </button>
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
               </div>
@@ -1429,6 +1554,12 @@ export const NewCustomOrderModal: React.FC<NewCustomOrderModalProps> = ({ isOpen
       <PartyAccessoriesModal
         isOpen={isPartyModalOpen}
         onClose={() => setIsPartyModalOpen(false)}
+      />
+
+      {/* Cake Flavors & Stock Modal */}
+      <CakeFlavorsModal
+        isOpen={isCakeFlavorsModalOpen}
+        onClose={() => setIsCakeFlavorsModalOpen(false)}
       />
     </div>
   );

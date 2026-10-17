@@ -176,10 +176,13 @@ export const CustomerOrderPortal: React.FC = () => {
     }
 
     const mapped = list.map((item) => {
-      const isUnavailable =
-        unavailableFlavors.includes(item.label) ||
-        unavailableFlavors.includes(item.id) ||
-        unavailableFlavors.includes(item.nameKh);
+      const lbl = item.label.toLowerCase().trim();
+      const id = item.id.toLowerCase().trim();
+      const kh = item.nameKh.toLowerCase().trim();
+      const isUnavailable = unavailableFlavors.some((u) => {
+        const uClean = u.toLowerCase().trim();
+        return uClean === lbl || uClean === id || uClean === kh;
+      });
       return {
         ...item,
         isAvailable: !isUnavailable,

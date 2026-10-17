@@ -486,6 +486,8 @@ interface BakeryContextType {
   deleteFlavor: (flavorName: string) => void;
   toggleFlavorAvailability: (flavorIdOrLabel: string) => void;
   setFlavorAvailability: (flavorIdOrLabel: string, isAvailable: boolean) => void;
+  markAllFlavorsAvailable: () => void;
+  restoreDefaultFlavors: () => void;
 
   partyAddons: PartyAddon[];
   addPartyAddon: (nameKh: string, priceKhr: number, priceUsd?: number, stockQty?: number, minAlertStock?: number) => PartyAddon;
@@ -3541,8 +3543,10 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     const key = flavorIdOrLabel.trim();
     if (!key) return;
     setUnavailableFlavors((prev) => {
-      const isUnavailable = prev.includes(key);
-      const updated = isUnavailable ? prev.filter((f) => f !== key) : [...prev, key];
+      const isUnavailable = prev.some((f) => f.trim().toLowerCase() === key.toLowerCase());
+      const updated = isUnavailable
+        ? prev.filter((f) => f.trim().toLowerCase() !== key.toLowerCase())
+        : [...prev, key];
       const storageKey = globalIsDemoMode ? 'demo_bakery_unavailable_flavors' : 'bakery_unavailable_flavors';
       try { localStorage.setItem(storageKey, JSON.stringify(updated)); } catch (e) {}
       saveToLanSync({ unavailableFlavors: updated });
@@ -3556,14 +3560,61 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     if (!key) return;
     setUnavailableFlavors((prev) => {
       const updated = isAvailable
-        ? prev.filter((f) => f !== key)
-        : prev.includes(key) ? prev : [...prev, key];
+        ? prev.filter((f) => f.trim().toLowerCase() !== key.toLowerCase())
+        : prev.some((f) => f.trim().toLowerCase() === key.toLowerCase())
+        ? prev
+        : [...prev, key];
       const storageKey = globalIsDemoMode ? 'demo_bakery_unavailable_flavors' : 'bakery_unavailable_flavors';
       try { localStorage.setItem(storageKey, JSON.stringify(updated)); } catch (e) {}
       saveToLanSync({ unavailableFlavors: updated });
       syncSaveDoc('settings', 'flavors', { list: flavors, unavailable: updated });
       return updated;
     });
+  };
+
+  const markAllFlavorsAvailable = () => {
+    setUnavailableFlavors([]);
+    const storageKey = globalIsDemoMode ? 'demo_bakery_unavailable_flavors' : 'bakery_unavailable_flavors';
+    try { localStorage.setItem(storageKey, JSON.stringify([])); } catch (e) {}
+    saveToLanSync({ unavailableFlavors: [] });
+    syncSaveDoc('settings', 'flavors', { list: flavors, unavailable: [] });
+  };
+
+  const restoreDefaultFlavors = () => {
+    const COMPREHENSIVE_DEFAULT_FLAVORS = [
+      'សូកូឡា (Chocolate Fudge Cake)',
+      'Red Velvet + Cream Cheese (រ៉េដវ៉េលវែត & ក្រីមឈីស)',
+      'Matcha Green Tea + Red Bean (តែបៃតងម៉ាត់ឆា)',
+      'Taro Coconut Mousse (ត្រាវដូងក្រអូប)',
+      'Durian Kampot Chiffon (ធុរេនកំពតពិសេស)',
+      'Lotus Biscoff Caramel (ខារ៉ាមែល ប៊ីស្គូហ្វ)',
+      'Mango Passionfruit Cream (ស្វាយ & ផាសិន)',
+      'Coffee Mocha Hazelnut (កាហ្វេម៉ូកា)',
+      'Classic Vanilla Bean (វ៉ានីឡាស្អាត)',
+      'ស្ត្រប៊ែរី (Strawberry Fresh Cream)',
+      'ប៊្លូប៊ែរី (Blueberry Cream Cheese)',
+      'តយដូង (Pandan Coconut)',
+    ];
+
+    setFlavors((prev) => {
+      const combined = [...COMPREHENSIVE_DEFAULT_FLAVORS];
+      (prev || []).forEach((f) => {
+        const clean = f.trim();
+        if (clean && !combined.some((c) => c.toLowerCase() === clean.toLowerCase())) {
+          combined.push(clean);
+        }
+      });
+      const storageKey = globalIsDemoMode ? 'demo_bakery_flavors' : 'bakery_flavors';
+      try { localStorage.setItem(storageKey, JSON.stringify(combined)); } catch (e) {}
+      saveToLanSync({ flavors: combined });
+      syncSaveDoc('settings', 'flavors', { list: combined, unavailable: [] });
+      return combined;
+    });
+
+    setUnavailableFlavors([]);
+    const unavKey = globalIsDemoMode ? 'demo_bakery_unavailable_flavors' : 'bakery_unavailable_flavors';
+    try { localStorage.setItem(unavKey, JSON.stringify([])); } catch (e) {}
+    saveToLanSync({ unavailableFlavors: [] });
   };
 
   // Party Addon actions
@@ -5500,6 +5551,8 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         deleteFlavor,
         toggleFlavorAvailability,
         setFlavorAvailability,
+        markAllFlavorsAvailable,
+        restoreDefaultFlavors,
         partyAddons,
         addPartyAddon,
         updatePartyAddon,

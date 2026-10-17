@@ -29,6 +29,8 @@ export const CakeFlavorsModal: React.FC<CakeFlavorsModalProps> = ({ isOpen, onCl
     deleteFlavor,
     toggleFlavorAvailability,
     setFlavorAvailability,
+    markAllFlavorsAvailable,
+    restoreDefaultFlavors,
   } = useBakery();
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -69,11 +71,13 @@ export const CakeFlavorsModal: React.FC<CakeFlavorsModalProps> = ({ isOpen, onCl
 
   // Check if a flavor is unavailable
   const isOutOfStock = (item: CakeFlavorItem) => {
-    return (
-      unavailableFlavors.includes(item.label) ||
-      unavailableFlavors.includes(item.id) ||
-      unavailableFlavors.includes(item.nameKh)
-    );
+    const lbl = item.label.toLowerCase().trim();
+    const id = item.id.toLowerCase().trim();
+    const kh = item.nameKh.toLowerCase().trim();
+    return unavailableFlavors.some((u) => {
+      const uClean = u.toLowerCase().trim();
+      return uClean === lbl || uClean === id || uClean === kh;
+    });
   };
 
   // Filtered flavors based on tab and search
@@ -111,17 +115,28 @@ export const CakeFlavorsModal: React.FC<CakeFlavorsModalProps> = ({ isOpen, onCl
 
   const handleToggle = (item: CakeFlavorItem) => {
     soundFx.playPop();
-    // Toggle by label and id
-    toggleFlavorAvailability(item.label);
+    const out = isOutOfStock(item);
+    if (out) {
+      setFlavorAvailability(item.label, true);
+      setFlavorAvailability(item.id, true);
+      setFlavorAvailability(item.nameKh, true);
+    } else {
+      toggleFlavorAvailability(item.label);
+    }
   };
 
   const handleMarkAllInStock = () => {
     soundFx.playSuccess();
-    allFlavors.forEach((f) => {
-      setFlavorAvailability(f.label, true);
-      setFlavorAvailability(f.id, true);
-      setFlavorAvailability(f.nameKh, true);
-    });
+    markAllFlavorsAvailable();
+    confetti({ particleCount: 40, spread: 60, origin: { y: 0.6 } });
+  };
+
+  const handleRestoreDefaults = () => {
+    if (confirm('តើអ្នកចង់ផ្ទុកបញ្ជីរសជាតិពេញលេញលំនាំដើម (12 មុខ) និងកំណត់ឱ្យមានក្នុងស្តុកទាំងអស់ឡើងវិញមែនទេ?')) {
+      soundFx.playSuccess();
+      restoreDefaultFlavors();
+      confetti({ particleCount: 50, spread: 70, origin: { y: 0.6 } });
+    }
   };
 
   if (!isOpen) return null;
@@ -214,13 +229,23 @@ export const CakeFlavorsModal: React.FC<CakeFlavorsModalProps> = ({ isOpen, onCl
               <button
                 type="button"
                 onClick={handleMarkAllInStock}
-                className="px-2.5 py-1.5 bg-white hover:bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-xl text-xs font-bold transition-all flex items-center gap-1 shadow-2xs active:scale-95 cursor-pointer"
+                className="px-2.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-xl text-xs font-bold transition-all flex items-center gap-1 shadow-2xs active:scale-95 cursor-pointer"
                 title="កំណត់ថារសជាតិទាំងអស់មានក្នុងស្តុកឡើងវិញ"
               >
                 <RotateCcw className="w-3.5 h-3.5 text-emerald-600" />
-                <span className="hidden sm:inline">ដាក់មានទាំងអស់</span>
+                <span>ដាក់មានទាំងអស់</span>
               </button>
             )}
+
+            <button
+              type="button"
+              onClick={handleRestoreDefaults}
+              className="px-2.5 py-1.5 bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 rounded-xl text-xs font-bold transition-all flex items-center gap-1 shadow-2xs active:scale-95 cursor-pointer"
+              title="ផ្ទុករសជាតិពេញលេញលំនាំដើម (12 មុខ) និងកំណត់មានក្នុងស្តុកទាំងអស់"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-purple-600" />
+              <span className="hidden sm:inline">ម៉ឺនុយពេញ (12 មុខ)</span>
+            </button>
 
             <button
               type="button"
