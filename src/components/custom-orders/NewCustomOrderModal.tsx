@@ -107,7 +107,8 @@ export const NewCustomOrderModal: React.FC<NewCustomOrderModalProps> = ({ isOpen
   const [flavor, setFlavor] = useState(() => {
     if (initialData?.flavor) return initialData.flavor;
     const list = getUnifiedCakeFlavors(flavors, unavailableFlavors, deletedFlavorIds, flavorOverrides);
-    return list[0]?.nameKh || list[0]?.label || 'សូកូឡា';
+    const inStock = list.filter((item) => !item.isOutOfStock);
+    return inStock[0]?.nameKh || inStock[0]?.label || list[0]?.nameKh || list[0]?.label || 'សូកូឡា';
   });
 
   // Unified Cake Flavors pulling 100% from Cake Flavors & Stock Management (CakeFlavorsModal)
@@ -139,8 +140,13 @@ export const NewCustomOrderModal: React.FC<NewCustomOrderModalProps> = ({ isOpen
     return list;
   }, [flavors, unavailableFlavors, deletedFlavorIds, flavorOverrides, flavor]);
 
+  // Show ONLY flavors that are currently in-stock so staff/users never accidentally pick out-of-stock items
+  const inStockFlavors = React.useMemo(() => {
+    return allCakeFlavors.filter((f) => !f.isOutOfStock);
+  }, [allCakeFlavors]);
+
   const outOfStockFlavorsCount = allCakeFlavors.filter((f) => f.isOutOfStock).length;
-  const inStockFlavorsCount = allCakeFlavors.filter((f) => !f.isOutOfStock).length;
+  const inStockFlavorsCount = inStockFlavors.length;
 
   const isOutOfStockFlavor = (f: string) => {
     const clean = (f || '').trim().toLowerCase();
@@ -216,6 +222,20 @@ export const NewCustomOrderModal: React.FC<NewCustomOrderModalProps> = ({ isOpen
   // Add new custom flavor state
   const [isAddingNewFlavor, setIsAddingNewFlavor] = useState(false);
   const [newFlavorInput, setNewFlavorInput] = useState('');
+
+  // Auto fallback to first in-stock flavor if currently selected flavor is out of stock
+  React.useEffect(() => {
+    if (inStockFlavors.length > 0) {
+      const isCurrentInStock = inStockFlavors.some(
+        (f) =>
+          f.label.toLowerCase() === flavor.toLowerCase().trim() ||
+          f.nameKh.toLowerCase() === flavor.toLowerCase().trim()
+      );
+      if (!isCurrentInStock && !isAddingNewFlavor) {
+        setFlavor(inStockFlavors[0].label || inStockFlavors[0].nameKh);
+      }
+    }
+  }, [inStockFlavors, flavor, isAddingNewFlavor]);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -955,7 +975,7 @@ export const NewCustomOrderModal: React.FC<NewCustomOrderModalProps> = ({ isOpen
                     {/* Stock status indicator */}
                     {outOfStockFlavorsCount > 0 ? (
                       <span className="text-[10px] bg-rose-100 text-rose-700 font-black px-2.5 py-1 rounded-full border border-rose-200">
-                        អស់ស្តុក {outOfStockFlavorsCount}
+                        មានស្តុក ({inStockFlavorsCount}) • លាក់អស់ស្តុក ({outOfStockFlavorsCount})
                       </span>
                     ) : (
                       <span className="text-[10px] bg-emerald-100 text-emerald-800 font-black px-2.5 py-1 rounded-full border border-emerald-200">
@@ -1057,70 +1077,74 @@ export const NewCustomOrderModal: React.FC<NewCustomOrderModalProps> = ({ isOpen
                   </div>
                 )}
 
-                {/* Interactive Flavors Grid - Outside cards for easy viewing and 1-tap picking */}
+                {/* Interactive Flavors Grid - Show ONLY in-stock flavors to prevent accidental selection */}
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 sm:gap-2.5">
-                  {allCakeFlavors.map((item) => {
-                    const isOut = !!item.isOutOfStock;
-                    const isSel =
-                      flavor === item.label ||
-                      flavor === item.nameKh ||
-                      (item.nameEn && flavor.toLowerCase().includes(item.nameEn.toLowerCase())) ||
-                      (item.nameKh && flavor.includes(item.nameKh));
-
-                    return (
+                  {inStockFlavors.length === 0 ? (
+                    <div className="col-span-full p-4 rounded-2xl bg-amber-50 border border-amber-200 text-center text-xs text-amber-800 font-bold space-y-2">
+                      <p>⚠️ មិនទាន់មានរសជាតិក្នុងស្តុកទេ (ទាំងអស់ {allCakeFlavors.length} មុខកំពុងអស់ស្តុក)។</p>
                       <button
-                        key={item.id}
                         type="button"
                         onClick={() => {
-                          soundFx.playPop();
-                          setFlavor(item.label || item.nameKh);
+                          soundFx.playSuccess();
+                          markAllFlavorsAvailable();
                         }}
-                        className={`group p-2.5 sm:p-3 rounded-2xl border text-left transition-all relative flex items-start gap-2.5 cursor-pointer ${
-                          isSel
-                            ? 'bg-gradient-to-r from-pink-600 to-rose-500 text-white border-pink-600 shadow-md shadow-pink-500/25 ring-2 ring-pink-400 scale-[1.02]'
-                            : isOut
-                            ? 'bg-rose-50/70 border-rose-200 hover:border-rose-300 text-slate-700 hover:bg-rose-50'
-                            : 'bg-white border-slate-200/90 hover:border-pink-300 hover:bg-pink-50/40 text-slate-800 shadow-2xs hover:scale-[1.01]'
-                        }`}
+                        className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black shadow-xs cursor-pointer inline-flex items-center gap-1"
                       >
-                        <span className={`text-xl shrink-0 p-1.5 rounded-xl flex items-center justify-center leading-none ${
-                          isSel ? 'bg-white/20' : isOut ? 'bg-rose-100/80 grayscale opacity-80' : 'bg-pink-50 text-slate-800'
-                        }`}>
-                          {item.icon}
-                        </span>
+                        <RotateCcw className="w-3.5 h-3.5" />
+                        <span>កំណត់ឱ្យមានក្នុងស្តុកទាំងអស់ឡើងវិញ</span>
+                      </button>
+                    </div>
+                  ) : (
+                    inStockFlavors.map((item) => {
+                      const isSel =
+                        flavor === item.label ||
+                        flavor === item.nameKh ||
+                        (item.nameEn && flavor.toLowerCase().includes(item.nameEn.toLowerCase())) ||
+                        (item.nameKh && flavor.includes(item.nameKh));
 
-                        <div className="min-w-0 flex-1">
-                          <div className={`text-xs font-black leading-tight line-clamp-1 ${
-                            isSel ? 'text-white' : isOut ? 'text-slate-700' : 'text-slate-800'
+                      return (
+                        <button
+                          key={item.id}
+                          type="button"
+                          onClick={() => {
+                            soundFx.playPop();
+                            setFlavor(item.label || item.nameKh);
+                          }}
+                          className={`group p-2.5 sm:p-3 rounded-2xl border text-left transition-all relative flex items-start gap-2.5 cursor-pointer ${
+                            isSel
+                              ? 'bg-gradient-to-r from-pink-600 to-rose-500 text-white border-pink-600 shadow-md shadow-pink-500/25 ring-2 ring-pink-400 scale-[1.02]'
+                              : 'bg-white border-slate-200/90 hover:border-pink-300 hover:bg-pink-50/40 text-slate-800 shadow-2xs hover:scale-[1.01]'
+                          }`}
+                        >
+                          <span className={`text-xl shrink-0 p-1.5 rounded-xl flex items-center justify-center leading-none ${
+                            isSel ? 'bg-white/20' : 'bg-pink-50 text-slate-800'
                           }`}>
-                            {item.nameKh}
+                            {item.icon}
+                          </span>
+
+                          <div className="min-w-0 flex-1">
+                            <div className={`text-xs font-black leading-tight line-clamp-1 ${
+                              isSel ? 'text-white' : 'text-slate-800'
+                            }`}>
+                              {item.nameKh}
+                            </div>
+
+                            {item.nameEn && (
+                              <div className={`text-[10px] leading-tight truncate mt-0.5 ${
+                                isSel ? 'text-white/80' : 'text-slate-400'
+                              }`}>
+                                {item.nameEn}
+                              </div>
+                            )}
                           </div>
 
-                          {item.nameEn && (
-                            <div className={`text-[10px] leading-tight truncate mt-0.5 ${
-                              isSel ? 'text-white/80' : 'text-slate-400'
-                            }`}>
-                              {item.nameEn}
-                            </div>
+                          {isSel && (
+                            <CheckCircle2 className="w-4 h-4 shrink-0 text-white mt-0.5" />
                           )}
-
-                          {isOut && (
-                            <span className={`inline-block mt-1 text-[9px] font-black px-1.5 py-0.5 rounded-md border ${
-                              isSel
-                                ? 'bg-white/20 text-white border-white/30'
-                                : 'bg-rose-100 text-rose-700 border-rose-200'
-                            }`}>
-                              ❌ អស់ស្តុក
-                            </span>
-                          )}
-                        </div>
-
-                        {isSel && (
-                          <CheckCircle2 className="w-4 h-4 shrink-0 text-white mt-0.5" />
-                        )}
-                      </button>
-                    );
-                  })}
+                        </button>
+                      );
+                    })
+                  )}
                 </div>
 
                 {/* If selected flavor is out of stock, show fast 1-click replenish bar */}

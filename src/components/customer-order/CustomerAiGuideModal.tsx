@@ -343,7 +343,7 @@ export const CustomerAiGuideModal: React.FC<CustomerAiGuideModalProps> = ({
     let guideMsg: CustomerAiMessage;
     if (topic === 'steps') guideMsg = { ...ORDERING_STEPS_GUIDE, id: 'guide-' + Date.now() };
     else if (topic === 'sizes') guideMsg = { ...CAKE_SIZES_GUIDE, id: 'guide-' + Date.now() };
-    else if (topic === 'flavors') guideMsg = { ...FLAVOR_RECOMMENDATIONS_GUIDE(context.availableFlavors), id: 'guide-' + Date.now() };
+    else if (topic === 'flavors') guideMsg = { ...FLAVOR_RECOMMENDATIONS_GUIDE(context.availableFlavors, context.outOfStockFlavors), id: 'guide-' + Date.now() };
     else if (topic === 'inscriptions') guideMsg = { ...INSCRIPTIONS_IDEAS_GUIDE, id: 'guide-' + Date.now() };
     else if (topic === 'payment') guideMsg = { ...BAKONG_PAYMENT_GUIDE, id: 'guide-' + Date.now() };
     else guideMsg = { ...PICKUP_TIME_GUIDE, id: 'guide-' + Date.now() };

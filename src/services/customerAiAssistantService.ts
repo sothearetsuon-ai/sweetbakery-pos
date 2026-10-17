@@ -23,6 +23,7 @@ export interface CustomerAiContext {
   exchangeRate: number;
   availableProducts: Product[];
   availableFlavors: { label: string; nameKh: string; isAvailable?: boolean }[];
+  outOfStockFlavors?: { label: string; nameKh: string }[];
   currentStep: number;
   selectedCakeName?: string;
   selectedSize?: string;
@@ -96,29 +97,26 @@ export const CAKE_SIZES_GUIDE: CustomerAiMessage = {
 };
 
 export const FLAVOR_RECOMMENDATIONS_GUIDE = (
-  availableFlavors: { label: string; nameKh: string; isAvailable?: boolean }[]
+  availableFlavors: { label: string; nameKh: string; isAvailable?: boolean }[],
+  outOfStockFlavors: { label: string; nameKh: string }[] = []
 ): CustomerAiMessage => {
   const inStock = availableFlavors.filter((f) => f.isAvailable !== false);
-  const actions: CustomerAiAction[] = inStock.slice(0, 4).map((f) => ({
+  const actions: CustomerAiAction[] = inStock.slice(0, 5).map((f) => ({
     type: 'SET_FLAVOR',
     label: `✓ រើសរសជាតិ "${f.nameKh}"`,
     payload: { flavor: f.label },
   }));
 
+  const inStockNames = inStock.map((f) => `• **${f.nameKh}**`).join('\n');
+  const outOfStockNote =
+    outOfStockFlavors && outOfStockFlavors.length > 0
+      ? `\n\n⚠️ *ចំណាំ៖ រសជាតិខាងក្រោមនេះកំពុងអស់ស្តុកបណ្តោះអាសន្ន៖*\n${outOfStockFlavors.map((f) => `• ~~${f.nameKh}~~ *(អស់ស្តុក)*`).join('\n')}`
+      : '';
+
   return {
     id: 'guide-flavors',
     sender: 'assistant',
-    text: `🍓 **រសជាតិនំឆ្ងាញ់ៗប្រចាំហាង Sweet Bakery៖**
-
-🍫 **សូកូឡា (Chocolate):** រសជាតិដិត ឈ្ងុយសូកូឡាពិតៗ ផ្អែមល្មម ក្មេងៗ និងយុវវ័យចូលចិត្តខ្លាំងជាងគេ!
-🍈 **ទុរេន (Durian):** ឈ្ងុយទុរេនធម្មជាតិជាប់ចិត្ត ពិសេសសម្រាប់អ្នកគាំទ្រទុរេន។
-🥥 **តយដូង (Pandan Coconut):** ក្លិនស្លឹកតយឈ្ងុយស្រាលជាមួយខ្ទិះដូង ផ្អែមត្រជាក់មិនទ្រលាន់។
-🍓 **ស្ត្រប៊ែរី (Strawberry):** ជូរអែមស្រទន់ ស្រស់ស្រាយជាមួយក្រែមស្រស់។
-🍠 **ត្រាវដូង (Taro Coconut):** ឈ្ងុយត្រាវធម្មជាតិ រសជាតិស្រទន់បែបប្រពៃណី។
-☕ **កាហ្វេម៉ូកា (Coffee Mocha):** ឈ្ងុយកាហ្វេអារ៉ាប៊ីកា សម្រាប់មនុស្សពេញវ័យ។
-🍵 **តែបៃតង (Matcha):** ឈ្ងុយតែបៃតងជប៉ុន ផ្អែមស្រាលចត់ចុងមាត់តិចៗ។
-
-💡 *ចុចជ្រើសរើសរសជាតិដែលអ្នកស្រឡាញ់ខាងក្រោមបានភ្លាមៗ៖*`,
+    text: `🍓 **រសជាតិនំឆ្ងាញ់ៗដែលមានក្នុងស្តុកប្រចាំថ្ងៃ៖**\n\n${inStockNames || '• កំពុងអស់ស្តុកបណ្តោះអាសន្ន'}${outOfStockNote}\n\n💡 *លោកអ្នកអាចចុចជ្រើសរើសរសជាតិដែលមានក្នុងស្តុកខាងក្រោម ឬជ្រើសរើស "ផ្សេងៗ (Other)" បានភ្លាមៗ!*`,
     timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     actions,
   };
@@ -225,6 +223,34 @@ export function matchLocalIntent(
     return { ...CAKE_SIZES_GUIDE, id: 'msg-' + Date.now() };
   }
 
+  // Check if customer asked about an out-of-stock flavor
+  if (context.outOfStockFlavors && context.outOfStockFlavors.length > 0) {
+    const matchedOutOfStock = context.outOfStockFlavors.find((f) => {
+      const name = f.nameKh.toLowerCase().trim();
+      const lbl = f.label.toLowerCase().trim();
+      return (name && q.includes(name)) || (lbl && q.includes(lbl));
+    });
+
+    if (matchedOutOfStock) {
+      const inStockList = (context.availableFlavors || []).filter((f) => f.isAvailable !== false);
+      const inStockActions: CustomerAiAction[] = inStockList.slice(0, 3).map((f) => ({
+        type: 'SET_FLAVOR',
+        label: `✓ រើស "${f.nameKh}" (មានស្តុក)`,
+        payload: { flavor: f.label },
+      }));
+
+      const inStockNames = inStockList.map((f) => f.nameKh).join(', ');
+
+      return {
+        id: 'msg-out-of-stock-' + Date.now(),
+        sender: 'assistant',
+        text: `😔 **សូមអភ័យទោសផងបាទ/ចាស!**\n\nរសជាតិ **"${matchedOutOfStock.nameKh}"** គឺ**កំពុងអស់ស្តុកបណ្តោះអាសន្ន**ហើយ មិនអាចកុម្ម៉ង់បាននៅពេលនេះទេ។ 🙏\n\n✨ ហាងយើងខ្ញុំសូមណែនាំរសជាតិឆ្ងាញ់ៗផ្សេងទៀតដែល**មានក្នុងស្តុកស្រាប់**៖\n👉 **${inStockNames || 'ផ្សេងៗ (Other)'}**\n\nលោកអ្នកអាចចុចជ្រើសរើសរសជាតិដែលមានក្នុងស្តុកខាងក្រោមបានភ្លាមៗបាទ/ចាស! 🎂`,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        actions: inStockActions.length > 0 ? inStockActions : undefined,
+      };
+    }
+  }
+
   // Flavors / taste
   if (
     q.includes('រសជាតិ') ||
@@ -235,7 +261,7 @@ export function matchLocalIntent(
     q.includes('flavor') ||
     q.includes('taste')
   ) {
-    return { ...FLAVOR_RECOMMENDATIONS_GUIDE(context.availableFlavors), id: 'msg-' + Date.now() };
+    return { ...FLAVOR_RECOMMENDATIONS_GUIDE(context.availableFlavors, context.outOfStockFlavors), id: 'msg-' + Date.now() };
   }
 
   // Inscriptions / wishes / text on cake
@@ -338,7 +364,8 @@ Bakery Context:
 - Phone: ${context.storePhone || '0978707000'}
 - Location: ${context.storeAddress || 'រតនៈគីរី អូរយ៉ាដាវ'}
 - Current Exchange Rate: $1 = ${context.exchangeRate} KHR
-- Available Flavors in Store: ${context.availableFlavors.map((f) => f.nameKh).join(', ')}
+- Available In-Stock Flavors: ${context.availableFlavors.filter((f) => f.isAvailable !== false).map((f) => f.nameKh).join(', ') || 'សូមជ្រើសរើស "ផ្សេងៗ"'}
+- Out-of-Stock Flavors (DO NOT RECOMMEND / CURRENTLY UNAVAILABLE): ${(context.outOfStockFlavors || []).map((f) => f.nameKh).join(', ') || 'គ្មាន'}
 - Cake Size & Price Presets: 
   - 1.5 ទឹក (~15cm, 2-4 នាក់): ២០,០០០ ៛ - ៣០,០០០ ៛ ($5 - $7.5)
   - 2 ទឹក (~20cm, 6-8 នាក់, ពេញនិយម): ៤០,០០០ ៛ - ៥០,០០០ ៛ ($10 - $12.5)
@@ -354,7 +381,10 @@ Bakery Context:
 Instruction:
 - Keep responses concise, clear, and very practical.
 - If recommending a size, explicitly provide size name and KHR price.
-- If recommending a flavor, recommend ones from the store's available flavors.
+- CRITICAL FLAVOR RULE:
+  1. ONLY recommend flavors that are in the "Available In-Stock Flavors" list.
+  2. If customer asks for or mentions any flavor in the "Out-of-Stock Flavors" list, you MUST politely inform them in natural Khmer that it is temporarily out of stock ("សុំទោសផងបាទ/ចាស រសជាតិនេះកំពុងអស់ស្តុកបណ្តោះអាសន្ន មិនអាចកុម្ម៉ង់បានទេ") and recommend available in-stock flavors instead.
+  3. NEVER generate [[ACTION:SET_FLAVOR:...]] for an out-of-stock flavor.
 - If customer asks about birthday wishes or cake writing, provide 2-3 sweet, meaningful quotes.
 - At the very end of your response, if you made a specific recommendation, you may include an actionable tag on a new line:
   - [[ACTION:SET_SIZE:priceKhr:sizeLabel]] (e.g., [[ACTION:SET_SIZE:40000:2 ទឹក (~20cm)]])
@@ -494,8 +524,35 @@ function generateFallbackAiResponse(
     return { ...CAKE_SIZES_GUIDE, id: 'fb-' + Date.now() };
   }
 
+  if (context.outOfStockFlavors && context.outOfStockFlavors.length > 0) {
+    const matchedOutOfStock = context.outOfStockFlavors.find((f) => {
+      const name = f.nameKh.toLowerCase().trim();
+      const lbl = f.label.toLowerCase().trim();
+      return (name && q.includes(name)) || (lbl && q.includes(lbl));
+    });
+
+    if (matchedOutOfStock) {
+      const inStockList = (context.availableFlavors || []).filter((f) => f.isAvailable !== false);
+      const inStockActions: CustomerAiAction[] = inStockList.slice(0, 3).map((f) => ({
+        type: 'SET_FLAVOR',
+        label: `✓ រើស "${f.nameKh}" (មានស្តុក)`,
+        payload: { flavor: f.label },
+      }));
+
+      const inStockNames = inStockList.map((f) => f.nameKh).join(', ');
+
+      return {
+        id: 'fb-out-of-stock-' + Date.now(),
+        sender: 'assistant',
+        text: `😔 **សូមអភ័យទោសផងបាទ/ចាស!**\n\nរសជាតិ **"${matchedOutOfStock.nameKh}"** គឺ**កំពុងអស់ស្តុកបណ្តោះអាសន្ន**ហើយ មិនអាចកុម្ម៉ង់បាននៅពេលនេះទេ។ 🙏\n\n✨ ហាងយើងខ្ញុំសូមណែនាំរសជាតិឆ្ងាញ់ៗផ្សេងទៀតដែល**មានក្នុងស្តុកស្រាប់**៖\n👉 **${inStockNames || 'ផ្សេងៗ (Other)'}**\n\nលោកអ្នកអាចចុចជ្រើសរើសរសជាតិដែលមានក្នុងស្តុកខាងក្រោមបានភ្លាមៗបាទ/ចាស! 🎂`,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        actions: inStockActions.length > 0 ? inStockActions : undefined,
+      };
+    }
+  }
+
   if (q.includes('រសជាតិ')) {
-    return { ...FLAVOR_RECOMMENDATIONS_GUIDE(context.availableFlavors), id: 'fb-' + Date.now() };
+    return { ...FLAVOR_RECOMMENDATIONS_GUIDE(context.availableFlavors, context.outOfStockFlavors), id: 'fb-' + Date.now() };
   }
 
   return {

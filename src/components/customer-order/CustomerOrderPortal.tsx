@@ -137,12 +137,20 @@ export const CustomerOrderPortal: React.FC<CustomerOrderPortalProps> = ({ onBack
     return estimatedSizeText.split(' - ')[0];
   }, [selectedSize, estimatedSizeText]);
 
-  // Computed list of cake flavors with in-stock / out-of-stock status
-  const cakeFlavorList = useMemo(() => {
+  // Computed in-stock vs out-of-stock cake flavors
+  const { inStockFlavors, outOfStockFlavors } = useMemo(() => {
     const list = getUnifiedCakeFlavors(flavors, unavailableFlavors, deletedFlavorIds, flavorOverrides);
-    const mapped: CakeFlavorItem[] = list.map((item) => ({
+    return {
+      inStockFlavors: list.filter((item) => !item.isOutOfStock),
+      outOfStockFlavors: list.filter((item) => !!item.isOutOfStock),
+    };
+  }, [flavors, unavailableFlavors, deletedFlavorIds, flavorOverrides]);
+
+  // Computed list of cake flavors displayed to customers (ONLY in-stock flavors + 'other')
+  const cakeFlavorList = useMemo(() => {
+    const mapped: CakeFlavorItem[] = inStockFlavors.map((item) => ({
       ...item,
-      isAvailable: !item.isOutOfStock,
+      isAvailable: true,
     }));
 
     mapped.push({
@@ -155,15 +163,17 @@ export const CustomerOrderPortal: React.FC<CustomerOrderPortalProps> = ({ onBack
     });
 
     return mapped;
-  }, [flavors, unavailableFlavors, deletedFlavorIds, flavorOverrides]);
+  }, [inStockFlavors]);
 
-  // Auto fallback if currently selected flavor is out of stock
+  // Auto fallback if currently selected flavor is out of stock or not in available list
   useEffect(() => {
-    const current = cakeFlavorList.find((f) => f.label === selectedFlavor);
-    if (current && current.isAvailable === false && !isOtherFlavor) {
-      const firstAvail = cakeFlavorList.find((f) => f.isAvailable !== false && f.id !== 'other');
+    const current = cakeFlavorList.find((f) => f.label === selectedFlavor || f.nameKh === selectedFlavor);
+    if (!current && !isOtherFlavor) {
+      const firstAvail = cakeFlavorList.find((f) => f.id !== 'other');
       if (firstAvail) {
         setSelectedFlavor(firstAvail.label);
+      } else {
+        setIsOtherFlavor(true);
       }
     }
   }, [cakeFlavorList, selectedFlavor, isOtherFlavor]);
@@ -274,10 +284,14 @@ export const CustomerOrderPortal: React.FC<CustomerOrderPortalProps> = ({ onBack
     storeAddress: storeInfo.address || 'រតនៈគីរី អូរយ៉ាដាវ',
     exchangeRate,
     availableProducts: products,
-    availableFlavors: cakeFlavorList.map((f) => ({
+    availableFlavors: inStockFlavors.map((f) => ({
       label: f.label,
       nameKh: f.nameKh,
-      isAvailable: f.isAvailable,
+      isAvailable: true,
+    })),
+    outOfStockFlavors: outOfStockFlavors.map((f) => ({
+      label: f.label,
+      nameKh: f.nameKh,
     })),
     currentStep: step,
     selectedCakeName: customCakeName,
@@ -285,7 +299,7 @@ export const CustomerOrderPortal: React.FC<CustomerOrderPortalProps> = ({ onBack
     cakePriceKhr,
     selectedFlavor: finalFlavor,
     inscription,
-  }), [storeInfo, exchangeRate, products, cakeFlavorList, step, customCakeName, finalSize, cakePriceKhr, finalFlavor, inscription]);
+  }), [storeInfo, exchangeRate, products, inStockFlavors, outOfStockFlavors, step, customCakeName, finalSize, cakePriceKhr, finalFlavor, inscription]);
 
   // Filtered Products for Catalog
   const filteredProducts = useMemo(() => {
@@ -1069,21 +1083,24 @@ export const CustomerOrderPortal: React.FC<CustomerOrderPortalProps> = ({ onBack
                 </div>
               </div>
 
-              {/* Grid of flavors with emojis, stock status & clear labels */}
+              {/* Out-of-stock notice if no standard flavors available */}
+              {inStockFlavors.length === 0 && (
+                <div className="p-3 bg-amber-50 border border-amber-200 rounded-2xl text-xs text-amber-900 font-medium flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+                  <span>រសជាតិស្តង់ដារកំពុងអស់ស្តុកបណ្តោះអាសន្ន។ លោកអ្នកអាចជ្រើសរើស <b>"ផ្សេងៗ (Other)"</b> ដើម្បីសរសេររសជាតិដែលអ្នកចង់បាន ឬចុចសួរជំនួយការ AI។</span>
+                </div>
+              )}
+
+              {/* Grid of flavors with emojis & clear labels (Only in-stock flavors displayed) */}
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                 {cakeFlavorList.map((fl) => {
-                  const outOfStock = fl.isAvailable === false;
-                  const isSel =
-                    !outOfStock &&
-                    (fl.id === 'other' ? isOtherFlavor : (!isOtherFlavor && selectedFlavor === fl.label));
+                  const isSel = fl.id === 'other' ? isOtherFlavor : (!isOtherFlavor && selectedFlavor === fl.label);
 
                   return (
                     <button
                       key={fl.id}
                       type="button"
-                      disabled={outOfStock}
                       onClick={() => {
-                        if (outOfStock) return;
                         soundFx.playPop();
                         if (fl.id === 'other') {
                           setIsOtherFlavor(true);
@@ -1092,31 +1109,24 @@ export const CustomerOrderPortal: React.FC<CustomerOrderPortalProps> = ({ onBack
                           setSelectedFlavor(fl.label);
                         }
                       }}
-                      className={`p-2.5 rounded-2xl border text-left transition-all relative flex items-center gap-2.5 ${
-                        outOfStock
-                          ? 'bg-slate-50 border-slate-200 text-slate-400 opacity-60 cursor-not-allowed select-none'
-                          : isSel
-                          ? 'bg-gradient-to-r from-pink-500 to-rose-500 text-white border-pink-500 shadow-md shadow-pink-500/20 ring-2 ring-pink-300 active:scale-95 cursor-pointer'
-                          : 'bg-white border-rose-100 hover:border-pink-300 hover:bg-pink-50/30 text-slate-700 shadow-2xs active:scale-95 cursor-pointer'
+                      className={`p-2.5 rounded-2xl border text-left transition-all relative flex items-center gap-2.5 cursor-pointer active:scale-95 ${
+                        isSel
+                          ? 'bg-gradient-to-r from-pink-500 to-rose-500 text-white border-pink-500 shadow-md shadow-pink-500/20 ring-2 ring-pink-300'
+                          : 'bg-white border-rose-100 hover:border-pink-300 hover:bg-pink-50/30 text-slate-700 shadow-2xs'
                       }`}
                     >
-                      <span className={`text-xl shrink-0 p-1 rounded-xl flex items-center justify-center ${outOfStock ? 'grayscale opacity-60' : 'bg-white/20'}`}>
+                      <span className="text-xl shrink-0 p-1 rounded-xl flex items-center justify-center bg-white/20">
                         {fl.icon}
                       </span>
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-1 flex-wrap">
-                          <span className={`font-black text-xs truncate leading-tight ${outOfStock ? 'line-through text-slate-400' : ''}`}>
+                          <span className="font-black text-xs truncate leading-tight">
                             {fl.nameKh}
                           </span>
                         </div>
-                        <div className={`text-[10px] truncate ${outOfStock ? 'text-slate-400' : isSel ? 'text-pink-100 font-semibold' : 'text-slate-400'}`}>
+                        <div className={`text-[10px] truncate ${isSel ? 'text-pink-100 font-semibold' : 'text-slate-400'}`}>
                           {fl.nameEn}
                         </div>
-                        {outOfStock && (
-                          <span className="inline-block mt-0.5 text-[9px] font-black text-rose-600 bg-rose-50 px-1.5 py-0.2 rounded border border-rose-200">
-                            អស់ស្តុក
-                          </span>
-                        )}
                       </div>
                       {isSel && <CheckCircle2 className="w-4 h-4 shrink-0 text-white" />}
                     </button>
