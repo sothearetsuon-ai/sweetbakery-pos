@@ -43,6 +43,9 @@ import { isTelegramWebApp, getTelegramUser, tgHapticImpact, tgHapticNotification
 import { StoreLocationModal } from '../common/StoreLocationModal';
 import { CustomerAiGuideModal } from './CustomerAiGuideModal';
 import { getFlavorEmoji, getUnifiedCakeFlavors, CakeFlavorItem, PRESET_CAKE_FLAVORS } from '../../utils/flavorUtils';
+import { analyzeCakeImageWithGemini, AiCakeAnalysisResult } from '../../services/aiCakeVisionService';
+import { verifyBankSlipWithGemini, AiBankSlipResult } from '../../services/aiBankSlipService';
+import { AiCakeAnalysisModal } from '../common/AiCakeAnalysisModal';
 
 const CAKE_SIZES = [
   { id: '1.5 ទឹក', label: '1.5 ទឹក (~15cm)', desc: 'សម្រាប់ 2-4 នាក់', priceUsd: 12 },
@@ -254,6 +257,17 @@ export const CustomerOrderPortal: React.FC<CustomerOrderPortalProps> = ({ onBack
   const [isUploadingSlip, setIsUploadingSlip] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // AI Cake Vision Analysis State
+  const [isAiVisionModalOpen, setIsAiVisionModalOpen] = useState(false);
+  const [isAnalyzingCakeVision, setIsAnalyzingCakeVision] = useState(false);
+  const [cakeVisionResult, setCakeVisionResult] = useState<AiCakeAnalysisResult | null>(null);
+  const [cakeVisionError, setCakeVisionError] = useState<string | null>(null);
+
+  // AI Bank Slip Verification State
+  const [isVerifyingSlip, setIsVerifyingSlip] = useState(false);
+  const [slipVerificationResult, setSlipVerificationResult] = useState<AiBankSlipResult | null>(null);
+  const [slipVerificationError, setSlipVerificationError] = useState<string | null>(null);
+
   // Confirmed Order
   const [confirmedOrder, setConfirmedOrder] = useState<CustomCakeOrder | null>(null);
   const [copiedAccount, setCopiedAccount] = useState(false);
@@ -400,6 +414,8 @@ export const CustomerOrderPortal: React.FC<CustomerOrderPortalProps> = ({ onBack
     if (!file) return;
 
     setIsUploadingSlip(true);
+    setSlipVerificationResult(null);
+    setSlipVerificationError(null);
     try {
       const reader = new FileReader();
       reader.onload = async () => {
@@ -408,12 +424,90 @@ export const CustomerOrderPortal: React.FC<CustomerOrderPortalProps> = ({ onBack
         setBankSlipImage(compressed);
         setIsUploadingSlip(false);
         soundFx.playSuccess();
+
+        // Run AI Verification automatically in background
+        runSlipVerification(compressed, depositKhr);
       };
       reader.readAsDataURL(file);
     } catch (err) {
       console.error('Error uploading slip:', err);
       setIsUploadingSlip(false);
     }
+  };
+
+  const runSlipVerification = async (slipImg: string, expectedDeposit: number) => {
+    setIsVerifyingSlip(true);
+    setSlipVerificationError(null);
+    try {
+      const res = await verifyBankSlipWithGemini(slipImg, expectedDeposit, exchangeRate);
+      setSlipVerificationResult(res);
+      if (res.verificationStatus === 'VERIFIED') {
+        soundFx.playSuccess();
+      }
+    } catch (err: any) {
+      console.warn('Bank slip AI verification error:', err);
+      setSlipVerificationError(err.message || 'មិនអាចផ្ទៀងផ្ទាត់វិក្កយបត្រដោយ AI បានទេ');
+    } finally {
+      setIsVerifyingSlip(false);
+    }
+  };
+
+  const handleAnalyzeReferencePhoto = async (imageToAnalyze?: string) => {
+    const targetImage = imageToAnalyze || referenceImage;
+    if (!targetImage) {
+      alert('សូមបញ្ចូលរូបភាពគំរូនំជាមុនសិន!');
+      return;
+    }
+    soundFx.playPop();
+    setIsAiVisionModalOpen(true);
+    setIsAnalyzingCakeVision(true);
+    setCakeVisionError(null);
+    try {
+      const res = await analyzeCakeImageWithGemini(targetImage, exchangeRate);
+      setCakeVisionResult(res);
+      soundFx.playSuccess();
+    } catch (err: any) {
+      console.error('Error analyzing cake photo:', err);
+      setCakeVisionError(err.message || 'មិនអាចវិភាគរូបភាពនំបានទេ។ សូមព្យាយាមម្តងទៀត។');
+    } finally {
+      setIsAnalyzingCakeVision(false);
+    }
+  };
+
+  const handleApplyCakeVision = (analysis: AiCakeAnalysisResult) => {
+    if (analysis.cakeNameKh) {
+      setCustomCakeName(analysis.cakeNameKh);
+    }
+    if (analysis.suggestedPriceKhr) {
+      setCakePriceKhrStr(analysis.suggestedPriceKhr.toString());
+    }
+    if (analysis.estimatedSize) {
+      setSelectedSize(analysis.estimatedSize);
+    }
+    if (analysis.recommendedFlavors && analysis.recommendedFlavors.length > 0) {
+      const firstRec = analysis.recommendedFlavors[0];
+      const match = cakeFlavorList.find((f) => f.nameKh.includes(firstRec) || firstRec.includes(f.nameKh));
+      if (match && match.id !== 'other') {
+        setSelectedFlavor(match.label);
+        setIsOtherFlavor(false);
+      } else {
+        setIsOtherFlavor(true);
+        setCustomFlavorText(firstRec);
+      }
+    }
+    if (analysis.recommendedInscriptions && analysis.recommendedInscriptions.length > 0) {
+      setInscription(analysis.recommendedInscriptions[0]);
+    }
+    const notesArr = [
+      analysis.bakingNotes,
+      analysis.difficultyKh ? `កម្រិតតុបតែង៖ ${analysis.difficultyKh}` : '',
+      analysis.primaryColors?.length ? `ពណ៌ចម្បង៖ ${analysis.primaryColors.join(', ')}` : '',
+    ].filter(Boolean);
+    if (notesArr.length > 0) {
+      setSpecialNotes((prev) => (prev ? `${prev}\n${notesArr.join('\n')}` : notesArr.join('\n')));
+    }
+    soundFx.playSuccess();
+    setIsAiVisionModalOpen(false);
   };
 
   // Copy Account Number
@@ -1197,12 +1291,25 @@ export const CustomerOrderPortal: React.FC<CustomerOrderPortalProps> = ({ onBack
               )}
             </div>
 
-            {/* Reference Image Upload */}
+            {/* Reference Image Upload & AI Vision Analyzer */}
             <div className="space-y-2">
-              <label className="text-xs font-black text-slate-700 flex items-center justify-between">
-                <span>📷 បញ្ចូលរូបភាពគំរូនំ (Upload Reference Photo)</span>
-                <span className="text-[10px] text-pink-600 font-bold">មានរូបគំរូកាន់តែស្រួល</span>
-              </label>
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-black text-slate-700 flex items-center gap-1.5">
+                  <span>📷 បញ្ចូលរូបភាពគំរូនំ (Upload Reference Photo)</span>
+                </label>
+                {referenceImage ? (
+                  <button
+                    type="button"
+                    onClick={() => handleAnalyzeReferencePhoto()}
+                    className="px-3 py-1 bg-gradient-to-r from-purple-600 via-pink-600 to-rose-600 hover:from-purple-700 hover:to-pink-700 text-white rounded-xl text-xs font-black shadow-xs flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all animate-pulse"
+                  >
+                    <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                    <span>✨ AI វិភាគម៉ូដ & គណនាតម្លៃ</span>
+                  </button>
+                ) : (
+                  <span className="text-[10px] text-pink-600 font-bold">មានរូបគំរូកាន់តែស្រួល</span>
+                )}
+              </div>
 
               <div className="flex items-center gap-3">
                 {referenceImage ? (
@@ -1227,7 +1334,7 @@ export const CustomerOrderPortal: React.FC<CustomerOrderPortalProps> = ({ onBack
                   <span className="text-xs font-bold text-slate-700">
                     {isUploadingRefImage ? 'កំពុងបញ្ចូលរូបភាព...' : 'ជ្រើសរើសរូបពីទូរស័ព្ទ / កុំព្យូទ័រ'}
                   </span>
-                  <span className="text-[10px] text-slate-400">JPG, PNG ឬ WebP</span>
+                  <span className="text-[10px] text-slate-400">JPG, PNG ឬ WebP (AI នឹងវិភាគម៉ូដស្វ័យប្រវត្តិ)</span>
                   <input
                     type="file"
                     accept="image/*"
@@ -1237,6 +1344,32 @@ export const CustomerOrderPortal: React.FC<CustomerOrderPortalProps> = ({ onBack
                   />
                 </label>
               </div>
+
+              {referenceImage && (
+                <div className="p-2.5 rounded-2xl bg-gradient-to-r from-purple-50 via-pink-50 to-rose-50 border border-purple-200/80 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-7 h-7 rounded-xl bg-purple-600 text-white flex items-center justify-center text-xs shadow-xs">
+                      🤖
+                    </div>
+                    <div>
+                      <div className="text-xs font-black text-purple-950">
+                        រូបគំរូនំបានបញ្ចូលរួចរាល់!
+                      </div>
+                      <div className="text-[10px] text-purple-700">
+                        ចុចឱ្យ AI ស្វែងយល់ម៉ូដ គណនាទំហំ និងតម្លៃសមរម្យជូនលោកអ្នក
+                      </div>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleAnalyzeReferencePhoto()}
+                    className="px-3 py-1.5 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white rounded-xl text-xs font-black shadow-xs flex items-center gap-1 cursor-pointer active:scale-95 transition-all"
+                  >
+                    <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                    <span>វិភាគជាមួយ AI</span>
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* Party Addons */}
@@ -1694,7 +1827,7 @@ export const CustomerOrderPortal: React.FC<CustomerOrderPortalProps> = ({ onBack
               </p>
             </div>
 
-            {/* Payment Slip Upload */}
+            {/* Payment Slip Upload & AI Bank Slip Verification */}
             <div className="space-y-2">
               <label className="text-xs font-black text-slate-700 flex items-center justify-between">
                 <span>🧾 បញ្ចូលរូបបង្កាន់ដៃបង់ប្រាក់កក់ (Upload Payment Slip / Screenshot) *</span>
@@ -1711,7 +1844,11 @@ export const CustomerOrderPortal: React.FC<CustomerOrderPortalProps> = ({ onBack
                     />
                     <button
                       type="button"
-                      onClick={() => setBankSlipImage('')}
+                      onClick={() => {
+                        setBankSlipImage('');
+                        setSlipVerificationResult(null);
+                        setSlipVerificationError(null);
+                      }}
                       className="absolute inset-0 bg-black/60 text-white opacity-0 group-hover:opacity-100 flex items-center justify-center text-xs font-bold transition-opacity"
                     >
                       ប្តូរ
@@ -1724,7 +1861,7 @@ export const CustomerOrderPortal: React.FC<CustomerOrderPortalProps> = ({ onBack
                   <span className="text-xs font-bold text-slate-700">
                     {isUploadingSlip ? 'កំពុងបញ្ចូលរូប...' : bankSlipImage ? 'បានជ្រើសរូបវិក្កយបត្ររួច ✓' : 'ចុចទីនេះដើម្បី Upload រូប Screenshot ពី App ធនាគារ'}
                   </span>
-                  <span className="text-[10px] text-slate-400">ដើម្បីឱ្យហាងយើងខ្ញុំដឹងថាលោកអ្នកបានបង់ប្រាក់កក់</span>
+                  <span className="text-[10px] text-slate-400">ប្រព័ន្ធ AI នឹងផ្ទៀងផ្ទាត់ចំនួនទឹកប្រាក់ និងធនាគារស្វ័យប្រវត្តិ</span>
                   <input
                     type="file"
                     accept="image/*"
@@ -1734,6 +1871,87 @@ export const CustomerOrderPortal: React.FC<CustomerOrderPortalProps> = ({ onBack
                   />
                 </label>
               </div>
+
+              {/* AI Verification Loading State */}
+              {isVerifyingSlip && (
+                <div className="p-3 bg-blue-50 border border-blue-200 rounded-2xl flex items-center gap-3 animate-pulse">
+                  <div className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center text-sm shadow-xs">
+                    🤖
+                  </div>
+                  <div>
+                    <div className="text-xs font-black text-blue-900">
+                      AI កំពុងផ្ទៀងផ្ទាត់វិក្កយបត្រធនាគារ...
+                    </div>
+                    <div className="text-[10px] text-blue-700">
+                      កំពុងពិនិត្យឈ្មោះធនាគារ ចំនួនទឹកប្រាក់ និងកូដប្រតិបត្តិការ (OCR)
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* AI Verification Result Card */}
+              {slipVerificationResult && (
+                <div className={`p-4 rounded-3xl border shadow-sm space-y-2 animate-in fade-in duration-200 ${
+                  slipVerificationResult.verificationStatus === 'VERIFIED'
+                    ? 'bg-gradient-to-r from-emerald-50 to-teal-50 border-emerald-300'
+                    : slipVerificationResult.verificationStatus === 'AMOUNT_MISMATCH'
+                    ? 'bg-amber-50 border-amber-300'
+                    : 'bg-rose-50 border-rose-300'
+                }`}>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="text-lg">{slipVerificationResult.bankLogoEmoji || '🏦'}</span>
+                      <span className="text-xs font-black text-slate-900">
+                        {slipVerificationResult.bankName}
+                      </span>
+                    </div>
+                    <span className={`text-[10px] font-black px-2.5 py-0.5 rounded-full border ${
+                      slipVerificationResult.verificationStatus === 'VERIFIED'
+                        ? 'bg-emerald-600 text-white border-emerald-700'
+                        : slipVerificationResult.verificationStatus === 'AMOUNT_MISMATCH'
+                        ? 'bg-amber-500 text-white border-amber-600'
+                        : 'bg-rose-600 text-white border-rose-700'
+                    }`}>
+                      {slipVerificationResult.verificationStatus === 'VERIFIED'
+                        ? '✓ ផ្ទៀងផ្ទាត់ជោគជ័យ'
+                        : slipVerificationResult.verificationStatus === 'AMOUNT_MISMATCH'
+                        ? '⚠️ ចំនួនខុសគ្នាបន្តិច'
+                        : '⚠️ មិនទាន់ស៊ីសង្វាក់'}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 text-xs pt-1">
+                    <div className="p-2 bg-white/80 rounded-xl">
+                      <span className="text-[10px] text-slate-400 block font-bold">ទឹកប្រាក់បានបង់ (Slip)</span>
+                      <span className="font-black text-slate-800">
+                        {slipVerificationResult.currency === 'USD'
+                          ? `$${slipVerificationResult.amountPaid.toFixed(2)}`
+                          : `${slipVerificationResult.amountPaid.toLocaleString()} ៛`}
+                      </span>
+                    </div>
+
+                    <div className="p-2 bg-white/80 rounded-xl">
+                      <span className="text-[10px] text-slate-400 block font-bold">ប្រាក់កក់ដែលត្រូវការ</span>
+                      <span className="font-black text-pink-600">
+                        ${depositUsd.toFixed(2)} ({depositKhr.toLocaleString()} ៛)
+                      </span>
+                    </div>
+                  </div>
+
+                  {slipVerificationResult.transactionId && (
+                    <div className="text-[11px] text-slate-600 flex items-center justify-between pt-1 border-t border-black/5">
+                      <span className="font-mono">លេខកូដ៖ {slipVerificationResult.transactionId}</span>
+                      {slipVerificationResult.transactionTime && (
+                        <span>{slipVerificationResult.transactionTime}</span>
+                      )}
+                    </div>
+                  )}
+
+                  <p className="text-[11px] font-bold text-slate-700">
+                    {slipVerificationResult.statusMessageKh}
+                  </p>
+                </div>
+              )}
             </div>
 
             {/* Submit Order Button */}
@@ -1926,6 +2144,27 @@ export const CustomerOrderPortal: React.FC<CustomerOrderPortalProps> = ({ onBack
         onApplyInscription={handleApplyInscription}
         onGoToStep={handleGoToStep}
         onOpenStoreLocation={() => setIsLocationModalOpen(true)}
+      />
+
+      {/* AI Cake Photo Analysis & Quotation Modal */}
+      <AiCakeAnalysisModal
+        isOpen={isAiVisionModalOpen}
+        onClose={() => setIsAiVisionModalOpen(false)}
+        result={cakeVisionResult}
+        isLoading={isAnalyzingCakeVision}
+        error={cakeVisionError}
+        onApplyAll={handleApplyCakeVision}
+        onApplyPriceOnly={(khr, size) => {
+          setCakePriceKhrStr(khr.toString());
+          if (size) setSelectedSize(size);
+          soundFx.playSuccess();
+          setIsAiVisionModalOpen(false);
+        }}
+        onApplyInscriptionOnly={(text) => {
+          setInscription(text);
+          soundFx.playSuccess();
+          setIsAiVisionModalOpen(false);
+        }}
       />
     </div>
   );

@@ -39,6 +39,10 @@ import { initTelegramMiniApp, isTelegramWebApp, getTelegramStartParam } from './
 import { checkForAppUpdates, AppUpdateInfo, getNativeAppVersion } from './services/appUpdateService';
 import { CakeFlavorsModal } from './components/pos/CakeFlavorsModal';
 import { AppUpdateModal } from './components/common/AppUpdateModal';
+import { KhmerVoicePosModal } from './components/pos/KhmerVoicePosModal';
+import { KitchenDisplayModal } from './components/kds/KitchenDisplayModal';
+import { SmartBirthdayCrmModal } from './components/crm/SmartBirthdayCrmModal';
+import { AiDemandForecastModal } from './components/reports/AiDemandForecastModal';
 
 export const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabType>('pos');
@@ -50,6 +54,12 @@ export const App: React.FC = () => {
   const [currentTheme, setCurrentTheme] = useState<AppTheme>(() => getSavedTheme());
   const [isThemePickerOpen, setIsThemePickerOpen] = useState(false);
   const [dismissedBannerThemeId, setDismissedBannerThemeId] = useState<string | null>(null);
+
+  // Smart AI Suite Modals
+  const [isVoicePosOpen, setIsVoicePosOpen] = useState(false);
+  const [isKdsOpen, setIsKdsOpen] = useState(false);
+  const [isBirthdayCrmOpen, setIsBirthdayCrmOpen] = useState(false);
+  const [isBakingForecastOpen, setIsBakingForecastOpen] = useState(false);
 
   // Flying Butterflies Effect State (Independent control - disabled by default for maximum performance)
   const [isButterflyEnabled, setIsButterflyEnabled] = useState<boolean>(() => {
@@ -96,6 +106,10 @@ export const App: React.FC = () => {
     openRealStoreAuthModal,
     realStoreAuthSuccessCallback,
     storeInfo,
+    products,
+    addToCart,
+    clearCart,
+    exchangeRate,
   } = useBakery();
 
   // Check if real store requires authentication on initial visit (if not demo mode and device/session not yet authorized)
@@ -380,6 +394,10 @@ export const App: React.FC = () => {
         onToggleGoldfish={handleToggleGoldfish}
         availableUpdate={availableUpdate}
         onOpenUpdateModal={() => setIsUpdateModalOpen(true)}
+        onOpenVoicePos={() => setIsVoicePosOpen(true)}
+        onOpenKds={() => setIsKdsOpen(true)}
+        onOpenBirthdayCrm={() => setIsBirthdayCrmOpen(true)}
+        onOpenBakingForecast={() => setIsBakingForecastOpen(true)}
       />
 
       {/* Main Workspace with Sidebar & Content */}
@@ -397,6 +415,10 @@ export const App: React.FC = () => {
           onCloseMobile={() => setIsMobileDrawerOpen(false)}
           availableUpdate={availableUpdate}
           onOpenUpdateModal={() => setIsUpdateModalOpen(true)}
+          onOpenVoicePos={() => setIsVoicePosOpen(true)}
+          onOpenKds={() => setIsKdsOpen(true)}
+          onOpenBirthdayCrm={() => setIsBirthdayCrmOpen(true)}
+          onOpenBakingForecast={() => setIsBakingForecastOpen(true)}
         />
 
         {/* Dynamic Views */}
@@ -603,6 +625,42 @@ export const App: React.FC = () => {
       <ContactModal
         isOpen={isContactModalOpen}
         onClose={() => setIsContactModalOpen(false)}
+      />
+
+      {/* Smart Voice POS Assistant */}
+      <KhmerVoicePosModal
+        isOpen={isVoicePosOpen}
+        onClose={() => setIsVoicePosOpen(false)}
+        products={products}
+        onAddProduct={(prod, qty) => {
+          for (let i = 0; i < (qty || 1); i++) {
+            addToCart(prod);
+          }
+          setActiveTab('pos');
+        }}
+        onCheckout={() => {
+          setActiveTab('pos');
+        }}
+        onClearCart={clearCart}
+        exchangeRate={exchangeRate}
+      />
+
+      {/* Real-time Kitchen Display System (KDS) */}
+      <KitchenDisplayModal
+        isOpen={isKdsOpen}
+        onClose={() => setIsKdsOpen(false)}
+      />
+
+      {/* Smart Birthday CRM Modal */}
+      <SmartBirthdayCrmModal
+        isOpen={isBirthdayCrmOpen}
+        onClose={() => setIsBirthdayCrmOpen(false)}
+      />
+
+      {/* AI Demand Forecasting & Daily Baking Plan */}
+      <AiDemandForecastModal
+        isOpen={isBakingForecastOpen}
+        onClose={() => setIsBakingForecastOpen(false)}
       />
     </div>
   );

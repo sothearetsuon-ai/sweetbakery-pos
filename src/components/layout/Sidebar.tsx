@@ -55,6 +55,10 @@ interface SidebarProps {
   onCloseMobile?: () => void;
   availableUpdate?: import('../../services/appUpdateService').AppUpdateInfo | null;
   onOpenUpdateModal?: () => void;
+  onOpenVoicePos?: () => void;
+  onOpenKds?: () => void;
+  onOpenBirthdayCrm?: () => void;
+  onOpenBakingForecast?: () => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -70,6 +74,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onCloseMobile,
   availableUpdate,
   onOpenUpdateModal,
+  onOpenVoicePos,
+  onOpenKds,
+  onOpenBirthdayCrm,
+  onOpenBakingForecast,
 }) => {
   const { lang, customOrders, lowStockCount, expenses, sales, currentStaff, hasPermission, staffMembers, storeInfo, logoutAndLock, isDemoMode, reserveFund } = useBakery();
   const { isPlaying: isMusicPlaying, setIsPlayerOpen: setIsMusicPlayerOpen } = useMusic();
@@ -496,25 +504,99 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </button>
         )}
 
-        {/* Kitchen Oven Status Card */}
-        <div className="p-3 rounded-2xl bg-gradient-to-br from-amber-50 to-orange-50/70 border border-amber-200/80 shadow-2xs">
+        {/* Kitchen Oven Status Card / KDS Trigger */}
+        <div
+          onClick={() => {
+            soundFx.playPop();
+            onOpenKds?.();
+            onCloseMobile?.();
+          }}
+          className="p-3 rounded-2xl bg-gradient-to-br from-amber-50 to-orange-50/70 border border-orange-200/80 shadow-2xs hover:border-orange-300 transition-all cursor-pointer group"
+          title="ចុចដើម្បីបើកអេក្រង់ផ្ទះបាយ KDS (Kitchen Display System)"
+        >
           <div className="flex items-center justify-between text-xs font-bold text-amber-900 mb-1.5">
             <span className="flex items-center gap-1.5">
               <Flame className="w-4 h-4 text-orange-500 animate-bounce" />
-              <span>ឡដុតនំកំពុងដុត</span>
+              <span className="group-hover:text-orange-700">ផ្ទះបាយ KDS • កំពុងដុត</span>
             </span>
-            <span className="text-[10px] bg-orange-200/60 text-orange-800 px-1.5 py-0.5 rounded-md">
-              180°C
+            <span className="text-[10px] bg-orange-200/60 text-orange-800 px-1.5 py-0.5 rounded-md font-mono font-bold">
+              {pendingCakeOrdersCount > 0 ? `${pendingCakeOrdersCount} នំ` : '180°C'}
             </span>
           </div>
           <div className="w-full bg-amber-200/50 h-2 rounded-full overflow-hidden">
-            <div className="bg-gradient-to-r from-orange-400 to-rose-500 h-full w-[70%] rounded-full animate-pulse" />
+            <div
+              className="bg-gradient-to-r from-orange-400 to-rose-500 h-full rounded-full transition-all duration-500"
+              style={{ width: `${Math.min(100, Math.max(20, pendingCakeOrdersCount * 25))}%` }}
+            />
           </div>
           <div className="flex justify-between text-[10px] text-amber-700/80 mt-1.5 font-medium">
-            <span>នំកំពុងដុត៖ 2 នំ</span>
-            <span>សមត្ថភាព 70%</span>
+            <span>នំរង់ចាំ៖ {pendingCakeOrdersCount} នំ</span>
+            <span className="font-bold text-orange-600 group-hover:underline">បើក KDS →</span>
           </div>
         </div>
+
+        {/* Khmer Voice POS button */}
+        {onOpenVoicePos && (
+          <button
+            type="button"
+            onClick={() => {
+              soundFx.playPop();
+              onOpenVoicePos();
+              onCloseMobile?.();
+            }}
+            className="w-full flex items-center justify-between px-3.5 py-2 rounded-2xl font-bold text-xs text-pink-700 bg-pink-50/70 hover:bg-pink-100/80 transition-all border border-pink-200/70 shadow-2xs cursor-pointer group"
+          >
+            <div className="flex items-center gap-3">
+              <span className="text-sm group-hover:scale-125 transition-transform">🎙️</span>
+              <span>POS បញ្ជាសំឡេងខ្មែរ</span>
+            </div>
+            <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-pink-200/80 text-pink-800 font-mono">
+              Voice
+            </span>
+          </button>
+        )}
+
+        {/* Birthday CRM button */}
+        {onOpenBirthdayCrm && (
+          <button
+            type="button"
+            onClick={() => {
+              soundFx.playPop();
+              onOpenBirthdayCrm();
+              onCloseMobile?.();
+            }}
+            className="w-full flex items-center justify-between px-3.5 py-2 rounded-2xl font-bold text-xs text-purple-700 bg-purple-50/70 hover:bg-purple-100/80 transition-all border border-purple-200/70 shadow-2xs cursor-pointer group"
+          >
+            <div className="flex items-center gap-3">
+              <span className="text-sm group-hover:scale-125 transition-transform">🎂</span>
+              <span>CRM រំលឹកខួបកំណើត</span>
+            </div>
+            <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-purple-200/80 text-purple-800 font-mono">
+              CRM
+            </span>
+          </button>
+        )}
+
+        {/* AI Baking Forecast button */}
+        {onOpenBakingForecast && (
+          <button
+            type="button"
+            onClick={() => {
+              soundFx.playPop();
+              onOpenBakingForecast();
+              onCloseMobile?.();
+            }}
+            className="w-full flex items-center justify-between px-3.5 py-2 rounded-2xl font-bold text-xs text-emerald-700 bg-emerald-50/70 hover:bg-emerald-100/80 transition-all border border-emerald-200/70 shadow-2xs cursor-pointer group"
+          >
+            <div className="flex items-center gap-3">
+              <span className="text-sm group-hover:scale-125 transition-transform">📊</span>
+              <span>ផែនការដុតនំ AI</span>
+            </div>
+            <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-200/80 text-emerald-800 font-mono">
+              Plan
+            </span>
+          </button>
+        )}
 
         {/* Music Player button */}
         <button

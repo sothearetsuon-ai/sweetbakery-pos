@@ -34,6 +34,8 @@ import { CakeFlavorsModal } from '../pos/CakeFlavorsModal';
 import { getUnifiedCakeFlavors, UnifiedCakeFlavor, getFlavorEmoji } from '../../utils/flavorUtils';
 import { formatDateDMY } from '../../utils/dateUtils';
 import { roundKhr } from '../../utils/currencyUtils';
+import { analyzeCakeImageWithGemini, AiCakeAnalysisResult } from '../../services/aiCakeVisionService';
+import { AiCakeAnalysisModal } from '../common/AiCakeAnalysisModal';
 
 interface NewCustomOrderModalProps {
   isOpen: boolean;
@@ -222,6 +224,66 @@ export const NewCustomOrderModal: React.FC<NewCustomOrderModalProps> = ({ isOpen
   // Add new custom flavor state
   const [isAddingNewFlavor, setIsAddingNewFlavor] = useState(false);
   const [newFlavorInput, setNewFlavorInput] = useState('');
+
+  // AI Cake Vision State
+  const [isAiVisionModalOpen, setIsAiVisionModalOpen] = useState(false);
+  const [isAnalyzingCakeVision, setIsAnalyzingCakeVision] = useState(false);
+  const [cakeVisionResult, setCakeVisionResult] = useState<AiCakeAnalysisResult | null>(null);
+  const [cakeVisionError, setCakeVisionError] = useState<string | null>(null);
+
+  const handleAnalyzeCakePhoto = async () => {
+    if (!referenceImage) {
+      alert('សូមបញ្ចូលរូបភាព ឬថតរូបគំរូនំជាមុនសិន!');
+      return;
+    }
+    soundFx.playPop();
+    setIsAiVisionModalOpen(true);
+    setIsAnalyzingCakeVision(true);
+    setCakeVisionError(null);
+    try {
+      const res = await analyzeCakeImageWithGemini(referenceImage, exchangeRate);
+      setCakeVisionResult(res);
+      soundFx.playSuccess();
+    } catch (err: any) {
+      console.error('Error analyzing cake photo:', err);
+      setCakeVisionError(err.message || 'មិនអាចវិភាគរូបភាពនំបានទេ។');
+    } finally {
+      setIsAnalyzingCakeVision(false);
+    }
+  };
+
+  const handleApplyCakeVision = (analysis: AiCakeAnalysisResult) => {
+    if (analysis.cakeNameKh) {
+      setCakeName(analysis.cakeNameKh);
+    }
+    if (analysis.suggestedPriceKhr) {
+      setBaseCakePriceKhr(analysis.suggestedPriceKhr.toString());
+      setDepositKhr(roundKhr(analysis.suggestedPriceKhr * 0.5).toString());
+    }
+    if (analysis.estimatedSize) {
+      setSize(analysis.estimatedSize);
+    }
+    if (analysis.recommendedFlavors && analysis.recommendedFlavors.length > 0) {
+      const firstRec = analysis.recommendedFlavors[0];
+      const match = allCakeFlavors.find((f) => f.nameKh.includes(firstRec) || firstRec.includes(f.nameKh));
+      if (match) {
+        setFlavor(match.nameKh || match.label);
+      }
+    }
+    if (analysis.recommendedInscriptions && analysis.recommendedInscriptions.length > 0) {
+      setInscription(analysis.recommendedInscriptions[0]);
+    }
+    const notesArr = [
+      analysis.bakingNotes,
+      analysis.difficultyKh ? `កម្រិតតុបតែង៖ ${analysis.difficultyKh}` : '',
+      analysis.primaryColors?.length ? `ពណ៌ចម្បង៖ ${analysis.primaryColors.join(', ')}` : '',
+    ].filter(Boolean);
+    if (notesArr.length > 0) {
+      setThemeNotes((prev) => (prev ? `${prev}\n${notesArr.join('\n')}` : notesArr.join('\n')));
+    }
+    soundFx.playSuccess();
+    setIsAiVisionModalOpen(false);
+  };
 
   // Auto fallback to first in-stock flavor if currently selected flavor is out of stock
   React.useEffect(() => {
@@ -627,6 +689,20 @@ export const NewCustomOrderModal: React.FC<NewCustomOrderModalProps> = ({ isOpen
                   : 'រូបភាពគំរូនំបុ័ង / កញ្ចប់វេចខ្ចប់ (Reference Photo)'}
               </label>
               <div className="flex items-center gap-1.5">
+                {referenceImage && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleAnalyzeCakePhoto();
+                    }}
+                    className="px-2.5 py-1 bg-gradient-to-r from-purple-600 via-pink-600 to-rose-600 hover:from-purple-700 hover:to-pink-700 text-white rounded-lg text-[11px] font-black flex items-center gap-1 cursor-pointer transition-all animate-pulse shadow-xs"
+                    title="ឱ្យ AI ពិនិត្យម៉ូដនំ គណនាទំហំ និងប៉ាន់ស្មានតម្លៃ"
+                  >
+                    <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                    <span>✨ AI វិភាគម៉ូដ & តម្លៃ</span>
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={() => {
@@ -658,6 +734,17 @@ export const NewCustomOrderModal: React.FC<NewCustomOrderModalProps> = ({ isOpen
                     className="w-full h-full object-cover"
                   />
                   <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-bold gap-2">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleAnalyzeCakePhoto();
+                      }}
+                      className="px-3 py-1.5 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 rounded-xl flex items-center gap-1 cursor-pointer text-white font-black shadow-xs"
+                    >
+                      <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                      <span>AI វិភាគម៉ូដ</span>
+                    </button>
                     <button
                       type="button"
                       onClick={(e) => {
@@ -1698,6 +1785,28 @@ export const NewCustomOrderModal: React.FC<NewCustomOrderModalProps> = ({ isOpen
       <CakeFlavorsModal
         isOpen={isCakeFlavorsModalOpen}
         onClose={() => setIsCakeFlavorsModalOpen(false)}
+      />
+
+      {/* AI Cake Photo Analysis & Quotation Modal */}
+      <AiCakeAnalysisModal
+        isOpen={isAiVisionModalOpen}
+        onClose={() => setIsAiVisionModalOpen(false)}
+        result={cakeVisionResult}
+        isLoading={isAnalyzingCakeVision}
+        error={cakeVisionError}
+        onApplyAll={handleApplyCakeVision}
+        onApplyPriceOnly={(khr, suggestedSize) => {
+          setBaseCakePriceKhr(khr.toString());
+          setDepositKhr(roundKhr(khr * 0.5).toString());
+          if (suggestedSize) setSize(suggestedSize);
+          soundFx.playSuccess();
+          setIsAiVisionModalOpen(false);
+        }}
+        onApplyInscriptionOnly={(text) => {
+          setInscription(text);
+          soundFx.playSuccess();
+          setIsAiVisionModalOpen(false);
+        }}
       />
     </div>
   );

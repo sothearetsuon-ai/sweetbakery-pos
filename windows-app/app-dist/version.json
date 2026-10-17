@@ -1,13 +1,15 @@
 {
-  "version": "1.4.9",
-  "releaseDate": "2026-10-17",
+  "version": "1.5.0",
+  "releaseDate": "2026-10-18",
   "releaseNotes": [
-    "⚡ ដោះស្រាយបញ្ហាលោតភ្លឹបភ្លែតលើ Android (Telegram Sync Loop Fix)៖ ជួសជុលបញ្ហាអេក្រង់លោតភ្លឹបភ្លែតចុះឡើង ឬបាត់ឃើញនៅពេលចុចរក្សាទុកការកំណត់ Telegram Bot លើទូរស័ព្ទ Android ដោយកាត់ផ្តាច់ Sync Echo Loop រវាង Cloud, LAN និង App ទាំងស្រុង។",
-    "🛡️ ការពារ Vite Watcher Full-Reload៖ កំណត់មិនឱ្យ Vite Dev Server ធ្វើការ Full-Reload លើទូរស័ព្ទពេលមានការសរសេរទិន្នន័យពីទូរស័ព្ទ។",
-    "⚡ ធ្វើសមកាលកម្មកាត់ស្តុកនំស្វ័យប្រវត្ត ១០០% រវាងទូរសព្ទ និងកុំព្យូទ័រ (Real-time Cloud Stock Sync Fix)៖ ដោះស្រាយបញ្ហាកាត់ស្តុកនំមិនស្មើគ្នារវាងទូរសព្ទ Android និងកុំព្យូទ័រ Windows។",
-    "🔄 ប៊ូតុង [ធ្វើសមកាលកម្មស្តុក] ថ្មីក្នុងផ្ទាំងគ្រប់គ្រងស្តុក៖ អាចចុចទាញ ឬ Push ទិន្នន័យស្តុកជាមួយ Google Cloud Firebase ភ្លាមៗគ្រប់ពេលវេលា។",
-    "🎂 ធ្វើសមកាលកម្មរសជាតិនំ ១០០% ជាមួយការគ្រប់គ្រងស្តុក (100% Flavors & Stock Sync)៖ ផ្ទាំងកាតរើសរសជាតិនំក្នុងផ្ទាំងកុម្ម៉ង់ (Custom Cake Order Modal) ទាញចេញពីផ្ទាំងគ្រប់គ្រងស្តុករសជាតិដោយស្វ័យប្រវត្ត។",
-    "🌐 កែសម្រួលលីង និង QR Code លើ Android (Android Link & Browser Fix) ផ្លូវការ (HTTPS) 100% អាចបើកលើ Chrome និងស្កេនពីក្រៅបានយ៉ាងរលូន។"
+    "🤖 AI Cake Photo Analyzer & Auto-Quotation៖ ភ្នែកទិព្វ AI វិភាគរូបថតនំ (Pinterest/TikTok) វាយតម្លៃកម្រិតលំបាក ស្រង់អក្សរលើនំ ណែនាំរសជាតិ និងចេញតម្លៃជាប្រាក់រៀល/ដុល្លារស្វ័យប្រវត្តិ។",
+    "🧾 AI Bank Slip Auto-Verification៖ ស្កេនពិនិត្យវិក្កយបត្រធនាគារ (ABA, ACLEDA, Bakong, Wing) ដកស្រង់ទឹកប្រាក់ ឈ្មោះអ្នកផ្ញើ និង Txn ID ផ្ទៀងផ្ទាត់ជាមួយប្រាក់កក់ ការពារការបន្លំស្លីបក្លែងក្លាយ ១០០%។",
+    "🎙️ Khmer Voice POS Assistant៖ បញ្ជាលក់ និងកុម្ម៉ង់ដោយសំឡេងភាសាខ្មែរ (Speech-to-Text) បញ្ចូលមុខទំនិញ និងបរិមាណទៅកន្ត្រក POS ដោយស្វ័យប្រវត្តិ។",
+    "👨‍🍳 Kitchen Display System (KDS) Real-Time៖ ផ្ទាំងអេក្រង់បន្ទប់ដុត & តែងនំសម្រាប់ជាងនំ រាប់ថយក្រោយម៉ោងកំណត់ ពង្រីករូបនំ និងផ្ញើសារស្វ័យប្រវត្តិទៅ Telegram ពេលនំរួចរាល់។",
+    "📊 AI Demand Forecasting & Daily Baking Plan៖ វិភាគប្រវត្តិលក់ និងការកុម្ម៉ង់ទុកមុន ដើម្បីណែនាំផែនការដុតនំ និងគ្រឿងផ្សំសម្រាប់ថ្ងៃស្អែក ការពារការសល់នំខូចគុណភាព។",
+    "🎂 Smart Birthday CRM & Auto-Greeting៖ រំលឹកថ្ងៃខួបកំណើតភ្ញៀវក្នុង ១៤ ថ្ងៃខាងមុខ បង្កើតសារជូនពរផ្អែមល្ហែម និង Voucher បញ្ចុះតម្លៃ ព្រមទាំងចុចផ្ញើតាម Telegram ឬខលជូនពរភ្លាមៗ។",
+    "🎂 ត្រងបង្ហាញតែរសជាតិនំដែលមានក្នុងស្តុក (In-Stock Flavors Only) ក្នុងផ្ទាំងកុម្ម៉ង់ទុកមុន និង Customer Portal ព្រមទាំង AI ប្រាប់ដំណឹងពេលអស់ស្តុក។",
+    "⚡ ជួសជុលបញ្ហាលោតភ្លឹបភ្លែតលើ Android (Telegram Sync Loop Fix) និងពង្រឹងល្បឿនប្រព័ន្ធទូទៅ។"
   ],
   "apkDownloadUrl": "https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/latest/download/SweetBakery-Android.apk",
   "windowsInstallerUrl": "https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/latest/download/SweetBakery-POS-Setup.exe",

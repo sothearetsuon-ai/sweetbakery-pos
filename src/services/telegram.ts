@@ -407,6 +407,17 @@ export const sendTelegramMessage = async (
 };
 
 /**
+ * Universal helper to send order or operation alert to Telegram
+ */
+export const sendTelegramOrderNotification = async (
+  message: string,
+  customConfig?: TelegramConfig
+): Promise<boolean> => {
+  const res = await sendTelegramMessage(message, customConfig);
+  return res.success;
+};
+
+/**
  * Escape HTML special characters for safe Telegram HTML parsing
  */
 export const escapeHtml = (str?: string): string => {

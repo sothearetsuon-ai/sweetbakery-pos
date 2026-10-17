@@ -58,6 +58,10 @@ interface NavbarProps {
   onToggleButterfly?: () => void;
   isGoldfishEnabled?: boolean;
   onToggleGoldfish?: () => void;
+  onOpenVoicePos?: () => void;
+  onOpenKds?: () => void;
+  onOpenBirthdayCrm?: () => void;
+  onOpenBakingForecast?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -78,6 +82,10 @@ export const Navbar: React.FC<NavbarProps> = ({
   onToggleButterfly,
   isGoldfishEnabled = false,
   onToggleGoldfish,
+  onOpenVoicePos,
+  onOpenKds,
+  onOpenBirthdayCrm,
+  onOpenBakingForecast,
 }) => {
   const {
     lang,
@@ -99,9 +107,14 @@ export const Navbar: React.FC<NavbarProps> = ({
     requestExitDemoMode,
     logoutAndLock,
     demoDevicesCount,
+    customOrders,
   } = useBakery();
   const { isPlaying: isMusicPlaying, setIsPlayerOpen: setIsMusicPlayerOpen } = useMusic();
   const text = t[lang];
+
+  const pendingCakeOrdersCount = (customOrders || []).filter(
+    (o) => o.status === 'PENDING' || o.status === 'BAKING' || o.status === 'DECORATING'
+  ).length;
 
   // Sound state
   const [soundEnabled, setSoundEnabled] = useState(true);
@@ -305,6 +318,43 @@ export const Navbar: React.FC<NavbarProps> = ({
             </button>
           )}
 
+          {/* Kitchen Display System (KDS) Direct Pill Button */}
+          {onOpenKds && (
+            <button
+              type="button"
+              onClick={() => {
+                soundFx.playPop();
+                onOpenKds();
+              }}
+              title="អេក្រង់ផ្ទះបាយ KDS (Kitchen Display System) - សម្រាប់ជាងនំ"
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-2xl bg-gradient-to-r from-amber-50 to-orange-50 hover:from-amber-100 hover:to-orange-100 border border-orange-200/90 text-orange-900 text-xs font-black transition-all shadow-2xs hover:scale-105 active:scale-95 cursor-pointer shrink-0"
+            >
+              <span className="text-sm">👨‍🍳</span>
+              <span className="hidden sm:inline font-battambang">ផ្ទះបាយ KDS</span>
+              {pendingCakeOrdersCount > 0 && (
+                <span className="px-1.5 py-0.2 rounded-full text-[10px] font-mono font-black bg-rose-600 text-white animate-pulse">
+                  {pendingCakeOrdersCount}
+                </span>
+              )}
+            </button>
+          )}
+
+          {/* Khmer Voice POS Direct Pill Button */}
+          {onOpenVoicePos && (
+            <button
+              type="button"
+              onClick={() => {
+                soundFx.playPop();
+                onOpenVoicePos();
+              }}
+              title="POS បញ្ជាដោយសំឡេងខ្មែរ (Khmer Voice POS Assistant)"
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-2xl bg-gradient-to-r from-pink-50 to-rose-50 hover:from-pink-100 hover:to-rose-100 border border-pink-200/90 text-pink-900 text-xs font-black transition-all shadow-2xs hover:scale-105 active:scale-95 cursor-pointer shrink-0"
+            >
+              <span className="text-sm">🎙️</span>
+              <span className="hidden md:inline font-battambang">POS សំឡេង</span>
+            </button>
+          )}
+
           {/* New Version Available Pulsing Pill Button */}
           {availableUpdate && availableUpdate.hasUpdate && (
             <button
@@ -411,6 +461,142 @@ export const Navbar: React.FC<NavbarProps> = ({
 
                 {/* Main Tools & Quick Action Items */}
                 <div className="space-y-1">
+                  {/* Smart AI & Kitchen Operations Section */}
+                  <div className="p-2 rounded-2xl bg-gradient-to-r from-pink-50 via-purple-50 to-orange-50 border border-pink-200/80 space-y-1 mb-2">
+                    <div className="px-1 py-0.5 text-[10px] font-black uppercase text-pink-700 flex items-center justify-between">
+                      <span className="flex items-center gap-1">
+                        <Sparkles className="w-3 h-3 text-pink-500 animate-spin-slow" />
+                        <span>មុខងារឆ្លាតវៃ AI & ប្រព័ន្ធទំនើប</span>
+                      </span>
+                      <span className="px-1.5 py-0.2 rounded-full text-[9px] bg-pink-200/80 text-pink-800 font-mono">
+                        Smart AI
+                      </span>
+                    </div>
+
+                    {/* Voice POS */}
+                    {onOpenVoicePos && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          soundFx.playPop();
+                          setIsQuickToolsOpen(false);
+                          onOpenVoicePos();
+                        }}
+                        className="w-full flex items-center justify-between p-2 rounded-xl hover:bg-white/80 text-slate-800 transition-colors cursor-pointer group text-left border border-transparent hover:border-pink-200 shadow-2xs"
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-pink-500 to-rose-600 text-white flex items-center justify-center text-xs shadow-xs group-hover:scale-105 transition-transform shrink-0">
+                            🎙️
+                          </div>
+                          <div>
+                            <div className="text-xs font-black text-slate-800 group-hover:text-pink-600">
+                              POS បញ្ជាសំឡេងខ្មែរ
+                            </div>
+                            <div className="text-[10px] text-slate-400">
+                              កុម្ម៉ង់លក់ & គិតលុយដោយសំឡេង
+                            </div>
+                          </div>
+                        </div>
+                        <span className="text-[10px] font-black px-1.5 py-0.2 rounded-full bg-pink-100 text-pink-700 font-mono">
+                          Voice
+                        </span>
+                      </button>
+                    )}
+
+                    {/* KDS Kitchen Display */}
+                    {onOpenKds && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          soundFx.playPop();
+                          setIsQuickToolsOpen(false);
+                          onOpenKds();
+                        }}
+                        className="w-full flex items-center justify-between p-2 rounded-xl hover:bg-white/80 text-slate-800 transition-colors cursor-pointer group text-left border border-transparent hover:border-orange-200 shadow-2xs"
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-amber-500 to-orange-600 text-white flex items-center justify-center text-xs shadow-xs group-hover:scale-105 transition-transform shrink-0">
+                            👨‍🍳
+                          </div>
+                          <div>
+                            <div className="text-xs font-black text-slate-800 group-hover:text-orange-600 flex items-center gap-1">
+                              <span>អេក្រង់ផ្ទះបាយ KDS</span>
+                              {pendingCakeOrdersCount > 0 && (
+                                <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping" />
+                              )}
+                            </div>
+                            <div className="text-[10px] text-slate-400">
+                              Kanban ជាងនំ & ជូនដំណឹង Telegram
+                            </div>
+                          </div>
+                        </div>
+                        <span className="text-[10px] font-black px-1.5 py-0.2 rounded-full bg-orange-100 text-orange-700 font-mono">
+                          KDS Live
+                        </span>
+                      </button>
+                    )}
+
+                    {/* Birthday CRM */}
+                    {onOpenBirthdayCrm && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          soundFx.playPop();
+                          setIsQuickToolsOpen(false);
+                          onOpenBirthdayCrm();
+                        }}
+                        className="w-full flex items-center justify-between p-2 rounded-xl hover:bg-white/80 text-slate-800 transition-colors cursor-pointer group text-left border border-transparent hover:border-purple-200 shadow-2xs"
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-purple-500 to-indigo-600 text-white flex items-center justify-center text-xs shadow-xs group-hover:scale-105 transition-transform shrink-0">
+                            🎂
+                          </div>
+                          <div>
+                            <div className="text-xs font-black text-slate-800 group-hover:text-purple-600">
+                              CRM រំលឹកខួបកំណើតភ្ញៀវ
+                            </div>
+                            <div className="text-[10px] text-slate-400">
+                              ស្វែងរកខួបកំណើត 14 ថ្ងៃ + ពាក្យជូនពរ & Voucher
+                            </div>
+                          </div>
+                        </div>
+                        <span className="text-[10px] font-black px-1.5 py-0.2 rounded-full bg-purple-100 text-purple-700 font-mono">
+                          CRM
+                        </span>
+                      </button>
+                    )}
+
+                    {/* Baking Demand Forecast */}
+                    {onOpenBakingForecast && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          soundFx.playPop();
+                          setIsQuickToolsOpen(false);
+                          onOpenBakingForecast();
+                        }}
+                        className="w-full flex items-center justify-between p-2 rounded-xl hover:bg-white/80 text-slate-800 transition-colors cursor-pointer group text-left border border-transparent hover:border-emerald-200 shadow-2xs"
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-emerald-500 to-teal-600 text-white flex items-center justify-center text-xs shadow-xs group-hover:scale-105 transition-transform shrink-0">
+                            📊
+                          </div>
+                          <div>
+                            <div className="text-xs font-black text-slate-800 group-hover:text-emerald-600">
+                              ផែនការដុតនំ & ទស្សន៍ទាយ AI
+                            </div>
+                            <div className="text-[10px] text-slate-400">
+                              ចំនួនដុតនំថ្ងៃស្អែក គ្រឿងផ្សំ & កាត់បន្ថយកាកសំណល់
+                            </div>
+                          </div>
+                        </div>
+                        <span className="text-[10px] font-black px-1.5 py-0.2 rounded-full bg-emerald-100 text-emerald-700 font-mono">
+                          AI Plan
+                        </span>
+                      </button>
+                    )}
+                  </div>
+
                   {/* 1. KHQR Counter Standee */}
                   <button
                     type="button"
