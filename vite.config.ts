@@ -958,5 +958,14 @@ export default defineConfig({
     port: 3000,
     open: false,
     allowedHosts: true, // Allow tunnel domains (Cloudflare, localtunnel)
+    watch: {
+      ignored: [
+        '**/local_bakery_db.json**',
+        '**/local_bakery_songs.json**',
+        '**/public/uploads/**',
+        '**/.git/**',
+      ],
+    },
   },
 });
+

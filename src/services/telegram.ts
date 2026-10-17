@@ -111,12 +111,62 @@ export const getStoredTelegramConfig = (): TelegramConfig => {
 };
 
 /**
+ * Deep equality checker for Telegram configurations to prevent unnecessary sync updates and infinite loops
+ */
+export const areTelegramConfigsEqual = (
+  a?: Partial<TelegramConfig> | null,
+  b?: Partial<TelegramConfig> | null
+): boolean => {
+  if (!a && !b) return true;
+  if (!a || !b) return false;
+  return (
+    (a.botToken || '').trim() === (b.botToken || '').trim() &&
+    (a.chatId || '').trim() === (b.chatId || '').trim() &&
+    (a.adminChatId || '').trim() === (b.adminChatId || '').trim() &&
+    Boolean(a.enabled) === Boolean(b.enabled) &&
+    Boolean(a.notifySales) === Boolean(b.notifySales) &&
+    Boolean(a.notifyCustomOrders) === Boolean(b.notifyCustomOrders) &&
+    Boolean(a.notifyExpenses) === Boolean(b.notifyExpenses) &&
+    Boolean(a.notifyExpenseDue) === Boolean(b.notifyExpenseDue) &&
+    Boolean(a.notifyShiftClose) === Boolean(b.notifyShiftClose) &&
+    Boolean(a.notifyDailyReport) === Boolean(b.notifyDailyReport) &&
+    (a.dailyReportTime || '21:00') === (b.dailyReportTime || '21:00') &&
+    (a.dailyReportRecipient || 'ADMIN_ONLY') === (b.dailyReportRecipient || 'ADMIN_ONLY') &&
+    Boolean(a.includeAiInsight) === Boolean(b.includeAiInsight)
+  );
+};
+
+/**
  * Save Telegram config to localStorage, IndexedDB, server LAN sync, and Firestore Cloud
  */
-export const saveStoredTelegramConfig = (config: TelegramConfig, syncToCloud = true): void => {
+export const saveStoredTelegramConfig = (
+  config: TelegramConfig,
+  syncToCloud = true,
+  syncToLan = true
+): void => {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
-    idbSet(STORAGE_KEY, JSON.stringify(config)).catch(() => {});
+    const rawSaved = typeof window !== 'undefined' ? localStorage.getItem(STORAGE_KEY) : null;
+    let isSameAsLocal = false;
+    if (rawSaved) {
+      try {
+        const existing = JSON.parse(rawSaved);
+        if (areTelegramConfigsEqual(existing, config)) {
+          isSameAsLocal = true;
+          // If already equal in localStorage and no remote push needed, skip everything
+          if (!syncToCloud && !syncToLan) {
+            return;
+          }
+        }
+      } catch (e) {}
+    }
+
+    if (!isSameAsLocal) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
+      idbSet(STORAGE_KEY, JSON.stringify(config)).catch(() => {});
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('bakery_telegram_config_changed', { detail: config }));
+      }
+    }
 
     // Sync to Firestore Cloud so mobile phones automatically inherit store Telegram credentials
     if (syncToCloud) {
@@ -124,18 +174,23 @@ export const saveStoredTelegramConfig = (config: TelegramConfig, syncToCloud = t
     }
 
     // Also push to server LAN sync if available so local network devices get it
-    fetch('/api/lan-sync')
-      .then((res) => res.json())
-      .then((data) => {
-        if (data) {
-          fetch('/api/lan-sync', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ ...data, telegramConfig: config }),
-          }).catch(() => {});
-        }
-      })
-      .catch(() => {});
+    if (syncToLan) {
+      fetch('/api/lan-sync')
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          if (data) {
+            if (data.telegramConfig && areTelegramConfigsEqual(data.telegramConfig, config)) {
+              return; // Already up-to-date on LAN server
+            }
+            fetch('/api/lan-sync', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ ...data, telegramConfig: config }),
+            }).catch(() => {});
+          }
+        })
+        .catch(() => {});
+    }
   } catch (e) {
     console.error('Error saving Telegram config:', e);
   }
@@ -228,7 +283,7 @@ export const getStoredTelegramConfigAsync = async (): Promise<TelegramConfig> =>
         }
         merged.enabled = true;
         merged.notifySales = true;
-        saveStoredTelegramConfig(merged);
+        saveStoredTelegramConfig(merged, false, false);
         return merged;
       }
     }

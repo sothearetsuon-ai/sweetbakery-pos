@@ -26,6 +26,7 @@ import {
   TelegramConfig,
   getStoredTelegramConfig,
   saveStoredTelegramConfig,
+  areTelegramConfigsEqual,
   testTelegramConnection,
   setTelegramMenuButton,
   resetTelegramMenuButton,
@@ -156,6 +157,16 @@ export const TelegramSettingsTab: React.FC = () => {
 
   useEffect(() => {
     setConfig(getStoredTelegramConfig());
+
+    const handleExternalConfigChange = (e: any) => {
+      const newConfig = e?.detail || getStoredTelegramConfig();
+      setConfig((prev) => (areTelegramConfigsEqual(prev, newConfig) ? prev : newConfig));
+    };
+
+    window.addEventListener('bakery_telegram_config_changed', handleExternalConfigChange);
+    return () => {
+      window.removeEventListener('bakery_telegram_config_changed', handleExternalConfigChange);
+    };
   }, []);
 
   const updateConfig = (updated: TelegramConfig) => {
@@ -173,11 +184,14 @@ export const TelegramSettingsTab: React.FC = () => {
     updateConfig(config);
     soundFx.playSuccess();
     setSavedSuccess(true);
-    confetti({
-      particleCount: 50,
-      spread: 60,
-      origin: { y: 0.6 },
-    });
+    try {
+      confetti({
+        particleCount: 35,
+        spread: 50,
+        origin: { y: 0.7 },
+        disableForReducedMotion: true,
+      });
+    } catch (err) {}
     setTimeout(() => setSavedSuccess(false), 3000);
   };
 
@@ -198,17 +212,20 @@ export const TelegramSettingsTab: React.FC = () => {
     setTesting(false);
     setTestResult(res);
 
-    if (res.success) {
-      // Auto-enable and auto-save on successful test
-      const activeConfig = { ...config, enabled: true };
-      updateConfig(activeConfig);
-      soundFx.playSuccess();
-      confetti({
-        particleCount: 70,
-        spread: 70,
-        origin: { y: 0.7 },
-      });
-    }
+      if (res.success) {
+        // Auto-enable and auto-save on successful test
+        const activeConfig = { ...config, enabled: true };
+        updateConfig(activeConfig);
+        soundFx.playSuccess();
+        try {
+          confetti({
+            particleCount: 40,
+            spread: 60,
+            origin: { y: 0.7 },
+            disableForReducedMotion: true,
+          });
+        } catch (err) {}
+      }
   };
 
   return (

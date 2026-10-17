@@ -57,6 +57,7 @@ import {
   notifyTelegramShiftClose as rawNotifyTelegramShiftClose,
   getStoredTelegramConfig,
   saveStoredTelegramConfig,
+  areTelegramConfigsEqual,
   TelegramConfig,
 } from '../services/telegram';
 import { setGeminiApiKeyLocally } from '../services/geminiInvoiceService';
@@ -2211,7 +2212,10 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       });
     }
     if (data.telegramConfig && data.telegramConfig.botToken) {
-      saveStoredTelegramConfig(data.telegramConfig);
+      const currentTg = getStoredTelegramConfig();
+      if (!areTelegramConfigsEqual(currentTg, data.telegramConfig)) {
+        saveStoredTelegramConfig(data.telegramConfig, false, false);
+      }
     }
     if (data.exchangeRate && Number(data.exchangeRate) > 0) {
       const rate = Number(data.exchangeRate);
@@ -2848,7 +2852,9 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     // Subscribe to shared Telegram config across all devices (PC & Phone sync automatically)
     const unsubTelegram = subscribeToFirestoreDoc<TelegramConfig>('settings', 'telegram', (cloudTelegram) => {
       if (globalIsDemoMode || !cloudTelegram?.botToken) return;
-      saveStoredTelegramConfig(cloudTelegram);
+      const currentTg = getStoredTelegramConfig();
+      if (areTelegramConfigsEqual(currentTg, cloudTelegram)) return;
+      saveStoredTelegramConfig(cloudTelegram, false, false);
     });
 
     // Subscribe to shared Party Add-ons across all devices (PC & Phone sync automatically)
