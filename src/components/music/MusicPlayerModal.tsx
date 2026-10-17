@@ -832,6 +832,14 @@ export const MusicPlayerModal: React.FC = () => {
                   </div>
                 )}
 
+                {/* Friendly Tip: Direct Play vs Download */}
+                <div className="p-2.5 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-[11px] text-amber-200 flex items-start gap-2">
+                  <Sparkles className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                  <div className="leading-relaxed">
+                    <span className="font-bold">💡 គន្លឹះងាយស្រួលបំផុត៖</span> លោកអ្នកមិនចាំបាច់ទាញយក File ទេ! គ្រាន់តែ Paste Link YouTube រួចចុច <strong className="text-white">"ស្វែងរក"</strong> និង <strong className="text-pink-300">"+ បញ្ចូលចាក់ភ្លាម"</strong> នោះបទចម្រៀងនឹងចាក់ផ្ទាល់ក្នុងហាងភ្លាមៗ។
+                  </div>
+                </div>
+
                 {/* 1-Click Fast Online Converters */}
                 <div className="pt-2 border-t border-white/10 space-y-1.5">
                   <div className="text-[10px] text-slate-400 font-bold flex items-center gap-1">
