@@ -1,17 +1,13 @@
 {
-  "version": "1.4.8",
+  "version": "1.4.9",
   "releaseDate": "2026-10-17",
   "releaseNotes": [
-    "🎂 ធ្វើសមកាលកម្ម ១០០% លើការរើសរសជាតិនំ (100% Unified Cake Flavors & Live Stock)៖ ទាំងការ [បញ្ចូលកន្ត្រក POS (លក់ភ្លាម)] និង [កុម្ម៉ង់ទុកជាមុន (Custom Order)] លើផ្ទាំងរើសម៉ូដនំ ឥឡូវនេះទាញចេញពី [គ្រប់គ្រងរសជាតិនំ & ស្តុក] ដូចគ្នា ១០០% ដោយផ្ទាល់។",
-    "📊 បង្ហាញស្លាកចំនួនស្តុកមានជាក់ស្តែង (ឧ. 7/11 មានក្នុងហាង)៖ មាន Tab ជ្រើសរើសមើលតែរសជាតិ [មានក្នុងហាង] ឬ [ទាំងអស់], ស្លាកបញ្ជាក់ [អស់ស្តុក], ប៊ូតុង [⚙️ គ្រប់គ្រងស្តុក] និងប៊ូតុង [✓ ដាក់មានក្នុងស្តុកវិញ] ភ្លាមៗ។",
-    "⚡ គ្រប់គ្រងការអស់ស្តុកភ្លាមៗ (Instant Stock Availability)៖ បើរើសរសជាតិណាដែលជាប់ពាក្យ [❌ អស់ស្តុក] ប្រព័ន្ធនឹងបង្ហាញផ្ទាំងដាស់តឿនភ្លាមៗ ព្រមទាំងមានប៊ូតុង [✓ ដាក់មានក្នុងស្តុកវិញ] ចុចតែ ១ វិនាទី បញ្ចូលស្តុកវិញភ្លាមៗដោយមិនបាច់ចេញពីផ្ទាំងកុម្ម៉ង់។",
-    "✏️ & 🗑️ កែប្រែ ឬលុបរ៉សជាតិក្នុងស្តុក ឆ្លុះបញ្ចាំងភ្លាមៗ (Real-time Flavor Updates)៖ រាល់ការកែឈ្មោះ ឬលុបរ៉សជាតិណាមួយចេញពីស្តុក នឹងផ្លាស់ប្តូរភ្លាមៗលើផ្ទាំងកាត និងផ្ទាំងកុម្ម៉ង់របស់ភ្ញៀវ (Customer Portal)។",
-    "✨ ប៊ូតុងស្តារឡើងវិញ [✨ ម៉ឺនុយពេញ (12 មុខ)] អាចកំណត់យករសជាតិដើមទាំង ១២ មុខមកវិញគ្រប់ពេល",
-    "🌐 កែសម្រួលលីង និង QR Code លើ Android (Android Link & Browser Fix)៖ លុបបំបាត់ appassets.androidplatform.net និងជំនួសដោយ Web URL ផ្លូវការ (HTTPS) 100% អាចបើកលើ Chrome និងស្កេនពីក្រៅបានយ៉ាងរលូន",
-    "🚀 ប៊ូតុង [🌐 បើកក្នុង Browser] ដំណើរការលើ Android 100%៖ ភ្ជាប់ Android Native Intent បើក Chrome/Samsung Internet ផ្ទាល់ពីក្នុង App ភ្លាមៗ",
-    "📱 ដោះស្រាយ QR Code ទាញយក APK (QR APK Download Fix)៖ ស្កេនពីលើកញ្ចក់អេក្រង់ទាញយក APK ចូលទូរសព្ទបានភ្លាមៗ",
-    "🎙️ ប៊ូតុង Mic និយាយសំឡេងខ្មែរ (Native Speech Recognition)៖ ភ្ជាប់ប្រព័ន្ធ Android Native Speech Recognizer លើ Android និងបើក Media Permission លើ Windows",
-    "🔒 កំណត់ការសម្ងាត់ខ្ពស់៖ របាយការណ៍បូកសរុបការលក់ និងចំណាយប្រចាំថ្ងៃ-ខែ ផ្ញើចូលតែ Telegram Bot Admin ផ្ទាល់ខ្លួន (8970210109)"
+    "⚡ ដោះស្រាយបញ្ហាលោតភ្លឹបភ្លែតលើ Android (Telegram Sync Loop Fix)៖ ជួសជុលបញ្ហាអេក្រង់លោតភ្លឹបភ្លែតចុះឡើង ឬបាត់ឃើញនៅពេលចុចរក្សាទុកការកំណត់ Telegram Bot លើទូរស័ព្ទ Android ដោយកាត់ផ្តាច់ Sync Echo Loop រវាង Cloud, LAN និង App ទាំងស្រុង។",
+    "🛡️ ការពារ Vite Watcher Full-Reload៖ កំណត់មិនឱ្យ Vite Dev Server ធ្វើការ Full-Reload លើទូរស័ព្ទពេលមានការសរសេរទិន្នន័យពីទូរស័ព្ទ។",
+    "⚡ ធ្វើសមកាលកម្មកាត់ស្តុកនំស្វ័យប្រវត្ត ១០០% រវាងទូរសព្ទ និងកុំព្យូទ័រ (Real-time Cloud Stock Sync Fix)៖ ដោះស្រាយបញ្ហាកាត់ស្តុកនំមិនស្មើគ្នារវាងទូរសព្ទ Android និងកុំព្យូទ័រ Windows។",
+    "🔄 ប៊ូតុង [ធ្វើសមកាលកម្មស្តុក] ថ្មីក្នុងផ្ទាំងគ្រប់គ្រងស្តុក៖ អាចចុចទាញ ឬ Push ទិន្នន័យស្តុកជាមួយ Google Cloud Firebase ភ្លាមៗគ្រប់ពេលវេលា។",
+    "🎂 ធ្វើសមកាលកម្មរសជាតិនំ ១០០% ជាមួយការគ្រប់គ្រងស្តុក (100% Flavors & Stock Sync)៖ ផ្ទាំងកាតរើសរសជាតិនំក្នុងផ្ទាំងកុម្ម៉ង់ (Custom Cake Order Modal) ទាញចេញពីផ្ទាំងគ្រប់គ្រងស្តុករសជាតិដោយស្វ័យប្រវត្ត។",
+    "🌐 កែសម្រួលលីង និង QR Code លើ Android (Android Link & Browser Fix) ផ្លូវការ (HTTPS) 100% អាចបើកលើ Chrome និងស្កេនពីក្រៅបានយ៉ាងរលូន។"
   ],
   "apkDownloadUrl": "https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/latest/download/SweetBakery-Android.apk",
   "windowsInstallerUrl": "https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/latest/download/SweetBakery-POS-Setup.exe",
