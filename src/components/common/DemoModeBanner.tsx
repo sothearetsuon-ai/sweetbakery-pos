@@ -29,7 +29,21 @@ export const DemoModeBanner: React.FC = () => {
 
   const handleShareDemo = () => {
     soundFx.playPop();
-    const demoUrl = `${window.location.origin}${window.location.pathname}?demo=true`;
+    const isLocalOrContainer =
+      typeof window === 'undefined' ||
+      !window.location.origin ||
+      window.location.origin.startsWith('file:') ||
+      window.location.origin.includes('localhost') ||
+      window.location.origin.includes('127.0.0.1') ||
+      window.location.origin.includes('androidplatform.net') ||
+      window.location.origin.includes('appassets') ||
+      Boolean((window as any).SweetBakeryDesktop) ||
+      Boolean((window as any).SweetBakeryNative);
+
+    const demoUrl = isLocalOrContainer
+      ? 'https://sothearetsuon-ai.github.io/sweetbakery-pos/?demo=true'
+      : `${window.location.origin}${window.location.pathname}?demo=true`;
+
     navigator.clipboard.writeText(demoUrl).then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 2500);

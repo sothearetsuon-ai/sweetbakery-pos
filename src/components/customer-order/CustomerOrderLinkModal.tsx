@@ -39,25 +39,31 @@ export const CustomerOrderLinkModal: React.FC<CustomerOrderLinkModalProps> = ({
     const customUrl = storeInfo.customerPortalUrl || storeInfo.website;
     if (
       customUrl &&
-      (customUrl.startsWith('http://') || customUrl.startsWith('https://'))
+      (customUrl.startsWith('http://') || customUrl.startsWith('https://')) &&
+      !customUrl.includes('androidplatform.net') &&
+      !customUrl.includes('appassets')
     ) {
       const base = customUrl.replace(/\/+$/, '');
       return base.includes('?order=true') ? base : `${base}/?order=true`;
     }
 
-    // 2. Check if current window is running on a live HTTP/HTTPS server
+    // 2. Check if current window is running on a live HTTP/HTTPS public server
     if (typeof window !== 'undefined' && window.location) {
       const origin = window.location.origin;
       const pathname = window.location.pathname || '/';
 
-      const isLocalOrFile =
+      const isLocalOrContainer =
         !origin ||
         origin.startsWith('file:') ||
         origin === 'null' ||
         origin.includes('localhost') ||
-        origin.includes('127.0.0.1');
+        origin.includes('127.0.0.1') ||
+        origin.includes('androidplatform.net') ||
+        origin.includes('appassets') ||
+        Boolean((window as any).SweetBakeryDesktop) ||
+        Boolean((window as any).SweetBakeryNative);
 
-      if (!isLocalOrFile && (origin.startsWith('http://') || origin.startsWith('https://'))) {
+      if (!isLocalOrContainer && (origin.startsWith('http://') || origin.startsWith('https://'))) {
         const cleanPath = pathname.replace(/\/index\.html$/, '').replace(/\/+$/, '');
         return `${origin}${cleanPath}/?order=true`;
       }
@@ -223,7 +229,9 @@ export const CustomerOrderLinkModal: React.FC<CustomerOrderLinkModalProps> = ({
                 type="button"
                 onClick={() => {
                   soundFx.playPop();
-                  if ((window as any).SweetBakeryDesktop?.openExternal) {
+                  if (typeof (window as any).SweetBakeryNative?.openBrowser === 'function') {
+                    (window as any).SweetBakeryNative.openBrowser(customerOrderUrl);
+                  } else if ((window as any).SweetBakeryDesktop?.openExternal) {
                     (window as any).SweetBakeryDesktop.openExternal(customerOrderUrl);
                   } else {
                     window.open(customerOrderUrl, '_blank');

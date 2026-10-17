@@ -56,15 +56,29 @@ export const MobileConnectModal: React.FC<MobileConnectModalProps> = ({ isOpen, 
 
   if (!isOpen) return null;
 
-  const cloudUrl =
-    typeof window !== 'undefined'
-      ? `${window.location.origin}${window.location.pathname}`
-      : 'https://sweetbakery-pos.surge.sh';
+  const cloudUrl = (() => {
+    if (typeof window !== 'undefined' && window.location) {
+      const origin = window.location.origin;
+      const isLocalOrContainer =
+        !origin ||
+        origin.startsWith('file:') ||
+        origin === 'null' ||
+        origin.includes('localhost') ||
+        origin.includes('127.0.0.1') ||
+        origin.includes('androidplatform.net') ||
+        origin.includes('appassets') ||
+        Boolean((window as any).SweetBakeryDesktop) ||
+        Boolean((window as any).SweetBakeryNative);
 
-  const demoUrl =
-    typeof window !== 'undefined'
-      ? `${window.location.origin}${window.location.pathname}?demo=true`
-      : `${cloudUrl}?demo=true`;
+      if (!isLocalOrContainer && (origin.startsWith('http://') || origin.startsWith('https://'))) {
+        const cleanPath = (window.location.pathname || '/').replace(/\/index\.html$/, '').replace(/\/+$/, '');
+        return `${origin}${cleanPath}/`;
+      }
+    }
+    return 'https://sothearetsuon-ai.github.io/sweetbakery-pos/';
+  })();
+
+  const demoUrl = `${cloudUrl.replace(/\/+$/, '')}/?demo=true`;
 
   const mobileUrl =
     activeTab === 'demo' ? demoUrl : activeTab === 'cloud' ? cloudUrl : `http://${localIp}:${port}`;

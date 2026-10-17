@@ -612,9 +612,7 @@ export const AppUpdateTab: React.FC = () => {
           <div className="w-24 h-24 p-1.5 bg-white rounded-xl border-2 border-slate-200 shadow-xs shrink-0 flex items-center justify-center">
             <img
               src={`https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(
-                typeof window !== 'undefined'
-                  ? window.location.origin + '/SweetBakery-Android.apk'
-                  : 'https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/latest/download/SweetBakery-Android.apk'
+                'https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/latest/download/SweetBakery-Android.apk'
               )}`}
               alt="Scan QR to Download APK"
               className="w-full h-full object-contain rounded-lg"
