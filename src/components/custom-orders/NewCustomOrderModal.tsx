@@ -31,6 +31,7 @@ import { PartyAddon } from '../../types';
 import { CameraCaptureModal } from '../common/CameraCaptureModal';
 import { PartyAccessoriesModal } from '../pos/PartyAccessoriesModal';
 import { CakeFlavorsModal } from '../pos/CakeFlavorsModal';
+import { PRESET_CAKE_FLAVORS } from '../customer-order/CustomerOrderPortal';
 import { formatDateDMY } from '../../utils/dateUtils';
 import { roundKhr } from '../../utils/currencyUtils';
 
@@ -71,6 +72,32 @@ const PACKAGING_OPTIONS = [
   'វេចខ្ចប់ប្រអប់ធំសម្រាប់កម្មវិធី (Bulk Catering Box)',
 ];
 
+const getFlavorEmoji = (flavorName: string): string => {
+  const clean = (flavorName || '').trim().toLowerCase();
+  const matched = PRESET_CAKE_FLAVORS.find(
+    (p) =>
+      p.label.toLowerCase() === clean ||
+      p.nameKh.toLowerCase() === clean ||
+      p.nameEn.toLowerCase() === clean
+  );
+  if (matched) return matched.icon;
+
+  if (clean.includes('choco') || clean.includes('សូកូឡា') || clean.includes('fudge') || clean.includes('brownie')) return '🍫';
+  if (clean.includes('straw') || clean.includes('ស្ត្រប៊ែរី') || clean.includes('ស្ត្របឺរី') || clean.includes('berry') || clean.includes('ប៊ឺរី')) return '🍓';
+  if (clean.includes('blue') || clean.includes('ប៊្លូ')) return '🫐';
+  if (clean.includes('vanil') || clean.includes('វ៉ានីឡា') || clean.includes('custard')) return '🍦';
+  if (clean.includes('velvet') || clean.includes('រ៉េដ') || clean.includes('cheese') || clean.includes('ឈីស')) return '🧀';
+  if (clean.includes('matcha') || clean.includes('green tea') || clean.includes('តែបៃតង') || clean.includes('ម៉ាត់ឆា')) return '🍵';
+  if (clean.includes('coffee') || clean.includes('កាហ្វេ') || clean.includes('tiramisu') || clean.includes('mocha')) return '☕';
+  if (clean.includes('durian') || clean.includes('ទុរេន') || clean.includes('ធុរេន')) return '🍈';
+  if (clean.includes('taro') || clean.includes('ត្រាវ')) return '🍠';
+  if (clean.includes('coconut') || clean.includes('ដូង') || clean.includes('pandan') || clean.includes('តយ') || clean.includes('ស្លឹកតយ')) return '🥥';
+  if (clean.includes('mango') || clean.includes('ស្វាយ')) return '🥭';
+  if (clean.includes('orange') || clean.includes('ក្រូច') || clean.includes('lemon')) return '🍊';
+  if (clean.includes('caramel') || clean.includes('ការ៉ាមែល') || clean.includes('biscoff')) return '🍯';
+  return '🎂';
+};
+
 export const NewCustomOrderModal: React.FC<NewCustomOrderModalProps> = ({ isOpen, onClose, initialData }) => {
   const {
     lang,
@@ -110,6 +137,13 @@ export const NewCustomOrderModal: React.FC<NewCustomOrderModalProps> = ({ isOpen
   const [size, setSize] = useState('1.5 kg');
   const [flavor, setFlavor] = useState(flavors[0] || 'Chocolate Fudge + Fresh Strawberry');
   const isSelectedFlavorOut = isOutOfStockFlavor(flavor);
+  const allDisplayedFlavors = React.useMemo(() => {
+    const base = flavors && flavors.length > 0 ? [...flavors] : [];
+    if (flavor && !base.some((f) => f.trim().toLowerCase() === flavor.trim().toLowerCase())) {
+      base.push(flavor);
+    }
+    return base;
+  }, [flavors, flavor]);
   const [filling, setFilling] = useState('Fresh Cream');
   const [inscription, setInscription] = useState('');
   const [themeNotes, setThemeNotes] = useState('');
@@ -862,15 +896,16 @@ export const NewCustomOrderModal: React.FC<NewCustomOrderModalProps> = ({ isOpen
           ) : (
             /* ==================== CUSTOM CAKE SECTION ==================== */
             <div className="space-y-4">
-              {/* Cake Details & Dynamic Flavors */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+              {/* 1. Cake Name & Size (2 Columns for spacious, clear inputs) */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">ឈ្មោះម៉ូដនំ</label>
                   <input
                     type="text"
                     value={cakeName}
                     onChange={(e) => setCakeName(e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500 font-medium"
+                    placeholder="ឧ. នំខួបកំណើតរូបតុក្កតា, ផ្កាឈូក..."
+                    className="w-full px-3.5 py-2.5 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500 font-semibold text-slate-800 bg-white"
                   />
                 </div>
 
@@ -879,7 +914,7 @@ export const NewCustomOrderModal: React.FC<NewCustomOrderModalProps> = ({ isOpen
                   <select
                     value={size}
                     onChange={(e) => setSize(e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500 font-semibold"
+                    className="w-full px-3.5 py-2.5 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500 font-bold text-slate-800 bg-white cursor-pointer"
                   >
                     <option value="0.8 kg (Mini 4-inch)">0.8 kg (Mini 4-inch)</option>
                     <option value="1.0 kg (6-inch)">1.0 kg (6-inch)</option>
@@ -889,170 +924,228 @@ export const NewCustomOrderModal: React.FC<NewCustomOrderModalProps> = ({ isOpen
                     <option value="4.0 kg (3 Tiers Wedding)">4.0 kg (3 Tiers មង្គលការ)</option>
                   </select>
                 </div>
+              </div>
 
-                {/* Dynamic Flavor Selector */}
-                <div>
-                  <div className="flex items-center justify-between mb-1.5 flex-wrap gap-1">
-                    <div className="flex items-center gap-1.5">
-                      <label className="text-xs font-bold text-slate-700">រសជាតិនំ (Flavor)</label>
-                      {outOfStockFlavorsCount > 0 ? (
-                        <span className="text-[10px] bg-rose-100 text-rose-700 font-black px-2 py-0.5 rounded-full border border-rose-200">
-                          អស់ស្តុក {outOfStockFlavorsCount}
-                        </span>
-                      ) : (
-                        <span className="text-[10px] bg-emerald-100 text-emerald-800 font-black px-2 py-0.5 rounded-full border border-emerald-200">
-                          មានក្នុងស្តុក ({inStockFlavorsCount})
-                        </span>
-                      )}
+              {/* 2. Full-Width Cake Flavor Selector Cards (ដាក់នៅខាងក្រៅ ងាយស្រួលមើល និងរើស) */}
+              <div className="bg-gradient-to-br from-pink-50/60 via-white to-rose-50/40 p-3.5 sm:p-4 rounded-3xl border border-pink-200/90 shadow-2xs space-y-3">
+                {/* Header bar: Title, Selected indicator, Stock counts & Action tools */}
+                <div className="flex items-center justify-between gap-2 flex-wrap pb-2 border-b border-pink-100">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-xs font-black text-slate-800 flex items-center gap-1.5">
+                      <Cake className="w-4 h-4 text-pink-600" />
+                      <span>រសជាតិនំ (Cake Flavors)</span>
+                    </span>
+
+                    {/* Current Selection Tag */}
+                    <div className="flex items-center gap-1.5 text-xs bg-pink-100/90 text-pink-900 font-black px-2.5 py-1 rounded-xl border border-pink-200 shadow-2xs">
+                      <span className="text-pink-600">កំពុងរើស៖</span>
+                      <span className="text-pink-800">{getFlavorEmoji(flavor)} {flavor}</span>
                     </div>
 
-                    <div className="flex items-center gap-1">
-                      {outOfStockFlavorsCount > 0 && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            soundFx.playSuccess();
-                            markAllFlavorsAvailable();
-                          }}
-                          className="text-[10px] font-black text-emerald-700 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-2 py-0.5 rounded-lg flex items-center gap-1 cursor-pointer transition-all shadow-2xs active:scale-95"
-                          title="កំណត់ឱ្យរសជាតិទាំងអស់មានក្នុងស្តុកឡើងវិញភ្លាមៗ"
-                        >
-                          <RotateCcw className="w-3 h-3 text-emerald-600" />
-                          <span>ដាក់មានទាំងអស់</span>
-                        </button>
-                      )}
+                    {/* Stock status indicator */}
+                    {outOfStockFlavorsCount > 0 ? (
+                      <span className="text-[10px] bg-rose-100 text-rose-700 font-black px-2.5 py-1 rounded-full border border-rose-200">
+                        អស់ស្តុក {outOfStockFlavorsCount}
+                      </span>
+                    ) : (
+                      <span className="text-[10px] bg-emerald-100 text-emerald-800 font-black px-2.5 py-1 rounded-full border border-emerald-200">
+                        មានគ្រប់រសជាតិ ({inStockFlavorsCount})
+                      </span>
+                    )}
+                  </div>
 
-                      <button
-                        type="button"
-                        onClick={() => {
-                          soundFx.playPop();
-                          setIsCakeFlavorsModalOpen(true);
-                        }}
-                        className="text-[10px] font-bold text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 px-1.5 py-0.5 rounded-lg flex items-center gap-0.5 cursor-pointer transition-all"
-                        title="គ្រប់គ្រងស្តុករសជាតិនំ & បិទ/បើកស្តុក"
-                      >
-                        <Settings className="w-3 h-3 text-slate-500" />
-                        <span>ស្តុក</span>
-                      </button>
-
+                  {/* Action Tools */}
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    {outOfStockFlavorsCount > 0 && (
                       <button
                         type="button"
                         onClick={() => {
                           soundFx.playSuccess();
-                          restoreDefaultFlavors();
+                          markAllFlavorsAvailable();
                         }}
-                        className="text-[10px] font-bold text-purple-700 hover:text-purple-800 bg-purple-50 hover:bg-purple-100 border border-purple-200 px-1.5 py-0.5 rounded-lg flex items-center gap-0.5 cursor-pointer transition-all shadow-2xs"
-                        title="ផ្ទុករសជាតិពេញលេញលំនាំដើម (12 មុខ) និងកំណត់មានក្នុងស្តុកទាំងអស់"
+                        className="text-[11px] font-black text-emerald-700 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-2.5 py-1 rounded-xl flex items-center gap-1 cursor-pointer transition-all shadow-2xs active:scale-95"
+                        title="កំណត់ឱ្យរសជាតិទាំងអស់មានក្នុងស្តុកឡើងវិញភ្លាមៗ"
                       >
-                        <Sparkles className="w-3 h-3 text-purple-600" />
-                        <span className="hidden sm:inline">ម៉ឺនុយពេញ</span>
+                        <RotateCcw className="w-3 h-3 text-emerald-600" />
+                        <span>ដាក់មានទាំងអស់</span>
                       </button>
+                    )}
 
-                      <button
-                        type="button"
-                        onClick={() => setIsAddingNewFlavor(!isAddingNewFlavor)}
-                        className="text-[10px] font-bold text-pink-600 hover:text-pink-700 flex items-center gap-0.5 cursor-pointer"
-                      >
-                        <Plus className="w-3 h-3" />
-                        <span>{isAddingNewFlavor ? 'ជ្រើសរើស' : 'ថែមរសជាតិ'}</span>
-                      </button>
-                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        soundFx.playPop();
+                        setIsCakeFlavorsModalOpen(true);
+                      }}
+                      className="text-[11px] font-bold text-slate-600 hover:text-slate-900 bg-white hover:bg-slate-100 border border-slate-200 px-2.5 py-1 rounded-xl flex items-center gap-1 cursor-pointer transition-all shadow-2xs active:scale-95"
+                      title="គ្រប់គ្រងស្តុករសជាតិនំ & បិទ/បើកស្តុក"
+                    >
+                      <Settings className="w-3.5 h-3.5 text-slate-500" />
+                      <span>គ្រប់គ្រងស្តុក</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        soundFx.playSuccess();
+                        restoreDefaultFlavors();
+                      }}
+                      className="text-[11px] font-bold text-purple-700 hover:text-purple-800 bg-purple-50 hover:bg-purple-100 border border-purple-200 px-2.5 py-1 rounded-xl flex items-center gap-1 cursor-pointer transition-all shadow-2xs active:scale-95"
+                      title="ផ្ទុករសជាតិពេញលេញលំនាំដើម (12 មុខ) និងកំណត់មានក្នុងស្តុកទាំងអស់"
+                    >
+                      <Sparkles className="w-3.5 h-3.5 text-purple-600" />
+                      <span>ម៉ឺនុយពេញ (12)</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        soundFx.playPop();
+                        setIsAddingNewFlavor(!isAddingNewFlavor);
+                      }}
+                      className="text-[11px] font-bold text-pink-600 hover:text-pink-700 bg-pink-50 hover:bg-pink-100 border border-pink-200 px-2.5 py-1 rounded-xl flex items-center gap-1 cursor-pointer transition-all shadow-2xs active:scale-95"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>{isAddingNewFlavor ? 'បិទការថែម' : '+ ថែមរសជាតិ'}</span>
+                    </button>
                   </div>
+                </div>
 
-                  {isAddingNewFlavor ? (
-                    <div className="flex gap-1.5">
-                      <input
-                        type="text"
-                        placeholder="ឧ. ធុរេន, ពងទាប្រៃ..."
-                        value={newFlavorInput}
-                        onChange={(e) => setNewFlavorInput(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            handleAddNewFlavor(e);
-                          }
-                        }}
-                        className="w-full px-2.5 py-1.5 text-xs border border-pink-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500/20 font-medium"
-                      />
+                {/* Inline Add New Flavor Box */}
+                {isAddingNewFlavor && (
+                  <div className="p-3 bg-white border border-pink-200 rounded-2xl flex items-center gap-2 shadow-2xs animate-in fade-in duration-150">
+                    <input
+                      type="text"
+                      placeholder="វាយបញ្ចូលឈ្មោះរសជាតិថ្មី (ឧ. ធុរេន, ពងទាប្រៃ, ស្លឹកតយ...)"
+                      value={newFlavorInput}
+                      onChange={(e) => setNewFlavorInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleAddNewFlavor(e);
+                        }
+                      }}
+                      className="w-full px-3 py-1.5 text-xs border border-pink-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500/20 font-medium"
+                      autoFocus
+                    />
+                    <button
+                      type="button"
+                      onClick={(e) => handleAddNewFlavor(e)}
+                      className="px-3.5 py-1.5 bg-pink-600 hover:bg-pink-700 text-white rounded-xl text-xs font-bold shrink-0 cursor-pointer shadow-xs active:scale-95 flex items-center gap-1"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>រក្សាទុក</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setIsAddingNewFlavor(false)}
+                      className="px-3 py-1.5 text-xs text-slate-500 hover:bg-slate-100 rounded-xl font-medium cursor-pointer"
+                    >
+                      បោះបង់
+                    </button>
+                  </div>
+                )}
+
+                {/* Interactive Flavors Grid - Outside cards for easy viewing and 1-tap picking */}
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 sm:gap-2.5">
+                  {allDisplayedFlavors.map((f, i) => {
+                    const isOut = isOutOfStockFlavor(f);
+                    const isSel = flavor === f;
+                    const emoji = getFlavorEmoji(f);
+
+                    return (
                       <button
+                        key={i}
                         type="button"
-                        onClick={(e) => handleAddNewFlavor(e)}
-                        className="px-2.5 py-1.5 bg-pink-600 hover:bg-pink-700 text-white rounded-xl text-xs font-bold shrink-0 cursor-pointer"
-                      >
-                        រក្សាទុក
-                      </button>
-                    </div>
-                  ) : (
-                    <>
-                      <select
-                        value={flavor}
-                        onChange={(e) => setFlavor(e.target.value)}
-                        className={`w-full px-3 py-2 text-sm border rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500 font-semibold ${
-                          isSelectedFlavorOut
-                            ? 'border-rose-300 bg-rose-50/20 text-slate-800'
-                            : 'border-slate-200 text-slate-800'
+                        onClick={() => {
+                          soundFx.playPop();
+                          setFlavor(f);
+                        }}
+                        className={`group p-2.5 sm:p-3 rounded-2xl border text-left transition-all relative flex items-start gap-2.5 cursor-pointer ${
+                          isSel
+                            ? 'bg-gradient-to-r from-pink-600 to-rose-500 text-white border-pink-600 shadow-md shadow-pink-500/25 ring-2 ring-pink-400 scale-[1.02]'
+                            : isOut
+                            ? 'bg-rose-50/70 border-rose-200 hover:border-rose-300 text-slate-700 hover:bg-rose-50'
+                            : 'bg-white border-slate-200/90 hover:border-pink-300 hover:bg-pink-50/40 text-slate-800 shadow-2xs hover:scale-[1.01]'
                         }`}
                       >
-                        {flavors.map((f, i) => {
-                          const isOut = isOutOfStockFlavor(f);
-                          return (
-                            <option
-                              key={i}
-                              value={f}
-                              className={isOut ? 'text-rose-600 font-bold' : 'text-slate-800'}
-                            >
-                              {f} {isOut ? '❌ (អស់ស្តុក)' : ''}
-                            </option>
-                          );
-                        })}
-                      </select>
+                        <span className={`text-xl shrink-0 p-1.5 rounded-xl flex items-center justify-center leading-none ${
+                          isSel ? 'bg-white/20' : isOut ? 'bg-rose-100/80 grayscale opacity-80' : 'bg-pink-50 text-slate-800'
+                        }`}>
+                          {emoji}
+                        </span>
 
-                      {isSelectedFlavorOut && (
-                        <div className="mt-1.5 p-2 bg-gradient-to-r from-amber-50 to-rose-50 border border-amber-200 rounded-xl flex items-center justify-between gap-2 animate-in fade-in">
-                          <div className="text-[11px] text-amber-900 font-bold flex items-center gap-1.5 min-w-0">
-                            <AlertCircle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-                            <span className="truncate">
-                              រសជាតិ <b>"{flavor}"</b> កំពុងដាក់ថា <b>អស់ស្តុក</b>
+                        <div className="min-w-0 flex-1">
+                          <div className={`text-xs font-black leading-tight line-clamp-2 ${
+                            isSel ? 'text-white' : isOut ? 'text-slate-600' : 'text-slate-800'
+                          }`}>
+                            {f}
+                          </div>
+
+                          {isOut && (
+                            <span className={`inline-block mt-1 text-[9px] font-black px-1.5 py-0.5 rounded-md border ${
+                              isSel
+                                ? 'bg-white/20 text-white border-white/30'
+                                : 'bg-rose-100 text-rose-700 border-rose-200'
+                            }`}>
+                              ❌ អស់ស្តុក
                             </span>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              soundFx.playSuccess();
-                              setFlavorAvailability(flavor, true);
-                            }}
-                            className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-black shadow-xs active:scale-95 cursor-pointer shrink-0 flex items-center gap-1"
-                            title="ចុចដើម្បីកំណត់រសជាតិនេះថាមានក្នុងស្តុកវិញភ្លាមៗ"
-                          >
-                            <CheckCircle2 className="w-3.5 h-3.5" />
-                            <span>ដាក់មានក្នុងស្តុកវិញ</span>
-                          </button>
+                          )}
                         </div>
-                      )}
 
-                      {flavors.length > 0 && outOfStockFlavorsCount === flavors.length && !isSelectedFlavorOut && (
-                        <div className="mt-1.5 p-2.5 bg-rose-50 border border-rose-200 rounded-xl flex items-center justify-between gap-2 animate-in fade-in">
-                          <div className="text-xs text-rose-800 font-bold flex items-center gap-1.5">
-                            <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
-                            <span>រសជាតិទាំងអស់កំពុងជាប់ "អស់ស្តុក"!</span>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              soundFx.playSuccess();
-                              markAllFlavorsAvailable();
-                            }}
-                            className="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-black shadow-sm active:scale-95 cursor-pointer shrink-0 flex items-center gap-1"
-                          >
-                            <RotateCcw className="w-3.5 h-3.5" />
-                            <span>ដាក់មានស្តុកទាំងអស់ (1 ចុច)</span>
-                          </button>
-                        </div>
-                      )}
-                    </>
-                  )}
+                        {isSel && (
+                          <CheckCircle2 className="w-4 h-4 shrink-0 text-white mt-0.5" />
+                        )}
+                      </button>
+                    );
+                  })}
                 </div>
+
+                {/* If selected flavor is out of stock, show fast 1-click replenish bar */}
+                {isSelectedFlavorOut && (
+                  <div className="p-2.5 bg-gradient-to-r from-amber-50 to-rose-50 border border-amber-200/90 rounded-2xl flex items-center justify-between gap-2 animate-in fade-in">
+                    <div className="text-xs text-amber-900 font-bold flex items-center gap-1.5 min-w-0">
+                      <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+                      <span className="truncate">
+                        រសជាតិ <b>"{flavor}"</b> កំពុងជាប់ស្ថានភាព <b>"អស់ស្តុក"</b>
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        soundFx.playSuccess();
+                        setFlavorAvailability(flavor, true);
+                      }}
+                      className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black shadow-xs active:scale-95 cursor-pointer shrink-0 flex items-center gap-1.5"
+                      title="ចុចដើម្បីកំណត់រសជាតិនេះថាមានក្នុងស្តុកវិញភ្លាមៗ"
+                    >
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      <span>ដាក់មានក្នុងស្តុកវិញ</span>
+                    </button>
+                  </div>
+                )}
+
+                {/* If all flavors are marked out of stock */}
+                {flavors.length > 0 && outOfStockFlavorsCount === flavors.length && !isSelectedFlavorOut && (
+                  <div className="p-2.5 bg-rose-50 border border-rose-200 rounded-2xl flex items-center justify-between gap-2 animate-in fade-in">
+                    <div className="text-xs text-rose-800 font-bold flex items-center gap-1.5">
+                      <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                      <span>រសជាតិទាំងអស់កំពុងជាប់ "អស់ស្តុក"!</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        soundFx.playSuccess();
+                        markAllFlavorsAvailable();
+                      }}
+                      className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black shadow-sm active:scale-95 cursor-pointer shrink-0 flex items-center gap-1"
+                    >
+                      <RotateCcw className="w-3.5 h-3.5" />
+                      <span>ដាក់មានស្តុកទាំងអស់ (1 ចុច)</span>
+                    </button>
+                  </div>
+                )}
               </div>
 
               {/* Party Add-ons & Supplies (មួក ទៀន ស្ព្រាយ) */}
