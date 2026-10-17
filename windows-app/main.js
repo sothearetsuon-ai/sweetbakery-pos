@@ -5,7 +5,7 @@ const https = require('https');
 const http = require('http');
 const { spawn } = require('child_process');
 
-const TARGET_ONLINE_URL = 'https://sweetbakery-8040d.web.app/';
+const TARGET_ONLINE_URL = 'https://sothearetsuon-ai.github.io/sweetbakery-pos/';
 
 let mainWindow;
 
@@ -65,7 +65,7 @@ function createWindow() {
 
   // Handle external links (open outside Electron in user's default browser)
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-    if (url.startsWith('http') && !url.includes('sweetbakery-8040d.web.app')) {
+    if (url.startsWith('http://') || url.startsWith('https://')) {
       shell.openExternal(url);
       return { action: 'deny' };
     }
@@ -146,17 +146,22 @@ function setupAppMenu() {
       label: 'ជំនួយ (Help)',
       submenu: [
         {
-          label: 'បើកក្នុង Browser ក្រៅ',
+          label: 'បើកផ្ទាំង POS ក្នុង Browser ក្រៅ',
           click: () => shell.openExternal(TARGET_ONLINE_URL)
         },
+        {
+          label: 'បើកផ្ទាំងកុម្ម៉ង់សម្រាប់ភ្ញៀវ (?order=true)',
+          click: () => shell.openExternal('https://sothearetsuon-ai.github.io/sweetbakery-pos/?order=true')
+        },
+        { type: 'separator' },
         {
           label: 'អំពី SweetBakery POS',
           click: () => {
             dialog.showMessageBox(mainWindow, {
               type: 'info',
               title: 'អំពី SweetBakery POS',
-              message: 'SweetBakery POS Desktop Edition v1.0',
-              detail: 'ប្រព័ន្ធគ្រប់គ្រងការលក់ និងស្តុកនំខេកទំនើប\nCloud Hosted: sweetbakery-8040d.web.app\nភ្ជាប់ប្រព័ន្ធស្វ័យប្រវត្តិ (Auto-Update Online)'
+              message: 'SweetBakery POS Desktop Edition v1.4.3',
+              detail: 'ប្រព័ន្ធគ្រប់គ្រងការលក់ និងស្តុកនំខេកទំនើប\nCloud Hosted: https://sothearetsuon-ai.github.io/sweetbakery-pos/\nភ្ជាប់ប្រព័ន្ធស្វ័យប្រវត្តិ (Auto-Update Online)'
             });
           }
         }

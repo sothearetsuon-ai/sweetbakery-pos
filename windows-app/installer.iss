@@ -4,7 +4,7 @@
 #define MyAppName "SweetBakery POS"
 #define MyAppVersion "1.4.3"
 #define MyAppPublisher "SweetBakery Team"
-#define MyAppURL "https://sweetbakery-8040d.web.app/"
+#define MyAppURL "https://sothearetsuon-ai.github.io/sweetbakery-pos/"
 #define MyAppExeName "SweetBakery-POS.exe"
 
 [Setup]

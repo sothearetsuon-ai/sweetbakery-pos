@@ -578,7 +578,7 @@ export const AppUpdateTab: React.FC = () => {
               </div>
               <div className="p-2.5 bg-purple-50 rounded-xl border border-purple-200">
                 <span className="font-bold text-purple-900 block mb-0.5">ជំហាន ២</span>
-                <span className="text-slate-600">ចូល <code>sweetbakery-8040d.web.app</code></span>
+                <span className="text-slate-600 truncate block">ចូល <code>sothearetsuon-ai.github.io/sweetbakery-pos</code></span>
               </div>
               <div className="p-2.5 bg-purple-50 rounded-xl border border-purple-200">
                 <span className="font-bold text-purple-900 block mb-0.5">ជំហាន ៣</span>
@@ -595,8 +595,8 @@ export const AppUpdateTab: React.FC = () => {
                 type="button"
                 onClick={() => {
                   soundFx.playPop();
-                  navigator.clipboard.writeText('https://sweetbakery-8040d.web.app');
-                  alert('បានចម្លង Link សម្រាប់បើកក្នុង Safari លើ iPhone ជោគជ័យ! ✅\nhttps://sweetbakery-8040d.web.app');
+                  navigator.clipboard.writeText('https://sothearetsuon-ai.github.io/sweetbakery-pos/');
+                  alert('បានចម្លង Link សម្រាប់បើកក្នុង Safari លើ iPhone ជោគជ័យ! ✅\nhttps://sothearetsuon-ai.github.io/sweetbakery-pos/');
                 }}
                 className="w-full sm:flex-1 py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 text-white rounded-xl text-xs sm:text-sm font-black transition-all flex items-center justify-center gap-2 shadow-md shadow-purple-600/25 cursor-pointer active:scale-95"
               >
