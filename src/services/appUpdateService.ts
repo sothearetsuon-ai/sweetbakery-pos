@@ -166,28 +166,40 @@ export const checkForAppUpdates = async (): Promise<AppUpdateInfo> => {
     console.warn('GitHub API check note:', ghErr);
   }
 
-  // 2. Also check version.json manifest
-  try {
-    const manifestRes = await fetchWithTimeout(`${manifestUrl}${cacheBuster}`);
-    if (manifestRes && manifestRes.ok) {
-      const data = await manifestRes.json();
-      const rawVer = (data.version || '').replace(/^v/i, '').trim();
-      if (rawVer && isVersionNewer(rawVer, foundLatestVersion)) {
-        foundLatestVersion = rawVer;
-        if (data.releaseDate) foundReleaseDate = data.releaseDate;
-        if (Array.isArray(data.releaseNotes) && data.releaseNotes.length > 0) {
+  // 2. Also check version.json manifests (checking multiple reliable endpoints)
+  const candidateUrls = [
+    manifestUrl,
+    'https://raw.githubusercontent.com/sothearetsuon-ai/sweetbakery-pos/main/version.json',
+    'https://sothearetsuon-ai.github.io/sweetbakery-pos/version.json',
+    './version.json',
+    '/version.json',
+  ];
+
+  for (const cUrl of candidateUrls) {
+    if (!cUrl) continue;
+    try {
+      const sep = cUrl.includes('?') ? '&' : '?';
+      const manifestRes = await fetchWithTimeout(`${cUrl}${sep}_t=${Date.now()}`);
+      if (manifestRes && manifestRes.ok) {
+        const data = await manifestRes.json();
+        const rawVer = (data.version || '').replace(/^v/i, '').trim();
+        if (rawVer && isVersionNewer(rawVer, foundLatestVersion)) {
+          foundLatestVersion = rawVer;
+          if (data.releaseDate) foundReleaseDate = data.releaseDate;
+          if (Array.isArray(data.releaseNotes) && data.releaseNotes.length > 0) {
+            foundReleaseNotes = data.releaseNotes;
+          }
+          if (data.apkDownloadUrl) foundApkUrl = data.apkDownloadUrl;
+          if (data.windowsInstallerUrl || data.windowsDownloadUrl) {
+            foundWinExeUrl = data.windowsInstallerUrl || data.windowsDownloadUrl;
+          }
+        } else if (!foundReleaseNotes.length && Array.isArray(data.releaseNotes)) {
           foundReleaseNotes = data.releaseNotes;
         }
-        if (data.apkDownloadUrl) foundApkUrl = data.apkDownloadUrl;
-        if (data.windowsInstallerUrl || data.windowsDownloadUrl) {
-          foundWinExeUrl = data.windowsInstallerUrl || data.windowsDownloadUrl;
-        }
-      } else if (!foundReleaseNotes.length && Array.isArray(data.releaseNotes)) {
-        foundReleaseNotes = data.releaseNotes;
       }
+    } catch (err) {
+      // Continue to next candidate
     }
-  } catch (err) {
-    console.warn('version.json fetch note:', err);
   }
 
   const hasNew = isVersionNewer(foundLatestVersion, currentVer);

@@ -427,24 +427,38 @@ export const AppUpdateTab: React.FC = () => {
                   </div>
                 </div>
 
+                {updateInfo.releaseNotes && updateInfo.releaseNotes.length > 0 && (
+                  <div className="bg-white/95 p-3.5 rounded-2xl border border-emerald-200 space-y-1.5 shadow-2xs">
+                    <p className="text-xs sm:text-sm font-black text-slate-700 flex items-center gap-1.5">
+                      <span>📋</span>
+                      <span>មុខងារថ្មីៗក្នុងកំណែ v{updateInfo.latestVersion || currentVersion} (What's New)៖</span>
+                    </p>
+                    <ul className="text-xs sm:text-sm text-slate-600 space-y-1 list-disc list-inside font-medium">
+                      {updateInfo.releaseNotes.map((note, idx) => (
+                        <li key={idx} className="leading-relaxed">{note}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
                 <div className="pt-2 border-t border-emerald-200/60 flex flex-col sm:flex-row items-center gap-2.5">
                   <span className="text-xs font-bold text-slate-600">ចង់ទាញយកដំឡើងឡើងវិញ?</span>
-                  <button
-                    type="button"
-                    onClick={handleDownloadAndroid}
-                    disabled={isDownloading}
-                    className="w-full sm:w-auto px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 shadow-xs"
+                  <a
+                    href="./SweetBakery-Android.apk"
+                    download="SweetBakery-Android.apk"
+                    onClick={() => soundFx.playSuccess()}
+                    className="w-full sm:w-auto px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 shadow-xs text-center"
                   >
                     <Smartphone className="w-3.5 h-3.5" />
-                    <span>📱 ទាញយក APK ឡើងវិញ</span>
-                  </button>
+                    <span>📱 ទាញយក APK (v{updateInfo.latestVersion || currentVersion})</span>
+                  </a>
                   <button
                     type="button"
                     onClick={handleDownloadWindows}
                     className="w-full sm:w-auto px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 shadow-xs"
                   >
                     <Monitor className="w-3.5 h-3.5" />
-                    <span>💻 ទាញយក Windows Setup ឡើងវិញ</span>
+                    <span>💻 ទាញយក Windows Setup</span>
                   </button>
                 </div>
               </div>
