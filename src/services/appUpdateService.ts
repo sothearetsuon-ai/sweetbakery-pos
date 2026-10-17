@@ -81,6 +81,13 @@ export const getNativeAppVersion = (): string => {
       return CURRENT_APP_VERSION;
     }
   }
+  if ((window as any).SweetBakeryDesktop?.getAppVersion) {
+    try {
+      return (window as any).SweetBakeryDesktop.getAppVersion();
+    } catch {
+      return CURRENT_APP_VERSION;
+    }
+  }
   return CURRENT_APP_VERSION;
 };
 
