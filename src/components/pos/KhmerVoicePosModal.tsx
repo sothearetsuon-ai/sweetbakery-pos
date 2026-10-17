@@ -21,7 +21,7 @@ import confetti from 'canvas-confetti';
 import { Product } from '../../types';
 import { parseKhmerVoiceCommand, VoicePosAction } from '../../services/khmerVoicePosService';
 import { soundFx } from '../../utils/audio';
-import { getGeminiApiKey } from '../../services/geminiInvoiceService';
+import { getGeminiApiKey, getGeminiApiKeyAsync } from '../../services/geminiInvoiceService';
 
 interface KhmerVoicePosModalProps {
   isOpen: boolean;
@@ -189,12 +189,16 @@ export const KhmerVoicePosModal: React.FC<KhmerVoicePosModalProps> = ({
     setIsListening(false);
   };
 
-  // Transcribe recorded audio with Gemini AI
+  // Transcribe recorded audio with Gemini AI (supports multi-model fallback to eliminate 404s)
   const transcribeWithGemini = async (audioBlob: Blob, mimeType: string) => {
     setIsAiProcessing(true);
     setStatusText('✨ AI កំពុងស្ដាប់ និងបកប្រែសំឡេងខ្មែរ (Gemini AI Speech)...');
 
-    const apiKey = getGeminiApiKey();
+    let apiKey = getGeminiApiKey();
+    if (!apiKey) {
+      apiKey = await getGeminiApiKeyAsync();
+    }
+
     if (!apiKey) {
       setIsAiProcessing(false);
       setErrorText('💡 លើ Windows៖ ដើម្បីឱ្យ AI ស្ដាប់សំឡេង សូមបញ្ចូល Gemini API Key ក្នុង Settings។ ឬប្រើ Windows Voice Typing (Win + H) និយាយផ្ទាល់បានភ្លាមៗ!');
@@ -214,40 +218,123 @@ export const KhmerVoicePosModal: React.FC<KhmerVoicePosModalProps> = ({
         reader.readAsDataURL(audioBlob);
       });
 
-      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [
-            {
-              parts: [
+      // Strip extra parameters like ';codecs=opus' so Gemini gets a pure mimeType
+      const cleanMimeType = (mimeType || 'audio/webm').split(';')[0].trim();
+
+      // Gather candidate models in order of speed, quota stability, and 2026 availability
+      let cachedModels: string[] = [];
+      try {
+        const cachedStr = localStorage.getItem('sweetbakery_usable_models');
+        if (cachedStr) {
+          const parsed = JSON.parse(cachedStr);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            cachedModels = parsed;
+          }
+        }
+      } catch {}
+
+      const activeModel = localStorage.getItem('sweetbakery_gemini_active_model');
+      const defaultCandidates = [
+        'gemini-2.5-flash',
+        'gemini-2.0-flash',
+        'gemini-1.5-flash-latest',
+        'gemini-1.5-flash',
+        'gemini-2.0-flash-exp',
+        'gemini-1.5-flash-8b',
+      ];
+
+      const candidateModels = Array.from(
+        new Set([
+          ...(activeModel ? [activeModel] : []),
+          ...cachedModels,
+          ...defaultCandidates,
+        ])
+      ).filter(Boolean);
+
+      let transcribedText = '';
+      let lastErrorMsg = '';
+
+      for (const model of candidateModels) {
+        try {
+          const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey.trim()}`;
+          const response = await fetch(endpoint, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-goog-api-key': apiKey.trim(),
+            },
+            body: JSON.stringify({
+              contents: [
                 {
-                  text: 'Listen to the Khmer speech in this audio clip. Transcribe it into Khmer text accurately (e.g., product names and numbers, or checkout commands like "គិតលុយ"). Return ONLY the recognized Khmer text. Do not add markdown or quotes.',
-                },
-                {
-                  inlineData: {
-                    mimeType: mimeType || 'audio/webm',
-                    data: base64Data,
-                  },
+                  parts: [
+                    {
+                      text: 'Listen to the Khmer speech in this audio clip. Transcribe it into Khmer text accurately (e.g., product names and numbers, or checkout commands like "គិតលុយ"). Return ONLY the recognized Khmer text. Do not add markdown or quotes.',
+                    },
+                    {
+                      inlineData: {
+                        mimeType: cleanMimeType,
+                        data: base64Data,
+                      },
+                    },
+                  ],
                 },
               ],
-            },
-          ],
-        }),
-      });
+            }),
+          });
 
-      if (!response.ok) {
-        throw new Error(`AI Service Error (${response.status})`);
+          if (response.ok) {
+            const resData = await response.json();
+            transcribedText = resData.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
+            try {
+              localStorage.setItem('sweetbakery_gemini_active_model', model);
+            } catch {}
+            break; // Success!
+          }
+
+          const errorData = await response.json().catch(() => ({}));
+          const rawMsg = errorData.error?.message || `HTTP ${response.status}: ${response.statusText}`;
+
+          if (
+            response.status === 404 ||
+            response.status === 429 ||
+            response.status === 503 ||
+            rawMsg.toLowerCase().includes('not found') ||
+            rawMsg.toLowerCase().includes('quota') ||
+            rawMsg.toLowerCase().includes('rate limit')
+          ) {
+            console.warn(`Model ${model} returned ${response.status} (${rawMsg}), trying next fallback model...`);
+            lastErrorMsg = rawMsg;
+            continue;
+          }
+
+          if (
+            rawMsg.toLowerCase().includes('api key not valid') ||
+            rawMsg.toLowerCase().includes('invalid authentication')
+          ) {
+            lastErrorMsg = 'Google API Key មិនត្រឹមត្រូវ សូមពិនិត្យមើលក្នុង Settings';
+            break;
+          }
+
+          lastErrorMsg = rawMsg;
+        } catch (callErr: any) {
+          console.warn(`Error connecting to Gemini model ${model}:`, callErr);
+          lastErrorMsg = callErr.message || 'Network error';
+        }
       }
-
-      const resData = await response.json();
-      const transcribedText = resData.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
 
       setIsAiProcessing(false);
 
       if (transcribedText) {
         processSpokenText(transcribedText);
+      } else if (lastErrorMsg) {
+        let userFriendly = lastErrorMsg;
+        if (lastErrorMsg.includes('404') || lastErrorMsg.toLowerCase().includes('not found')) {
+          userFriendly = 'Google Gemini ឆ្លើយតប (404)៖ សូមពិនិត្យមើល API Key ក្នុង Settings ឬប្រើ Windows Voice Typing (Win + H) ជំនួសវិញ';
+        } else if (lastErrorMsg.toLowerCase().includes('quota')) {
+          userFriendly = 'Quota ការប្រើប្រាស់ Gemini ពេញហើយ (Quota Exceeded)។ សូមរង់ចាំបន្តិច ឬប្រើ Windows Voice Typing (Win + H)';
+        }
+        setErrorText('មិនអាចបកប្រែសំឡេងបានទេ៖ ' + userFriendly);
+        setStatusText('សូមសាកល្បងនិយាយម្តងទៀត ឬចុចលើពាក្យគំរូខាងក្រោម 👇');
       } else {
         setStatusText('មិនបានឮសំឡេងច្បាស់លាស់ទេ សូមសាកល្បងនិយាយម្តងទៀត');
       }
