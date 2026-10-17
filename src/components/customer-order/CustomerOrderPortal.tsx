@@ -28,6 +28,7 @@ import {
   AlertCircle,
   X,
   MapPin,
+  Bot,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { useBakery } from '../../context/BakeryContext';
@@ -38,6 +39,7 @@ import { getProductImageUrl } from '../../utils/imagePath';
 import { formatDateDMY } from '../../utils/dateUtils';
 import { isTelegramWebApp, getTelegramUser, tgHapticImpact, tgHapticNotification } from '../../services/telegramWebApp';
 import { StoreLocationModal } from '../common/StoreLocationModal';
+import { CustomerAiGuideModal } from './CustomerAiGuideModal';
 
 const CAKE_SIZES = [
   { id: '1.5 ទឹក', label: '1.5 ទឹក (~15cm)', desc: 'សម្រាប់ 2-4 នាក់', priceUsd: 12 },
@@ -242,6 +244,39 @@ export const CustomerOrderPortal: React.FC = () => {
   // Store Location In-App Modal State
   const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
 
+  // AI Ordering Assistant Modal State
+  const [isAiGuideOpen, setIsAiGuideOpen] = useState(false);
+
+  // Apply suggestions from AI directly to form
+  const handleApplySizeBudget = (khr: number, sizeHint?: string) => {
+    setCakePriceKhrStr(khr.toString());
+    if (sizeHint) {
+      setSelectedSize(sizeHint);
+    }
+    soundFx.playSuccess();
+  };
+
+  const handleApplyFlavor = (flavorLabel: string, isOther?: boolean, customText?: string) => {
+    if (isOther) {
+      setIsOtherFlavor(true);
+      if (customText) setCustomFlavorText(customText);
+    } else {
+      setIsOtherFlavor(false);
+      setSelectedFlavor(flavorLabel);
+    }
+    soundFx.playSuccess();
+  };
+
+  const handleApplyInscription = (text: string) => {
+    setInscription(text);
+    soundFx.playSuccess();
+  };
+
+  const handleGoToStep = (targetStep: 1 | 2 | 3 | 4) => {
+    setStep(targetStep);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   // Deposit Payment State
   // '50%' | '30%' | '100%' | 'custom'
   const [depositOption, setDepositOption] = useState<'50%' | '30%' | '100%' | 'custom'>('50%');
@@ -272,6 +307,26 @@ export const CustomerOrderPortal: React.FC = () => {
       { id: 'plates_forks', nameKh: 'ចាន & ស្លាបព្រាបន្ថែម (Extra Plates & Forks)', priceUsd: 1, priceKhr: 4100 },
     ];
   }, [partyAddons, exchangeRate]);
+
+  // Context bundle for AI Assistant
+  const aiContext = useMemo(() => ({
+    storeName: storeInfo.nameKh || 'ហាងនំបុ័ង & នំខួបកំណើត',
+    storePhone: storeInfo.phone || '0978707000',
+    storeAddress: storeInfo.address || 'រតនៈគីរី អូរយ៉ាដាវ',
+    exchangeRate,
+    availableProducts: products,
+    availableFlavors: cakeFlavorList.map((f) => ({
+      label: f.label,
+      nameKh: f.nameKh,
+      isAvailable: f.isAvailable,
+    })),
+    currentStep: step,
+    selectedCakeName: customCakeName,
+    selectedSize: finalSize,
+    cakePriceKhr,
+    selectedFlavor: finalFlavor,
+    inscription,
+  }), [storeInfo, exchangeRate, products, cakeFlavorList, step, customCakeName, finalSize, cakePriceKhr, finalFlavor, inscription]);
 
   // Filtered Products for Catalog
   const filteredProducts = useMemo(() => {
@@ -535,8 +590,21 @@ export const CustomerOrderPortal: React.FC = () => {
             </div>
           </div>
 
-          {/* Customer Support Contact */}
+          {/* Customer Support Contact & AI Assistant */}
           <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                soundFx.playPop();
+                setIsAiGuideOpen(true);
+              }}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-pink-600 to-rose-500 hover:from-pink-700 hover:to-rose-600 text-white rounded-xl text-xs font-black transition-all border border-pink-400 active:scale-95 shadow-xs shadow-pink-500/25 cursor-pointer"
+              title="សួរជំនួយការ AI ពីរបៀបកុម្ម៉ង់"
+            >
+              <Bot className="w-3.5 h-3.5" />
+              <span>ជំនួយការ AI</span>
+            </button>
+
             <a
               href={`tel:${storeInfo.phone || '012345678'}`}
               className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-xl text-xs font-bold transition-all border border-rose-200/80 active:scale-95 shadow-2xs"
@@ -677,6 +745,42 @@ export const CustomerOrderPortal: React.FC = () => {
               {/* Decorative Background Shape */}
               <div className="absolute right-[-20px] bottom-[-20px] text-8xl sm:text-9xl opacity-20 select-none pointer-events-none">
                 🎂
+              </div>
+            </div>
+
+            {/* AI Assistant Quick Guide Banner */}
+            <div
+              onClick={() => {
+                soundFx.playPop();
+                setIsAiGuideOpen(true);
+              }}
+              className="bg-gradient-to-r from-rose-50 via-pink-50 to-purple-50 border border-pink-200/80 rounded-3xl p-3.5 sm:p-4 flex items-center justify-between cursor-pointer hover:border-pink-400 hover:shadow-md transition-all group shadow-2xs"
+            >
+              <div className="flex items-center gap-3">
+                <div className="relative shrink-0">
+                  <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-pink-500 via-rose-500 to-purple-500 text-white flex items-center justify-center text-2xl shadow-sm group-hover:scale-105 group-hover:rotate-6 transition-transform">
+                    🤖
+                  </div>
+                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 border-2 border-white absolute -top-0.5 -right-0.5 animate-pulse" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="font-black text-xs sm:text-sm text-slate-800">
+                      ត្រូវការជំនួយពីរបៀបកុម្ម៉ង់ ឬជ្រើសរើសនំ?
+                    </span>
+                    <span className="px-2 py-0.5 bg-pink-100 text-pink-700 rounded-full text-[10px] font-black uppercase">
+                      AI Assistant
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-pink-700 font-medium mt-0.5">
+                    ចុចសួរ AI ណែនាំទំហំ រសជាតិឆ្ងាញ់ៗ និងជួយតែងអក្សរជូនពរលើនំបានភ្លាមៗ!
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-1 px-3 py-1.5 bg-white text-pink-600 rounded-xl text-xs font-black shadow-2xs group-hover:bg-pink-600 group-hover:text-white transition-all shrink-0 ml-2">
+                <Sparkles className="w-3.5 h-3.5 text-amber-400 group-hover:text-white" />
+                <span className="hidden sm:inline">សួរ AI ឥឡូវនេះ</span>
+                <ChevronRight className="w-4 h-4" />
               </div>
             </div>
 
@@ -854,6 +958,18 @@ export const CustomerOrderPortal: React.FC = () => {
                 </label>
 
                 <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      soundFx.playPop();
+                      setIsAiGuideOpen(true);
+                    }}
+                    className="text-[11px] font-bold text-pink-700 hover:text-pink-800 flex items-center gap-1 cursor-pointer bg-white px-2.5 py-1 rounded-xl border border-pink-200 shadow-2xs hover:bg-pink-50 transition-colors"
+                  >
+                    <Sparkles className="w-3 h-3 text-pink-500" />
+                    <span>សួរ AI ណែនាំទំហំ</span>
+                  </button>
+
                   <span className="text-xs sm:text-sm font-black text-pink-700 bg-white px-3 py-1 rounded-full border border-pink-200 shadow-2xs">
                     {cakePriceKhr > 0 ? `${cakePriceKhr.toLocaleString()} ៛` : '០ ៛'}
                     <span className="text-slate-400 font-semibold ml-1 text-xs">
@@ -943,12 +1059,29 @@ export const CustomerOrderPortal: React.FC = () => {
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <label className="text-xs font-black text-slate-800 flex items-center gap-1.5">
-                  <span className="text-base">🍰</span>
+                  <span className="w-7 h-7 rounded-xl bg-gradient-to-tr from-pink-500 to-rose-400 text-white flex items-center justify-center text-xs shadow-xs">
+                    🍓
+                  </span>
                   <span>ជ្រើសរើសរសជាតិនំ (Cake Flavor) *</span>
                 </label>
-                <span className="text-[11px] font-bold text-pink-700 bg-pink-50 px-2.5 py-0.5 rounded-full border border-pink-100 max-w-[200px] truncate">
-                  {finalFlavor}
-                </span>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      soundFx.playPop();
+                      setIsAiGuideOpen(true);
+                    }}
+                    className="text-[11px] font-bold text-pink-700 hover:text-pink-800 flex items-center gap-1 cursor-pointer bg-white px-2.5 py-1 rounded-xl border border-pink-200 shadow-2xs hover:bg-pink-50 transition-colors"
+                  >
+                    <Sparkles className="w-3 h-3 text-pink-500" />
+                    <span>សួរ AI ណែនាំរសជាតិ</span>
+                  </button>
+
+                  <span className="text-[11px] font-bold text-pink-700 bg-pink-50 px-2.5 py-0.5 rounded-full border border-pink-100 max-w-[200px] truncate">
+                    {finalFlavor}
+                  </span>
+                </div>
               </div>
 
               {/* Grid of flavors with emojis, stock status & clear labels */}
@@ -1035,7 +1168,20 @@ export const CustomerOrderPortal: React.FC = () => {
                 <span className="flex items-center gap-1.5">
                   <span>✍️ អក្សរជូនពរលើនំ (Inscription on Cake)</span>
                 </span>
-                <span className="text-[10px] text-slate-400">ឥតគិតថ្លៃ (Free)</span>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      soundFx.playPop();
+                      setIsAiGuideOpen(true);
+                    }}
+                    className="text-[11px] font-bold text-pink-700 hover:text-pink-800 flex items-center gap-1 cursor-pointer bg-pink-50 hover:bg-pink-100 px-2.5 py-1 rounded-xl border border-pink-200 shadow-2xs transition-colors"
+                  >
+                    <Sparkles className="w-3 h-3 text-pink-500" />
+                    <span>ឱ្យ AI ជួយគិតពាក្យជូនពរ</span>
+                  </button>
+                  <span className="text-[10px] text-slate-400">ឥតគិតថ្លៃ (Free)</span>
+                </div>
               </label>
               <input
                 type="text"
@@ -1744,6 +1890,47 @@ export const CustomerOrderPortal: React.FC = () => {
         address={storeInfo.address || 'រតនៈគីរី អូរយ៉ាដាវ'}
         phone={storeInfo.phone || '0978707000'}
         mapsUrl={storeInfo.mapsUrl}
+      />
+
+      {/* Floating AI Assistant Launcher Button */}
+      {step < 5 && (
+        <div className="fixed bottom-5 right-4 sm:bottom-6 sm:right-6 z-40">
+          <button
+            type="button"
+            onClick={() => {
+              soundFx.playPop();
+              setIsAiGuideOpen(true);
+            }}
+            className="group flex items-center gap-2.5 px-3.5 py-2.5 sm:px-4 sm:py-3 bg-gradient-to-r from-pink-600 via-rose-600 to-rose-500 hover:from-pink-700 hover:to-rose-700 text-white rounded-full shadow-lg shadow-pink-600/30 hover:shadow-xl hover:shadow-pink-600/40 border-2 border-white transition-all active:scale-95 cursor-pointer"
+            title="ចុចសួរជំនួយការ AI ពីរបៀបកុម្ម៉ង់"
+          >
+            <div className="relative shrink-0">
+              <span className="text-xl sm:text-2xl group-hover:scale-110 transition-transform block">
+                🤖
+              </span>
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 border-2 border-white absolute -top-0.5 -right-0.5 animate-pulse" />
+            </div>
+            <div className="text-left">
+              <div className="flex items-center gap-1 leading-none">
+                <span className="text-xs sm:text-sm font-black tracking-tight">ជំនួយការ AI</span>
+                <Sparkles className="w-3 h-3 text-amber-300 animate-spin [animation-duration:4s]" />
+              </div>
+              <span className="text-[10px] text-pink-100 font-medium block mt-0.5">ណែនាំរបៀបកុម្ម៉ង់</span>
+            </div>
+          </button>
+        </div>
+      )}
+
+      {/* AI Ordering Assistant Guide Modal */}
+      <CustomerAiGuideModal
+        isOpen={isAiGuideOpen}
+        onClose={() => setIsAiGuideOpen(false)}
+        context={aiContext}
+        onApplySizeBudget={handleApplySizeBudget}
+        onApplyFlavor={handleApplyFlavor}
+        onApplyInscription={handleApplyInscription}
+        onGoToStep={handleGoToStep}
+        onOpenStoreLocation={() => setIsLocationModalOpen(true)}
       />
     </div>
   );

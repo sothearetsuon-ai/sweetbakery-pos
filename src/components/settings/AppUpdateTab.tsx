@@ -488,14 +488,15 @@ export const AppUpdateTab: React.FC = () => {
             </div>
 
             <div className="space-y-2 pt-2">
-              <button
-                type="button"
-                onClick={handleDownloadAndroid}
-                className="w-full py-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-xl text-xs sm:text-sm font-black transition-all flex items-center justify-center gap-2 shadow-md shadow-emerald-600/25 cursor-pointer active:scale-95"
+              <a
+                href="./SweetBakery-Android.apk"
+                download="SweetBakery-Android.apk"
+                onClick={() => soundFx.playSuccess()}
+                className="w-full py-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-xl text-xs sm:text-sm font-black transition-all flex items-center justify-center gap-2 shadow-md shadow-emerald-600/25 cursor-pointer active:scale-95 text-center"
               >
                 <Download className="w-4 h-4 animate-bounce" />
-                <span>📥 ទាញយក APK (SweetBakery-Android.apk ~9.1 MB)</span>
-              </button>
+                <span>📥 ទាញយក APK ដោយផ្ទាល់ (SweetBakery-Android.apk v{currentVersion})</span>
+              </a>
 
               <a
                 href="https://raw.githubusercontent.com/sothearetsuon-ai/sweetbakery-pos/main/SweetBakery-Android.apk"
@@ -518,7 +519,7 @@ export const AppUpdateTab: React.FC = () => {
                 <span>💻 កុំព្យូទ័រ Windows (SweetBakery-POS-Setup.exe)</span>
               </div>
               <p className="text-xs text-slate-500 leading-relaxed font-medium">
-                ទំហំ៖ <strong>~113 MB</strong> | កម្មវិធីដំឡើងស្តង់ដារ Windows Official Installer ដំឡើងម្តងប្រើបានរហូត មិនបាត់ពេល restart ឡើយ។
+                ទំហំ៖ <strong>Windows Official Installer</strong> | កម្មវិធីដំឡើងស្តង់ដារ Windows ដំឡើងម្តងប្រើបានរហូត មិនបាត់ពេល restart ឡើយ។
               </p>
             </div>
 
@@ -529,7 +530,7 @@ export const AppUpdateTab: React.FC = () => {
                 className="w-full py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl text-xs sm:text-sm font-black transition-all flex items-center justify-center gap-2 shadow-md shadow-blue-600/25 cursor-pointer active:scale-95"
               >
                 <Download className="w-4 h-4" />
-                <span>📥 ទាញយក Windows Setup (SweetBakery-POS-Setup.exe ~113 MB)</span>
+                <span>📥 ទាញយក Windows Setup (SweetBakery-POS-Setup.exe v{currentVersion})</span>
               </button>
 
               <a
@@ -539,7 +540,7 @@ export const AppUpdateTab: React.FC = () => {
                 className="w-full py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 border border-slate-300 cursor-pointer active:scale-95"
               >
                 <ExternalLink className="w-3.5 h-3.5 text-slate-500" />
-                <span>បើកទំព័រ GitHub Releases (v1.2.0)</span>
+                <span>បើកទំព័រ GitHub Releases ផ្លូវការ (v{currentVersion})</span>
               </a>
             </div>
           </div>

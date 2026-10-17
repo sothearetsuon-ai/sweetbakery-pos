@@ -15,8 +15,8 @@ export interface AppUpdateInfo {
   mandatory?: boolean;
 }
 
-export const CURRENT_APP_VERSION = '1.3.1';
-export const CURRENT_BUILD_DATE = '2026-10-16';
+export const CURRENT_APP_VERSION = '1.4.0';
+export const CURRENT_BUILD_DATE = '2026-10-17';
 
 // Storage key for custom update server URL if configured
 const STORAGE_KEY_UPDATE_URL = 'sweetbakery_update_manifest_url';
@@ -198,9 +198,10 @@ export const checkForAppUpdates = async (): Promise<AppUpdateInfo> => {
     latestVersion: foundLatestVersion,
     releaseDate: foundReleaseDate,
     releaseNotes: foundReleaseNotes.length > 0 ? foundReleaseNotes : [
-      'ប្រព័ន្ធ In-App Auto Update ស្តង់ដារថ្មី៖ ទាញយកអាប់ដែតបានរលូន និងលឿនរហ័ស ទាំងលើ Windows និង Android',
-      'របារទាញយក Progress Bar ផ្ទាល់៖ បង្ហាញភាគរយ % និងទំហំ MB កំពុងទាញយកជាក់ស្តែង',
-      'ការដំឡើងស្វ័យប្រវត្ត (1-Click Auto Install) ដោយសុវត្ថិភាព មិនបាត់បង់ទិន្នន័យ',
+      '🤖 ជំនួយការ AI ណែនាំកុម្ម៉ង់នំខេក (Customer Order AI Guide)៖ ឆ្លាតវៃជួយណែនាំភ្ញៀវជ្រើសរើសទំហំ រសជាតិ និងអក្សរលើនំ គាំទ្រសំឡេង (Voice) & Khmer Audio TTS',
+      '📊 ជំនួយការបូកសរុបរបាយការណ៍លក់ និងចំណាយប្រចាំថ្ងៃ + ប្រចាំខែស្វ័យប្រវត្តិ៖ ផ្ញើចូល Telegram រៀងរាល់ម៉ោង ៩:០០ (ចំណូល, KHQR, ចំណាយ COGS/OPEX, ចំណេញសុទ្ធ & AI Insights)',
+      '✈️ ប៊ូតុងផ្ញើរបាយការណ៍ទៅ Telegram ភ្លាមៗ (Instant Report Dispatch) ក្នុងផ្ទាំង Reports Dashboard',
+      '⚡ ពង្រឹងស្ថេរភាព និងល្បឿនប្រព័ន្ធទូទាត់ POS ព្រមទាំង In-App Auto Update ស្តង់ដារថ្មី មិនបាត់បង់ទិន្នន័យ',
     ],
     apkDownloadUrl: foundApkUrl,
     windowsDownloadUrl: foundWinExeUrl,

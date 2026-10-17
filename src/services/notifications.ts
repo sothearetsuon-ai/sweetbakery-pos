@@ -1,6 +1,6 @@
-import { NotificationConfig, CustomCakeOrder, Expense, Ingredient, StoreInfo } from '../types';
+import { NotificationConfig, CustomCakeOrder, Expense, Ingredient, StoreInfo, CompletedSale } from '../types';
 import { soundFx } from '../utils/audio';
-import { notifyTelegramExpenseDueAlert, isDemoModeActive } from './telegram';
+import { notifyTelegramExpenseDueAlert, sendTelegramDailyReport, getStoredTelegramConfig, isDemoModeActive } from './telegram';
 
 const STORAGE_KEY = 'bakery_notification_config';
 
@@ -188,6 +188,7 @@ export const runPeriodicNotificationChecks = (params: {
   customOrders: CustomCakeOrder[];
   expenses: Expense[];
   ingredients: Ingredient[];
+  sales?: CompletedSale[];
   storeInfo?: StoreInfo;
   exchangeRate?: number;
 }) => {
@@ -344,5 +345,34 @@ export const runPeriodicNotificationChecks = (params: {
         notifyTelegramExpenseDueAlert(expense, diffDays, params.storeInfo, exRate).catch(() => {});
       }
     });
+  }
+
+  // 5. Daily & Monthly Summary Report to Telegram (Default at 21:00 or 09:00 as configured)
+  const tgConfig = getStoredTelegramConfig();
+  if (tgConfig.enabled && tgConfig.notifyDailyReport !== false && tgConfig.botToken && tgConfig.chatId) {
+    const reportTime = tgConfig.dailyReportTime || '21:00';
+    if (currentTimeStr === reportTime) {
+      const tag = `tg-daily-report-${todayStr}-${reportTime}`;
+      if (!hasFiredToday(tag, todayStr)) {
+        markFiredToday(tag, todayStr);
+        sendTelegramDailyReport({
+          sales: params.sales || [],
+          expenses: params.expenses || [],
+          customOrders: params.customOrders || [],
+          storeInfo: params.storeInfo,
+          exchangeRate: params.exchangeRate,
+          targetDate: todayStr,
+        }).then((res) => {
+          if (res.success) {
+            sendDeviceNotification('📊 បានផ្ញើរបាយការណ៍បូកសរុបទៅ Telegram', {
+              body: `របាយការណ៍បូកសរុបការលក់ និងចំណាយប្រចាំថ្ងៃ-ខែ ត្រូវបានផ្ញើចូល Telegram ជោគជ័យ!`,
+              tag,
+            });
+          }
+        }).catch((err) => {
+          console.error('[Auto Daily Report] Failed to send report to Telegram:', err);
+        });
+      }
+    }
   }
 };

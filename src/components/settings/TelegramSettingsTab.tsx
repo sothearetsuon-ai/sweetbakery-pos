@@ -16,6 +16,7 @@ import {
   Receipt,
   Clock,
   Lock,
+  BarChart3,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import {
@@ -25,12 +26,13 @@ import {
   testTelegramConnection,
   setTelegramMenuButton,
   resetTelegramMenuButton,
+  sendTelegramDailyReport,
 } from '../../services/telegram';
 import { useBakery } from '../../context/BakeryContext';
 import { soundFx } from '../../utils/audio';
 
 export const TelegramSettingsTab: React.FC = () => {
-  const { isDemoMode, currentStaff } = useBakery();
+  const { isDemoMode, currentStaff, sales, expenses, customOrders, storeInfo, exchangeRate } = useBakery();
 
   if (currentStaff.role !== 'ADMIN') {
     return (
@@ -68,9 +70,45 @@ export const TelegramSettingsTab: React.FC = () => {
   const [showToken, setShowToken] = useState(false);
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
-  const [savedSuccess, setSavedSuccess] = useState(false);
   const [isConnectingMenu, setIsConnectingMenu] = useState(false);
   const [menuConnectResult, setMenuConnectResult] = useState<{ success: boolean; message: string } | null>(null);
+  const [isSendingReportTest, setIsSendingReportTest] = useState(false);
+  const [reportSendResult, setReportSendResult] = useState<{ success: boolean; message: string } | null>(null);
+  const [savedSuccess, setSavedSuccess] = useState(false);
+
+  const handleSendDailyReportTest = async () => {
+    if (!config.botToken || !config.chatId) {
+      alert('សូមបញ្ចូល Bot Token និង Chat ID ជាមុនសិន!');
+      return;
+    }
+    setIsSendingReportTest(true);
+    setReportSendResult(null);
+    soundFx.playPop();
+
+    try {
+      const res = await sendTelegramDailyReport(
+        {
+          sales,
+          expenses,
+          customOrders,
+          storeInfo,
+          exchangeRate,
+        },
+        true // isManual = true
+      );
+      setIsSendingReportTest(false);
+      setReportSendResult(res);
+      if (res.success) {
+        soundFx.playSuccess();
+        try {
+          confetti({ particleCount: 60, spread: 70, origin: { y: 0.6 } });
+        } catch (e) {}
+      }
+    } catch (err: any) {
+      setIsSendingReportTest(false);
+      setReportSendResult({ success: false, message: err?.message || 'Error sending report' });
+    }
+  };
 
   const handleAutoConnectMenu = async () => {
     if (!config.botToken) {
@@ -437,6 +475,87 @@ export const TelegramSettingsTab: React.FC = () => {
                 </p>
               </div>
             </label>
+
+            {/* Daily & Monthly Summary Report */}
+            <div className="p-3.5 rounded-2xl border border-sky-200/90 bg-gradient-to-r from-sky-50/50 via-indigo-50/30 to-pink-50/30 space-y-3">
+              <label className="flex items-start gap-3 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={config.notifyDailyReport ?? true}
+                  onChange={(e) => updateConfig({ ...config, notifyDailyReport: e.target.checked })}
+                  className="mt-0.5 w-4 h-4 rounded text-sky-600 focus:ring-0 cursor-pointer"
+                />
+                <div className="flex-1">
+                  <div className="text-xs font-black text-slate-800 flex items-center gap-1.5 flex-wrap">
+                    <BarChart3 className="w-3.5 h-3.5 text-sky-600" />
+                    <span>របាយការណ៍បូកសរុបការលក់ & ចំណាយប្រចាំថ្ងៃ-ខែ (Daily & Monthly Summary Report)</span>
+                    <span className="px-2 py-0.5 bg-sky-100 text-sky-700 rounded-full text-[10px] font-black uppercase">
+                      ស្វ័យប្រវត្តិ
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-600 mt-0.5 leading-relaxed">
+                    បូកសរុបចំណូលលក់, ការទូទាត់ Bakong/Cash, ចំណាយ, ចំណេញសុទ្ធ, មុខទំនិញលក់ដាច់ និងវឌ្ឍនភាពប្រចាំខែ រួមទាំងការវិភាគដោយជំនួយការ AI។
+                  </p>
+                </div>
+              </label>
+
+              {/* Extended options when enabled */}
+              {(config.notifyDailyReport ?? true) && (
+                <div className="pl-7 space-y-2.5 pt-2 border-t border-sky-100 text-xs animate-in fade-in duration-200">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <span className="font-bold text-slate-700 flex items-center gap-1">
+                      <Clock className="w-3.5 h-3.5 text-sky-600" />
+                      <span>ម៉ោងកំណត់ផ្ញើរបាយការណ៍ស្វ័យប្រវត្តិតាមថ្ងៃ (Schedule Time)៖</span>
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <select
+                        value={config.dailyReportTime || '21:00'}
+                        onChange={(e) => updateConfig({ ...config, dailyReportTime: e.target.value })}
+                        className="px-3 py-1.5 bg-white border border-sky-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-sky-500/20 shadow-2xs cursor-pointer"
+                      >
+                        <option value="21:00">🕘 ម៉ោង 9:00 យប់ (21:00) — ពេលបិទហាង (ពេញនិយមបំផុត ⭐)</option>
+                        <option value="09:00">🕘 ម៉ោង 9:00 ព្រឹក (09:00) — ពេលព្រឹកព្រលឹម</option>
+                        <option value="20:00">🕗 ម៉ោង 8:00 យប់ (20:00)</option>
+                        <option value="22:00">🕙 ម៉ោង 10:00 យប់ (22:00)</option>
+                        <option value="18:00">🕕 ម៉ោង 6:00 ល្ងាច (18:00)</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* AI Insight Checkbox */}
+                  <label className="flex items-center gap-2 text-slate-700 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={config.includeAiInsight ?? true}
+                      onChange={(e) => updateConfig({ ...config, includeAiInsight: e.target.checked })}
+                      className="w-3.5 h-3.5 rounded text-sky-600 cursor-pointer"
+                    />
+                    <span className="text-[11px] font-bold flex items-center gap-1">
+                      <Sparkles className="w-3 h-3 text-amber-500" />
+                      <span>រួមបញ្ចូលការវិភាគអាជីវកម្មដោយជំនួយការ AI (AI Executive Insights)</span>
+                    </span>
+                  </label>
+
+                  {/* Quick Test Send Daily Report Button */}
+                  <div className="pt-1 flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={handleSendDailyReportTest}
+                      disabled={isSendingReportTest}
+                      className="px-3 py-1.5 bg-sky-600 hover:bg-sky-700 text-white rounded-xl text-xs font-bold transition-all active:scale-95 disabled:opacity-50 cursor-pointer flex items-center gap-1.5 shadow-2xs"
+                    >
+                      <Send className={`w-3.5 h-3.5 ${isSendingReportTest ? 'animate-pulse' : ''}`} />
+                      <span>{isSendingReportTest ? 'កំពុងផ្ញើរបាយការណ៍...' : '📊 សាកល្បងផ្ញើរបាយការណ៍បូកសរុបទៅ Telegram ឥឡូវនេះ'}</span>
+                    </button>
+                    {reportSendResult && (
+                      <span className={`text-[11px] font-bold ${reportSendResult.success ? 'text-emerald-700' : 'text-rose-600'}`}>
+                        {reportSendResult.message}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 

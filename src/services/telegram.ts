@@ -12,6 +12,9 @@ export interface TelegramConfig {
   notifyExpenses: boolean;
   notifyExpenseDue?: boolean;
   notifyShiftClose: boolean;
+  notifyDailyReport?: boolean;
+  dailyReportTime?: string; // e.g. "21:00" (9:00 PM) or "09:00" (9:00 AM)
+  includeAiInsight?: boolean;
 }
 
 const STORAGE_KEY = 'bakery_telegram_config';
@@ -25,6 +28,9 @@ export const DEFAULT_TELEGRAM_CONFIG: TelegramConfig = {
   notifyExpenses: true,
   notifyExpenseDue: true,
   notifyShiftClose: true,
+  notifyDailyReport: true,
+  dailyReportTime: '21:00', // 9:00 យប់ (ម៉ោងបិទហាងលក់សរុបប្រចាំថ្ងៃ)
+  includeAiInsight: true,
 };
 
 export const isDemoModeActive = (): boolean => {
@@ -63,6 +69,7 @@ export const getStoredTelegramConfig = (): TelegramConfig => {
         merged.notifyCustomOrders = true;
         merged.notifyExpenses = true;
         merged.notifyShiftClose = true;
+        merged.notifyDailyReport = true;
       }
 
       // Auto-heal 2: Ensure group -5528089668 is always present in chatId
@@ -993,4 +1000,239 @@ export const resetTelegramMenuButton = async (
     return { success: false, message: err?.message || 'Error connecting to Telegram API' };
   }
 };
+
+/**
+ * Daily & Monthly Sales and Expenses Summary Report Parameters
+ */
+export interface DailyReportParams {
+  sales: CompletedSale[];
+  expenses: Expense[];
+  customOrders?: CustomCakeOrder[];
+  storeInfo?: StoreInfo;
+  exchangeRate?: number;
+  targetDate?: string; // YYYY-MM-DD
+  dateStr?: string; // alias for targetDate
+  reportTimeLabel?: string;
+}
+
+/**
+ * Generate formatted HTML report summarizing daily & monthly sales and expenses with AI insights
+ */
+export const generateDailyMonthlySummaryReportText = (params: DailyReportParams): string => {
+  const {
+    sales = [],
+    expenses = [],
+    customOrders = [],
+    storeInfo,
+    exchangeRate = 4100,
+    targetDate,
+    dateStr,
+    reportTimeLabel,
+  } = params;
+
+  const now = new Date();
+  const todayStr = targetDate || dateStr || now.toISOString().slice(0, 10);
+  const currentMonthStr = todayStr.slice(0, 7); // YYYY-MM
+
+  // Filter Sales for Today
+  const todaySales = sales.filter((s) => (s.createdAt || '').slice(0, 10) === todayStr);
+  const todaySalesCount = todaySales.length;
+  const todaySalesUsd = todaySales.reduce((sum, s) => sum + s.totalUsd, 0);
+  const todaySalesKhr = todaySales.reduce(
+    (sum, s) => sum + (s.totalKhr || Math.round(s.totalUsd * exchangeRate)),
+    0
+  );
+
+  // Payment Breakdown
+  const bakongSalesKhr = todaySales
+    .filter((s) => s.paymentMethod === 'KHQR_BAKONG')
+    .reduce((sum, s) => sum + (s.totalKhr || Math.round(s.totalUsd * exchangeRate)), 0);
+  const cashKhrSalesKhr = todaySales
+    .filter((s) => s.paymentMethod === 'CASH_KHR')
+    .reduce((sum, s) => sum + (s.totalKhr || Math.round(s.totalUsd * exchangeRate)), 0);
+  const cashUsdSalesUsd = todaySales
+    .filter((s) => s.paymentMethod === 'CASH_USD')
+    .reduce((sum, s) => sum + s.totalUsd, 0);
+
+  const bakongPct = todaySalesKhr > 0 ? Math.round((bakongSalesKhr / todaySalesKhr) * 100) : 0;
+  const cashKhrPct = todaySalesKhr > 0 ? Math.round((cashKhrSalesKhr / todaySalesKhr) * 100) : 0;
+
+  // Custom cake orders created or for today
+  const todayOrders = customOrders.filter(
+    (o) => (o.createdAt || o.pickupDate || '').slice(0, 10) === todayStr
+  );
+  const todayOrdersDepositsKhr = todayOrders.reduce(
+    (sum, o) => sum + (o.depositKhr || Math.round(o.depositUsd * exchangeRate)),
+    0
+  );
+
+  // Filter Expenses for Today
+  const isIngExpense = (e: any) => e.expenseType === 'INGREDIENT' || e.category === 'INGREDIENTS';
+  const todayExpenses = expenses.filter((e) => (e.date || e.createdAt || '').slice(0, 10) === todayStr);
+  const todayExpensesCount = todayExpenses.length;
+  const todayExpensesUsd = todayExpenses.reduce((sum, e) => sum + e.amountUsd, 0);
+  const todayExpensesKhr = todayExpenses.reduce(
+    (sum, e) => sum + (e.amountKhr || Math.round(e.amountUsd * exchangeRate)),
+    0
+  );
+
+  const todayIngExpensesKhr = todayExpenses
+    .filter(isIngExpense)
+    .reduce((sum, e) => sum + (e.amountKhr || Math.round(e.amountUsd * exchangeRate)), 0);
+  const todayGenExpensesKhr = todayExpenses
+    .filter((e) => !isIngExpense(e))
+    .reduce((sum, e) => sum + (e.amountKhr || Math.round(e.amountUsd * exchangeRate)), 0);
+
+  // Daily Net Profit
+  const todayNetProfitKhr = todaySalesKhr - todayExpensesKhr;
+  const todayNetProfitUsd = Number((todaySalesUsd - todayExpensesUsd).toFixed(2));
+  const todayMarginPct = todaySalesUsd > 0 ? ((todayNetProfitUsd / todaySalesUsd) * 100).toFixed(1) : '0';
+
+  // Best-selling items today
+  const itemMap = new Map<string, number>();
+  todaySales.forEach((s) => {
+    (s.items || []).forEach((item) => {
+      const name = item.nameKh || item.nameEn || 'ទំនិញ';
+      itemMap.set(name, (itemMap.get(name) || 0) + (item.quantity || 1));
+    });
+  });
+  const topItems = Array.from(itemMap.entries())
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 4);
+
+  // Month-to-date (MTD)
+  const monthSales = sales.filter((s) => (s.createdAt || '').slice(0, 7) === currentMonthStr);
+  const monthSalesCount = monthSales.length;
+  const monthSalesUsd = monthSales.reduce((sum, s) => sum + s.totalUsd, 0);
+  const monthSalesKhr = monthSales.reduce(
+    (sum, s) => sum + (s.totalKhr || Math.round(s.totalUsd * exchangeRate)),
+    0
+  );
+
+  const monthExpenses = expenses.filter((e) => (e.date || e.createdAt || '').slice(0, 7) === currentMonthStr);
+  const monthExpensesUsd = monthExpenses.reduce((sum, e) => sum + e.amountUsd, 0);
+  const monthExpensesKhr = monthExpenses.reduce(
+    (sum, e) => sum + (e.amountKhr || Math.round(e.amountUsd * exchangeRate)),
+    0
+  );
+
+  const monthNetProfitUsd = Number((monthSalesUsd - monthExpensesUsd).toFixed(2));
+  const monthNetProfitKhr = monthSalesKhr - monthExpensesKhr;
+  const monthMarginPct = monthSalesUsd > 0 ? ((monthNetProfitUsd / monthSalesUsd) * 100).toFixed(1) : '0';
+
+  // Month Name in Khmer
+  const monthNamesKh = [
+    'មករា', 'កុម្ភៈ', 'មីនា', 'មេសា', 'ឧសភា', 'មិថុនា',
+    'កក្កដា', 'សីហា', 'កញ្ញា', 'តុលា', 'វិច្ឆិកា', 'ធ្នូ'
+  ];
+  const [, mStr] = currentMonthStr.split('-');
+  const monthKhName = monthNamesKh[parseInt(mStr, 10) - 1] || mStr;
+
+  // Day of week in Khmer
+  const dayNamesKh = ['អាទិត្យ', 'ច័ន្ទ', 'អង្គារ', 'ពុធ', 'ព្រហស្បតិ៍', 'សុក្រ', 'សៅរ៍'];
+  const dayOfWeekKh = dayNamesKh[now.getDay()] || '';
+  const dateFormatted = formatDateDMY(todayStr);
+
+  const storeTitle = escapeHtml(storeInfo?.nameKh || 'ហាងនំ SweetBakery');
+  const timeDisplay = reportTimeLabel || now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+
+  // Intelligent AI Insights Summary
+  let aiInsightText = '';
+  if (todayNetProfitKhr > 0) {
+    aiInsightText = `ថ្ងៃនេះការលក់មានភាពកាក់កប ចំណេញសុទ្ធ <b>+${todayNetProfitKhr.toLocaleString()} ៛ ($${todayNetProfitUsd.toFixed(2)})</b> (អត្រាចំណេញ ${todayMarginPct}%)។ `;
+    if (topItems.length > 0) {
+      aiInsightText += `មុខទំនិញលក់ដាច់បំផុតគឺ <i>"${escapeHtml(topItems[0][0])}"</i>។ `;
+    }
+    if (bakongPct > 40) {
+      aiInsightText += `ការទូទាត់តាម KHQR មានដល់ ${bakongPct}% ជួយកាត់បន្ថយការកាន់សាច់ប្រាក់។`;
+    }
+  } else if (todayExpensesKhr > 0 && todaySalesKhr === 0) {
+    aiInsightText = `ថ្ងៃនេះមិនទាន់មានវិក្កយបត្រលក់ទេ ប៉ុន្តែមានការកត់ត្រាចំណាយសរុប <b>${todayExpensesKhr.toLocaleString()} ៛</b>។`;
+  } else if (todayExpensesKhr > todaySalesKhr) {
+    aiInsightText = `ថ្ងៃនេះការចំណាយខ្ពស់ជាងចំណូលលក់បន្តិច (ភាគច្រើនលើការទិញគ្រឿងផ្សំស្តុក)។ សរុបខែ${monthKhName}នៅតែរក្សាបានប្រាក់ចំណេញសុទ្ធ <b>+${monthNetProfitKhr.toLocaleString()} ៛</b>។`;
+  } else {
+    aiInsightText = `អាជីវកម្មដំណើរការល្អធម្មតា។ ខែ${monthKhName}នេះសម្រេចបានចំណូលលក់សរុប <b>${monthSalesKhr.toLocaleString()} ៛ ($${monthSalesUsd.toFixed(2)})</b> ជាមួយអត្រាចំណេញ ${monthMarginPct}%។`;
+  }
+
+  // Top items list formatted
+  const topItemsFormatted = topItems.length > 0
+    ? topItems.map(([name, qty], idx) => `   ${idx + 1}. <b>${escapeHtml(name)}</b> × ${qty}`).join('\n')
+    : '   <i>(មិនទាន់មានទំនិញលក់ចេញ)</i>';
+
+  return (
+    `📊 <b>[${storeTitle}] — របាយការណ៍បូកសរុបការលក់ & ចំណាយ</b>\n` +
+    `━━━━━━━━━━━━━━━━━━\n` +
+    `📅 <b>កាលបរិច្ឆេទ៖</b> ថ្ងៃ${dayOfWeekKh} ទី ${dateFormatted}\n` +
+    `⏰ <b>ម៉ោងចេញរបាយការណ៍៖</b> ${timeDisplay}\n\n` +
+    `💵 <b>១. សង្ខេបការលក់ថ្ងៃនេះ (Daily Sales)៖</b>\n` +
+    `• ចំនួនវិក្កយបត្រ៖ <b>${todaySalesCount} វិក្កយបត្រ</b>\n` +
+    `• ចំណូលលក់សរុប៖ <b>${todaySalesKhr.toLocaleString()} ៛</b> <i>($${todaySalesUsd.toFixed(2)})</i>\n` +
+    `  ├ 📲 KHQR Bakong: <b>${bakongSalesKhr.toLocaleString()} ៛</b> (${bakongPct}%)\n` +
+    `  ├ 💵 សាច់ប្រាក់ (៛): <b>${cashKhrSalesKhr.toLocaleString()} ៛</b> (${cashKhrPct}%)\n` +
+    `  └ 💵 សាច់ប្រាក់ ($): <b>$${cashUsdSalesUsd.toFixed(2)}</b>\n` +
+    (todayOrders.length > 0 ? `• 🎂 នំខួបកំណើតកុម្ម៉ង់ថ្មី៖ <b>${todayOrders.length} នំ</b> (ប្រាក់កក់: ${todayOrdersDepositsKhr.toLocaleString()} ៛)\n` : '') +
+    `\n💸 <b>២. សង្ខេបការចំណាយថ្ងៃនេះ (Daily Expenses)៖</b>\n` +
+    `• ចំណាយសរុប៖ <b>${todayExpensesKhr.toLocaleString()} ៛</b> <i>($${todayExpensesUsd.toFixed(2)})</i> [${todayExpensesCount} មុខ]\n` +
+    `  ├ 🥚 គ្រឿងផ្សំ (COGS): <b>${todayIngExpensesKhr.toLocaleString()} ៛</b>\n` +
+    `  └ 🏢 ទូទៅ/ប្រតិបត្តិការ: <b>${todayGenExpensesKhr.toLocaleString()} ៛</b>\n\n` +
+    `📈 <b>៣. ប្រាក់ចំណេញសុទ្ធថ្ងៃនេះ (Daily Net Profit)៖</b>\n` +
+    `• ចំណេញសុទ្ធ៖ <b>${todayNetProfitKhr >= 0 ? '+' : ''}${todayNetProfitKhr.toLocaleString()} ៛</b> <i>($${todayNetProfitUsd >= 0 ? '+' : ''}${todayNetProfitUsd.toFixed(2)})</i>\n` +
+    `• អត្រាចំណេញ (Margin)៖ <b>${todayMarginPct}%</b>\n\n` +
+    `🏆 <b>៤. មុខទំនិញលក់ដាច់បំផុតថ្ងៃនេះ៖</b>\n` +
+    `${topItemsFormatted}\n\n` +
+    `━━━━━━━━━━━━━━━━━━\n` +
+    `📅 <b>៥. វឌ្ឍនភាពប្រចាំខែ${monthKhName} (Month-to-Date)៖</b>\n` +
+    `• ចំណូលលក់សរុប៖ <b>${monthSalesKhr.toLocaleString()} ៛</b> <i>($${monthSalesUsd.toFixed(2)})</i> [${monthSalesCount} វិក្កយបត្រ]\n` +
+    `• ចំណាយសរុប៖ <b>${monthExpensesKhr.toLocaleString()} ៛</b> <i>($${monthExpensesUsd.toFixed(2)})</i>\n` +
+    `• ចំណេញសុទ្ធខែនេះ៖ <b>${monthNetProfitKhr >= 0 ? '+' : ''}${monthNetProfitKhr.toLocaleString()} ៛</b> <i>($${monthNetProfitUsd >= 0 ? '+' : ''}${monthNetProfitUsd.toFixed(2)})</i> [${monthMarginPct}%]\n\n` +
+    `💡 <b>៦. ការវិភាគដោយជំនួយការ AI៖</b>\n` +
+    `<i>${aiInsightText}</i>\n` +
+    `━━━━━━━━━━━━━━━━━━\n` +
+    `✨ <i>របាយការណ៍ស្វ័យប្រវត្តិចេញដោយ SweetBakery POS</i>`
+  );
+};
+
+/**
+ * Send Daily & Monthly Summary Report to Telegram
+ */
+export const sendTelegramDailyReport = async (
+  params: DailyReportParams,
+  isManual = false
+): Promise<{ success: boolean; message: string }> => {
+  if (isDemoModeActive()) {
+    return { success: false, message: 'Telegram ត្រូវបានបិទក្នុង Demo Mode' };
+  }
+
+  const config = await getStoredTelegramConfigAsync();
+  if (!config.enabled || (config.notifyDailyReport === false && !isManual) || !config.botToken || !config.chatId) {
+    return {
+      success: false,
+      message: 'សូមបើកមុខងារ Telegram Bot និងបំពេញ Token & Chat ID ក្នុង Settings ជាមុនសិន!',
+    };
+  }
+
+  const now = new Date();
+  const todayStr = params.targetDate || params.dateStr || now.toISOString().slice(0, 10);
+  const timeSlot = config.dailyReportTime || '21:00';
+  const eventKey = `daily_report_${todayStr}_${timeSlot}`;
+
+  if (!isManual && hasTelegramEventFired(eventKey)) {
+    return {
+      success: true,
+      message: 'របាយការណ៍ប្រចាំថ្ងៃត្រូវបានផ្ញើរួចហើយសម្រាប់ថ្ងៃនេះ',
+    };
+  }
+
+  const reportText = generateDailyMonthlySummaryReportText({
+    ...params,
+    reportTimeLabel: isManual ? undefined : timeSlot,
+  });
+
+  const res = await sendTelegramMessage(reportText, config);
+  if (res.success) {
+    markTelegramEventFired(eventKey);
+  }
+  return res;
+};
+
 

@@ -18,7 +18,9 @@ import {
   Sparkles,
   ShieldCheck,
   Zap,
+  Send,
 } from 'lucide-react';
+import confetti from 'canvas-confetti';
 import { useBakery } from '../../context/BakeryContext';
 import { t } from '../../utils/translations';
 import { ReceiptModal } from '../pos/ReceiptModal';
@@ -26,6 +28,7 @@ import { CompletedSale, ExpenseCategory } from '../../types';
 import { soundFx } from '../../utils/audio';
 import { formatDateDMY, formatDateTimeDMY, formatTime } from '../../utils/dateUtils';
 import { roundKhr } from '../../utils/currencyUtils';
+import { sendTelegramDailyReport } from '../../services/telegram';
 
 type DateFilterType =
   | 'this_month'
@@ -39,12 +42,16 @@ type DateFilterType =
   | 'all';
 
 export const ReportsDashboard: React.FC = () => {
-  const { lang, sales, expenses, exchangeRate, customOrders } = useBakery();
+  const { lang, sales, expenses, exchangeRate, customOrders, storeInfo } = useBakery();
   const text = t[lang];
 
   // Always default to the current real month (ខែជាក់ស្តែងជាប្រចាំ)
   const [dateFilter, setDateFilter] = useState<DateFilterType>('this_month');
   const [selectedSaleForReprint, setSelectedSaleForReprint] = useState<CompletedSale | null>(null);
+
+  // Telegram report sending states
+  const [isSendingTelegram, setIsSendingTelegram] = useState(false);
+  const [telegramStatus, setTelegramStatus] = useState<{ success: boolean; message: string } | null>(null);
 
   // Helper to extract local calendar YYYY-MM-DD
   const getLocalDateStr = (d?: string | Date) => {
@@ -314,6 +321,45 @@ export const ReportsDashboard: React.FC = () => {
     a.click();
   };
 
+  const handleSendTelegramSummary = async () => {
+    setIsSendingTelegram(true);
+    setTelegramStatus(null);
+    soundFx.playPop();
+
+    try {
+      const targetDate = dateFilter === 'yesterday' ? yesterdayStr : todayStr;
+      const res = await sendTelegramDailyReport(
+        {
+          sales,
+          expenses,
+          customOrders,
+          storeInfo,
+          exchangeRate,
+          dateStr: targetDate,
+        },
+        true // isManual = true
+      );
+      setIsSendingTelegram(false);
+      setTelegramStatus(res);
+      if (res.success) {
+        soundFx.playSuccess();
+        try {
+          confetti({ particleCount: 60, spread: 70, origin: { y: 0.6 } });
+        } catch (e) {}
+      } else {
+        soundFx.playWarning();
+      }
+      setTimeout(() => setTelegramStatus(null), 6000);
+    } catch (err: any) {
+      setIsSendingTelegram(false);
+      setTelegramStatus({
+        success: false,
+        message: err?.message || 'បរាជ័យក្នុងការផ្ញើរបាយការណ៍!',
+      });
+      setTimeout(() => setTelegramStatus(null), 6000);
+    }
+  };
+
   // Filter description text
   const getFilterDescription = () => {
     switch (dateFilter) {
@@ -335,7 +381,7 @@ export const ReportsDashboard: React.FC = () => {
         return `ចន្លោះពីថ្ងៃ ${customStartDate} ដល់ ${customEndDate}`;
       case 'all':
       default:
-        return 'ទិន្នន័យទាំងអស់តាំងពីដើមមក (All Time)';
+        return 'ទិន្នន័យទាំងអស់តាំងពីដើមក (All Time)';
     }
   };
 
@@ -356,13 +402,38 @@ export const ReportsDashboard: React.FC = () => {
           </p>
         </div>
 
-        <button
-          onClick={handleExportCsv}
-          className="px-3.5 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-2xl text-xs font-bold transition-all flex items-center gap-2 shadow-2xs cursor-pointer self-start sm:self-auto active:scale-95"
-        >
-          <Download className="w-4 h-4" />
-          <span>ទាញយករបាយការណ៍ (CSV)</span>
-        </button>
+        <div className="flex items-center gap-2 flex-wrap self-start sm:self-auto">
+          {telegramStatus && (
+            <div
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold animate-in fade-in flex items-center gap-1.5 shadow-2xs ${
+                telegramStatus.success
+                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                  : 'bg-rose-50 text-rose-700 border border-rose-200'
+              }`}
+            >
+              <span>{telegramStatus.success ? '✅' : '⚠️'}</span>
+              <span>{telegramStatus.message}</span>
+            </div>
+          )}
+
+          <button
+            onClick={handleSendTelegramSummary}
+            disabled={isSendingTelegram}
+            className="px-3.5 py-2 bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 text-white rounded-2xl text-xs font-bold transition-all flex items-center gap-2 shadow-sm shadow-sky-500/20 cursor-pointer active:scale-95 disabled:opacity-50"
+            title="ផ្ញើរបាយការណ៍បូកសរុបការលក់ និងចំណាយថ្ងៃនេះ & ខែនេះ ទៅកាន់ Telegram ឥឡូវនេះ"
+          >
+            <Send className={`w-3.5 h-3.5 ${isSendingTelegram ? 'animate-pulse' : ''}`} />
+            <span>{isSendingTelegram ? 'កំពុងផ្ញើ...' : 'ផ្ញើរបាយការណ៍ទៅ Telegram'}</span>
+          </button>
+
+          <button
+            onClick={handleExportCsv}
+            className="px-3.5 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-2xl text-xs font-bold transition-all flex items-center gap-2 shadow-2xs cursor-pointer active:scale-95"
+          >
+            <Download className="w-4 h-4" />
+            <span>ទាញយករបាយការណ៍ (CSV)</span>
+          </button>
+        </div>
       </div>
 
       {/* Date & Time Filters Bar */}

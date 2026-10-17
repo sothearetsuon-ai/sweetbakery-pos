@@ -13,7 +13,7 @@ import {
 import { soundFx } from '../../utils/audio';
 
 export const NotificationReminderScheduler: React.FC = () => {
-  const { customOrders, expenses, ingredients, storeInfo, exchangeRate, isDemoMode } = useBakery();
+  const { customOrders, expenses, ingredients, storeInfo, exchangeRate, isDemoMode, sales } = useBakery();
   const [permission, setPermission] = useState<NotificationPermission | 'unsupported'>(
     getNotificationPermission
   );
@@ -23,10 +23,10 @@ export const NotificationReminderScheduler: React.FC = () => {
   const [isEnabling, setIsEnabling] = useState(false);
 
   // Ref to hold latest params without restarting interval on every state update
-  const paramsRef = React.useRef({ customOrders, expenses, ingredients, storeInfo, exchangeRate });
+  const paramsRef = React.useRef({ customOrders, expenses, ingredients, storeInfo, exchangeRate, sales });
   useEffect(() => {
-    paramsRef.current = { customOrders, expenses, ingredients, storeInfo, exchangeRate };
-  }, [customOrders, expenses, ingredients, storeInfo, exchangeRate]);
+    paramsRef.current = { customOrders, expenses, ingredients, storeInfo, exchangeRate, sales };
+  }, [customOrders, expenses, ingredients, storeInfo, exchangeRate, sales]);
 
   // 1. Run background periodic notification checks smoothly (every 60s, with safe initial delay)
   useEffect(() => {
