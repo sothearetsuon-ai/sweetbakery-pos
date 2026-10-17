@@ -1,4 +1,4 @@
-import { getGeminiApiKey, getGeminiApiKeyAsync } from './geminiInvoiceService';
+import { getGeminiApiKey, getGeminiApiKeyAsync, getUsableGeminiModels } from './geminiInvoiceService';
 
 export interface AiCakeAnalysisResult {
   cakeNameKh: string;
@@ -76,19 +76,17 @@ Return ONLY a valid JSON object matching the following schema without any markdo
 styleCategory can be: 'MINIMALIST_KOREAN', 'VINTAGE_LUXURY', 'CARTOON_KIDS', 'FLORAL_ROMANTIC', 'CHOCOLATE_DRIP', 'TWO_TIER', 'CUSTOM_3D', or 'STANDARD'.
 difficultyLevel can be: 'EASY', 'MEDIUM', 'COMPLEX', or 'MASTER'.`;
 
-  const candidateModels = [
-    'gemini-2.5-flash',
-    'gemini-2.0-flash',
-    'gemini-1.5-flash',
-    'gemini-1.5-flash-latest',
-  ];
+  const candidateModels = await getUsableGeminiModels(apiKey);
 
   let rawJson = '';
   let lastError: any = null;
 
   for (const model of candidateModels) {
+    const cleanModel = (model || '').replace(/^models\//, '').trim();
+    if (!cleanModel) continue;
+
     try {
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey.trim()}`;
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${cleanModel}:generateContent?key=${apiKey.trim()}`;
       const res = await fetch(url, {
         method: 'POST',
         headers: {

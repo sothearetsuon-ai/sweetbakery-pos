@@ -21,7 +21,7 @@ import confetti from 'canvas-confetti';
 import { Product } from '../../types';
 import { parseKhmerVoiceCommand, VoicePosAction } from '../../services/khmerVoicePosService';
 import { soundFx } from '../../utils/audio';
-import { getGeminiApiKey, getGeminiApiKeyAsync } from '../../services/geminiInvoiceService';
+import { getGeminiApiKey, getGeminiApiKeyAsync, getUsableGeminiModels } from '../../services/geminiInvoiceService';
 
 interface KhmerVoicePosModalProps {
   isOpen: boolean;
@@ -221,33 +221,24 @@ export const KhmerVoicePosModal: React.FC<KhmerVoicePosModalProps> = ({
       // Strip extra parameters like ';codecs=opus' so Gemini gets a pure mimeType
       const cleanMimeType = (mimeType || 'audio/webm').split(';')[0].trim();
 
-      // Gather candidate models in order of speed, quota stability, and 2026 availability
-      let cachedModels: string[] = [];
-      try {
-        const cachedStr = localStorage.getItem('sweetbakery_usable_models');
-        if (cachedStr) {
-          const parsed = JSON.parse(cachedStr);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            cachedModels = parsed;
-          }
-        }
-      } catch {}
+      // Dynamic model discovery: Query Google's ListModels API directly so we never call 404 non-existent models
+      let usableModels = await getUsableGeminiModels(apiKey);
 
       const activeModel = localStorage.getItem('sweetbakery_gemini_active_model');
-      const defaultCandidates = [
-        'gemini-2.5-flash',
-        'gemini-2.0-flash',
-        'gemini-1.5-flash-latest',
-        'gemini-1.5-flash',
-        'gemini-2.0-flash-exp',
-        'gemini-1.5-flash-8b',
-      ];
+      const cleanActive = activeModel ? activeModel.replace(/^models\//, '').trim() : '';
 
+      // Prioritize dedicated transcribe & modern 2026 models
       const candidateModels = Array.from(
         new Set([
-          ...(activeModel ? [activeModel] : []),
-          ...cachedModels,
-          ...defaultCandidates,
+          'gemini-3.5-transcribe',
+          ...(cleanActive ? [cleanActive] : []),
+          ...usableModels,
+          'gemini-3.5-flash-lite',
+          'gemini-3.5-flash',
+          'gemini-3.8-flash',
+          'gemini-2.5-flash-lite',
+          'gemini-2.0-flash',
+          'gemini-1.5-flash',
         ])
       ).filter(Boolean);
 
@@ -255,8 +246,11 @@ export const KhmerVoicePosModal: React.FC<KhmerVoicePosModalProps> = ({
       let lastErrorMsg = '';
 
       for (const model of candidateModels) {
+        const cleanModel = (model || '').replace(/^models\//, '').trim();
+        if (!cleanModel) continue;
+
         try {
-          const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey.trim()}`;
+          const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${cleanModel}:generateContent?key=${apiKey.trim()}`;
           const response = await fetch(endpoint, {
             method: 'POST',
             headers: {
@@ -286,7 +280,7 @@ export const KhmerVoicePosModal: React.FC<KhmerVoicePosModalProps> = ({
             const resData = await response.json();
             transcribedText = resData.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
             try {
-              localStorage.setItem('sweetbakery_gemini_active_model', model);
+              localStorage.setItem('sweetbakery_gemini_active_model', cleanModel);
             } catch {}
             break; // Success!
           }
@@ -302,7 +296,7 @@ export const KhmerVoicePosModal: React.FC<KhmerVoicePosModalProps> = ({
             rawMsg.toLowerCase().includes('quota') ||
             rawMsg.toLowerCase().includes('rate limit')
           ) {
-            console.warn(`Model ${model} returned ${response.status} (${rawMsg}), trying next fallback model...`);
+            console.warn(`Model ${cleanModel} returned ${response.status} (${rawMsg}), trying next fallback model...`);
             lastErrorMsg = rawMsg;
             continue;
           }
@@ -317,7 +311,7 @@ export const KhmerVoicePosModal: React.FC<KhmerVoicePosModalProps> = ({
 
           lastErrorMsg = rawMsg;
         } catch (callErr: any) {
-          console.warn(`Error connecting to Gemini model ${model}:`, callErr);
+          console.warn(`Error connecting to Gemini model ${cleanModel}:`, callErr);
           lastErrorMsg = callErr.message || 'Network error';
         }
       }
@@ -329,12 +323,13 @@ export const KhmerVoicePosModal: React.FC<KhmerVoicePosModalProps> = ({
       } else if (lastErrorMsg) {
         let userFriendly = lastErrorMsg;
         if (lastErrorMsg.includes('404') || lastErrorMsg.toLowerCase().includes('not found')) {
-          userFriendly = 'Google Gemini ឆ្លើយតប (404)៖ សូមពិនិត្យមើល API Key ក្នុង Settings ឬប្រើ Windows Voice Typing (Win + H) ជំនួសវិញ';
+          userFriendly = 'Google Gemini ឆ្លើយតប (404 Not Found)៖ សូមពិនិត្យមើល API Key ក្នុង Settings (ត្រូវប្រាកដថាបានបើក Generative Language API ឬបង្កើត Key ពី Google AI Studio: aistudio.google.com)។ លើ Windows លោកអ្នកអាចប្រើ Windows Voice Typing (Win + H) និយាយខ្មែរបានភ្លាមៗ!';
         } else if (lastErrorMsg.toLowerCase().includes('quota')) {
           userFriendly = 'Quota ការប្រើប្រាស់ Gemini ពេញហើយ (Quota Exceeded)។ សូមរង់ចាំបន្តិច ឬប្រើ Windows Voice Typing (Win + H)';
         }
         setErrorText('មិនអាចបកប្រែសំឡេងបានទេ៖ ' + userFriendly);
-        setStatusText('សូមសាកល្បងនិយាយម្តងទៀត ឬចុចលើពាក្យគំរូខាងក្រោម 👇');
+        setStatusText('💡 លើ Windows៖ ចុច ⊞ Windows + H លើ Keyboard រួចនិយាយ ឬចុចលើពាក្យគំរូខាងក្រោម 👇');
+        inputRef.current?.focus();
       } else {
         setStatusText('មិនបានឮសំឡេងច្បាស់លាស់ទេ សូមសាកល្បងនិយាយម្តងទៀត');
       }

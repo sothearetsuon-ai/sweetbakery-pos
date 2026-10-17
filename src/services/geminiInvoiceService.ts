@@ -175,6 +175,83 @@ export interface ApiKeyTestResult {
 }
 
 /**
+ * Dynamic resolution of available models for the current API key.
+ * Queries Google's ListModels API directly so we never hardcode obsolete models (e.g., avoiding 404).
+ */
+export const getUsableGeminiModels = async (customApiKey?: string, forceRefresh = false): Promise<string[]> => {
+  const apiKey = (customApiKey || getGeminiApiKey()).trim();
+  const defaultFallback = [
+    'gemini-3.5-flash-lite',
+    'gemini-3.5-flash',
+    'gemini-3.8-flash',
+    'gemini-3.5-transcribe',
+    'gemini-2.5-flash-lite',
+    'gemini-2.5-flash',
+    'gemini-2.0-flash',
+    'gemini-1.5-flash',
+    'gemini-1.5-flash-latest',
+  ];
+
+  if (!apiKey) {
+    return defaultFallback;
+  }
+
+  if (!forceRefresh) {
+    try {
+      const cached = localStorage.getItem('sweetbakery_usable_models');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed.map((m: string) => m.replace(/^models\//, '').trim());
+        }
+      }
+    } catch {}
+  }
+
+  try {
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`, {
+      method: 'GET',
+      headers: { 'x-goog-api-key': apiKey },
+    });
+
+    if (res.ok) {
+      const data = await res.json().catch(() => ({}));
+      const rawList: any[] = data.models || [];
+      const usable = rawList
+        .filter((m: any) => m.supportedGenerationMethods?.includes('generateContent'))
+        .map((m: any) => (m.name || '').replace(/^models\//, '').trim())
+        .filter((name: string) => name && !name.includes('embedding') && !name.includes('aqa') && !name.includes('imagen'));
+
+      if (usable.length > 0) {
+        // Sort: modern 3.x and 2.x flash models first
+        usable.sort((a: string, b: string) => {
+          const score = (m: string) => {
+            if (m.includes('3.5-transcribe')) return 7;
+            if (m.includes('3.5-flash-lite')) return 6;
+            if (m.includes('3.5-flash')) return 5;
+            if (m.includes('3.8-flash')) return 5;
+            if (m.includes('2.5-flash-lite')) return 4;
+            if (m.includes('2.5-flash')) return 4;
+            if (m.includes('2.0-flash')) return 3;
+            if (m.includes('1.5-flash')) return 2;
+            return 1;
+          };
+          return score(b) - score(a);
+        });
+
+        localStorage.setItem('sweetbakery_usable_models', JSON.stringify(usable));
+        localStorage.setItem('sweetbakery_gemini_active_model', usable[0]);
+        return usable;
+      }
+    }
+  } catch (err) {
+    console.warn('Failed to dynamically query Google Gemini models list:', err);
+  }
+
+  return defaultFallback;
+};
+
+/**
  * Quick validation check for Gemini API Key (supports both legacy AIza and new AQ. format)
  * Uses ModelService.ListModels to verify key and discover available models dynamically
  */
@@ -199,14 +276,23 @@ export const testGeminiApiKey = async (apiKey: string): Promise<ApiKeyTestResult
       const modelsList: any[] = data.models || [];
       const usableModels = modelsList
         .filter((m: any) => m.supportedGenerationMethods?.includes('generateContent'))
-        .map((m: any) => m.name?.replace('models/', ''))
+        .map((m: any) => m.name?.replace(/^models\//, '').trim())
         .filter((name: string) => name && !name.includes('embedding') && !name.includes('aqa') && !name.includes('imagen'));
 
       // Sort flash models to the front for maximum speed
       usableModels.sort((a: string, b: string) => {
-        const aScore = a.includes('2.5-flash') ? 4 : a.includes('2.0-flash') ? 3 : a.includes('1.5-flash') ? 2 : 1;
-        const bScore = b.includes('2.5-flash') ? 4 : b.includes('2.0-flash') ? 3 : b.includes('1.5-flash') ? 2 : 1;
-        return bScore - aScore;
+        const score = (m: string) => {
+          if (m.includes('3.5-transcribe')) return 7;
+          if (m.includes('3.5-flash-lite')) return 6;
+          if (m.includes('3.5-flash')) return 5;
+          if (m.includes('3.8-flash')) return 5;
+          if (m.includes('2.5-flash-lite')) return 4;
+          if (m.includes('2.5-flash')) return 4;
+          if (m.includes('2.0-flash')) return 3;
+          if (m.includes('1.5-flash')) return 2;
+          return 1;
+        };
+        return score(b) - score(a);
       });
 
       if (usableModels.length > 0) {
@@ -214,7 +300,7 @@ export const testGeminiApiKey = async (apiKey: string): Promise<ApiKeyTestResult
         localStorage.setItem('sweetbakery_gemini_active_model', usableModels[0]);
       }
 
-      const bestModel = usableModels[0] || 'gemini-1.5-flash';
+      const bestModel = usableModels[0] || 'gemini-3.5-flash-lite';
 
       return {
         valid: true,
@@ -309,55 +395,7 @@ Return ONLY a valid JSON object matching this schema without any markdown format
 }`;
 
   // 1. Dynamic model discovery to get the EXACT models available on this API key
-  let models: string[] = [];
-
-  try {
-    const cachedStr = localStorage.getItem('sweetbakery_usable_models');
-    if (cachedStr) {
-      const parsed = JSON.parse(cachedStr);
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        models = parsed;
-      }
-    }
-  } catch (e) {}
-
-  if (models.length === 0) {
-    try {
-      const listRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`, {
-        method: 'GET',
-        headers: { 'x-goog-api-key': apiKey },
-      });
-      if (listRes.ok) {
-        const data = await listRes.json();
-        const rawList: any[] = data.models || [];
-        const usable = rawList
-          .filter((m: any) => m.supportedGenerationMethods?.includes('generateContent'))
-          .map((m: any) => m.name?.replace('models/', ''))
-          .filter((name: string) => name && !name.includes('embedding') && !name.includes('aqa') && !name.includes('imagen'));
-
-        if (usable.length > 0) {
-          usable.sort((a: string, b: string) => {
-            const aScore = a.includes('2.5-flash') ? 4 : a.includes('2.0-flash') ? 3 : a.includes('1.5-flash') ? 2 : 1;
-            const bScore = b.includes('2.5-flash') ? 4 : b.includes('2.0-flash') ? 3 : b.includes('1.5-flash') ? 2 : 1;
-            return bScore - aScore;
-          });
-          models = usable;
-          localStorage.setItem('sweetbakery_usable_models', JSON.stringify(usable));
-        }
-      }
-    } catch (e) {}
-  }
-
-  // Fallback defaults if list retrieval failed
-  if (models.length === 0) {
-    models = [
-      'gemini-1.5-flash',
-      'gemini-1.5-flash-latest',
-      'gemini-2.0-flash',
-      'gemini-2.0-flash-exp',
-      'gemini-1.5-flash-8b',
-    ];
-  }
+  let models: string[] = await getUsableGeminiModels(apiKey);
 
   // Put currently active model first if available
   const savedActiveModel = localStorage.getItem('sweetbakery_gemini_active_model');
@@ -370,10 +408,13 @@ Return ONLY a valid JSON object matching this schema without any markdown format
   const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
   for (const model of models) {
+    const cleanModel = (model || '').replace(/^models\//, '').trim();
+    if (!cleanModel) continue;
+
     let retries = 1; // Auto-retry for transient network hiccups
     while (retries >= 0) {
       try {
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${cleanModel}:generateContent?key=${apiKey}`;
         const response = await fetch(url, {
           method: 'POST',
           headers: {

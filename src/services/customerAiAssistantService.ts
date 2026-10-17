@@ -1,4 +1,4 @@
-import { getGeminiApiKey, getGeminiApiKeyAsync } from './geminiInvoiceService';
+import { getGeminiApiKey, getGeminiApiKeyAsync, getUsableGeminiModels } from './geminiInvoiceService';
 import { Product } from '../types';
 
 export interface CustomerAiAction {
@@ -404,18 +404,16 @@ Instruction:
       parts: [{ text: userQuery }],
     });
 
-    const candidateModels = [
-      'gemini-2.5-flash',
-      'gemini-2.0-flash',
-      'gemini-1.5-flash',
-      'gemini-1.5-flash-latest',
-    ];
+    const candidateModels = await getUsableGeminiModels(apiKey);
 
     let responseText = '';
 
     for (const model of candidateModels) {
+      const cleanModel = (model || '').replace(/^models\//, '').trim();
+      if (!cleanModel) continue;
+
       try {
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey.trim()}`;
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${cleanModel}:generateContent?key=${apiKey.trim()}`;
         const res = await fetch(url, {
           method: 'POST',
           headers: {

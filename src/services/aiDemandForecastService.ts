@@ -1,5 +1,5 @@
 import { CompletedSale, CustomCakeOrder, Product } from '../types';
-import { getGeminiApiKey, getGeminiApiKeyAsync } from './geminiInvoiceService';
+import { getGeminiApiKey, getGeminiApiKeyAsync, getUsableGeminiModels } from './geminiInvoiceService';
 
 export interface BakingPlanItem {
   id: string;
@@ -99,38 +99,48 @@ Return ONLY a valid JSON object matching this schema without any markdown format
   "wasteReductionTipKh": "ដុតនំបាហ្គេតជា ២ វគ្គ (ព្រឹក ម៉ោង ៦:០០ និងរសៀល ម៉ោង ២:០០) ដើម្បីរក្សាភាពស្រួយក្តៅ និងការពារការសល់រឹង។"
 }`;
 
-      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey.trim()}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { temperature: 0.2, responseMimeType: 'application/json' },
-        }),
-      });
+      const usableModels = await getUsableGeminiModels(apiKey);
+      for (const model of usableModels) {
+        const cleanModel = (model || '').replace(/^models\//, '').trim();
+        if (!cleanModel) continue;
 
-      if (res.ok) {
-        const json = await res.json();
-        const text = json.candidates?.[0]?.content?.parts?.[0]?.text;
-        if (text) {
-          const parsed = JSON.parse(text.replace(/```json/gi, '').replace(/```/g, '').trim());
-          return {
-            forecastDate: targetDateStr,
-            dayOfWeekKh,
-            summaryKh: parsed.summaryKh || 'ផែនការដុតនំឆ្លាតវៃសម្រាប់ថ្ងៃស្អែក',
-            bakingPlan: (parsed.bakingPlan || []).map((p: any, i: number) => ({
-              id: 'bp-' + i,
-              nameKh: p.nameKh,
-              category: p.category || 'នំបុ័ង',
-              historicalDailyAvg: p.historicalDailyAvg || 20,
-              recommendedQty: p.recommendedQty || 25,
-              unit: p.unit || 'ដុំ',
-              confidence: p.confidence || 0.9,
-              reasonKh: p.reasonKh || 'តម្រូវការប្រចាំថ្ងៃ',
-            })),
-            projectedRevenueKhr: parsed.projectedRevenueKhr || 350000,
-            keyIngredientsNeeded: parsed.keyIngredientsNeeded || [],
-            wasteReductionTipKh: parsed.wasteReductionTipKh || 'ដុតនំជាដំណាក់កាលដើម្បីធានាភាពស្រស់ថ្មី។',
-          };
+        try {
+          const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${cleanModel}:generateContent?key=${apiKey.trim()}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey.trim() },
+            body: JSON.stringify({
+              contents: [{ parts: [{ text: prompt }] }],
+              generationConfig: { temperature: 0.2, responseMimeType: 'application/json' },
+            }),
+          });
+
+          if (res.ok) {
+            const json = await res.json();
+            const text = json.candidates?.[0]?.content?.parts?.[0]?.text;
+            if (text) {
+              const parsed = JSON.parse(text.replace(/```json/gi, '').replace(/```/g, '').trim());
+              return {
+                forecastDate: targetDateStr,
+                dayOfWeekKh,
+                summaryKh: parsed.summaryKh || 'ផែនការដុតនំឆ្លាតវៃសម្រាប់ថ្ងៃស្អែក',
+                bakingPlan: (parsed.bakingPlan || []).map((p: any, i: number) => ({
+                  id: 'bp-' + i,
+                  nameKh: p.nameKh,
+                  category: p.category || 'នំបុ័ង',
+                  historicalDailyAvg: p.historicalDailyAvg || 20,
+                  recommendedQty: p.recommendedQty || 25,
+                  unit: p.unit || 'ដុំ',
+                  confidence: p.confidence || 0.9,
+                  reasonKh: p.reasonKh || 'តម្រូវការប្រចាំថ្ងៃ',
+                })),
+                projectedRevenueKhr: parsed.projectedRevenueKhr || 350000,
+                keyIngredientsNeeded: parsed.keyIngredientsNeeded || [],
+                wasteReductionTipKh: parsed.wasteReductionTipKh || 'ដុតនំជាដំណាក់កាលដើម្បីធានាភាពស្រស់ថ្មី។',
+              };
+            }
+          }
+        } catch (mErr) {
+          console.warn(`Model ${cleanModel} forecast error:`, mErr);
         }
       }
     } catch (e) {
