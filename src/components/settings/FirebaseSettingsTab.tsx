@@ -50,6 +50,36 @@ export const FirebaseSettingsTab: React.FC = () => {
     isDemoMode,
   } = useBakery();
 
+  const [currentConfig, setCurrentConfig] = useState<FirebaseConfig | null>(() =>
+    getStoredFirebaseConfig()
+  );
+  const [rawInput, setRawInput] = useState('');
+  const [isTesting, setIsTesting] = useState(false);
+  const [testResult, setTestResult] = useState<{
+    success?: boolean;
+    message: string;
+    latencyMs?: number;
+  } | null>(null);
+
+  const [isSyncingUp, setIsSyncingUp] = useState(false);
+  const [syncUpResult, setSyncUpResult] = useState<{
+    success?: boolean;
+    message: string;
+    counts?: any;
+  } | null>(null);
+
+  const [isPulling, setIsPulling] = useState(false);
+  const [pullResult, setPullResult] = useState<{
+    success?: boolean;
+    message: string;
+  } | null>(null);
+
+  const [showManualFields, setShowManualFields] = useState(false);
+  const [apiKeyInput, setApiKeyInput] = useState('');
+  const [projectIdInput, setProjectIdInput] = useState('');
+  const [appIdInput, setAppIdInput] = useState('');
+  const [authDomainInput, setAuthDomainInput] = useState('');
+
   if (currentStaff.role !== 'ADMIN') {
     return (
       <div className="p-8 text-center bg-white rounded-3xl border border-rose-100 shadow-sm space-y-4 my-6">
@@ -81,36 +111,6 @@ export const FirebaseSettingsTab: React.FC = () => {
       </div>
     );
   }
-
-  const [currentConfig, setCurrentConfig] = useState<FirebaseConfig | null>(() =>
-    getStoredFirebaseConfig()
-  );
-  const [rawInput, setRawInput] = useState('');
-  const [isTesting, setIsTesting] = useState(false);
-  const [testResult, setTestResult] = useState<{
-    success?: boolean;
-    message: string;
-    latencyMs?: number;
-  } | null>(null);
-
-  const [isSyncingUp, setIsSyncingUp] = useState(false);
-  const [syncUpResult, setSyncUpResult] = useState<{
-    success?: boolean;
-    message: string;
-    counts?: any;
-  } | null>(null);
-
-  const [isPulling, setIsPulling] = useState(false);
-  const [pullResult, setPullResult] = useState<{
-    success?: boolean;
-    message: string;
-  } | null>(null);
-
-  const [showManualFields, setShowManualFields] = useState(false);
-  const [apiKeyInput, setApiKeyInput] = useState('');
-  const [projectIdInput, setProjectIdInput] = useState('');
-  const [appIdInput, setAppIdInput] = useState('');
-  const [authDomainInput, setAuthDomainInput] = useState('');
 
   const isConnected = !!currentConfig && !!getFirestoreDb();
 

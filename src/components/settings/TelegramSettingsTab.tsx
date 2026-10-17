@@ -38,6 +38,30 @@ import { soundFx } from '../../utils/audio';
 export const TelegramSettingsTab: React.FC = () => {
   const { isDemoMode, currentStaff, sales, expenses, customOrders, storeInfo, exchangeRate } = useBakery();
 
+  const [config, setConfig] = useState<TelegramConfig>(getStoredTelegramConfig());
+  const [showToken, setShowToken] = useState(false);
+  const [testing, setTesting] = useState(false);
+  const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
+  const [isConnectingMenu, setIsConnectingMenu] = useState(false);
+  const [menuConnectResult, setMenuConnectResult] = useState<{ success: boolean; message: string } | null>(null);
+  const [isSendingReportTest, setIsSendingReportTest] = useState(false);
+  const [reportSendResult, setReportSendResult] = useState<{ success: boolean; message: string } | null>(null);
+  const [savedSuccess, setSavedSuccess] = useState(false);
+
+  useEffect(() => {
+    setConfig(getStoredTelegramConfig());
+
+    const handleExternalConfigChange = (e: any) => {
+      const newConfig = e?.detail || getStoredTelegramConfig();
+      setConfig((prev) => (areTelegramConfigsEqual(prev, newConfig) ? prev : newConfig));
+    };
+
+    window.addEventListener('bakery_telegram_config_changed', handleExternalConfigChange);
+    return () => {
+      window.removeEventListener('bakery_telegram_config_changed', handleExternalConfigChange);
+    };
+  }, []);
+
   if (currentStaff.role !== 'ADMIN') {
     return (
       <div className="p-8 text-center bg-white rounded-3xl border border-rose-100 shadow-sm space-y-4 my-6">
@@ -69,16 +93,6 @@ export const TelegramSettingsTab: React.FC = () => {
       </div>
     );
   }
-
-  const [config, setConfig] = useState<TelegramConfig>(getStoredTelegramConfig());
-  const [showToken, setShowToken] = useState(false);
-  const [testing, setTesting] = useState(false);
-  const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
-  const [isConnectingMenu, setIsConnectingMenu] = useState(false);
-  const [menuConnectResult, setMenuConnectResult] = useState<{ success: boolean; message: string } | null>(null);
-  const [isSendingReportTest, setIsSendingReportTest] = useState(false);
-  const [reportSendResult, setReportSendResult] = useState<{ success: boolean; message: string } | null>(null);
-  const [savedSuccess, setSavedSuccess] = useState(false);
 
   const handleSendDailyReportTest = async () => {
     if (!config.botToken || !config.chatId) {
@@ -154,20 +168,6 @@ export const TelegramSettingsTab: React.FC = () => {
       soundFx.playSuccess();
     }
   };
-
-  useEffect(() => {
-    setConfig(getStoredTelegramConfig());
-
-    const handleExternalConfigChange = (e: any) => {
-      const newConfig = e?.detail || getStoredTelegramConfig();
-      setConfig((prev) => (areTelegramConfigsEqual(prev, newConfig) ? prev : newConfig));
-    };
-
-    window.addEventListener('bakery_telegram_config_changed', handleExternalConfigChange);
-    return () => {
-      window.removeEventListener('bakery_telegram_config_changed', handleExternalConfigChange);
-    };
-  }, []);
 
   const updateConfig = (updated: TelegramConfig) => {
     if (isDemoMode) return;

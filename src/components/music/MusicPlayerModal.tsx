@@ -110,6 +110,28 @@ export const MusicPlayerModal: React.FC = () => {
   // Drag and drop for local upload
   const [isDraggingFile, setIsDraggingFile] = useState(false);
 
+  // Filter playlist by Vibe Mood & Search Query (must be declared before any conditional return!)
+  const filteredPlaylist = useMemo(() => {
+    return playlist.filter((track) => {
+      // Vibe filter
+      if (vibeMood === 'favorites' && !favoriteTrackIds.includes(track.id)) return false;
+      if (vibeMood === 'cafe' && track.category !== 'cafe') return false;
+      if (vibeMood === 'birthday' && track.category !== 'birthday') return false;
+      if (vibeMood === 'acoustic' && track.category !== 'acoustic') return false;
+      if (vibeMood === 'custom' && !track.isCustom) return false;
+      if (vibeMood === 'youtube' && track.category !== 'youtube') return false;
+
+      // Search query
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase();
+        const matchTitle = track.title.toLowerCase().includes(q);
+        const matchArtist = track.artist?.toLowerCase().includes(q) || false;
+        return matchTitle || matchArtist;
+      }
+      return true;
+    });
+  }, [playlist, vibeMood, favoriteTrackIds, searchQuery]);
+
   if (!isPlayerOpen) return null;
 
   const formatTime = (seconds: number) => {
@@ -132,28 +154,6 @@ export const MusicPlayerModal: React.FC = () => {
     else if (loopMode === 'one') setLoopMode('none');
     else setLoopMode('all');
   };
-
-  // Filter playlist by Vibe Mood & Search Query
-  const filteredPlaylist = useMemo(() => {
-    return playlist.filter((track) => {
-      // Vibe filter
-      if (vibeMood === 'favorites' && !favoriteTrackIds.includes(track.id)) return false;
-      if (vibeMood === 'cafe' && track.category !== 'cafe') return false;
-      if (vibeMood === 'birthday' && track.category !== 'birthday') return false;
-      if (vibeMood === 'acoustic' && track.category !== 'acoustic') return false;
-      if (vibeMood === 'custom' && !track.isCustom) return false;
-      if (vibeMood === 'youtube' && track.category !== 'youtube') return false;
-
-      // Search query
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase();
-        const matchTitle = track.title.toLowerCase().includes(q);
-        const matchArtist = track.artist?.toLowerCase().includes(q) || false;
-        return matchTitle || matchArtist;
-      }
-      return true;
-    });
-  }, [playlist, vibeMood, favoriteTrackIds, searchQuery]);
 
   // Handle YouTube URL Lookup
   const handleLookupYouTube = async () => {

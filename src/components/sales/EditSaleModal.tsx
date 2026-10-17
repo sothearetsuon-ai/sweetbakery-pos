@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Edit3, Calendar, DollarSign, CheckCircle } from 'lucide-react';
 import { useBakery } from '../../context/BakeryContext';
 import { CompletedSale } from '../../types';
@@ -14,24 +14,37 @@ interface EditSaleModalProps {
 export const EditSaleModal: React.FC<EditSaleModalProps> = ({ sale, isOpen, onClose }) => {
   const { updateSale, exchangeRate } = useBakery();
 
+  const [date, setDate] = useState('');
+  const [time, setTime] = useState('12:00');
+  const [orderNumber, setOrderNumber] = useState('');
+  const [customerName, setCustomerName] = useState('');
+  const [amountKhr, setAmountKhr] = useState('0');
+  const [paymentMethod, setPaymentMethod] = useState<any>('CASH');
+  const [cashierName, setCashierName] = useState('');
+  const [notes, setNotes] = useState('');
+
+  useEffect(() => {
+    if (sale) {
+      const saleDateObj = new Date(sale.createdAt);
+      const initialDate = !isNaN(saleDateObj.getTime())
+        ? saleDateObj.toISOString().slice(0, 10)
+        : new Date().toISOString().slice(0, 10);
+      const initialTime = !isNaN(saleDateObj.getTime())
+        ? saleDateObj.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
+        : '12:00';
+
+      setDate(initialDate);
+      setTime(initialTime);
+      setOrderNumber(sale.orderNumber);
+      setCustomerName(sale.customerName || '');
+      setAmountKhr(sale.totalKhr.toString());
+      setPaymentMethod(sale.paymentMethod);
+      setCashierName(sale.cashierName);
+      setNotes(sale.notes || '');
+    }
+  }, [sale, isOpen]);
+
   if (!isOpen || !sale) return null;
-
-  const saleDateObj = new Date(sale.createdAt);
-  const initialDate = !isNaN(saleDateObj.getTime())
-    ? saleDateObj.toISOString().slice(0, 10)
-    : new Date().toISOString().slice(0, 10);
-  const initialTime = !isNaN(saleDateObj.getTime())
-    ? saleDateObj.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
-    : '12:00';
-
-  const [date, setDate] = useState(initialDate);
-  const [time, setTime] = useState(initialTime);
-  const [orderNumber, setOrderNumber] = useState(sale.orderNumber);
-  const [customerName, setCustomerName] = useState(sale.customerName || '');
-  const [amountKhr, setAmountKhr] = useState(sale.totalKhr.toString());
-  const [paymentMethod, setPaymentMethod] = useState(sale.paymentMethod);
-  const [cashierName, setCashierName] = useState(sale.cashierName);
-  const [notes, setNotes] = useState(sale.notes || '');
 
   const numKhr = parseFloat(amountKhr) || 0;
   const numUsd = parseFloat((numKhr / exchangeRate).toFixed(2));
