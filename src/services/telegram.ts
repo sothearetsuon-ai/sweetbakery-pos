@@ -15,6 +15,8 @@ export interface TelegramConfig {
   notifyDailyReport?: boolean;
   dailyReportTime?: string; // e.g. "21:00" (9:00 PM) or "09:00" (9:00 AM)
   includeAiInsight?: boolean;
+  adminChatId?: string; // e.g. "8970210109" (Admin private chat id)
+  dailyReportRecipient?: 'ADMIN_ONLY' | 'GROUP_ONLY' | 'BOTH'; // default: 'ADMIN_ONLY'
 }
 
 const STORAGE_KEY = 'bakery_telegram_config';
@@ -22,6 +24,8 @@ const STORAGE_KEY = 'bakery_telegram_config';
 export const DEFAULT_TELEGRAM_CONFIG: TelegramConfig = {
   botToken: '8544004471:AAFsyBJbtmKR6W46zGtqGhNVWjE2AIvzWC4',
   chatId: '-5528089668',
+  adminChatId: '8970210109',
+  dailyReportRecipient: 'ADMIN_ONLY',
   enabled: true,
   notifySales: true,
   notifyCustomOrders: true,
@@ -79,7 +83,15 @@ export const getStoredTelegramConfig = (): TelegramConfig => {
         merged.chatId = `-5528089668, ${merged.chatId}`;
       }
 
-      // Auto-heal 3: If bot credentials exist, ensure alerts are enabled
+      // Auto-heal 3: Admin chat ID and daily report recipient defaults
+      if (!merged.adminChatId) {
+        merged.adminChatId = DEFAULT_TELEGRAM_CONFIG.adminChatId || '8970210109';
+      }
+      if (!merged.dailyReportRecipient) {
+        merged.dailyReportRecipient = 'ADMIN_ONLY';
+      }
+
+      // Auto-heal 4: If bot credentials exist, ensure alerts are enabled
       if (merged.botToken && merged.chatId && !merged.enabled) {
         merged.enabled = true;
         merged.notifySales = true;
@@ -230,19 +242,29 @@ export const getStoredTelegramConfigAsync = async (): Promise<TelegramConfig> =>
 /**
  * Send raw HTML message via Telegram Bot API
  * Supports single chat ID or multiple comma-separated IDs (e.g. Group + Personal Admin)
+ * If directChatIds is provided, sends EXCLUSIVELY to those IDs without appending default group
  */
 export const sendTelegramMessage = async (
   text: string,
-  customConfig?: TelegramConfig
+  customConfig?: TelegramConfig,
+  directChatIds?: string | string[]
 ): Promise<{ success: boolean; message: string; data?: any }> => {
   const config = customConfig || (await getStoredTelegramConfigAsync());
 
-  if (!config.botToken || !config.chatId) {
-    return { success: false, message: 'សូមបំពេញ Bot Token និង Chat ID ជាមុនសិន!' };
+  if (!config.botToken) {
+    return { success: false, message: 'សូមបំពេញ Bot Token ជាមុនសិន!' };
   }
 
   const cleanToken = config.botToken.trim();
-  const chatIds = parseTelegramChatIds(config.chatId, cleanToken);
+
+  let chatIds: string[];
+  if (directChatIds) {
+    const rawIds = Array.isArray(directChatIds) ? directChatIds : [directChatIds];
+    const cleaned = rawIds.map((s) => (s ? String(s).trim() : '')).filter(Boolean);
+    chatIds = Array.from(new Set(cleaned));
+  } else {
+    chatIds = parseTelegramChatIds(config.chatId, cleanToken);
+  }
 
   if (chatIds.length === 0) {
     return { success: false, message: 'សូមបំពេញ Chat ID ជាមុនសិន!' };
@@ -317,8 +339,10 @@ export const sendTelegramMessage = async (
   let errDesc = lastError || 'កំហុសមិនស្គាល់';
   if (errDesc.includes('Unauthorized') || errDesc.includes('Not Found')) {
     errDesc = 'Bot Token មិនត្រឹមត្រូវ (Invalid Bot Token)';
+  } else if (errDesc.includes("bot can't initiate conversation") || errDesc.includes('Forbidden')) {
+    errDesc = 'Telegram តម្រូវឱ្យ Admin ចុច /start ក្នុង Bot ជាមុនសិន! សូមបើក Telegram ស្វែងរក @vicheta_order_bot ហើយចុច Start (ឬផ្ញើសារ /start) ដើម្បីឱ្យ Bot អាចផ្ញើសារចូលគណនីផ្ទាល់ខ្លួនបាន។';
   } else if (errDesc.includes('chat not found')) {
-    errDesc = 'រកមិនឃើញ Chat ID នេះឡើយ។ សូមប្រាកដថាអ្នកបានចុច /start ក្នុង Bot ឬបាន Add Bot ចូល Group!';
+    errDesc = 'រកមិនឃើញ Chat ID នេះឡើយ។ សូមប្រាកដថា Admin បានចុច /start ក្នុង Bot (@vicheta_order_bot) ឬបាន Add Bot ចូល Group!';
   }
 
   return {
@@ -1194,6 +1218,7 @@ export const generateDailyMonthlySummaryReportText = (params: DailyReportParams)
 
 /**
  * Send Daily & Monthly Summary Report to Telegram
+ * Defaults to 'ADMIN_ONLY' (8970210109) so financial summaries remain private and confidential
  */
 export const sendTelegramDailyReport = async (
   params: DailyReportParams,
@@ -1204,17 +1229,49 @@ export const sendTelegramDailyReport = async (
   }
 
   const config = await getStoredTelegramConfigAsync();
-  if (!config.enabled || (config.notifyDailyReport === false && !isManual) || !config.botToken || !config.chatId) {
+  if (!config.enabled || (config.notifyDailyReport === false && !isManual) || !config.botToken) {
     return {
       success: false,
-      message: 'សូមបើកមុខងារ Telegram Bot និងបំពេញ Token & Chat ID ក្នុង Settings ជាមុនសិន!',
+      message: 'សូមបើកមុខងារ Telegram Bot ក្នុង Settings ជាមុនសិន!',
+    };
+  }
+
+  // Determine recipient for the Daily/Monthly Summary Report
+  // Default: 'ADMIN_ONLY' -> Send strictly and confidentially to Admin's private bot chat (8970210109)
+  const recipientMode = config.dailyReportRecipient || 'ADMIN_ONLY';
+  const adminId = (config.adminChatId || '8970210109').trim();
+  const groupChatId = config.chatId || DEFAULT_TELEGRAM_CONFIG.chatId;
+
+  let targetChatIds: string[] = [];
+  if (recipientMode === 'ADMIN_ONLY') {
+    if (!adminId) {
+      return {
+        success: false,
+        message: 'សូមបញ្ចូល Admin Chat ID (ឧទាហរណ៍: 8970210109) ដើម្បីទទួលរបាយការណ៍!',
+      };
+    }
+    targetChatIds = [adminId];
+  } else if (recipientMode === 'GROUP_ONLY') {
+    targetChatIds = parseTelegramChatIds(groupChatId, config.botToken);
+  } else {
+    // 'BOTH'
+    const groupIds = parseTelegramChatIds(groupChatId, config.botToken);
+    const combined = new Set([...groupIds]);
+    if (adminId) combined.add(adminId);
+    targetChatIds = Array.from(combined);
+  }
+
+  if (targetChatIds.length === 0) {
+    return {
+      success: false,
+      message: 'គ្មាន Chat ID សម្រាប់ទទួលរបាយការណ៍ឡើយ!',
     };
   }
 
   const now = new Date();
   const todayStr = params.targetDate || params.dateStr || now.toISOString().slice(0, 10);
   const timeSlot = config.dailyReportTime || '21:00';
-  const eventKey = `daily_report_${todayStr}_${timeSlot}`;
+  const eventKey = `daily_report_${todayStr}_${timeSlot}_${recipientMode}`;
 
   if (!isManual && hasTelegramEventFired(eventKey)) {
     return {
@@ -1228,9 +1285,21 @@ export const sendTelegramDailyReport = async (
     reportTimeLabel: isManual ? undefined : timeSlot,
   });
 
-  const res = await sendTelegramMessage(reportText, config);
+  const res = await sendTelegramMessage(reportText, config, targetChatIds);
   if (res.success) {
     markTelegramEventFired(eventKey);
+    let targetDesc = '';
+    if (recipientMode === 'ADMIN_ONLY') {
+      targetDesc = `Admin ផ្ទាល់ខ្លួន (${adminId}) [សម្ងាត់ មិនផ្ញើចូល Group ឡើយ]`;
+    } else if (recipientMode === 'GROUP_ONLY') {
+      targetDesc = 'Telegram Group ហាង';
+    } else {
+      targetDesc = `Admin (${adminId}) និង Group ហាង`;
+    }
+    return {
+      success: true,
+      message: `📊 របាយការណ៍បូកសរុបត្រូវបានផ្ញើទៅកាន់ ${targetDesc} ជោគជ័យ!`,
+    };
   }
   return res;
 };

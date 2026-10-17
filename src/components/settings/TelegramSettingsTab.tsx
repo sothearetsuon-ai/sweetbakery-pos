@@ -17,6 +17,9 @@ import {
   Clock,
   Lock,
   BarChart3,
+  ShieldCheck,
+  UserCheck,
+  Users,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import {
@@ -501,8 +504,147 @@ export const TelegramSettingsTab: React.FC = () => {
 
               {/* Extended options when enabled */}
               {(config.notifyDailyReport ?? true) && (
-                <div className="pl-7 space-y-2.5 pt-2 border-t border-sky-100 text-xs animate-in fade-in duration-200">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div className="pl-7 space-y-3 pt-2.5 border-t border-sky-100 text-xs animate-in fade-in duration-200">
+                  {/* Recipient Destination Selector */}
+                  <div className="space-y-1.5">
+                    <span className="font-bold text-slate-700 flex items-center gap-1.5">
+                      <ShieldCheck className="w-3.5 h-3.5 text-indigo-600" />
+                      <span>កន្លែងទទួលរបាយការណ៍បូកសរុប (Report Destination)៖</span>
+                    </span>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                      {/* Option 1: ADMIN_ONLY (Default & Recommended) */}
+                      <button
+                        type="button"
+                        onClick={() => updateConfig({ ...config, dailyReportRecipient: 'ADMIN_ONLY' })}
+                        className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between gap-1 ${
+                          (config.dailyReportRecipient || 'ADMIN_ONLY') === 'ADMIN_ONLY'
+                            ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
+                            : 'bg-white text-slate-700 border-slate-200 hover:border-indigo-300'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-1">
+                          <span className="font-black text-xs flex items-center gap-1">
+                            <UserCheck className="w-3.5 h-3.5" />
+                            <span>Admin ផ្ទាល់ខ្លួន</span>
+                          </span>
+                          <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold uppercase ${
+                            (config.dailyReportRecipient || 'ADMIN_ONLY') === 'ADMIN_ONLY'
+                              ? 'bg-white/20 text-white'
+                              : 'bg-amber-100 text-amber-800'
+                          }`}>
+                            ណែនាំ ⭐
+                          </span>
+                        </div>
+                        <p className={`text-[10px] leading-tight ${
+                          (config.dailyReportRecipient || 'ADMIN_ONLY') === 'ADMIN_ONLY'
+                            ? 'text-indigo-100'
+                            : 'text-slate-500'
+                        }`}>
+                          ផ្ញើចូលតែ Admin ({config.adminChatId || '8970210109'}) សម្ងាត់ មិនផ្ញើចូល Group ហាងឡើយ
+                        </p>
+                      </button>
+
+                      {/* Option 2: GROUP_ONLY */}
+                      <button
+                        type="button"
+                        onClick={() => updateConfig({ ...config, dailyReportRecipient: 'GROUP_ONLY' })}
+                        className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between gap-1 ${
+                          config.dailyReportRecipient === 'GROUP_ONLY'
+                            ? 'bg-sky-600 text-white border-sky-600 shadow-sm'
+                            : 'bg-white text-slate-700 border-slate-200 hover:border-sky-300'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-1">
+                          <span className="font-black text-xs flex items-center gap-1">
+                            <Users className="w-3.5 h-3.5" />
+                            <span>Group ហាង</span>
+                          </span>
+                        </div>
+                        <p className={`text-[10px] leading-tight ${
+                          config.dailyReportRecipient === 'GROUP_ONLY'
+                            ? 'text-sky-100'
+                            : 'text-slate-500'
+                        }`}>
+                          ផ្ញើចូល Telegram Group ({config.chatId || '-5528089668'}) សម្រាប់បុគ្គលិកទាំងអស់
+                        </p>
+                      </button>
+
+                      {/* Option 3: BOTH */}
+                      <button
+                        type="button"
+                        onClick={() => updateConfig({ ...config, dailyReportRecipient: 'BOTH' })}
+                        className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between gap-1 ${
+                          config.dailyReportRecipient === 'BOTH'
+                            ? 'bg-purple-600 text-white border-purple-600 shadow-sm'
+                            : 'bg-white text-slate-700 border-slate-200 hover:border-purple-300'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-1">
+                          <span className="font-black text-xs flex items-center gap-1">
+                            <Sparkles className="w-3.5 h-3.5" />
+                            <span>ផ្ញើទាំងពីរ (Both)</span>
+                          </span>
+                        </div>
+                        <p className={`text-[10px] leading-tight ${
+                          config.dailyReportRecipient === 'BOTH'
+                            ? 'text-purple-100'
+                            : 'text-slate-500'
+                        }`}>
+                          ផ្ញើដំណាលគ្នាទាំងចូល Admin ({config.adminChatId || '8970210109'}) និង Group ហាង
+                        </p>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Admin Chat ID Input (shown if ADMIN_ONLY or BOTH) */}
+                  {(config.dailyReportRecipient || 'ADMIN_ONLY') !== 'GROUP_ONLY' && (
+                    <div className="p-3 bg-white/90 border border-indigo-100 rounded-2xl space-y-2">
+                      <div className="flex items-center justify-between gap-2">
+                        <label className="text-[11px] font-bold text-slate-800 flex items-center gap-1.5">
+                          <Lock className="w-3 h-3 text-indigo-600" />
+                          <span>Admin Private Chat ID (លេខសម្គាល់ Telegram Admin ផ្ទាល់ខ្លួន)៖</span>
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => updateConfig({ ...config, adminChatId: '8970210109' })}
+                          className="text-[10px] text-indigo-600 hover:text-indigo-800 font-bold underline cursor-pointer"
+                        >
+                          កំណត់ 8970210109
+                        </button>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={config.adminChatId ?? '8970210109'}
+                          onChange={(e) => updateConfig({ ...config, adminChatId: e.target.value.trim() })}
+                          placeholder="8970210109"
+                          className="flex-1 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                        />
+                        <a
+                          href="https://t.me/vicheta_order_bot"
+                          target="_blank"
+                          rel="noreferrer"
+                          className="px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-xl text-[11px] font-bold flex items-center gap-1 transition-all"
+                        >
+                          <span>បើក Bot</span>
+                          <ExternalLink className="w-3 h-3" />
+                        </a>
+                      </div>
+
+                      {/* Important Bot Start Reminder */}
+                      <div className="p-2.5 bg-amber-50/90 border border-amber-200/80 rounded-xl text-[11px] text-amber-900 space-y-1">
+                        <p className="font-bold flex items-center gap-1 text-amber-800">
+                          <span>🔔 សំខាន់សម្រាប់ Admin៖</span>
+                        </p>
+                        <p className="text-[10.5px] leading-relaxed text-amber-800/90">
+                          Telegram តម្រូវឱ្យ Admin ចុច <b>Start</b> ក្នុង Bot ជាមុនសិន ទើប Bot មានសិទ្ធិផ្ញើសារចូលគណនីផ្ទាល់ខ្លួនបាន។ សូមបើក Telegram ស្វែងរក <b>@vicheta_order_bot</b> រួចចុច Start (ឬផ្ញើសារ <code>/start</code>) ម្ដងជាការស្រេច។
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Schedule Time */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-1">
                     <span className="font-bold text-slate-700 flex items-center gap-1">
                       <Clock className="w-3.5 h-3.5 text-sky-600" />
                       <span>ម៉ោងកំណត់ផ្ញើរបាយការណ៍ស្វ័យប្រវត្តិតាមថ្ងៃ (Schedule Time)៖</span>
@@ -542,10 +684,18 @@ export const TelegramSettingsTab: React.FC = () => {
                       type="button"
                       onClick={handleSendDailyReportTest}
                       disabled={isSendingReportTest}
-                      className="px-3 py-1.5 bg-sky-600 hover:bg-sky-700 text-white rounded-xl text-xs font-bold transition-all active:scale-95 disabled:opacity-50 cursor-pointer flex items-center gap-1.5 shadow-2xs"
+                      className="px-3.5 py-1.5 bg-sky-600 hover:bg-sky-700 text-white rounded-xl text-xs font-bold transition-all active:scale-95 disabled:opacity-50 cursor-pointer flex items-center gap-1.5 shadow-2xs"
                     >
                       <Send className={`w-3.5 h-3.5 ${isSendingReportTest ? 'animate-pulse' : ''}`} />
-                      <span>{isSendingReportTest ? 'កំពុងផ្ញើរបាយការណ៍...' : '📊 សាកល្បងផ្ញើរបាយការណ៍បូកសរុបទៅ Telegram ឥឡូវនេះ'}</span>
+                      <span>
+                        {isSendingReportTest
+                          ? 'កំពុងផ្ញើរបាយការណ៍...'
+                          : (config.dailyReportRecipient || 'ADMIN_ONLY') === 'ADMIN_ONLY'
+                          ? `📊 សាកល្បងផ្ញើទៅ Admin (${config.adminChatId || '8970210109'}) ឥឡូវនេះ`
+                          : config.dailyReportRecipient === 'GROUP_ONLY'
+                          ? '📊 សាកល្បងផ្ញើទៅ Group ហាង ឥឡូវនេះ'
+                          : `📊 សាកល្បងផ្ញើទៅ Admin & Group ឥឡូវនេះ`}
+                      </span>
                     </button>
                     {reportSendResult && (
                       <span className={`text-[11px] font-bold ${reportSendResult.success ? 'text-emerald-700' : 'text-rose-600'}`}>
