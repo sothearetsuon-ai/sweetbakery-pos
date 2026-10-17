@@ -1,5 +1,21 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Mic, MicOff, X, Sparkles, Plus, Check, ShoppingCart, AlertCircle, RotateCcw } from 'lucide-react';
+import {
+  Mic,
+  MicOff,
+  X,
+  Sparkles,
+  Plus,
+  Check,
+  ShoppingCart,
+  AlertCircle,
+  RotateCcw,
+  Send,
+  HelpCircle,
+  CreditCard,
+  Trash2,
+  Tag,
+} from 'lucide-react';
+import confetti from 'canvas-confetti';
 import { Product } from '../../types';
 import { parseKhmerVoiceCommand, VoicePosAction } from '../../services/khmerVoicePosService';
 import { soundFx } from '../../utils/audio';
@@ -25,6 +41,7 @@ export const KhmerVoicePosModal: React.FC<KhmerVoicePosModalProps> = ({
 }) => {
   const [isListening, setIsListening] = useState(false);
   const [transcript, setTranscript] = useState('');
+  const [manualInput, setManualInput] = useState('');
   const [detectedActions, setDetectedActions] = useState<VoicePosAction[]>([]);
   const [statusText, setStatusText] = useState('ចុចលើ Microphone ដើម្បីចាប់ផ្តើមនិយាយ...');
   const [errorText, setErrorText] = useState<string | null>(null);
@@ -37,24 +54,113 @@ export const KhmerVoicePosModal: React.FC<KhmerVoicePosModalProps> = ({
     } else {
       stopListening();
       setTranscript('');
+      setManualInput('');
       setDetectedActions([]);
       setErrorText(null);
+      setStatusText('ចុចលើ Microphone ដើម្បីចាប់ផ្តើមនិយាយ...');
     }
   }, [isOpen]);
 
-  const startListening = () => {
+  const processSpokenText = (text: string) => {
+    if (!text || !text.trim()) return;
+    const cleanText = text.trim();
+    setTranscript(cleanText);
+    setErrorText(null);
+
+    const parsed = parseKhmerVoiceCommand(cleanText, products);
+    setDetectedActions(parsed);
+
+    const hasValidProduct = parsed.some((a) => a.type === 'ADD_PRODUCT' && a.product);
+    const hasCheckout = parsed.some((a) => a.type === 'CHECKOUT');
+    const hasClear = parsed.some((a) => a.type === 'CLEAR_CART');
+
+    if (hasValidProduct) {
+      soundFx.playSuccess();
+      setStatusText(`✅ បានសម្គាល់ឃើញទំនិញពីសំឡេង៖ "${cleanText}"`);
+    } else if (hasCheckout) {
+      soundFx.playSuccess();
+      setStatusText('💰 បញ្ជាបើកផ្ទាំងគិតលុយ (Checkout)...');
+    } else if (hasClear) {
+      soundFx.playPop();
+      setStatusText('🗑️ បញ្ជាសម្អាតកន្ត្រក...');
+    } else {
+      setStatusText(`បានឮ៖ "${cleanText}" (សូមចុចជ្រើសរើស ឬនិយាយឈ្មោះឱ្យកាន់តែច្បាស់)`);
+    }
+  };
+
+  const startListening = async () => {
+    setErrorText(null);
+
+    // 1. Android Native App Speech Bridge
+    if (typeof (window as any).SweetBakeryNative?.startSpeechRecognition === 'function') {
+      try {
+        setIsListening(true);
+        setStatusText('🎙️ កំពុងស្តាប់តាម Android Google Voice Typing... សូមនិយាយ');
+        soundFx.playPop();
+
+        (window as any).__onSweetBakerySpeechResult = (text: string) => {
+          setIsListening(false);
+          if (text && text.trim()) {
+            processSpokenText(text);
+          } else {
+            setStatusText('មិនបានទទួលសំឡេងទេ សូមចុចលើ Mic ដើម្បីនិយាយម្តងទៀត');
+          }
+        };
+
+        (window as any).__onSweetBakerySpeechError = (err: string) => {
+          setIsListening(false);
+          if (err === 'cancelled') {
+            setStatusText('បានបោះបង់ការនិយាយ។ ចុចលើ Mic ដើម្បីនិយាយម្តងទៀត');
+          } else {
+            setStatusText('មិនបានឮសំឡេងទេ សូមសាកល្បងនិយាយម្តងទៀត ឬចុចលើពាក្យគំរូខាងក្រោម 👇');
+          }
+        };
+
+        (window as any).SweetBakeryNative.startSpeechRecognition();
+        return;
+      } catch (err: any) {
+        console.warn('Android native speech bridge exception:', err);
+      }
+    }
+
+    // 2. Web Speech API (Chrome / Edge / Safari / Desktop)
     const SpeechRecognition =
       (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
 
     if (!SpeechRecognition) {
-      setErrorText('Browser នេះមិនទាន់គាំទ្រការទទួលសំឡេង Web Speech API ឡើយ។');
+      setErrorText('ឧបករណ៍ ឬ Browser នេះមិនទាន់គាំទ្រ Web Speech API ឡើយ។ អ្នកអាចប្រើប្រាស់ប៊ូតុងគំរូរហ័ស ឬវាយអក្សរខាងក្រោមបានយ៉ាងងាយស្រួល!');
+      setIsListening(false);
+      setStatusText('សូមចុចលើប៊ូតុងបញ្ជាគំរូខាងក្រោម 👇');
       return;
     }
 
+    // Pre-flight Microphone Permission Check via getUserMedia
+    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        stream.getTracks().forEach((track) => track.stop());
+      } catch (err: any) {
+        console.warn('Microphone permission request result:', err);
+        if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+          setErrorText('សូមអនុញ្ញាតសិទ្ធិប្រើ Microphone (Allow Microphone) នៅក្នុងការកំណត់ Browser/App។');
+          setIsListening(false);
+          setStatusText('មិនអាចប្រើ Mic បានដោយសារគ្មានសិទ្ធិ (Microphone Permission Denied)');
+          return;
+        }
+      }
+    }
+
     try {
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.stop();
+        } catch {}
+      }
+
       const recognition = new SpeechRecognition();
-      recognition.continuous = true;
+      recognition.continuous = false;
       recognition.interimResults = true;
+      recognition.maxAlternatives = 1;
       recognition.lang = 'km-KH';
 
       recognition.onstart = () => {
@@ -70,9 +176,7 @@ export const KhmerVoicePosModal: React.FC<KhmerVoicePosModalProps> = ({
         }
 
         if (currentTranscript.trim()) {
-          setTranscript(currentTranscript);
-          const parsed = parseKhmerVoiceCommand(currentTranscript, products);
-          setDetectedActions(parsed);
+          processSpokenText(currentTranscript);
         }
       };
 
@@ -82,19 +186,32 @@ export const KhmerVoicePosModal: React.FC<KhmerVoicePosModalProps> = ({
           if (event.error === 'not-allowed') {
             setErrorText('សូមអនុញ្ញាតសិទ្ធិប្រើ Microphone ក្នុង Browser Settings។');
           } else if (event.error === 'no-speech') {
-            setStatusText('មិនបានឮសំឡេងទេ សូមនិយាយម្តងទៀត...');
+            setStatusText('មិនបានឮសំឡេងទេ សូមនិយាយម្តងទៀត ឬចុចលើពាក្យគំរូខាងក្រោម 👇');
+          } else {
+            setStatusText('ការស្តាប់ត្រូវបានផ្អាក។ ចុចលើ Mic ដើម្បីនិយាយម្តងទៀត');
           }
         }
+        setIsListening(false);
       };
 
       recognition.onend = () => {
         setIsListening(false);
+        // Only reset status text if not currently showing recognized result
+        setStatusText((prev) => {
+          if (prev.startsWith('✅') || prev.startsWith('💰') || prev.startsWith('🗑️')) {
+            return prev;
+          }
+          return 'បានបញ្ចប់ការស្តាប់។ ចុចលើ Microphone ម្តងទៀតដើម្បីនិយាយ ឬចុចលើពាក្យគំរូខាងក្រោម 👇';
+        });
       };
 
       recognitionRef.current = recognition;
       recognition.start();
     } catch (err: any) {
-      setErrorText('មិនអាចបើក Microphone បានទេ៖ ' + err.message);
+      console.warn('Cannot start recognition:', err);
+      setErrorText('មិនអាចបើក Microphone បានទេ៖ ' + (err.message || 'Error'));
+      setIsListening(false);
+      setStatusText('សូមចុចលើពាក្យបញ្ជាគំរូខាងក្រោម 👇');
     }
   };
 
@@ -131,23 +248,39 @@ export const KhmerVoicePosModal: React.FC<KhmerVoicePosModalProps> = ({
         onCheckout();
         onClose();
         return;
+      } else if (act.type === 'CLEAR_CART' && onClearCart) {
+        onClearCart();
       }
     }
 
     if (addedCount > 0) {
+      confetti({
+        particleCount: 50,
+        spread: 60,
+        origin: { y: 0.7 },
+      });
       setTranscript('');
       setDetectedActions([]);
       setStatusText(`✅ បានបញ្ចូល ${addedCount} មុខទំនិញចូលកន្ត្រករួចរាល់!`);
     }
   };
 
+  const handleManualSubmit = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!manualInput.trim()) return;
+    processSpokenText(manualInput);
+    setManualInput('');
+  };
+
   if (!isOpen) return null;
 
   const validProducts = detectedActions.filter((a) => a.type === 'ADD_PRODUCT' && a.product);
+  const checkoutAction = detectedActions.find((a) => a.type === 'CHECKOUT');
+  const clearCartAction = detectedActions.find((a) => a.type === 'CLEAR_CART');
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-white rounded-3xl max-w-lg w-full overflow-hidden shadow-2xl border border-rose-100 flex flex-col max-h-[88vh]">
+      <div className="bg-white rounded-3xl max-w-lg w-full overflow-hidden shadow-2xl border border-rose-100 flex flex-col max-h-[90vh]">
         {/* Header */}
         <div className="bg-gradient-to-r from-pink-600 via-rose-600 to-amber-600 text-white p-4 sm:p-5 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
@@ -183,26 +316,113 @@ export const KhmerVoicePosModal: React.FC<KhmerVoicePosModalProps> = ({
         {/* Content */}
         <div className="p-4 sm:p-5 overflow-y-auto space-y-4">
           {/* Big Interactive Mic Button */}
-          <div className="py-4 flex flex-col items-center justify-center text-center">
-            <button
-              type="button"
-              onClick={() => {
-                if (isListening) stopListening();
-                else startListening();
-              }}
-              className={`w-20 h-20 rounded-full flex items-center justify-center text-3xl shadow-xl transition-all cursor-pointer active:scale-90 ${
-                isListening
-                  ? 'bg-gradient-to-tr from-rose-500 to-pink-500 text-white ring-8 ring-pink-400/30 animate-pulse'
-                  : 'bg-slate-100 text-slate-500 hover:bg-pink-50 hover:text-pink-600'
-              }`}
-            >
-              {isListening ? <Mic className="w-9 h-9" /> : <MicOff className="w-9 h-9" />}
-            </button>
+          <div className="py-2 flex flex-col items-center justify-center text-center">
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => {
+                  if (isListening) stopListening();
+                  else startListening();
+                }}
+                className={`w-20 h-20 rounded-full flex items-center justify-center text-3xl shadow-xl transition-all cursor-pointer active:scale-90 ${
+                  isListening
+                    ? 'bg-gradient-to-tr from-rose-500 to-pink-500 text-white ring-8 ring-pink-400/40 animate-pulse scale-105'
+                    : 'bg-slate-100 text-slate-600 hover:bg-pink-50 hover:text-pink-600 border border-slate-200'
+                }`}
+                title={isListening ? 'ចុចដើម្បីផ្អាកការស្តាប់' : 'ចុចដើម្បីចាប់ផ្តើមនិយាយ'}
+              >
+                {isListening ? (
+                  <Mic className="w-9 h-9 animate-bounce" />
+                ) : (
+                  <MicOff className="w-9 h-9" />
+                )}
+              </button>
 
-            <div className="mt-3 font-bold text-xs text-slate-700">
+              {isListening && (
+                <span className="absolute -top-1 -right-1 flex h-4 w-4">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-4 w-4 bg-rose-500" />
+                </span>
+              )}
+            </div>
+
+            <div className="mt-3 font-bold text-xs text-slate-700 max-w-sm">
               {statusText}
             </div>
           </div>
+
+          {/* Quick Interactive Command Suggestion Chips (1-Click Test / Fallback) */}
+          <div className="space-y-1.5">
+            <div className="text-[11px] font-bold text-slate-500 flex items-center justify-between">
+              <span className="flex items-center gap-1">
+                <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                <span>ចុចលើពាក្យគំរូដើម្បីបញ្ជាលក់ភ្លាមៗ (Quick Test Chips)៖</span>
+              </span>
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              <button
+                type="button"
+                onClick={() => processSpokenText('នំបុ័ងបារាំង ២ ដើម')}
+                className="text-[11px] font-bold px-2.5 py-1 rounded-xl bg-pink-50 hover:bg-pink-100 text-pink-700 border border-pink-200 transition-all active:scale-95 cursor-pointer flex items-center gap-1"
+              >
+                🥖 នំបុ័ងបារាំង ២ដើម
+              </button>
+              <button
+                type="button"
+                onClick={() => processSpokenText('នំខេកសូកូឡា ១ ដុំ')}
+                className="text-[11px] font-bold px-2.5 py-1 rounded-xl bg-pink-50 hover:bg-pink-100 text-pink-700 border border-pink-200 transition-all active:scale-95 cursor-pointer flex items-center gap-1"
+              >
+                🎂 នំខេកសូកូឡា ១ដុំ
+              </button>
+              <button
+                type="button"
+                onClick={() => processSpokenText('នំខេកស្ត្រប៊ឺរី ៣ ដុំ')}
+                className="text-[11px] font-bold px-2.5 py-1 rounded-xl bg-pink-50 hover:bg-pink-100 text-pink-700 border border-pink-200 transition-all active:scale-95 cursor-pointer flex items-center gap-1"
+              >
+                🍰 នំខេកស្ត្រប៊ឺរី ៣ដុំ
+              </button>
+              <button
+                type="button"
+                onClick={() => processSpokenText('គិតលុយ')}
+                className="text-[11px] font-bold px-2.5 py-1 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 transition-all active:scale-95 cursor-pointer flex items-center gap-1"
+              >
+                💰 គិតលុយ
+              </button>
+              <button
+                type="button"
+                onClick={() => processSpokenText('បញ្ចុះតម្លៃ 10 ភាគរយ')}
+                className="text-[11px] font-bold px-2.5 py-1 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 transition-all active:scale-95 cursor-pointer flex items-center gap-1"
+              >
+                🏷️ បញ្ចុះតម្លៃ 10%
+              </button>
+              <button
+                type="button"
+                onClick={() => processSpokenText('លុបចោល')}
+                className="text-[11px] font-bold px-2.5 py-1 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-600 border border-slate-200 transition-all active:scale-95 cursor-pointer flex items-center gap-1"
+              >
+                🗑️ សម្អាតកន្ត្រក
+              </button>
+            </div>
+          </div>
+
+          {/* Manual Khmer Voice Command Text Bar */}
+          <form onSubmit={handleManualSubmit} className="flex gap-1.5">
+            <input
+              type="text"
+              value={manualInput}
+              onChange={(e) => setManualInput(e.target.value)}
+              placeholder="វាយពាក្យបញ្ជា ឧ. នំបុ័ងបារាំង ២ដើម ឬ គិតលុយ..."
+              className="flex-1 text-xs px-3.5 py-2 rounded-xl border border-slate-200 focus:border-pink-500 focus:ring-2 focus:ring-pink-200 bg-slate-50 text-slate-800 placeholder:text-slate-400 font-medium"
+            />
+            <button
+              type="submit"
+              disabled={!manualInput.trim()}
+              className="px-3 py-2 bg-pink-600 hover:bg-pink-700 disabled:opacity-50 text-white rounded-xl text-xs font-bold transition-all shadow-xs flex items-center gap-1 cursor-pointer active:scale-95 shrink-0"
+            >
+              <Send className="w-3.5 h-3.5" />
+              <span>បញ្ជា</span>
+            </button>
+          </form>
 
           {errorText && (
             <div className="p-3 bg-rose-50 border border-rose-200 rounded-2xl flex items-center gap-2 text-xs text-rose-800">
@@ -220,6 +440,48 @@ export const KhmerVoicePosModal: React.FC<KhmerVoicePosModalProps> = ({
               <p className="text-sm font-black text-slate-800 italic">
                 "{transcript}"
               </p>
+            </div>
+          )}
+
+          {/* Checkout Shortcut Triggered */}
+          {checkoutAction && (
+            <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-2xl flex items-center justify-between">
+              <div className="flex items-center gap-2 text-emerald-800 text-xs font-bold">
+                <CreditCard className="w-4 h-4 text-emerald-600" />
+                <span>បានសម្គាល់ឃើញពាក្យបញ្ជា «គិតលុយ»</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  onCheckout?.();
+                  onClose();
+                }}
+                className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold cursor-pointer shadow-xs active:scale-95"
+              >
+                បើកផ្ទាំងទូទាត់ភ្លាមៗ
+              </button>
+            </div>
+          )}
+
+          {/* Clear Cart Triggered */}
+          {clearCartAction && (
+            <div className="p-3 bg-amber-50 border border-amber-200 rounded-2xl flex items-center justify-between">
+              <div className="flex items-center gap-2 text-amber-800 text-xs font-bold">
+                <Trash2 className="w-4 h-4 text-amber-600" />
+                <span>បានសម្គាល់ឃើញពាក្យបញ្ជា «សម្អាតកន្ត្រក»</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  onClearCart?.();
+                  soundFx.playPop();
+                  setTranscript('');
+                  setDetectedActions([]);
+                }}
+                className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold cursor-pointer shadow-xs active:scale-95"
+              >
+                សម្អាតកន្ត្រក
+              </button>
             </div>
           )}
 

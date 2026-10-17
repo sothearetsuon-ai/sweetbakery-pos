@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Play, Pause, SkipForward, Disc3, ChevronDown, GripVertical } from 'lucide-react';
+import { Play, Pause, SkipForward, Disc3, ChevronDown, GripVertical, MapPin, X, RotateCcw } from 'lucide-react';
 import { useMusic } from '../../context/MusicContext';
 import { soundFx } from '../../utils/audio';
 
-const STORAGE_KEY = 'bakery_pos_mini_music_pos';
+export const MINI_PLAYER_POS_STORAGE_KEY = 'bakery_pos_mini_music_pos';
+
+export type PositionPreset = 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left' | 'bottom-center';
 
 interface Position {
   x: number;
@@ -27,7 +29,7 @@ export const MiniMusicPlayer: React.FC = () => {
   const [position, setPosition] = useState<Position | null>(() => {
     if (typeof window === 'undefined') return null;
     try {
-      const saved = localStorage.getItem(STORAGE_KEY);
+      const saved = localStorage.getItem(MINI_PLAYER_POS_STORAGE_KEY);
       if (saved) {
         const parsed = JSON.parse(saved);
         if (typeof parsed.x === 'number' && typeof parsed.y === 'number') {
@@ -41,6 +43,7 @@ export const MiniMusicPlayer: React.FC = () => {
   });
 
   const [isDragging, setIsDragging] = useState(false);
+  const [isPositionMenuOpen, setIsPositionMenuOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const autoCollapseTimerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -54,9 +57,9 @@ export const MiniMusicPlayer: React.FC = () => {
   }>({ startX: 0, startY: 0, elemX: 0, elemY: 0, hasDragged: false });
 
   // Clamp position within visible screen bounds
-  const clampPosition = useCallback((x: number, y: number, elemWidth = 260, elemHeight = 50): Position => {
+  const clampPosition = useCallback((x: number, y: number, elemWidth = 300, elemHeight = 54): Position => {
     if (typeof window === 'undefined') return { x, y };
-    const margin = 8;
+    const margin = 10;
     const maxX = Math.max(margin, window.innerWidth - elemWidth - margin);
     const maxY = Math.max(margin, window.innerHeight - elemHeight - margin);
     return {
@@ -69,9 +72,11 @@ export const MiniMusicPlayer: React.FC = () => {
   useEffect(() => {
     if (position === null && typeof window !== 'undefined') {
       const isMobile = window.innerWidth < 768;
-      const defaultX = isMobile ? 12 : 280; // Beside sidebar on desktop
-      const defaultY = isMobile ? window.innerHeight - 90 : window.innerHeight - 68;
-      const clamped = clampPosition(defaultX, defaultY, isMinimized ? 60 : 300, isMinimized ? 50 : 54);
+      const width = isMinimized ? 60 : (isMobile ? 280 : 320);
+      const height = isMinimized ? 50 : 54;
+      const defaultX = isMobile ? 12 : window.innerWidth - width - 24; // Bottom-right corner by default
+      const defaultY = isMobile ? window.innerHeight - 90 : window.innerHeight - 74;
+      const clamped = clampPosition(defaultX, defaultY, width, height);
       setPosition(clamped);
     }
   }, [position, clampPosition, isMinimized]);
@@ -91,13 +96,59 @@ export const MiniMusicPlayer: React.FC = () => {
     return () => window.removeEventListener('resize', handleResize);
   }, [clampPosition, isMinimized]);
 
-  // Auto-collapse after 5 seconds of inactivity when expanded on mobile
+  // Listen to external reposition events
+  useEffect(() => {
+    const handleExternalPos = (e: any) => {
+      if (e.detail?.preset) {
+        moveToPreset(e.detail.preset);
+      }
+    };
+    window.addEventListener('sweetbakery_set_music_pos', handleExternalPos);
+    return () => window.removeEventListener('sweetbakery_set_music_pos', handleExternalPos);
+  }, [isMinimized, clampPosition]);
+
+  // Move directly to preset corner
+  const moveToPreset = (preset: PositionPreset) => {
+    if (typeof window === 'undefined') return;
+    const width = containerRef.current?.offsetWidth || (isMinimized ? 60 : 300);
+    const height = containerRef.current?.offsetHeight || 52;
+    let targetX = 16;
+    let targetY = window.innerHeight - height - 16;
+
+    if (preset === 'bottom-right') {
+      targetX = window.innerWidth - width - 16;
+      targetY = window.innerHeight - height - 16;
+    } else if (preset === 'bottom-left') {
+      targetX = 16;
+      targetY = window.innerHeight - height - 16;
+    } else if (preset === 'top-right') {
+      targetX = window.innerWidth - width - 16;
+      targetY = 16;
+    } else if (preset === 'top-left') {
+      targetX = 16;
+      targetY = 16;
+    } else if (preset === 'bottom-center') {
+      targetX = Math.round((window.innerWidth - width) / 2);
+      targetY = window.innerHeight - height - 16;
+    }
+
+    const clamped = clampPosition(targetX, targetY, width, height);
+    setPosition(clamped);
+    try {
+      localStorage.setItem(MINI_PLAYER_POS_STORAGE_KEY, JSON.stringify(clamped));
+    } catch {}
+    soundFx.playPop();
+    setIsPositionMenuOpen(false);
+  };
+
+  // Auto-collapse after 6 seconds of inactivity when expanded on mobile
   const resetAutoCollapseTimer = useCallback(() => {
     if (autoCollapseTimerRef.current) clearTimeout(autoCollapseTimerRef.current);
     if (!isMinimized && typeof window !== 'undefined' && window.innerWidth < 768) {
       autoCollapseTimerRef.current = setTimeout(() => {
         setIsMinimized(true);
-      }, 5000);
+        setIsPositionMenuOpen(false);
+      }, 6000);
     }
   }, [isMinimized]);
 
@@ -119,10 +170,10 @@ export const MiniMusicPlayer: React.FC = () => {
       hasDragged: false,
     };
     setIsDragging(true);
+    setIsPositionMenuOpen(false);
   };
 
   const handleMouseDown = (e: React.MouseEvent) => {
-    // Only drag on left click and not if clicking interactive buttons
     if (e.button !== 0) return;
     const target = e.target as HTMLElement;
     if (target.closest('button') && !target.closest('.drag-handle')) {
@@ -178,7 +229,7 @@ export const MiniMusicPlayer: React.FC = () => {
       setPosition((current) => {
         if (current) {
           try {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(current));
+            localStorage.setItem(MINI_PLAYER_POS_STORAGE_KEY, JSON.stringify(current));
           } catch {
             // ignore
           }
@@ -214,7 +265,7 @@ export const MiniMusicPlayer: React.FC = () => {
     : {
         position: 'fixed',
         bottom: '1rem',
-        left: '17.5rem',
+        right: '1.5rem',
       };
 
   // Minimized Compact Floating Bubble (Draggable)
@@ -261,7 +312,7 @@ export const MiniMusicPlayer: React.FC = () => {
     );
   }
 
-  // Expanded Floating Bar (Draggable)
+  // Expanded Floating Bar (Draggable + Preset Position Switcher)
   return (
     <div
       ref={containerRef}
@@ -272,10 +323,74 @@ export const MiniMusicPlayer: React.FC = () => {
         if (autoCollapseTimerRef.current) clearTimeout(autoCollapseTimerRef.current);
       }}
       onMouseLeave={() => resetAutoCollapseTimer()}
-      className={`z-40 flex items-center gap-2 bg-slate-900/95 backdrop-blur-md text-white pl-2 pr-2.5 py-2 rounded-2xl border border-pink-500/30 shadow-xl shadow-pink-950/20 max-w-[290px] sm:max-w-[330px] select-none ${
+      className={`relative z-40 flex items-center gap-1.5 bg-slate-900/95 backdrop-blur-md text-white pl-2 pr-2.5 py-2 rounded-2xl border border-pink-500/30 shadow-xl shadow-pink-950/20 max-w-[310px] sm:max-w-[360px] select-none ${
         isDragging ? 'cursor-grabbing scale-102 shadow-2xl transition-none border-pink-400' : 'cursor-grab transition-all duration-200'
       }`}
     >
+      {/* Position Selector Popup Dropdown */}
+      {isPositionMenuOpen && (
+        <div
+          onMouseDown={(e) => e.stopPropagation()}
+          className="absolute bottom-full mb-2 left-0 right-0 bg-slate-900/95 border border-pink-500/40 backdrop-blur-xl rounded-2xl p-2.5 shadow-2xl text-xs space-y-2 animate-in fade-in zoom-in-95 duration-150 z-50"
+        >
+          <div className="flex items-center justify-between border-b border-slate-800 pb-1.5 text-slate-300 font-bold text-[11px]">
+            <span className="flex items-center gap-1 text-pink-400">
+              <MapPin className="w-3.5 h-3.5" />
+              <span>ជ្រើសរើសទីតាំងចាក់ភ្លេង៖</span>
+            </span>
+            <button
+              type="button"
+              onClick={() => setIsPositionMenuOpen(false)}
+              className="text-slate-400 hover:text-white p-0.5 rounded-lg"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
+          <div className="grid grid-cols-2 gap-1.5 text-[11px]">
+            <button
+              type="button"
+              onClick={() => moveToPreset('bottom-right')}
+              className="px-2 py-1.5 bg-slate-800 hover:bg-pink-600/30 text-white rounded-xl border border-slate-700/60 hover:border-pink-500/40 text-left flex items-center gap-1.5 font-medium transition-colors"
+            >
+              <span>↘️</span> ក្រោមស្តាំ (ស្តង់ដារ)
+            </button>
+            <button
+              type="button"
+              onClick={() => moveToPreset('bottom-left')}
+              className="px-2 py-1.5 bg-slate-800 hover:bg-pink-600/30 text-white rounded-xl border border-slate-700/60 hover:border-pink-500/40 text-left flex items-center gap-1.5 font-medium transition-colors"
+            >
+              <span>↙️</span> ក្រោមឆ្វេង
+            </button>
+            <button
+              type="button"
+              onClick={() => moveToPreset('top-right')}
+              className="px-2 py-1.5 bg-slate-800 hover:bg-pink-600/30 text-white rounded-xl border border-slate-700/60 hover:border-pink-500/40 text-left flex items-center gap-1.5 font-medium transition-colors"
+            >
+              <span>↗️</span> លើស្តាំ
+            </button>
+            <button
+              type="button"
+              onClick={() => moveToPreset('top-left')}
+              className="px-2 py-1.5 bg-slate-800 hover:bg-pink-600/30 text-white rounded-xl border border-slate-700/60 hover:border-pink-500/40 text-left flex items-center gap-1.5 font-medium transition-colors"
+            >
+              <span>↖️</span> លើឆ្វេង
+            </button>
+          </div>
+
+          <div className="flex items-center justify-between pt-1 border-t border-slate-800/80 text-[10px] text-slate-400">
+            <span>💡 ឬចុចអូសទាញដាក់កន្លែងណាស្រេចចិត្ត</span>
+            <button
+              type="button"
+              onClick={() => moveToPreset('bottom-right')}
+              className="text-pink-400 hover:underline flex items-center gap-0.5"
+            >
+              <RotateCcw className="w-2.5 h-2.5" /> ដើម
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Drag Handle Indicator */}
       <div
         className="drag-handle text-slate-500 hover:text-pink-400 cursor-grab active:cursor-grabbing p-0.5 -mr-1 flex items-center justify-center shrink-0"
@@ -354,6 +469,24 @@ export const MiniMusicPlayer: React.FC = () => {
         <SkipForward className="w-3.5 h-3.5" />
       </button>
 
+      {/* Change Position Button */}
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          soundFx.playPop();
+          setIsPositionMenuOpen((prev) => !prev);
+        }}
+        className={`w-7 h-7 rounded-xl flex items-center justify-center transition-all cursor-pointer active:scale-90 shrink-0 ${
+          isPositionMenuOpen
+            ? 'bg-pink-600 text-white'
+            : 'text-slate-400 hover:text-pink-300 hover:bg-white/10'
+        }`}
+        title="ប្តូរទីតាំង (Reposition Player)"
+      >
+        <MapPin className="w-3.5 h-3.5" />
+      </button>
+
       {/* Minimize Button */}
       <button
         type="button"
@@ -361,6 +494,7 @@ export const MiniMusicPlayer: React.FC = () => {
           e.stopPropagation();
           soundFx.playPop();
           setIsMinimized(true);
+          setIsPositionMenuOpen(false);
         }}
         className="w-7 h-7 rounded-xl text-slate-400 hover:text-pink-400 hover:bg-white/10 flex items-center justify-center transition-all cursor-pointer active:scale-90 shrink-0"
         title="បង្រួមតូច (Minimize / Hide)"
@@ -370,4 +504,3 @@ export const MiniMusicPlayer: React.FC = () => {
     </div>
   );
 };
-

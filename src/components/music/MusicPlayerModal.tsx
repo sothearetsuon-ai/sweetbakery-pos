@@ -24,6 +24,7 @@ import {
   Plus,
   AlertCircle,
   Check,
+  MapPin,
 } from 'lucide-react';
 import { useMusic } from '../../context/MusicContext';
 import { soundFx } from '../../utils/audio';
@@ -500,6 +501,58 @@ export const MusicPlayerModal: React.FC = () => {
             </button>
           </div>
 
+          {/* Quick Floating Mini-Player Position Selector */}
+          <div className="p-3 bg-slate-50 border border-slate-200/80 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-2.5">
+            <div className="flex items-center gap-2 text-xs font-black text-slate-700">
+              <span className="p-1.5 rounded-xl bg-pink-100 text-pink-600">
+                <MapPin className="w-3.5 h-3.5" />
+              </span>
+              <span>ទីតាំងម៉ាស៊ីនចាក់ភ្លេងបណ្តែត (Mini Player)៖</span>
+            </div>
+            <div className="flex items-center flex-wrap gap-1.5 text-[11px]">
+              <button
+                type="button"
+                onClick={() => {
+                  soundFx.playPop();
+                  window.dispatchEvent(new CustomEvent('sweetbakery_set_music_pos', { detail: { preset: 'bottom-right' } }));
+                }}
+                className="px-2.5 py-1 bg-white hover:bg-pink-50 border border-slate-200 hover:border-pink-300 rounded-xl text-slate-700 font-bold transition-all shadow-2xs active:scale-95 cursor-pointer"
+              >
+                ↘️ ក្រោមស្តាំ
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  soundFx.playPop();
+                  window.dispatchEvent(new CustomEvent('sweetbakery_set_music_pos', { detail: { preset: 'bottom-left' } }));
+                }}
+                className="px-2.5 py-1 bg-white hover:bg-pink-50 border border-slate-200 hover:border-pink-300 rounded-xl text-slate-700 font-bold transition-all shadow-2xs active:scale-95 cursor-pointer"
+              >
+                ↙️ ក្រោមឆ្វេង
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  soundFx.playPop();
+                  window.dispatchEvent(new CustomEvent('sweetbakery_set_music_pos', { detail: { preset: 'top-right' } }));
+                }}
+                className="px-2.5 py-1 bg-white hover:bg-pink-50 border border-slate-200 hover:border-pink-300 rounded-xl text-slate-700 font-bold transition-all shadow-2xs active:scale-95 cursor-pointer"
+              >
+                ↗️ លើស្តាំ
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  soundFx.playPop();
+                  window.dispatchEvent(new CustomEvent('sweetbakery_set_music_pos', { detail: { preset: 'top-left' } }));
+                }}
+                className="px-2.5 py-1 bg-white hover:bg-pink-50 border border-slate-200 hover:border-pink-300 rounded-xl text-slate-700 font-bold transition-all shadow-2xs active:scale-95 cursor-pointer"
+              >
+                ↖️ លើឆ្វេង
+              </button>
+            </div>
+          </div>
+
           {/* Expandable Add Song by URL Section */}
           {isAddUrlOpen && (
             <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-blue-50/70 via-indigo-50/50 to-pink-50/60 border-2 border-blue-200/80 shadow-md animate-in slide-in-from-top duration-300 space-y-4">
@@ -603,40 +656,40 @@ export const MusicPlayerModal: React.FC = () => {
                       type="button"
                       onClick={() =>
                         applyPresetUrl(
-                          'https://assets.mixkit.co/music/preview/mixkit-coffee-chill-out-1094.mp3',
-                          'Sweet Morning Cafe ☕',
-                          'Acoustic Ambiance'
+                          'https://upload.wikimedia.org/wikipedia/commons/4/4b/Gymnopedie_No_1.ogg',
+                          'Relaxing Gymnopedie ☕',
+                          'Erik Satie (Acoustic Piano)'
                         )
                       }
                       className="text-[10px] font-bold px-2 py-1 rounded-lg bg-white border border-blue-200 hover:border-blue-400 hover:bg-blue-50 text-slate-700 transition-colors cursor-pointer"
                     >
-                      ☕ Cafe Chill Out
+                      ☕ Cafe Relaxing Piano
                     </button>
                     <button
                       type="button"
                       onClick={() =>
                         applyPresetUrl(
-                          'https://assets.mixkit.co/music/preview/mixkit-sweet-melody-789.mp3',
-                          'Pastry Shop Sweet Melody 🍰',
-                          'Chillout Vibes'
+                          'https://upload.wikimedia.org/wikipedia/commons/e/e0/Clair_de_lune_%28Claude_Debussy%29_Suite_bergamasque.ogg',
+                          'Pastry Shop Clair De Lune 🍰',
+                          'Claude Debussy (Bakery Melody)'
                         )
                       }
                       className="text-[10px] font-bold px-2 py-1 rounded-lg bg-white border border-blue-200 hover:border-blue-400 hover:bg-blue-50 text-slate-700 transition-colors cursor-pointer"
                     >
-                      🍰 Sweet Pastry Melody
+                      🍰 Sweet Pastry Piano
                     </button>
                     <button
                       type="button"
                       onClick={() =>
                         applyPresetUrl(
-                          'https://assets.mixkit.co/music/preview/mixkit-relaxing-in-nature-522.mp3',
-                          'Acoustic Bakery Guitar 🥐',
-                          'Bakery Acoustic'
+                          'https://upload.wikimedia.org/wikipedia/commons/5/52/Chopin_Nocturne_Op9_No2.ogg',
+                          'Bakery Chopin Nocturne 🥐',
+                          'Frédéric Chopin'
                         )
                       }
                       className="text-[10px] font-bold px-2 py-1 rounded-lg bg-white border border-blue-200 hover:border-blue-400 hover:bg-blue-50 text-slate-700 transition-colors cursor-pointer"
                     >
-                      🥐 Acoustic Guitar
+                      🥐 Classical Bakery
                     </button>
                   </div>
                 </div>

@@ -4,6 +4,7 @@ import { AudioTrack, MusicLoopMode } from '../types';
 import { saveTrackToDB, getAllTracksFromDB, deleteTrackFromDB, clearAllTracksFromDB } from '../utils/musicDb';
 import { birthdaySynth } from '../utils/birthdaySynthesizer';
 import { soundFx } from '../utils/audio';
+import { bakeryAmbientAudio, BakerySoundtrackId } from '../utils/bakeryAmbientAudio';
 import {
   uploadAudioToFirebaseStorage,
   deleteAudioFromFirebaseStorage,
@@ -13,13 +14,13 @@ import {
   getStoredFirebaseConfig,
 } from '../services/firebase';
 
-// Default Royalty-Free Cafe & Bakery Soundtracks
+// Default 100% Offline Cafe & Bakery Soundtracks (Runs anywhere with zero network dependency)
 const defaultTracks: AudioTrack[] = [
   {
     id: 'default-1',
     title: 'Happy Birthday Celebration 🎂',
-    artist: 'SweetBakery Orchestra',
-    url: 'https://assets.mixkit.co/music/preview/mixkit-happy-birthday-cheer-527.mp3',
+    artist: 'SweetBakery Orchestra (100% Offline)',
+    url: 'synthesized:birthday',
     duration: 110,
     isCustom: false,
     category: 'birthday',
@@ -27,8 +28,8 @@ const defaultTracks: AudioTrack[] = [
   {
     id: 'default-2',
     title: 'Sweet Morning Cafe & Bakery ☕',
-    artist: 'Acoustic Ambiance',
-    url: 'https://assets.mixkit.co/music/preview/mixkit-coffee-chill-out-1094.mp3',
+    artist: 'Acoustic Ambiance (100% Offline)',
+    url: 'synthesized:cafe',
     duration: 148,
     isCustom: false,
     category: 'cafe',
@@ -36,8 +37,8 @@ const defaultTracks: AudioTrack[] = [
   {
     id: 'default-3',
     title: 'Relaxing Pastry Shop Melody 🍰',
-    artist: 'Chillout Vibes',
-    url: 'https://assets.mixkit.co/music/preview/mixkit-sweet-melody-789.mp3',
+    artist: 'Chillout Vibes (100% Offline)',
+    url: 'synthesized:pastry',
     duration: 135,
     isCustom: false,
     category: 'cafe',
@@ -45,8 +46,8 @@ const defaultTracks: AudioTrack[] = [
   {
     id: 'default-4',
     title: 'Acoustic Garden Guitar 🥐',
-    artist: 'Acoustic Bakery',
-    url: 'https://assets.mixkit.co/music/preview/mixkit-relaxing-in-nature-522.mp3',
+    artist: 'Acoustic Bakery (100% Offline)',
+    url: 'synthesized:acoustic',
     duration: 160,
     isCustom: false,
     category: 'acoustic',
@@ -224,21 +225,34 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setIsPlaying(true);
     isPlayingRef.current = true;
 
-    if (audioRef.current) {
-      birthdaySynth.stop();
-      const currentAudio = audioRef.current;
-      currentAudio.volume = isMutedRef.current ? 0 : volumeRef.current;
-      currentAudio.src = targetTrack.url;
-      currentAudio.currentTime = 0;
-      currentAudio.play().catch((err) => {
-        console.warn('Playback error or policy blocked:', err);
-        // If file cannot be played or format error, auto skip to next track after a short delay
-        setTimeout(() => {
-          if (isPlayingRef.current) {
-            handleEnded();
-          }
-        }, 800);
-      });
+    birthdaySynth.stop();
+
+    if (targetTrack.url.startsWith('synthesized:')) {
+      // Pause HTML5 audio and clear src to prevent error events
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.removeAttribute('src');
+      }
+      const trackId = (targetTrack.url.replace('synthesized:', '') as BakerySoundtrackId) || 'cafe';
+      bakeryAmbientAudio.setVolume(isMutedRef.current ? 0 : volumeRef.current);
+      bakeryAmbientAudio.play(trackId);
+      setCurrentTime(0);
+      setDuration(targetTrack.duration || 120);
+    } else {
+      // Offline/Uploaded custom track or URL via HTML5 Audio
+      bakeryAmbientAudio.stop();
+      if (audioRef.current) {
+        const currentAudio = audioRef.current;
+        currentAudio.volume = isMutedRef.current ? 0 : volumeRef.current;
+        currentAudio.src = targetTrack.url;
+        currentAudio.currentTime = 0;
+        currentAudio.play().catch((err) => {
+          console.warn('Playback error or policy blocked, falling back to ambient audio:', err);
+          // If custom track URL fails or is blocked, seamlessly play offline ambient music so store is never silent!
+          bakeryAmbientAudio.setVolume(isMutedRef.current ? 0 : volumeRef.current);
+          bakeryAmbientAudio.play('cafe');
+        });
+      }
     }
   };
 
@@ -250,10 +264,14 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const shuffle = isShuffleRef.current;
 
     if (!list || list.length === 0) return;
+    const currentTrack = list[currentIndex];
 
     // 1. Loop single track
     if (mode === 'one') {
-      if (audioRef.current) {
+      if (currentTrack?.url.startsWith('synthesized:')) {
+        const trackId = (currentTrack.url.replace('synthesized:', '') as BakerySoundtrackId) || 'cafe';
+        bakeryAmbientAudio.play(trackId);
+      } else if (audioRef.current) {
         audioRef.current.currentTime = 0;
         audioRef.current.play().catch(() => {});
       }
@@ -264,6 +282,7 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (mode === 'none' && currentIndex >= list.length - 1) {
       setIsPlaying(false);
       isPlayingRef.current = false;
+      bakeryAmbientAudio.stop();
       return;
     }
 
@@ -282,14 +301,14 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     playTrackAtIndex(nextIdx);
   };
 
-  // Initialize HTML5 audio element
+  // Initialize HTML5 audio element & ambient audio callbacks
   useEffect(() => {
     const audio = new Audio();
     audio.preload = 'metadata';
     audioRef.current = audio;
 
     const handleTimeUpdate = () => {
-      if (audioRef.current) {
+      if (audioRef.current && isPlayingRef.current) {
         setCurrentTime(audioRef.current.currentTime);
       }
     };
@@ -301,11 +320,10 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     };
 
     const handleError = () => {
-      console.warn('Audio playback error on current track, auto-skipping to next...');
+      console.warn('Audio playback error on current track, auto-recovering with ambient audio...');
       if (isPlayingRef.current) {
-        setTimeout(() => {
-          handleEnded();
-        }, 600);
+        bakeryAmbientAudio.setVolume(isMutedRef.current ? 0 : volumeRef.current);
+        bakeryAmbientAudio.play('cafe');
       }
     };
 
@@ -314,12 +332,27 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     audio.addEventListener('ended', handleEnded);
     audio.addEventListener('error', handleError);
 
+    bakeryAmbientAudio.setCallbacks(
+      (time, dur) => {
+        if (isPlayingRef.current) {
+          setCurrentTime(time);
+          if (dur > 0) setDuration(dur);
+        }
+      },
+      () => {
+        if (isPlayingRef.current) {
+          handleEnded();
+        }
+      }
+    );
+
     return () => {
       audio.removeEventListener('timeupdate', handleTimeUpdate);
       audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
       audio.removeEventListener('ended', handleEnded);
       audio.removeEventListener('error', handleError);
       audio.pause();
+      bakeryAmbientAudio.stop();
     };
   }, []);
 
@@ -437,55 +470,50 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const currentTrack = playlist[currentTrackIndex] || null;
 
-  // Handle external or manual track changes
+  // Handle volume / mute change across both HTML5 Audio and Bakery Ambient Audio
   useEffect(() => {
-    if (!audioRef.current || !currentTrack) return;
-
-    const audio = audioRef.current;
-    const currentSrc = audio.src;
-    const isSameSrc = currentSrc === currentTrack.url || currentSrc.endsWith(currentTrack.url);
-
-    if (!isSameSrc) {
-      audio.src = currentTrack.url;
-      audio.volume = isMuted ? 0 : volume;
-      if (isPlaying) {
-        audio.play().catch((err) => {
-          console.warn('Playback prevented by browser policy:', err);
-        });
-      }
-    } else if (isPlaying && audio.paused) {
-      audio.play().catch(() => {});
-    }
-  }, [currentTrackIndex, playlist]);
-
-  // Handle volume / mute change
-  useEffect(() => {
+    const effectiveVol = isMuted ? 0 : volume;
     if (audioRef.current) {
-      audioRef.current.volume = isMuted ? 0 : volume;
+      audioRef.current.volume = effectiveVol;
     }
+    bakeryAmbientAudio.setVolume(effectiveVol);
   }, [volume, isMuted]);
 
   const play = () => {
-    if (audioRef.current) {
-      birthdaySynth.stop();
-      if (!audioRef.current.src && currentTrack) {
-        audioRef.current.src = currentTrack.url;
+    const track = currentTrack || playlist[0];
+    if (!track) return;
+    setIsPlaying(true);
+    isPlayingRef.current = true;
+
+    birthdaySynth.stop();
+    if (track.url.startsWith('synthesized:')) {
+      if (audioRef.current) {
+        audioRef.current.pause();
       }
-      audioRef.current.play().then(() => {
-        setIsPlaying(true);
-        isPlayingRef.current = true;
-      }).catch((e) => {
-        console.warn('Playback failed:', e);
+      const trackId = (track.url.replace('synthesized:', '') as BakerySoundtrackId) || 'cafe';
+      bakeryAmbientAudio.setVolume(isMutedRef.current ? 0 : volumeRef.current);
+      bakeryAmbientAudio.play(trackId);
+    } else if (audioRef.current) {
+      bakeryAmbientAudio.stop();
+      if (!audioRef.current.src || !audioRef.current.src.includes(track.url)) {
+        audioRef.current.src = track.url;
+      }
+      audioRef.current.volume = isMutedRef.current ? 0 : volumeRef.current;
+      audioRef.current.play().catch((e) => {
+        console.warn('Playback failed, falling back to ambient audio:', e);
+        bakeryAmbientAudio.setVolume(isMutedRef.current ? 0 : volumeRef.current);
+        bakeryAmbientAudio.play('cafe');
       });
     }
   };
 
   const pause = () => {
+    setIsPlaying(false);
+    isPlayingRef.current = false;
     if (audioRef.current) {
       audioRef.current.pause();
-      setIsPlaying(false);
-      isPlayingRef.current = false;
     }
+    bakeryAmbientAudio.stop();
     birthdaySynth.stop();
   };
 
