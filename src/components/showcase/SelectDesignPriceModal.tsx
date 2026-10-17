@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   X,
   Cake,
@@ -11,6 +11,9 @@ import {
   Layers,
   Heart,
   Palette,
+  Settings,
+  Check,
+  AlertCircle,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { Product } from '../../types';
@@ -18,6 +21,8 @@ import { useBakery } from '../../context/BakeryContext';
 import { soundFx } from '../../utils/audio';
 import { getProductImageUrl } from '../../utils/imagePath';
 import { roundKhr } from '../../utils/currencyUtils';
+import { getUnifiedCakeFlavors, UnifiedCakeFlavor } from '../../utils/flavorUtils';
+import { CakeFlavorsModal } from '../pos/CakeFlavorsModal';
 
 interface SelectDesignPriceModalProps {
   isOpen: boolean;
@@ -46,17 +51,6 @@ const COMMON_SIZES = [
   '3 ជាន់ (3-Tier)',
 ];
 
-const COMMON_FLAVORS = [
-  'វ៉ានីឡា (Vanilla)',
-  'សូកូឡា (Chocolate Fudge)',
-  'ស្ត្រប៊ឺរីស្រស់ (Fresh Strawberry)',
-  'ស្លឹកតើយឈ្ងុយ (Pandan)',
-  'ត្រាវ (Taro)',
-  'កាហ្វេម៉ូកា (Coffee Mocha)',
-  'ឈីសខេក (Cheesecake)',
-  'ទឹកដោះគោស្រស់ (Fresh Milk)',
-];
-
 const PRICE_PRESETS_KHR = [
   30000, 40000, 50000, 60000, 80000, 100000, 120000, 150000, 200000,
 ];
@@ -68,15 +62,66 @@ export const SelectDesignPriceModal: React.FC<SelectDesignPriceModalProps> = ({
   onAddToCart,
   onOpenCustomOrder,
 }) => {
-  const { exchangeRate, lang, flavors } = useBakery();
+  const {
+    exchangeRate,
+    lang,
+    flavors,
+    unavailableFlavors = [],
+    deletedFlavorIds = [],
+    flavorOverrides = {},
+    setFlavorAvailability,
+  } = useBakery();
 
   const [selectedSize, setSelectedSize] = useState('2 ទឹក (~20cm)');
   const [customSize, setCustomSize] = useState('');
-  const [selectedFlavor, setSelectedFlavor] = useState('វ៉ានីឡា (Vanilla)');
+  const [selectedFlavor, setSelectedFlavor] = useState('');
   const [customFlavor, setCustomFlavor] = useState('');
   const [priceKhrStr, setPriceKhrStr] = useState('60000');
   const [inscription, setInscription] = useState('');
   const [selectedImgIdx, setSelectedImgIdx] = useState(0);
+
+  // Stock management & filter tab
+  const [flavorFilterTab, setFlavorFilterTab] = useState<'available' | 'all'>('available');
+  const [isCakeFlavorsModalOpen, setIsCakeFlavorsModalOpen] = useState(false);
+
+  // Pull unified flavors 100% from Cake Flavors & Stock Management
+  const allCakeFlavors = useMemo(() => {
+    return getUnifiedCakeFlavors(flavors, unavailableFlavors, deletedFlavorIds, flavorOverrides);
+  }, [flavors, unavailableFlavors, deletedFlavorIds, flavorOverrides]);
+
+  const inStockFlavors = useMemo(() => {
+    return allCakeFlavors.filter((f) => !f.isOutOfStock);
+  }, [allCakeFlavors]);
+
+  const totalCount = allCakeFlavors.length;
+  const inStockCount = inStockFlavors.length;
+
+  // Active displayed flavors based on selected tab
+  const displayedFlavors = useMemo(() => {
+    if (flavorFilterTab === 'available') {
+      return inStockFlavors.length > 0 ? inStockFlavors : allCakeFlavors;
+    }
+    return allCakeFlavors;
+  }, [flavorFilterTab, inStockFlavors, allCakeFlavors]);
+
+  const isSelectedFlavor = (item: UnifiedCakeFlavor) => {
+    if (customFlavor.trim()) return false;
+    const cleanSel = (selectedFlavor || '').trim().toLowerCase();
+    const cleanLbl = item.label.trim().toLowerCase();
+    const cleanKh = item.nameKh.trim().toLowerCase();
+    const cleanEn = (item.nameEn || '').trim().toLowerCase();
+    return (
+      cleanSel === cleanLbl ||
+      cleanSel === cleanKh ||
+      (cleanEn && cleanSel.includes(cleanEn)) ||
+      (cleanKh && cleanSel.includes(cleanKh))
+    );
+  };
+
+  const selectedFlavorItem = useMemo(() => {
+    if (customFlavor.trim()) return null;
+    return allCakeFlavors.find((f) => isSelectedFlavor(f)) || null;
+  }, [allCakeFlavors, selectedFlavor, customFlavor]);
 
   // Sync default price and details when product changes
   useEffect(() => {
@@ -85,12 +130,16 @@ export const SelectDesignPriceModal: React.FC<SelectDesignPriceModalProps> = ({
       setPriceKhrStr(baseKhr > 0 ? baseKhr.toString() : '60000');
       setSelectedSize('2 ទឹក (~20cm)');
       setCustomSize('');
-      setSelectedFlavor(flavors[0] || 'វ៉ានីឡា (Vanilla)');
+      
+      // Default to first available in-stock flavor
+      const defaultFl = inStockFlavors[0] || allCakeFlavors[0];
+      setSelectedFlavor(defaultFl ? (defaultFl.label || defaultFl.nameKh) : 'សូកូឡា (Chocolate Cake)');
       setCustomFlavor('');
       setInscription('');
       setSelectedImgIdx(0);
+      setFlavorFilterTab('available');
     }
-  }, [product, exchangeRate, flavors]);
+  }, [product, exchangeRate, allCakeFlavors, inStockFlavors]);
 
   if (!isOpen || !product) return null;
 
@@ -363,35 +412,160 @@ export const SelectDesignPriceModal: React.FC<SelectDesignPriceModalProps> = ({
             />
           </div>
 
-          {/* Flavor Selector */}
-          <div className="space-y-2">
-            <label className="text-xs font-black text-slate-800 flex items-center gap-1.5">
-              <Palette className="w-3.5 h-3.5 text-purple-500" />
-              <span>ជ្រើសរើសរសជាតិ (Cake Flavor)</span>
-            </label>
-            <div className="flex flex-wrap gap-1.5">
-              {COMMON_FLAVORS.map((fl) => {
-                const isSelected = selectedFlavor === fl && !customFlavor;
-                return (
+          {/* Flavor Selector - 100% Unified with គ្រប់គ្រងរសជាតិនំ & ស្តុក */}
+          <div className="space-y-2.5 p-3.5 sm:p-4 bg-gradient-to-br from-purple-50/50 via-pink-50/30 to-rose-50/50 rounded-3xl border border-purple-100 shadow-2xs">
+            {/* Header with Title, 7/11 មានក្នុងហាង Badge, Tab filters, & Settings button */}
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <div className="flex items-center gap-2">
+                <label className="text-xs font-black text-slate-800 flex items-center gap-1.5">
+                  <Palette className="w-4 h-4 text-purple-600" />
+                  <span>ជ្រើសរើសរសជាតិ (Cake Flavor)</span>
+                </label>
+                <span className="text-[11px] font-black px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-2xs">
+                  {inStockCount}/{totalCount} មានក្នុងហាង
+                </span>
+              </div>
+
+              <div className="flex items-center gap-1.5">
+                {/* Filter Tabs */}
+                <div className="flex items-center bg-white p-0.5 rounded-xl border border-purple-200/80 text-[10px] font-bold shadow-2xs">
                   <button
-                    key={fl}
                     type="button"
                     onClick={() => {
                       soundFx.playPop();
-                      setSelectedFlavor(fl);
-                      setCustomFlavor('');
+                      setFlavorFilterTab('available');
                     }}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                      isSelected
-                        ? 'bg-purple-600 text-white shadow-xs'
-                        : 'bg-slate-50 text-slate-700 hover:bg-slate-100 border border-slate-200'
+                    className={`px-2 py-0.5 rounded-lg transition-all cursor-pointer ${
+                      flavorFilterTab === 'available'
+                        ? 'bg-emerald-600 text-white shadow-xs font-black'
+                        : 'text-slate-600 hover:text-slate-900'
                     }`}
                   >
-                    {fl}
+                    មានក្នុងហាង ({inStockCount})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      soundFx.playPop();
+                      setFlavorFilterTab('all');
+                    }}
+                    className={`px-2 py-0.5 rounded-lg transition-all cursor-pointer ${
+                      flavorFilterTab === 'all'
+                        ? 'bg-purple-600 text-white shadow-xs font-black'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    ទាំងអស់ ({totalCount})
+                  </button>
+                </div>
+
+                {/* Open CakeFlavorsModal Button */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    soundFx.playPop();
+                    setIsCakeFlavorsModalOpen(true);
+                  }}
+                  className="text-[11px] font-bold text-slate-600 hover:text-slate-900 bg-white hover:bg-slate-50 border border-slate-200 px-2.5 py-1 rounded-xl flex items-center gap-1 cursor-pointer transition-all shadow-2xs active:scale-95"
+                  title="គ្រប់គ្រងរសជាតិនំ & ស្តុក"
+                >
+                  <Settings className="w-3.5 h-3.5 text-slate-500" />
+                  <span>គ្រប់គ្រងស្តុក</span>
+                </button>
+              </div>
+            </div>
+
+            {/* If selected flavor is out of stock, prompt quick restock button */}
+            {selectedFlavorItem && selectedFlavorItem.isOutOfStock && (
+              <div className="p-2.5 bg-rose-50 border border-rose-200 rounded-2xl flex items-center justify-between gap-2 animate-in fade-in">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-rose-800">
+                  <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                  <span>រសជាតិ <strong>{selectedFlavorItem.nameKh}</strong> បានកំណត់ថា [❌ អស់ស្តុក]</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    soundFx.playSuccess();
+                    setFlavorAvailability(selectedFlavorItem.label, true);
+                  }}
+                  className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black shadow-xs shrink-0 cursor-pointer flex items-center gap-1 active:scale-95"
+                >
+                  <Check className="w-3.5 h-3.5" />
+                  <span>ដាក់មានក្នុងស្តុកវិញ</span>
+                </button>
+              </div>
+            )}
+
+            {/* Flavor Interactive Grid Cards */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              {displayedFlavors.map((fl) => {
+                const isSel = isSelectedFlavor(fl);
+                const isOut = !!fl.isOutOfStock;
+
+                return (
+                  <button
+                    key={fl.id}
+                    type="button"
+                    onClick={() => {
+                      soundFx.playPop();
+                      setSelectedFlavor(fl.label || fl.nameKh);
+                      setCustomFlavor('');
+                    }}
+                    className={`p-2.5 rounded-2xl border text-left transition-all relative flex items-center gap-2.5 cursor-pointer ${
+                      isSel
+                        ? 'bg-gradient-to-r from-pink-600 to-rose-500 text-white border-pink-600 shadow-md shadow-pink-500/25 ring-2 ring-pink-400 scale-[1.02]'
+                        : isOut
+                        ? 'bg-rose-50/70 border-rose-200 hover:border-rose-300 text-slate-700 hover:bg-rose-50'
+                        : 'bg-white border-slate-200/90 hover:border-pink-300 hover:bg-pink-50/40 text-slate-800 shadow-2xs hover:scale-[1.01]'
+                    }`}
+                  >
+                    <span
+                      className={`text-xl shrink-0 p-1.5 rounded-xl flex items-center justify-center leading-none ${
+                        isSel
+                          ? 'bg-white/20'
+                          : isOut
+                          ? 'bg-rose-100/80 grayscale opacity-80'
+                          : 'bg-pink-50 text-slate-800'
+                      }`}
+                    >
+                      {fl.icon}
+                    </span>
+
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center justify-between gap-1">
+                        <span
+                          className={`text-xs font-black leading-tight truncate ${
+                            isSel ? 'text-white' : isOut ? 'text-slate-700' : 'text-slate-800'
+                          }`}
+                        >
+                          {fl.nameKh}
+                        </span>
+                        {isOut && (
+                          <span
+                            className={`text-[9px] font-black px-1.5 py-0.2 rounded-md shrink-0 ${
+                              isSel ? 'bg-white/25 text-white' : 'bg-rose-100 text-rose-700'
+                            }`}
+                          >
+                            អស់
+                          </span>
+                        )}
+                      </div>
+                      {fl.nameEn && (
+                        <div
+                          className={`text-[10px] leading-tight truncate mt-0.5 ${
+                            isSel ? 'text-pink-100' : 'text-slate-400'
+                          }`}
+                        >
+                          {fl.nameEn}
+                        </div>
+                      )}
+                    </div>
                   </button>
                 );
               })}
             </div>
+
+            {/* Fallback custom flavor input */}
             <input
               type="text"
               placeholder="ឬវាយបញ្ចូលរសជាតិផ្សេងទៀត (ឧ. សូកូឡា + គ្រាប់អាល់ម៉ុន)..."
@@ -439,6 +613,12 @@ export const SelectDesignPriceModal: React.FC<SelectDesignPriceModalProps> = ({
           </button>
         </div>
       </div>
+
+      {/* Cake Flavors & Stock Management Modal */}
+      <CakeFlavorsModal
+        isOpen={isCakeFlavorsModalOpen}
+        onClose={() => setIsCakeFlavorsModalOpen(false)}
+      />
     </div>
   );
 };
