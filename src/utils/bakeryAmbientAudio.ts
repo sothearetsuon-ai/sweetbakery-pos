@@ -74,11 +74,11 @@ class BakeryAmbientAudioEngine {
     osc1.frequency.setValueAtTime(freq, startTime);
     osc2.frequency.setValueAtTime(isBell ? freq * 2 : freq * 1.003, startTime); // subtle chorus/shimmer
 
-    const peak = (isBell ? 0.22 : 0.16) * this.masterVolume;
-    gainNode.gain.setValueAtTime(0.0001, startTime);
-    gainNode.gain.exponentialRampToValueAtTime(peak, startTime + (isBell ? 0.03 : 0.06));
-    gainNode.gain.exponentialRampToValueAtTime(peak * 0.45, startTime + duration * 0.4);
-    gainNode.gain.exponentialRampToValueAtTime(0.0001, startTime + duration * 0.95);
+    const peak = Math.max(0, (isBell ? 0.22 : 0.16) * this.masterVolume);
+    gainNode.gain.setValueAtTime(0, startTime);
+    gainNode.gain.linearRampToValueAtTime(peak, startTime + (isBell ? 0.03 : 0.06));
+    gainNode.gain.linearRampToValueAtTime(peak * 0.45, startTime + duration * 0.4);
+    gainNode.gain.linearRampToValueAtTime(0, startTime + duration * 0.95);
 
     osc1.connect(gainNode);
     osc2.connect(gainNode);

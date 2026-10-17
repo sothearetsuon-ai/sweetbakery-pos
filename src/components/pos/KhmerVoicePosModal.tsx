@@ -10,15 +10,18 @@ import {
   AlertCircle,
   RotateCcw,
   Send,
-  HelpCircle,
   CreditCard,
   Trash2,
   Tag,
+  Loader2,
+  Keyboard,
+  Radio,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { Product } from '../../types';
 import { parseKhmerVoiceCommand, VoicePosAction } from '../../services/khmerVoicePosService';
 import { soundFx } from '../../utils/audio';
+import { getGeminiApiKey } from '../../services/geminiInvoiceService';
 
 interface KhmerVoicePosModalProps {
   isOpen: boolean;
@@ -40,6 +43,8 @@ export const KhmerVoicePosModal: React.FC<KhmerVoicePosModalProps> = ({
   exchangeRate = 4100,
 }) => {
   const [isListening, setIsListening] = useState(false);
+  const [isAiProcessing, setIsAiProcessing] = useState(false);
+  const [recordingSeconds, setRecordingSeconds] = useState(0);
   const [transcript, setTranscript] = useState('');
   const [manualInput, setManualInput] = useState('');
   const [detectedActions, setDetectedActions] = useState<VoicePosAction[]>([]);
@@ -47,19 +52,49 @@ export const KhmerVoicePosModal: React.FC<KhmerVoicePosModalProps> = ({
   const [errorText, setErrorText] = useState<string | null>(null);
 
   const recognitionRef = useRef<any>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const recordingTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  const isFallingBackRef = useRef(false);
+
+  const isWindows = typeof navigator !== 'undefined' && /windows|win32/i.test(navigator.userAgent);
+  const isDesktop = typeof window !== 'undefined' && Boolean(
+    (window as any).SweetBakeryDesktop?.isDesktop ||
+    navigator.userAgent.includes('Electron') ||
+    navigator.userAgent.includes('SweetBakery-POS')
+  );
+  const isWindowsEnvironment = isDesktop || isWindows;
 
   useEffect(() => {
     if (isOpen) {
-      startListening();
-    } else {
-      stopListening();
+      setErrorText(null);
       setTranscript('');
       setManualInput('');
       setDetectedActions([]);
-      setErrorText(null);
-      setStatusText('ចុចលើ Microphone ដើម្បីចាប់ផ្តើមនិយាយ...');
+      setIsAiProcessing(false);
+      setRecordingSeconds(0);
+      isFallingBackRef.current = false;
+
+      // On Android native app, automatically start speech
+      if (typeof (window as any).SweetBakeryNative?.startSpeechRecognition === 'function') {
+        startListening();
+      } else if (isWindowsEnvironment) {
+        setStatusText('ចុចលើ Microphone ដើម្បីថតសំឡេងបញ្ជា ឬប្រើ Windows Voice Typing (Win + H)');
+      } else {
+        setStatusText('ចុចលើ Microphone ដើម្បីចាប់ផ្តើមនិយាយ ឬចុចលើពាក្យគំរូខាងក្រោម 👇');
+      }
+    } else {
+      stopListening();
     }
   }, [isOpen]);
+
+  // Clean up recording timer on unmount
+  useEffect(() => {
+    return () => {
+      if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
+    };
+  }, []);
 
   const processSpokenText = (text: string) => {
     if (!text || !text.trim()) return;
@@ -85,6 +120,142 @@ export const KhmerVoicePosModal: React.FC<KhmerVoicePosModalProps> = ({
       setStatusText('🗑️ បញ្ជាសម្អាតកន្ត្រក...');
     } else {
       setStatusText(`បានឮ៖ "${cleanText}" (សូមចុចជ្រើសរើស ឬនិយាយឈ្មោះឱ្យកាន់តែច្បាស់)`);
+    }
+  };
+
+  // Start audio recording via MediaRecorder (for Windows Electron & Web fallback)
+  const startMediaRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      audioChunksRef.current = [];
+      const mimeType = MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/mp4';
+      const recorder = new MediaRecorder(stream, { mimeType });
+
+      recorder.ondataavailable = (event) => {
+        if (event.data && event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
+        }
+      };
+
+      recorder.onstop = async () => {
+        stream.getTracks().forEach((track) => track.stop());
+        const audioBlob = new Blob(audioChunksRef.current, { type: mimeType });
+
+        if (audioBlob.size > 2000) {
+          await transcribeWithGemini(audioBlob, mimeType);
+        } else {
+          setIsListening(false);
+          setIsAiProcessing(false);
+          setStatusText('មិនបានទទួលសំឡេងទេ សូមចុចលើ Mic ម្តងទៀតដើម្បីនិយាយ');
+        }
+      };
+
+      mediaRecorderRef.current = recorder;
+      recorder.start(250);
+
+      setIsListening(true);
+      setErrorText(null);
+      setRecordingSeconds(0);
+      setStatusText('🎙️ កំពុងថតសំឡេង... សូមនិយាយ (រួចចុចលើ Mic ម្តងទៀតដើម្បីផ្ញើ)');
+      soundFx.playPop();
+
+      if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
+      recordingTimerRef.current = setInterval(() => {
+        setRecordingSeconds((prev) => {
+          if (prev >= 6) {
+            stopMediaRecording();
+            return 6;
+          }
+          return prev + 1;
+        });
+      }, 1000);
+    } catch (err: any) {
+      console.warn('MediaRecorder error:', err);
+      setIsListening(false);
+      setErrorText('មិនអាចបើក Microphone បានទេ៖ ' + (err.message || 'Permission denied'));
+    }
+  };
+
+  const stopMediaRecording = () => {
+    if (recordingTimerRef.current) {
+      clearInterval(recordingTimerRef.current);
+      recordingTimerRef.current = null;
+    }
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+      try {
+        mediaRecorderRef.current.stop();
+      } catch {}
+    }
+    setIsListening(false);
+  };
+
+  // Transcribe recorded audio with Gemini AI
+  const transcribeWithGemini = async (audioBlob: Blob, mimeType: string) => {
+    setIsAiProcessing(true);
+    setStatusText('✨ AI កំពុងស្ដាប់ និងបកប្រែសំឡេងខ្មែរ (Gemini AI Speech)...');
+
+    const apiKey = getGeminiApiKey();
+    if (!apiKey) {
+      setIsAiProcessing(false);
+      setErrorText('💡 លើ Windows៖ ដើម្បីឱ្យ AI ស្ដាប់សំឡេង សូមបញ្ចូល Gemini API Key ក្នុង Settings។ ឬប្រើ Windows Voice Typing (Win + H) និយាយផ្ទាល់បានភ្លាមៗ!');
+      setStatusText('👉 សូមចុច ⊞ Windows + H លើ Keyboard រួចនិយាយ ឬចុចលើពាក្យគំរូខាងក្រោម 👇');
+      inputRef.current?.focus();
+      return;
+    }
+
+    try {
+      const base64Data = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const res = reader.result as string;
+          resolve(res.split(',')[1] || '');
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(audioBlob);
+      });
+
+      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [
+            {
+              parts: [
+                {
+                  text: 'Listen to the Khmer speech in this audio clip. Transcribe it into Khmer text accurately (e.g., product names and numbers, or checkout commands like "គិតលុយ"). Return ONLY the recognized Khmer text. Do not add markdown or quotes.',
+                },
+                {
+                  inlineData: {
+                    mimeType: mimeType || 'audio/webm',
+                    data: base64Data,
+                  },
+                },
+              ],
+            },
+          ],
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`AI Service Error (${response.status})`);
+      }
+
+      const resData = await response.json();
+      const transcribedText = resData.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
+
+      setIsAiProcessing(false);
+
+      if (transcribedText) {
+        processSpokenText(transcribedText);
+      } else {
+        setStatusText('មិនបានឮសំឡេងច្បាស់លាស់ទេ សូមសាកល្បងនិយាយម្តងទៀត');
+      }
+    } catch (err: any) {
+      console.warn('Gemini audio transcription failed:', err);
+      setIsAiProcessing(false);
+      setErrorText('មិនអាចបកប្រែសំឡេងបានទេ៖ ' + (err.message || 'Error'));
+      setStatusText('សូមចុចលើប៊ូតុងបញ្ជាគំរូខាងក្រោម 👇');
     }
   };
 
@@ -123,14 +294,19 @@ export const KhmerVoicePosModal: React.FC<KhmerVoicePosModalProps> = ({
       }
     }
 
-    // 2. Web Speech API (Chrome / Edge / Safari / Desktop)
+    // 2. Windows Desktop Electron: Always use MediaRecorder + Gemini AI (because Chromium disables Web Speech in Electron)
+    if (isDesktop) {
+      await startMediaRecording();
+      return;
+    }
+
+    // 3. Web Speech API (Chrome / Edge / Safari on Web)
     const SpeechRecognition =
       (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
 
     if (!SpeechRecognition) {
-      setErrorText('ឧបករណ៍ ឬ Browser នេះមិនទាន់គាំទ្រ Web Speech API ឡើយ។ អ្នកអាចប្រើប្រាស់ប៊ូតុងគំរូរហ័ស ឬវាយអក្សរខាងក្រោមបានយ៉ាងងាយស្រួល!');
-      setIsListening(false);
-      setStatusText('សូមចុចលើប៊ូតុងបញ្ជាគំរូខាងក្រោម 👇');
+      // Fallback to MediaRecorder + Gemini AI
+      await startMediaRecording();
       return;
     }
 
@@ -183,7 +359,12 @@ export const KhmerVoicePosModal: React.FC<KhmerVoicePosModalProps> = ({
       recognition.onerror = (event: any) => {
         if (event.error !== 'aborted') {
           console.warn('SpeechRecognition error:', event.error);
-          if (event.error === 'not-allowed') {
+          if (event.error === 'network') {
+            // Chromium Web Speech API network error -> Auto fallback to MediaRecorder + Gemini AI!
+            isFallingBackRef.current = true;
+            startMediaRecording();
+            return;
+          } else if (event.error === 'not-allowed') {
             setErrorText('សូមអនុញ្ញាតសិទ្ធិប្រើ Microphone ក្នុង Browser Settings។');
           } else if (event.error === 'no-speech') {
             setStatusText('មិនបានឮសំឡេងទេ សូមនិយាយម្តងទៀត ឬចុចលើពាក្យគំរូខាងក្រោម 👇');
@@ -195,8 +376,11 @@ export const KhmerVoicePosModal: React.FC<KhmerVoicePosModalProps> = ({
       };
 
       recognition.onend = () => {
+        if (isFallingBackRef.current) {
+          isFallingBackRef.current = false;
+          return;
+        }
         setIsListening(false);
-        // Only reset status text if not currently showing recognized result
         setStatusText((prev) => {
           if (prev.startsWith('✅') || prev.startsWith('💰') || prev.startsWith('🗑️')) {
             return prev;
@@ -208,14 +392,15 @@ export const KhmerVoicePosModal: React.FC<KhmerVoicePosModalProps> = ({
       recognitionRef.current = recognition;
       recognition.start();
     } catch (err: any) {
-      console.warn('Cannot start recognition:', err);
-      setErrorText('មិនអាចបើក Microphone បានទេ៖ ' + (err.message || 'Error'));
-      setIsListening(false);
-      setStatusText('សូមចុចលើពាក្យបញ្ជាគំរូខាងក្រោម 👇');
+      console.warn('Cannot start recognition, falling back to MediaRecorder:', err);
+      startMediaRecording();
     }
   };
 
   const stopListening = () => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+      stopMediaRecording();
+    }
     if (recognitionRef.current) {
       try {
         recognitionRef.current.stop();
@@ -272,6 +457,12 @@ export const KhmerVoicePosModal: React.FC<KhmerVoicePosModalProps> = ({
     setManualInput('');
   };
 
+  const handleActivateWindowsVoiceTyping = () => {
+    soundFx.playPop();
+    inputRef.current?.focus();
+    setStatusText('👉 សូមចុចគ្រាប់ចុច ⊞ Windows + H លើ Keyboard រួចនិយាយភាសាខ្មែរ!');
+  };
+
   if (!isOpen) return null;
 
   const validProducts = detectedActions.filter((a) => a.type === 'ADD_PRODUCT' && a.product);
@@ -280,7 +471,7 @@ export const KhmerVoicePosModal: React.FC<KhmerVoicePosModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-white rounded-3xl max-w-lg w-full overflow-hidden shadow-2xl border border-rose-100 flex flex-col max-h-[90vh]">
+      <div className="bg-white rounded-3xl max-w-lg w-full overflow-hidden shadow-2xl border border-rose-100 flex flex-col max-h-[92vh]">
         {/* Header */}
         <div className="bg-gradient-to-r from-pink-600 via-rose-600 to-amber-600 text-white p-4 sm:p-5 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
@@ -293,7 +484,7 @@ export const KhmerVoicePosModal: React.FC<KhmerVoicePosModalProps> = ({
                   Khmer Voice POS Assistant
                 </h3>
                 <span className="px-2 py-0.5 bg-white/20 text-yellow-300 rounded-full text-[10px] font-black uppercase">
-                  និយាយភាសាខ្មែរ
+                  {isWindowsEnvironment ? 'Windows Voice' : 'និយាយភាសាខ្មែរ'}
                 </span>
               </div>
               <p className="text-[11px] text-pink-100 mt-0.5">
@@ -327,14 +518,16 @@ export const KhmerVoicePosModal: React.FC<KhmerVoicePosModalProps> = ({
                 className={`w-20 h-20 rounded-full flex items-center justify-center text-3xl shadow-xl transition-all cursor-pointer active:scale-90 ${
                   isListening
                     ? 'bg-gradient-to-tr from-rose-500 to-pink-500 text-white ring-8 ring-pink-400/40 animate-pulse scale-105'
-                    : 'bg-slate-100 text-slate-600 hover:bg-pink-50 hover:text-pink-600 border border-slate-200'
+                    : 'bg-slate-100 text-slate-700 hover:bg-pink-50 hover:text-pink-600 border border-slate-200'
                 }`}
                 title={isListening ? 'ចុចដើម្បីផ្អាកការស្តាប់' : 'ចុចដើម្បីចាប់ផ្តើមនិយាយ'}
               >
-                {isListening ? (
-                  <Mic className="w-9 h-9 animate-bounce" />
+                {isAiProcessing ? (
+                  <Loader2 className="w-9 h-9 animate-spin text-pink-600" />
+                ) : isListening ? (
+                  <Mic className="w-9 h-9 animate-bounce text-white" />
                 ) : (
-                  <MicOff className="w-9 h-9" />
+                  <Mic className="w-9 h-9 text-pink-600" />
                 )}
               </button>
 
@@ -347,9 +540,31 @@ export const KhmerVoicePosModal: React.FC<KhmerVoicePosModalProps> = ({
             </div>
 
             <div className="mt-3 font-bold text-xs text-slate-700 max-w-sm">
+              {isListening && recordingSeconds > 0 && (
+                <span className="inline-block px-2 py-0.5 bg-rose-100 text-rose-700 rounded-full text-[10px] font-mono font-bold mr-1.5 animate-pulse">
+                  REC 00:0{recordingSeconds}
+                </span>
+              )}
               {statusText}
             </div>
           </div>
+
+          {/* Windows Voice Typing (Win + H) Helper Bar */}
+          {isWindowsEnvironment && (
+            <div className="p-2.5 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-2xl flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2 text-xs text-blue-900 font-bold min-w-0">
+                <Keyboard className="w-4 h-4 text-blue-600 shrink-0" />
+                <span className="truncate">🗣️ និយាយផ្ទាល់លើ Windows៖</span>
+              </div>
+              <button
+                type="button"
+                onClick={handleActivateWindowsVoiceTyping}
+                className="px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-[11px] font-bold shrink-0 shadow-2xs active:scale-95 cursor-pointer flex items-center gap-1"
+              >
+                <span>ចុច ⊞ Win + H</span>
+              </button>
+            </div>
+          )}
 
           {/* Quick Interactive Command Suggestion Chips (1-Click Test / Fallback) */}
           <div className="space-y-1.5">
@@ -408,10 +623,20 @@ export const KhmerVoicePosModal: React.FC<KhmerVoicePosModalProps> = ({
           {/* Manual Khmer Voice Command Text Bar */}
           <form onSubmit={handleManualSubmit} className="flex gap-1.5">
             <input
+              ref={inputRef}
               type="text"
               value={manualInput}
-              onChange={(e) => setManualInput(e.target.value)}
-              placeholder="វាយពាក្យបញ្ជា ឧ. នំបុ័ងបារាំង ២ដើម ឬ គិតលុយ..."
+              onChange={(e) => {
+                const val = e.target.value;
+                setManualInput(val);
+                if (val.trim()) {
+                  const parsed = parseKhmerVoiceCommand(val.trim(), products);
+                  if (parsed.length > 0) {
+                    setDetectedActions(parsed);
+                  }
+                }
+              }}
+              placeholder="វាយ ឬនិយាយតាម Win + H (ឧ. នំបុ័ងបារាំង ២ដើម ឬ គិតលុយ)..."
               className="flex-1 text-xs px-3.5 py-2 rounded-xl border border-slate-200 focus:border-pink-500 focus:ring-2 focus:ring-pink-200 bg-slate-50 text-slate-800 placeholder:text-slate-400 font-medium"
             />
             <button
