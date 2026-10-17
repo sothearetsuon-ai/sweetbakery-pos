@@ -481,9 +481,11 @@ interface BakeryContextType {
 
   flavors: string[];
   unavailableFlavors: string[];
+  deletedFlavorIds: string[];
+  flavorOverrides: Record<string, { nameKh: string; nameEn?: string }>;
   addFlavor: (flavorName: string) => void;
-  updateFlavor: (oldFlavor: string, newFlavor: string) => void;
-  deleteFlavor: (flavorName: string) => void;
+  updateFlavor: (oldFlavorOrId: string, newFlavorKh: string, newFlavorEn?: string) => void;
+  deleteFlavor: (flavorNameOrId: string) => void;
   toggleFlavorAvailability: (flavorIdOrLabel: string) => void;
   setFlavorAvailability: (flavorIdOrLabel: string, isAvailable: boolean) => void;
   markAllFlavorsAvailable: () => void;
@@ -1286,6 +1288,38 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     const key = globalIsDemoMode ? 'demo_bakery_unavailable_flavors' : 'bakery_unavailable_flavors';
     safeSetStorage(key, JSON.stringify(unavailableFlavors));
   }, [unavailableFlavors]);
+
+  // Deleted flavor IDs (presets or custom)
+  const [deletedFlavorIds, setDeletedFlavorIds] = useState<string[]>(() => {
+    try {
+      const key = globalIsDemoMode ? 'demo_bakery_deleted_flavor_ids' : 'bakery_deleted_flavor_ids';
+      const saved = localStorage.getItem(key);
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  useEffect(() => {
+    const key = globalIsDemoMode ? 'demo_bakery_deleted_flavor_ids' : 'bakery_deleted_flavor_ids';
+    safeSetStorage(key, JSON.stringify(deletedFlavorIds));
+  }, [deletedFlavorIds]);
+
+  // Flavor name overrides (for presets or custom renaming)
+  const [flavorOverrides, setFlavorOverrides] = useState<Record<string, { nameKh: string; nameEn?: string }>>(() => {
+    try {
+      const key = globalIsDemoMode ? 'demo_bakery_flavor_overrides' : 'bakery_flavor_overrides';
+      const saved = localStorage.getItem(key);
+      return saved ? JSON.parse(saved) : {};
+    } catch {
+      return {};
+    }
+  });
+
+  useEffect(() => {
+    const key = globalIsDemoMode ? 'demo_bakery_flavor_overrides' : 'bakery_flavor_overrides';
+    safeSetStorage(key, JSON.stringify(flavorOverrides));
+  }, [flavorOverrides]);
 
   const [partyAddons, setPartyAddons] = useState<PartyAddon[]>(() => {
     if (globalIsDemoMode) {
@@ -2767,7 +2801,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     });
 
     // Subscribe to shared Flavors across all devices (PC & Phone sync automatically)
-    const unsubFlavors = subscribeToFirestoreDoc<{ list?: string[]; unavailable?: string[] }>('settings', 'flavors', (cloudData) => {
+    const unsubFlavors = subscribeToFirestoreDoc<{ list?: string[]; unavailable?: string[]; deletedIds?: string[]; overrides?: Record<string, { nameKh: string; nameEn?: string }> }>('settings', 'flavors', (cloudData) => {
       if (globalIsDemoMode || !cloudData) return;
       const list = cloudData.list;
       if (Array.isArray(list) && list.length > 0) {
@@ -2794,6 +2828,22 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           safeSetStorage('bakery_unavailable_flavors', JSON.stringify(unavailable));
           return unavailable;
         });
+      }
+      if (Array.isArray(cloudData.deletedIds)) {
+        setDeletedFlavorIds((prev) => {
+          if (
+            cloudData.deletedIds!.length === prev.length &&
+            cloudData.deletedIds!.every((d, idx) => d === prev[idx])
+          ) {
+            return prev;
+          }
+          safeSetStorage('bakery_deleted_flavor_ids', JSON.stringify(cloudData.deletedIds));
+          return cloudData.deletedIds!;
+        });
+      }
+      if (cloudData.overrides && typeof cloudData.overrides === 'object') {
+        setFlavorOverrides(cloudData.overrides);
+        safeSetStorage('bakery_flavor_overrides', JSON.stringify(cloudData.overrides));
       }
     });
 
@@ -3510,31 +3560,76 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     if (!trimmed || flavors.includes(trimmed)) return;
     setFlavors((prev) => {
       const updated = [trimmed, ...prev];
-      try { localStorage.setItem('bakery_flavors', JSON.stringify(updated)); } catch (e) {}
+      const storageKey = globalIsDemoMode ? 'demo_bakery_flavors' : 'bakery_flavors';
+      try { localStorage.setItem(storageKey, JSON.stringify(updated)); } catch (e) {}
       saveToLanSync({ flavors: updated });
-      syncSaveDoc('settings', 'flavors', { list: updated });
+      syncSaveDoc('settings', 'flavors', { list: updated, unavailable: unavailableFlavors, deletedIds: deletedFlavorIds, overrides: flavorOverrides });
+      return updated;
+    });
+    setDeletedFlavorIds((prev) => prev.filter((d) => d !== trimmed.toLowerCase()));
+  };
+
+  const updateFlavor = (oldFlavorOrId: string, newFlavorKh: string, newFlavorEn?: string) => {
+    const oldKey = (oldFlavorOrId || '').trim();
+    const newKh = (newFlavorKh || '').trim();
+    const newEn = (newFlavorEn || '').trim();
+    if (!newKh) return;
+
+    // 1. Update in flavors array
+    setFlavors((prev) => {
+      const formatted = newEn ? `${newKh} (${newEn})` : newKh;
+      const updated = prev.map((f) => {
+        const cleanF = f.trim().toLowerCase();
+        if (cleanF === oldKey.toLowerCase() || cleanF.includes(oldKey.toLowerCase())) {
+          return formatted;
+        }
+        return f;
+      });
+      const storageKey = globalIsDemoMode ? 'demo_bakery_flavors' : 'bakery_flavors';
+      try { localStorage.setItem(storageKey, JSON.stringify(updated)); } catch (e) {}
+      saveToLanSync({ flavors: updated });
+      return updated;
+    });
+
+    // 2. Track in flavorOverrides (covers preset IDs like 'chocolate', 'durian', or custom keys)
+    setFlavorOverrides((prev) => {
+      const updated = {
+        ...prev,
+        [oldKey.toLowerCase()]: { nameKh: newKh, nameEn: newEn },
+      };
+      const storageKey = globalIsDemoMode ? 'demo_bakery_flavor_overrides' : 'bakery_flavor_overrides';
+      try { localStorage.setItem(storageKey, JSON.stringify(updated)); } catch (e) {}
+      saveToLanSync({ flavorOverrides: updated });
+      syncSaveDoc('settings', 'flavors', { list: flavors, unavailable: unavailableFlavors, deletedIds: deletedFlavorIds, overrides: updated });
       return updated;
     });
   };
 
-  const updateFlavor = (oldFlavor: string, newFlavor: string) => {
-    const trimmed = newFlavor.trim();
-    if (!trimmed) return;
+  const deleteFlavor = (flavorNameOrId: string) => {
+    const key = (flavorNameOrId || '').trim();
+    if (!key) return;
+
+    // 1. Remove from flavors state
     setFlavors((prev) => {
-      const updated = prev.map((f) => (f === oldFlavor ? trimmed : f));
-      try { localStorage.setItem('bakery_flavors', JSON.stringify(updated)); } catch (e) {}
+      const updated = prev.filter((f) => {
+        const cleanF = f.trim().toLowerCase();
+        return cleanF !== key.toLowerCase() && !cleanF.includes(key.toLowerCase());
+      });
+      const storageKey = globalIsDemoMode ? 'demo_bakery_flavors' : 'bakery_flavors';
+      try { localStorage.setItem(storageKey, JSON.stringify(updated)); } catch (e) {}
       saveToLanSync({ flavors: updated });
-      syncSaveDoc('settings', 'flavors', { list: updated });
       return updated;
     });
-  };
 
-  const deleteFlavor = (flavorName: string) => {
-    setFlavors((prev) => {
-      const updated = prev.filter((f) => f !== flavorName);
-      try { localStorage.setItem('bakery_flavors', JSON.stringify(updated)); } catch (e) {}
-      saveToLanSync({ flavors: updated });
-      syncSaveDoc('settings', 'flavors', { list: updated, unavailable: unavailableFlavors });
+    // 2. Track in deletedFlavorIds (for presets and custom items)
+    setDeletedFlavorIds((prev) => {
+      const low = key.toLowerCase();
+      if (prev.includes(low)) return prev;
+      const updated = [...prev, low];
+      const storageKey = globalIsDemoMode ? 'demo_bakery_deleted_flavor_ids' : 'bakery_deleted_flavor_ids';
+      try { localStorage.setItem(storageKey, JSON.stringify(updated)); } catch (e) {}
+      saveToLanSync({ deletedFlavorIds: updated });
+      syncSaveDoc('settings', 'flavors', { list: flavors, unavailable: unavailableFlavors, deletedIds: updated, overrides: flavorOverrides });
       return updated;
     });
   };
@@ -3581,6 +3676,17 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   };
 
   const restoreDefaultFlavors = () => {
+    // Reset deletedFlavorIds and flavorOverrides
+    setDeletedFlavorIds([]);
+    const delKey = globalIsDemoMode ? 'demo_bakery_deleted_flavor_ids' : 'bakery_deleted_flavor_ids';
+    try { localStorage.removeItem(delKey); } catch (e) {}
+
+    setFlavorOverrides({});
+    const ovrKey = globalIsDemoMode ? 'demo_bakery_flavor_overrides' : 'bakery_flavor_overrides';
+    try { localStorage.removeItem(ovrKey); } catch (e) {}
+
+    saveToLanSync({ deletedFlavorIds: [], flavorOverrides: {} });
+
     const COMPREHENSIVE_DEFAULT_FLAVORS = [
       'សូកូឡា (Chocolate Fudge Cake)',
       'Red Velvet + Cream Cheese (រ៉េដវ៉េលវែត & ក្រីមឈីស)',
@@ -3607,7 +3713,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       const storageKey = globalIsDemoMode ? 'demo_bakery_flavors' : 'bakery_flavors';
       try { localStorage.setItem(storageKey, JSON.stringify(combined)); } catch (e) {}
       saveToLanSync({ flavors: combined });
-      syncSaveDoc('settings', 'flavors', { list: combined, unavailable: [] });
+      syncSaveDoc('settings', 'flavors', { list: combined, unavailable: [], deletedIds: [], overrides: {} });
       return combined;
     });
 
@@ -5546,6 +5652,8 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         restockProduct,
         flavors,
         unavailableFlavors,
+        deletedFlavorIds,
+        flavorOverrides,
         addFlavor,
         updateFlavor,
         deleteFlavor,

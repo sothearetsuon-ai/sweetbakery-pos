@@ -104,6 +104,7 @@ export const NewCustomOrderModal: React.FC<NewCustomOrderModalProps> = ({ isOpen
     addCustomOrder,
     flavors,
     unavailableFlavors = [],
+    deletedFlavorIds = [],
     addFlavor,
     partyAddons,
     addPartyAddon,
@@ -138,12 +139,17 @@ export const NewCustomOrderModal: React.FC<NewCustomOrderModalProps> = ({ isOpen
   const [flavor, setFlavor] = useState(flavors[0] || 'Chocolate Fudge + Fresh Strawberry');
   const isSelectedFlavorOut = isOutOfStockFlavor(flavor);
   const allDisplayedFlavors = React.useMemo(() => {
-    const base = flavors && flavors.length > 0 ? [...flavors] : [];
+    const deletedSet = new Set((deletedFlavorIds || []).map((d) => d.toLowerCase().trim()));
+    const base = (flavors && flavors.length > 0 ? [...flavors] : []).filter(
+      (f) => !deletedSet.has(f.toLowerCase().trim())
+    );
     if (flavor && !base.some((f) => f.trim().toLowerCase() === flavor.trim().toLowerCase())) {
-      base.push(flavor);
+      if (!deletedSet.has(flavor.toLowerCase().trim())) {
+        base.push(flavor);
+      }
     }
     return base;
-  }, [flavors, flavor]);
+  }, [flavors, flavor, deletedFlavorIds]);
   const [filling, setFilling] = useState('Fresh Cream');
   const [inscription, setInscription] = useState('');
   const [themeNotes, setThemeNotes] = useState('');

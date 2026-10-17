@@ -42,6 +42,7 @@ import { formatDateDMY } from '../../utils/dateUtils';
 import { isTelegramWebApp, getTelegramUser, tgHapticImpact, tgHapticNotification } from '../../services/telegramWebApp';
 import { StoreLocationModal } from '../common/StoreLocationModal';
 import { CustomerAiGuideModal } from './CustomerAiGuideModal';
+import { getFlavorEmoji } from '../../utils/flavorUtils';
 
 const CAKE_SIZES = [
   { id: '1.5 ទឹក', label: '1.5 ទឹក (~15cm)', desc: 'សម្រាប់ 2-4 នាក់', priceUsd: 12 },
@@ -97,6 +98,8 @@ export const CustomerOrderPortal: React.FC<CustomerOrderPortalProps> = ({ onBack
     categories,
     flavors,
     unavailableFlavors = [],
+    deletedFlavorIds = [],
+    flavorOverrides = {},
     partyAddons,
     storeInfo,
     exchangeRate,
@@ -158,23 +161,61 @@ export const CustomerOrderPortal: React.FC<CustomerOrderPortalProps> = ({ onBack
 
   // Computed list of cake flavors with in-stock / out-of-stock status
   const cakeFlavorList = useMemo(() => {
-    const list: CakeFlavorItem[] = PRESET_CAKE_FLAVORS.filter((f) => f.id !== 'other');
+    const deletedSet = new Set((deletedFlavorIds || []).map((d) => d.toLowerCase().trim()));
+
+    const list: CakeFlavorItem[] = PRESET_CAKE_FLAVORS
+      .filter((f) => {
+        if (f.id === 'other') return false;
+        const idLower = f.id.toLowerCase().trim();
+        const khLower = f.nameKh.toLowerCase().trim();
+        const lblLower = f.label.toLowerCase().trim();
+        return !deletedSet.has(idLower) && !deletedSet.has(khLower) && !deletedSet.has(lblLower);
+      })
+      .map((f) => {
+        const idLower = f.id.toLowerCase().trim();
+        const khLower = f.nameKh.toLowerCase().trim();
+        const lblLower = f.label.toLowerCase().trim();
+        const override =
+          flavorOverrides[idLower] ||
+          flavorOverrides[khLower] ||
+          flavorOverrides[lblLower];
+
+        if (override) {
+          const nameKh = override.nameKh || f.nameKh;
+          const nameEn = override.nameEn !== undefined ? override.nameEn : f.nameEn;
+          return {
+            ...f,
+            nameKh,
+            nameEn,
+            label: nameEn ? `${nameKh} (${nameEn})` : nameKh,
+            icon: getFlavorEmoji(nameKh),
+          };
+        }
+        return {
+          ...f,
+          icon: f.icon || getFlavorEmoji(f.nameKh),
+        };
+      });
 
     if (flavors && flavors.length > 0) {
       flavors.forEach((fl, idx) => {
         const clean = fl.trim();
         if (!clean) return;
+        const cleanLower = clean.toLowerCase();
+        if (deletedSet.has(cleanLower)) return;
+
         const exists = list.some(
           (item) =>
-            item.label.toLowerCase() === clean.toLowerCase() ||
-            item.nameKh.toLowerCase() === clean.toLowerCase()
+            item.label.toLowerCase() === cleanLower ||
+            item.nameKh.toLowerCase() === cleanLower ||
+            cleanLower.includes(item.nameKh.toLowerCase())
         );
         if (!exists) {
           list.push({
-            id: `store-fl-${idx}`,
+            id: `store-fl-${idx}-${clean}`,
             nameKh: clean,
-            nameEn: 'រសជាតិហាង',
-            icon: '🧁',
+            nameEn: 'រសជាតិហាងថែម',
+            icon: getFlavorEmoji(clean),
             label: clean,
           });
         }
@@ -205,7 +246,7 @@ export const CustomerOrderPortal: React.FC<CustomerOrderPortalProps> = ({ onBack
     });
 
     return mapped;
-  }, [flavors, unavailableFlavors]);
+  }, [flavors, unavailableFlavors, deletedFlavorIds, flavorOverrides]);
 
   // Auto fallback if currently selected flavor is out of stock
   useEffect(() => {
