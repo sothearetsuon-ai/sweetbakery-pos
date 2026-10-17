@@ -312,10 +312,14 @@ export interface AudioTrack {
   url: string;
   duration?: number;
   isCustom: boolean;
-  category?: 'cafe' | 'birthday' | 'custom' | 'acoustic';
+  category?: 'cafe' | 'birthday' | 'custom' | 'acoustic' | 'youtube' | 'web';
   dateAdded?: string;
   storagePath?: string;
   isCloudSynced?: boolean;
+  youtubeId?: string;
+  thumbnailUrl?: string;
+  isFavorite?: boolean;
+  sourceUrl?: string;
 }
 
 export interface NotificationConfig {

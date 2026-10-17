@@ -13,6 +13,11 @@ import {
   subscribeToFirestoreCollection,
   getStoredFirebaseConfig,
 } from '../services/firebase';
+import {
+  extractYouTubeVideoId,
+  fetchYouTubeVideoInfo,
+  downloadWebAudioBlob,
+} from '../services/youtubeMusicService';
 
 // Default 100% Offline Cafe & Bakery Soundtracks (Bundled locally with zero network dependency)
 const defaultTracks: AudioTrack[] = [
@@ -60,6 +65,8 @@ export interface UploadProgress {
   currentFileName: string;
 }
 
+export type VibeMood = 'all' | 'cafe' | 'birthday' | 'acoustic' | 'custom' | 'youtube' | 'favorites';
+
 interface MusicContextType {
   playlist: AudioTrack[];
   currentTrackIndex: number;
@@ -76,12 +83,22 @@ interface MusicContextType {
   isUploading: boolean;
   uploadProgress: UploadProgress | null;
 
+  // Modern App Features
+  vibeMood: VibeMood;
+  setVibeMood: (mood: VibeMood) => void;
+  sleepTimerMinutes: number | null;
+  sleepTimerRemaining: number | null;
+  setSleepTimer: (minutes: number | null) => void;
+  favoriteTrackIds: string[];
+  toggleFavorite: (trackId: string) => void;
+
   play: () => void;
   pause: () => void;
   togglePlay: () => void;
   nextTrack: () => void;
   prevTrack: () => void;
   seek: (time: number) => void;
+  skipBy: (seconds: number) => void;
   setVolume: (level: number) => void;
   toggleMute: () => void;
   setLoopMode: (mode: MusicLoopMode) => void;
@@ -89,6 +106,8 @@ interface MusicContextType {
   playTrackById: (id: string) => void;
   uploadTracks: (files: FileList | File[]) => Promise<void>;
   addTrackByUrl: (url: string, title?: string, artist?: string) => Promise<{ success: boolean; error?: string }>;
+  addYouTubeTrack: (urlOrId: string, customTitle?: string) => Promise<{ success: boolean; track?: AudioTrack; error?: string }>;
+  downloadWebAudioTrack: (url: string, title?: string, artist?: string) => Promise<{ success: boolean; track?: AudioTrack; error?: string }>;
   deleteTrack: (id: string) => Promise<void>;
   clearCustomTracks: () => Promise<void>;
   playBirthdayCelebration: () => void;
@@ -128,7 +147,6 @@ export const normalizeAudioUrl = (inputUrl: string): { url: string; fallbackTitl
   let fallbackTitle = 'Online Track 🎵';
 
   // 1. Google Drive direct link conversion
-  // e.g. https://drive.google.com/file/d/FILE_ID/view?usp=sharing
   const gdriveMatch =
     url.match(/drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/i) ||
     url.match(/drive\.google\.com\/open\?id=([a-zA-Z0-9_-]+)/i);
@@ -138,7 +156,6 @@ export const normalizeAudioUrl = (inputUrl: string): { url: string; fallbackTitl
   }
 
   // 2. Dropbox direct link conversion
-  // e.g. https://www.dropbox.com/s/xyz/song.mp3?dl=0
   if (url.includes('dropbox.com')) {
     url = url.replace('?dl=0', '?raw=1').replace('&dl=0', '&raw=1');
     if (!url.includes('raw=1') && !url.includes('dl=1')) {
@@ -158,9 +175,7 @@ export const normalizeAudioUrl = (inputUrl: string): { url: string; fallbackTitl
         fallbackTitle = clean;
       }
     }
-  } catch (e) {
-    // ignore
-  }
+  } catch (e) {}
 
   return { url, fallbackTitle };
 };
@@ -179,9 +194,24 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [isUploading, setIsUploading] = useState<boolean>(false);
   const [uploadProgress, setUploadProgress] = useState<UploadProgress | null>(null);
 
-  const audioRef = useRef<HTMLAudioElement | null>(null);
+  // Modern Features State
+  const [vibeMood, setVibeMood] = useState<VibeMood>('all');
+  const [sleepTimerMinutes, setSleepTimerMinutes] = useState<number | null>(null);
+  const [sleepTimerRemaining, setSleepTimerRemaining] = useState<number | null>(null);
+  const [favoriteTrackIds, setFavoriteTrackIds] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem('bakery_favorite_tracks');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
 
-  // Live mutable refs to completely prevent stale closures in HTML5 audio event callbacks
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const ytPlayerRef = useRef<any>(null);
+  const ytTickerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Live mutable refs to completely prevent stale closures in event callbacks
   const playlistRef = useRef<AudioTrack[]>(playlist);
   const currentTrackIndexRef = useRef<number>(currentTrackIndex);
   const isPlayingRef = useRef<boolean>(isPlaying);
@@ -212,6 +242,106 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     isMutedRef.current = isMuted;
   }, [isMuted]);
 
+  // Load YouTube IFrame API script dynamically
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const initYt = () => {
+      try {
+        let container = document.getElementById('sweetbakery-yt-hidden-player');
+        if (!container) {
+          container = document.createElement('div');
+          container.id = 'sweetbakery-yt-hidden-player';
+          container.style.position = 'fixed';
+          container.style.top = '-9999px';
+          container.style.left = '-9999px';
+          container.style.width = '200px';
+          container.style.height = '200px';
+          container.style.pointerEvents = 'none';
+          container.style.opacity = '0';
+          document.body.appendChild(container);
+        }
+
+        if ((window as any).YT && (window as any).YT.Player) {
+          ytPlayerRef.current = new (window as any).YT.Player('sweetbakery-yt-hidden-player', {
+            height: '200',
+            width: '200',
+            playerVars: {
+              autoplay: 1,
+              controls: 0,
+              disablekb: 1,
+              playsinline: 1,
+            },
+            events: {
+              onStateChange: (event: any) => {
+                // 1 = PLAYING, 2 = PAUSED, 0 = ENDED
+                if (event.data === 1) {
+                  setIsPlaying(true);
+                  isPlayingRef.current = true;
+                } else if (event.data === 2) {
+                  setIsPlaying(false);
+                  isPlayingRef.current = false;
+                } else if (event.data === 0) {
+                  handleEnded();
+                }
+              },
+            },
+          });
+        }
+      } catch (e) {
+        console.warn('YouTube IFrame player initialization warning:', e);
+      }
+    };
+
+    if (!(window as any).YT) {
+      const tag = document.createElement('script');
+      tag.src = 'https://www.youtube.com/iframe_api';
+      const first = document.getElementsByTagName('script')[0];
+      first?.parentNode?.insertBefore(tag, first);
+      (window as any).onYouTubeIframeAPIReady = initYt;
+    } else {
+      initYt();
+    }
+  }, []);
+
+  // Sleep Timer countdown ticker
+  useEffect(() => {
+    if (sleepTimerRemaining === null || sleepTimerRemaining <= 0) return;
+    const interval = setInterval(() => {
+      setSleepTimerRemaining((prev) => {
+        if (prev === null || prev <= 1) {
+          pause();
+          setSleepTimerMinutes(null);
+          soundFx.playPop();
+          return null;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [sleepTimerRemaining]);
+
+  const setSleepTimer = (minutes: number | null) => {
+    soundFx.playPop();
+    setSleepTimerMinutes(minutes);
+    if (minutes === null) {
+      setSleepTimerRemaining(null);
+    } else {
+      setSleepTimerRemaining(minutes * 60);
+    }
+  };
+
+  const toggleFavorite = (trackId: string) => {
+    soundFx.playPop();
+    setFavoriteTrackIds((prev) => {
+      const next = prev.includes(trackId) ? prev.filter((id) => id !== trackId) : [...prev, trackId];
+      try {
+        localStorage.setItem('bakery_favorite_tracks', JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+  };
+
   // Direct playback function that guarantees immediate audio continuation
   const playTrackAtIndex = (index: number) => {
     const list = playlistRef.current;
@@ -227,8 +357,38 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     birthdaySynth.stop();
 
+    // 1. YouTube Track Playback
+    if (targetTrack.category === 'youtube' || targetTrack.url.startsWith('youtube:')) {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.removeAttribute('src');
+      }
+      bakeryAmbientAudio.stop();
+
+      const videoId = targetTrack.youtubeId || extractYouTubeVideoId(targetTrack.url);
+      if (videoId && ytPlayerRef.current && typeof ytPlayerRef.current.loadVideoById === 'function') {
+        try {
+          ytPlayerRef.current.loadVideoById(videoId);
+          ytPlayerRef.current.setVolume(isMutedRef.current ? 0 : Math.round(volumeRef.current * 100));
+          ytPlayerRef.current.playVideo();
+        } catch (err) {
+          console.warn('YouTube loadVideo error:', err);
+        }
+      }
+      setCurrentTime(0);
+      setDuration(targetTrack.duration || 210);
+      return;
+    }
+
+    // Stop YouTube audio when switching to normal audio
+    if (ytPlayerRef.current && typeof ytPlayerRef.current.pauseVideo === 'function') {
+      try {
+        ytPlayerRef.current.pauseVideo();
+      } catch {}
+    }
+
+    // 2. Synthesized Ambient Music
     if (targetTrack.url.startsWith('synthesized:')) {
-      // Pause HTML5 audio and clear src to prevent error events
       if (audioRef.current) {
         audioRef.current.pause();
         audioRef.current.removeAttribute('src');
@@ -239,7 +399,7 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       setCurrentTime(0);
       setDuration(targetTrack.duration || 120);
     } else {
-      // Offline/Uploaded custom track or URL via HTML5 Audio
+      // 3. Offline WAV / Uploaded custom track or URL via HTML5 Audio
       bakeryAmbientAudio.stop();
       if (audioRef.current) {
         const currentAudio = audioRef.current;
@@ -248,7 +408,6 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         currentAudio.currentTime = 0;
         currentAudio.play().catch((err) => {
           console.warn('Playback error or policy blocked, falling back to ambient audio:', err);
-          // If custom track URL fails or is blocked, seamlessly play offline ambient music so store is never silent!
           bakeryAmbientAudio.setVolume(isMutedRef.current ? 0 : volumeRef.current);
           bakeryAmbientAudio.play('cafe');
         });
@@ -266,9 +425,22 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (!list || list.length === 0) return;
     const currentTrack = list[currentIndex];
 
+    // Check if sleep timer was set to "End of current song"
+    if (sleepTimerMinutes === 0) {
+      pause();
+      setSleepTimerMinutes(null);
+      setSleepTimerRemaining(null);
+      return;
+    }
+
     // 1. Loop single track
     if (mode === 'one') {
-      if (currentTrack?.url.startsWith('synthesized:')) {
+      if (currentTrack?.category === 'youtube' && ytPlayerRef.current) {
+        try {
+          ytPlayerRef.current.seekTo(0, true);
+          ytPlayerRef.current.playVideo();
+        } catch {}
+      } else if (currentTrack?.url.startsWith('synthesized:')) {
         const trackId = (currentTrack.url.replace('synthesized:', '') as BakerySoundtrackId) || 'cafe';
         bakeryAmbientAudio.play(trackId);
       } else if (audioRef.current) {
@@ -300,6 +472,27 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const nextIdx = (currentIndex + 1) % list.length;
     playTrackAtIndex(nextIdx);
   };
+
+  // Live ticker for YouTube audio duration & progress
+  useEffect(() => {
+    if (ytTickerRef.current) clearInterval(ytTickerRef.current);
+    const track = playlist[currentTrackIndex];
+    if (isPlaying && track?.category === 'youtube') {
+      ytTickerRef.current = setInterval(() => {
+        try {
+          if (ytPlayerRef.current && typeof ytPlayerRef.current.getCurrentTime === 'function') {
+            const time = ytPlayerRef.current.getCurrentTime() || 0;
+            const dur = ytPlayerRef.current.getDuration() || 0;
+            setCurrentTime(time);
+            if (dur > 0) setDuration(dur);
+          }
+        } catch {}
+      }, 500);
+    }
+    return () => {
+      if (ytTickerRef.current) clearInterval(ytTickerRef.current);
+    };
+  }, [isPlaying, currentTrackIndex, playlist]);
 
   // Initialize HTML5 audio element & ambient audio callbacks
   useEffect(() => {
@@ -387,19 +580,23 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             if (item.blob) {
               try {
                 trackUrl = URL.createObjectURL(item.blob);
-              } catch (e) {
-                // ignore
-              }
+              } catch (e) {}
             }
             if (!trackUrl) return null;
+
+            const isYt = trackUrl.startsWith('youtube:') || item.id.startsWith('yt-');
+            const ytId = isYt ? extractYouTubeVideoId(trackUrl) || item.id.replace('yt-', '') : undefined;
+
             return {
               id: item.id,
               title: item.title,
-              artist: item.artist || (item.url ? 'Online Audio Link 🌐' : 'Uploaded Track'),
+              artist: item.artist || (isYt ? 'YouTube Music 🔴' : item.url ? 'Online Audio Link 🌐' : 'Uploaded Track'),
               url: trackUrl,
               duration: item.duration,
               isCustom: true,
-              category: 'custom' as const,
+              category: (isYt ? 'youtube' : 'custom') as any,
+              youtubeId: ytId,
+              thumbnailUrl: ytId ? `https://img.youtube.com/vi/${ytId}/hqdefault.jpg` : undefined,
               dateAdded: item.dateAdded,
             };
           })
@@ -470,11 +667,18 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const currentTrack = playlist[currentTrackIndex] || null;
 
-  // Handle volume / mute change across both HTML5 Audio and Bakery Ambient Audio
+  // Handle volume / mute change across HTML5 Audio, YouTube, and Bakery Ambient Audio
   useEffect(() => {
     const effectiveVol = isMuted ? 0 : volume;
     if (audioRef.current) {
       audioRef.current.volume = effectiveVol;
+    }
+    if (ytPlayerRef.current && typeof ytPlayerRef.current.setVolume === 'function') {
+      try {
+        ytPlayerRef.current.setVolume(Math.round(effectiveVol * 100));
+        if (isMuted) ytPlayerRef.current.mute();
+        else ytPlayerRef.current.unMute();
+      } catch {}
     }
     bakeryAmbientAudio.setVolume(effectiveVol);
   }, [volume, isMuted]);
@@ -486,6 +690,16 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     isPlayingRef.current = true;
 
     birthdaySynth.stop();
+
+    if (track.category === 'youtube' || track.url.startsWith('youtube:')) {
+      if (ytPlayerRef.current && typeof ytPlayerRef.current.playVideo === 'function') {
+        try {
+          ytPlayerRef.current.playVideo();
+        } catch {}
+      }
+      return;
+    }
+
     if (track.url.startsWith('synthesized:')) {
       if (audioRef.current) {
         audioRef.current.pause();
@@ -512,6 +726,11 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     isPlayingRef.current = false;
     if (audioRef.current) {
       audioRef.current.pause();
+    }
+    if (ytPlayerRef.current && typeof ytPlayerRef.current.pauseVideo === 'function') {
+      try {
+        ytPlayerRef.current.pauseVideo();
+      } catch {}
     }
     bakeryAmbientAudio.stop();
     birthdaySynth.stop();
@@ -547,8 +766,8 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const currentIndex = currentTrackIndexRef.current;
     if (!list || list.length === 0) return;
 
-    if (currentTime > 3 && audioRef.current) {
-      audioRef.current.currentTime = 0;
+    if (currentTime > 3) {
+      seek(0);
       return;
     }
 
@@ -557,10 +776,22 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const seek = (seconds: number) => {
-    if (audioRef.current) {
+    const track = playlistRef.current[currentTrackIndexRef.current];
+    if (track?.category === 'youtube' && ytPlayerRef.current && typeof ytPlayerRef.current.seekTo === 'function') {
+      try {
+        ytPlayerRef.current.seekTo(seconds, true);
+      } catch {}
+      setCurrentTime(seconds);
+    } else if (audioRef.current) {
       audioRef.current.currentTime = seconds;
       setCurrentTime(seconds);
     }
+  };
+
+  const skipBy = (seconds: number) => {
+    soundFx.playPop();
+    const target = Math.max(0, Math.min(duration || 1000, currentTime + seconds));
+    seek(target);
   };
 
   const setVolume = (level: number) => {
@@ -646,7 +877,6 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
               trackId = resData.track.id;
             }
           } else {
-            // Server endpoint returned non-ok (e.g. 404 on Surge static deployment)
             serverActive = false;
           }
         } catch (err) {
@@ -665,7 +895,7 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         dateAdded: new Date().toISOString().slice(0, 10),
       };
 
-      // 2. Always persist into browser IndexedDB so it's permanent across page refreshes
+      // 2. Persist into browser IndexedDB so it's permanent across page refreshes
       saveTrackToDB({
         id: trackId,
         title: cleanTitle,
@@ -729,6 +959,12 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       return { success: false, error: 'សូមបញ្ចូលលីង URL បទចម្រៀង' };
     }
 
+    // Check if it's a YouTube URL
+    const ytId = extractYouTubeVideoId(rawUrl);
+    if (ytId) {
+      return addYouTubeTrack(rawUrl, customTitle);
+    }
+
     const { url, fallbackTitle } = normalizeAudioUrl(rawUrl);
     const title = (customTitle && customTitle.trim()) || fallbackTitle;
     const artist = (customArtist && customArtist.trim()) || 'Online Web Stream 🌐';
@@ -776,15 +1012,13 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       dateAdded: newTrack.dateAdded!,
     }).catch(() => {});
 
-    // 2. Sync to Firebase Cloud so other devices (PC, Phone) receive it in real-time!
+    // 2. Sync to Firebase Cloud
     try {
       await saveFirestoreDoc('musicTracks', trackId, {
         ...newTrack,
         isCloudSynced: true,
       });
-    } catch {
-      // ignore
-    }
+    } catch {}
 
     // 3. Update active playlist state
     setPlaylist((prev) => {
@@ -807,6 +1041,129 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }, 100);
 
     return { success: true };
+  };
+
+  // Add YouTube Track via oEmbed metadata and background playback
+  const addYouTubeTrack = async (
+    urlOrId: string,
+    customTitle?: string
+  ): Promise<{ success: boolean; track?: AudioTrack; error?: string }> => {
+    const videoId = extractYouTubeVideoId(urlOrId);
+    if (!videoId) {
+      return { success: false, error: 'លីង YouTube មិនត្រឹមត្រូវ (សូមបញ្ចូល Link ពេញលេញ)' };
+    }
+
+    const info = await fetchYouTubeVideoInfo(videoId);
+    const title = customTitle?.trim() || info?.title || `YouTube Music (${videoId})`;
+    const artist = info?.author || 'YouTube';
+    const trackId = 'yt-' + videoId;
+
+    const newTrack: AudioTrack = {
+      id: trackId,
+      title,
+      artist,
+      url: `youtube:${videoId}`,
+      duration: 210,
+      isCustom: true,
+      category: 'youtube',
+      youtubeId: videoId,
+      thumbnailUrl: info?.thumbnailUrl || `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`,
+      sourceUrl: `https://www.youtube.com/watch?v=${videoId}`,
+      dateAdded: new Date().toISOString().slice(0, 10),
+    };
+
+    // Save to IndexedDB
+    await saveTrackToDB({
+      id: trackId,
+      title,
+      artist,
+      url: newTrack.url,
+      isUrlOnly: true,
+      duration: 210,
+      dateAdded: newTrack.dateAdded!,
+    }).catch(() => {});
+
+    setPlaylist((prev) => {
+      const filtered = prev.filter((t) => t.id !== trackId);
+      const updated = [...filtered, newTrack];
+      playlistRef.current = updated;
+      return updated;
+    });
+
+    soundFx.playSuccess();
+    confetti({
+      particleCount: 75,
+      spread: 70,
+      origin: { y: 0.6 },
+    });
+
+    setTimeout(() => {
+      const idx = playlistRef.current.findIndex((t) => t.id === trackId);
+      if (idx !== -1) playTrackAtIndex(idx);
+    }, 150);
+
+    return { success: true, track: newTrack };
+  };
+
+  // Direct Audio Downloader: download online MP3/WAV into IndexedDB blob for offline playback
+  const downloadWebAudioTrack = async (
+    url: string,
+    title?: string,
+    artist?: string
+  ): Promise<{ success: boolean; track?: AudioTrack; error?: string }> => {
+    setIsUploading(true);
+    const result = await downloadWebAudioBlob(url);
+    setIsUploading(false);
+
+    if (!result) {
+      return { success: false, error: 'មិនអាចទាញយកបទចម្រៀងពីលីងនេះបានទេ សូមពិនិត្យមើលលីងម្តងទៀត' };
+    }
+
+    const trackId = 'web-dl-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6);
+    const finalTitle = title?.trim() || normalizeAudioUrl(url).fallbackTitle;
+    const finalArtist = artist?.trim() || 'Online Downloaded 📥';
+    const objectUrl = URL.createObjectURL(result.blob);
+
+    const newTrack: AudioTrack = {
+      id: trackId,
+      title: finalTitle,
+      artist: finalArtist,
+      url: objectUrl,
+      duration: result.duration,
+      isCustom: true,
+      category: 'custom',
+      dateAdded: new Date().toISOString().slice(0, 10),
+    };
+
+    // Save blob directly into IndexedDB for 100% offline playback
+    await saveTrackToDB({
+      id: trackId,
+      title: finalTitle,
+      artist: finalArtist,
+      blob: result.blob,
+      duration: result.duration,
+      dateAdded: newTrack.dateAdded!,
+    }).catch(() => {});
+
+    setPlaylist((prev) => {
+      const updated = [...prev, newTrack];
+      playlistRef.current = updated;
+      return updated;
+    });
+
+    soundFx.playSuccess();
+    confetti({
+      particleCount: 80,
+      spread: 75,
+      origin: { y: 0.6 },
+    });
+
+    setTimeout(() => {
+      const idx = playlistRef.current.findIndex((t) => t.id === trackId);
+      if (idx !== -1) playTrackAtIndex(idx);
+    }, 150);
+
+    return { success: true, track: newTrack };
   };
 
   const deleteTrack = async (id: string) => {
@@ -888,12 +1245,20 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         setIsPlayerOpen,
         isUploading,
         uploadProgress,
+        vibeMood,
+        setVibeMood,
+        sleepTimerMinutes,
+        sleepTimerRemaining,
+        setSleepTimer,
+        favoriteTrackIds,
+        toggleFavorite,
         play,
         pause,
         togglePlay,
         nextTrack,
         prevTrack,
         seek,
+        skipBy,
         setVolume,
         toggleMute,
         setLoopMode,
@@ -901,6 +1266,8 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         playTrackById,
         uploadTracks,
         addTrackByUrl,
+        addYouTubeTrack,
+        downloadWebAudioTrack,
         deleteTrack,
         clearCustomTracks,
         playBirthdayCelebration,
