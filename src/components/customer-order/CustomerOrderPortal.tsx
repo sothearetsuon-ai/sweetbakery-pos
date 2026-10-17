@@ -29,6 +29,8 @@ import {
   X,
   MapPin,
   Bot,
+  Store,
+  ArrowLeft,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { useBakery } from '../../context/BakeryContext';
@@ -85,7 +87,11 @@ export const PRESET_CAKE_FLAVORS: CakeFlavorItem[] = [
   { id: 'other', nameKh: 'ផ្សេងៗ', nameEn: 'Other...', icon: '✨', label: 'ផ្សេងៗ (Other)' },
 ];
 
-export const CustomerOrderPortal: React.FC = () => {
+interface CustomerOrderPortalProps {
+  onBackToPos?: () => void;
+}
+
+export const CustomerOrderPortal: React.FC<CustomerOrderPortalProps> = ({ onBackToPos }) => {
   const {
     products,
     categories,
@@ -593,19 +599,45 @@ export const CustomerOrderPortal: React.FC = () => {
             </div>
           </div>
 
-          {/* Customer Support Contact & AI Assistant */}
-          <div className="flex items-center gap-2">
+          {/* Customer Support Contact & AI Assistant & Return to POS */}
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            {/* Return to POS Cashier View */}
+            <button
+              type="button"
+              onClick={() => {
+                soundFx.playPop();
+                if (onBackToPos) {
+                  onBackToPos();
+                } else {
+                  window.dispatchEvent(new CustomEvent('close_customer_portal'));
+                  try {
+                    if (typeof window !== 'undefined' && window.location.protocol.startsWith('http')) {
+                      const url = new URL(window.location.href);
+                      url.searchParams.delete('order');
+                      window.history.pushState({}, '', url.pathname + (url.search ? url.search : ''));
+                    }
+                  } catch (e) {}
+                }
+              }}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-black transition-all border border-slate-700 active:scale-95 shadow-xs cursor-pointer shrink-0"
+              title="ត្រឡប់ទៅផ្ទាំងលក់ POS វិញ"
+            >
+              <Store className="w-3.5 h-3.5 text-pink-400" />
+              <span className="hidden xs:inline sm:inline">ត្រឡប់ទៅ POS</span>
+              <span className="xs:hidden sm:hidden">POS</span>
+            </button>
+
             <button
               type="button"
               onClick={() => {
                 soundFx.playPop();
                 setIsAiGuideOpen(true);
               }}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-pink-600 to-rose-500 hover:from-pink-700 hover:to-rose-600 text-white rounded-xl text-xs font-black transition-all border border-pink-400 active:scale-95 shadow-xs shadow-pink-500/25 cursor-pointer"
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-pink-600 to-rose-500 hover:from-pink-700 hover:to-rose-600 text-white rounded-xl text-xs font-black transition-all border border-pink-400 active:scale-95 shadow-xs shadow-pink-500/25 cursor-pointer shrink-0"
               title="សួរជំនួយការ AI ពីរបៀបកុម្ម៉ង់"
             >
               <Bot className="w-3.5 h-3.5" />
-              <span>ជំនួយការ AI</span>
+              <span className="hidden sm:inline">ជំនួយការ AI</span>
             </button>
 
             <a

@@ -762,6 +762,10 @@ export const CustomOrderPipeline: React.FC = () => {
       <CustomerOrderLinkModal
         isOpen={isCustomerLinkModalOpen}
         onClose={() => setIsCustomerLinkModalOpen(false)}
+        onOpenCustomerView={() => {
+          setIsCustomerLinkModalOpen(false);
+          window.dispatchEvent(new CustomEvent('open_customer_portal'));
+        }}
       />
 
       {/* Cake Flavors & Stock Modal */}

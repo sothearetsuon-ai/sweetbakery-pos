@@ -16,6 +16,8 @@ export interface StoreInfo {
   khqrBankName?: string;
   realStorePin?: string;
   requireRealStorePin?: boolean;
+  website?: string;
+  customerPortalUrl?: string;
 }
 
 export interface Category {

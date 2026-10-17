@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   X,
   Link as LinkIcon,
@@ -11,6 +11,7 @@ import {
   Sparkles,
   Smartphone,
   MessageCircle,
+  Globe,
 } from 'lucide-react';
 import { useBakery } from '../../context/BakeryContext';
 import { soundFx } from '../../utils/audio';
@@ -29,12 +30,44 @@ export const CustomerOrderLinkModal: React.FC<CustomerOrderLinkModalProps> = ({
   const { storeInfo } = useBakery();
   const [copied, setCopied] = useState(false);
 
-  if (!isOpen) return null;
+  // Compute public shareable Customer Order Link URL
+  // If running locally in Electron desktop (file://) or Android WebView (file:///android_asset/...),
+  // window.location.origin is "file://" which cannot be accessed by customer phones.
+  // Therefore, fallback to the official live hosted GitHub Pages URL or storeInfo.website.
+  const customerOrderUrl = useMemo(() => {
+    // 1. If store has a custom website or custom customer portal URL configured
+    const customUrl = storeInfo.customerPortalUrl || storeInfo.website;
+    if (
+      customUrl &&
+      (customUrl.startsWith('http://') || customUrl.startsWith('https://'))
+    ) {
+      const base = customUrl.replace(/\/+$/, '');
+      return base.includes('?order=true') ? base : `${base}/?order=true`;
+    }
 
-  // Determine Customer Order Link URL
-  const origin = typeof window !== 'undefined' ? window.location.origin : 'https://sweetbakery.app';
-  const pathname = typeof window !== 'undefined' ? window.location.pathname : '/';
-  const customerOrderUrl = `${origin}${pathname}?order=true`;
+    // 2. Check if current window is running on a live HTTP/HTTPS server
+    if (typeof window !== 'undefined' && window.location) {
+      const origin = window.location.origin;
+      const pathname = window.location.pathname || '/';
+
+      const isLocalOrFile =
+        !origin ||
+        origin.startsWith('file:') ||
+        origin === 'null' ||
+        origin.includes('localhost') ||
+        origin.includes('127.0.0.1');
+
+      if (!isLocalOrFile && (origin.startsWith('http://') || origin.startsWith('https://'))) {
+        const cleanPath = pathname.replace(/\/index\.html$/, '').replace(/\/+$/, '');
+        return `${origin}${cleanPath}/?order=true`;
+      }
+    }
+
+    // 3. Default to official production GitHub Pages hosted app
+    return 'https://sothearetsuon-ai.github.io/sweetbakery-pos/?order=true';
+  }, [storeInfo.customerPortalUrl, storeInfo.website]);
+
+  if (!isOpen) return null;
 
   const handleCopy = () => {
     navigator.clipboard.writeText(customerOrderUrl);
@@ -145,31 +178,63 @@ export const CustomerOrderLinkModal: React.FC<CustomerOrderLinkModalProps> = ({
           </div>
 
           {/* Action Buttons */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
-            <button
-              type="button"
-              onClick={handleShareTelegram}
-              className="py-2.5 px-4 bg-[#2AABEE] hover:bg-[#229ED9] text-white rounded-2xl text-xs font-black transition-all shadow-md shadow-[#2AABEE]/20 flex items-center justify-center gap-2 cursor-pointer active:scale-95"
-            >
-              <MessageCircle className="w-4 h-4" />
-              <span>ផ្ញើតាម Telegram</span>
-            </button>
+          <div className="space-y-2.5 pt-1">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={handleShareTelegram}
+                className="py-2.5 px-3 bg-[#2AABEE] hover:bg-[#229ED9] text-white rounded-2xl text-xs font-black transition-all shadow-md shadow-[#2AABEE]/20 flex items-center justify-center gap-1.5 cursor-pointer active:scale-95"
+              >
+                <MessageCircle className="w-4 h-4" />
+                <span>ផ្ញើតាម Telegram</span>
+              </button>
 
-            <button
-              type="button"
-              onClick={() => {
-                if (onOpenCustomerView) {
+              <button
+                type="button"
+                onClick={handlePrint}
+                className="py-2.5 px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-2xl text-xs font-bold transition-all border border-slate-200 flex items-center justify-center gap-1.5 cursor-pointer active:scale-95"
+              >
+                <Printer className="w-4 h-4 text-slate-500" />
+                <span>បោះពុម្ព QR</span>
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {/* In-App Direct Preview */}
+              <button
+                type="button"
+                onClick={() => {
+                  soundFx.playPop();
                   onClose();
-                  onOpenCustomerView();
-                } else {
-                  window.open(customerOrderUrl, '_blank');
-                }
-              }}
-              className="py-2.5 px-4 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl text-xs font-black transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer active:scale-95"
-            >
-              <ExternalLink className="w-4 h-4" />
-              <span>បើកមើលទំព័រភ្ញៀវ</span>
-            </button>
+                  if (onOpenCustomerView) {
+                    onOpenCustomerView();
+                  } else {
+                    window.dispatchEvent(new CustomEvent('open_customer_portal'));
+                  }
+                }}
+                className="py-2.5 px-3 bg-gradient-to-r from-pink-600 to-rose-500 hover:from-pink-700 hover:to-rose-600 text-white rounded-2xl text-xs font-black transition-all shadow-md shadow-pink-500/25 flex items-center justify-center gap-1.5 cursor-pointer active:scale-95"
+              >
+                <Smartphone className="w-4 h-4" />
+                <span>📱 បើកក្នុងកម្មវិធី (In-App)</span>
+              </button>
+
+              {/* Open in Default Web Browser (Chrome/Edge) */}
+              <button
+                type="button"
+                onClick={() => {
+                  soundFx.playPop();
+                  if ((window as any).SweetBakeryDesktop?.openExternal) {
+                    (window as any).SweetBakeryDesktop.openExternal(customerOrderUrl);
+                  } else {
+                    window.open(customerOrderUrl, '_blank');
+                  }
+                }}
+                className="py-2.5 px-3 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl text-xs font-black transition-all shadow-md flex items-center justify-center gap-1.5 cursor-pointer active:scale-95"
+              >
+                <Globe className="w-4 h-4 text-cyan-400" />
+                <span>🌐 បើកក្នុង Browser</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>

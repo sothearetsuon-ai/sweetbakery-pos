@@ -1,12 +1,13 @@
 {
-  "version": "1.4.2",
+  "version": "1.4.3",
   "releaseDate": "2026-10-17",
   "releaseNotes": [
-    "🧁 រសជាតិនំខួបកំណើត (Cake Flavors & Stock)៖ បន្ថែមប៊ូតុង [⚡ ដាក់មានទាំងអស់] ដើម្បីដោះស្រាយបញ្ហាជាប់ស្លាក ❌ (អស់ស្តុក) ដោយចុចតែ ១ ក្លិក, ប៊ូតុង [✨ ម៉ឺនុយពេញ (12 មុខ)] បញ្ចូលរសជាតិពេញលេញលំនាំដើម, និងប៊ូតុង [⚙️ ស្តុក] គ្រប់គ្រងស្តុករសជាតិនំផ្ទាល់លើផ្ទាំងកុម្ម៉ង់",
-    "🎙️ ប៊ូតុង Mic និយាយបញ្ចូលសំឡេង (Voice Recognition)៖ ភ្ជាប់ប្រព័ន្ធ Android Native Speech Recognizer (Google Voice Typing) លើទូរស័ព្ទ Android គាំទ្រការនិយាយភាសាខ្មែរ ១០០%, បន្ថែមសិទ្ធិ RECORD_AUDIO, បើក Media Permission លើ Windows Desktop App, និងផ្ទាំង Live Listening Status",
-    "🔒 កំណត់ការសម្ងាត់ខ្ពស់៖ របាយការណ៍បូកសរុបការលក់ និងចំណាយប្រចាំថ្ងៃ-ខែស្វ័យប្រវត្តិ (ម៉ោង ៩:០០ យប់) ផ្ញើចូលតែ Telegram Bot Admin ផ្ទាល់ខ្លួន (8970210109) តាមលំនាំដើម ដោយមិនផ្ញើចូល Group ហាងឡើយ",
-    "🛡️ ផ្ទាំងកំណត់ Telegram Bot Settings កម្រិតខ្ពស់៖ អាចជ្រើសរើសផ្ញើចូល Admin ផ្ទាល់ខ្លួន (ណែនាំ ⭐), ផ្ញើចូល Group ហាង, ឬផ្ញើចូលទាំងពីរ ព្រមទាំងបញ្ចូល Admin Chat ID បានតាមតម្រូវការ",
-    "⚡ ពង្រឹងស្ថេរភាព និងល្បឿនប្រព័ន្ធទូទាត់ POS ព្រមទាំង In-App Auto Update ស្តង់ដារថ្មី មិនបាត់បង់ទិន្នន័យ"
+    "🔗 ដោះស្រាយបញ្ហាលីង និង QR Code ផ្ទាំងភ្ញៀវ (Customer Order Portal Fix)៖ លីង និង QR Code បង្ហាញជា Web URL ផ្លូវការ (HTTPS) ដំណើរការបាន ១០០% លើទូរស័ព្ទដៃភ្ញៀវ និង Browser ក្រៅ មិនជាប់ file:/// ទៀតឡើយ",
+    "📱 ប៊ូតុង [បើកក្នុងកម្មវិធី (In-App)] & [បើកក្នុង Browser]៖ អាចបើកមើលទំព័រភ្ញៀវដោយផ្ទាល់ក្នុងកម្មវិធី POS ឬបើកលើ Chrome/Edge បានយ៉ាងងាយស្រួល",
+    "🏪 ប៊ូតុង [ត្រឡប់ទៅ POS]៖ បន្ថែមប៊ូតុងត្រឡប់មកផ្ទាំងលក់ POS វិញភ្លាមៗពេលកំពុងមើលផ្ទាំងភ្ញៀវ",
+    "🧁 គ្រប់គ្រងស្តុករសជាតិនំ (Cake Flavors Stock)៖ ប៊ូតុង [⚡ ដាក់មានទាំងអស់] ដោះស្លាកអស់ស្តុក ១ ក្លិក, ប៊ូតុង [✨ ម៉ឺនុយពេញ 12 មុខ], និង [⚙️ ស្តុក]",
+    "🎙️ ប៊ូតុង Mic និយាយសំឡេងខ្មែរ (Native Speech Recognition)៖ ភ្ជាប់ប្រព័ន្ធ Android Native Speech Recognizer លើ Android និងបើក Media Permission លើ Windows",
+    "🔒 កំណត់ការសម្ងាត់ខ្ពស់៖ របាយការណ៍បូកសរុបការលក់ និងចំណាយប្រចាំថ្ងៃ-ខែ ផ្ញើចូលតែ Telegram Bot Admin ផ្ទាល់ខ្លួន (8970210109)"
   ],
   "apkDownloadUrl": "https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/latest/download/SweetBakery-Android.apk",
   "windowsInstallerUrl": "https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/latest/download/SweetBakery-POS-Setup.exe",

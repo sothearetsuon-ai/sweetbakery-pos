@@ -194,11 +194,17 @@ export const App: React.FC = () => {
         tgParam === 'catalog';
       setIsCustomerPortalOpen(isOrder);
     };
+    const handleOpenPortal = () => setIsCustomerPortalOpen(true);
+    const handleClosePortal = () => setIsCustomerPortalOpen(false);
     window.addEventListener('popstate', handleUrlChange);
     window.addEventListener('hashchange', handleUrlChange);
+    window.addEventListener('open_customer_portal', handleOpenPortal);
+    window.addEventListener('close_customer_portal', handleClosePortal);
     return () => {
       window.removeEventListener('popstate', handleUrlChange);
       window.removeEventListener('hashchange', handleUrlChange);
+      window.removeEventListener('open_customer_portal', handleOpenPortal);
+      window.removeEventListener('close_customer_portal', handleClosePortal);
     };
   }, []);
 
@@ -267,7 +273,7 @@ export const App: React.FC = () => {
   if (isCustomerPortalOpen) {
     return (
       <>
-        <CustomerOrderPortal />
+        <CustomerOrderPortal onBackToPos={() => setIsCustomerPortalOpen(false)} />
         <OfflineAutoSyncToast />
       </>
     );
@@ -488,8 +494,13 @@ export const App: React.FC = () => {
         isOpen={isCustomerOrderLinkModalOpen}
         onClose={() => setIsCustomerOrderLinkModalOpen(false)}
         onOpenCustomerView={() => {
+          setIsCustomerOrderLinkModalOpen(false);
           setIsCustomerPortalOpen(true);
-          window.history.pushState({}, '', '?order=true');
+          try {
+            if (typeof window !== 'undefined' && window.location.protocol.startsWith('http')) {
+              window.history.pushState({}, '', '?order=true');
+            }
+          } catch (e) {}
         }}
       />
 
