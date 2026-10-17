@@ -14,13 +14,14 @@ import {
   deleteFirestoreDoc,
   getFirestoreDb,
   getScopedDocRef,
+  getScopedCollectionRef,
   sanitizeForFirestore,
   batchSaveFirestoreDocs,
   batchDeleteFirestoreDocs,
   testFirebaseConnection,
   getStoredFirebaseConfig,
 } from './firebase';
-import { writeBatch } from 'firebase/firestore';
+import { writeBatch, getDocs } from 'firebase/firestore';
 import { initialExpenses } from '../data/mockData';
 
 export interface OfflineMutation {
@@ -370,7 +371,7 @@ class OfflineSyncEngine {
         }
       }
 
-      // 4. Products
+      // 4. Products (Only seed to cloud if Cloud is completely empty to prevent overwriting updated cloud stock)
       let productsCount = 0;
       if (Array.isArray(localData.products) && localData.products.length > 0) {
         let deletedProducts = new Set<string>();
@@ -379,13 +380,17 @@ class OfflineSyncEngine {
           if (raw) deletedProducts = new Set(JSON.parse(raw));
         } catch (e) {}
 
-        const productsToSync = localData.products.filter((p) => p && p.id && !deletedProducts.has(p.id));
-        if (productsToSync.length > 0) {
-          productsCount = await batchSaveFirestoreDocs(
-            'products',
-            productsToSync.map((p) => ({ id: p.id, data: p }))
-          );
-          uploaded += productsCount;
+        const colRef = getScopedCollectionRef(db, 'products');
+        const snap = await getDocs(colRef).catch(() => null);
+        if (!snap || snap.empty) {
+          const productsToSync = localData.products.filter((p) => p && p.id && !deletedProducts.has(p.id));
+          if (productsToSync.length > 0) {
+            productsCount = await batchSaveFirestoreDocs(
+              'products',
+              productsToSync.map((p) => ({ id: p.id, data: p }))
+            );
+            uploaded += productsCount;
+          }
         }
       }
 

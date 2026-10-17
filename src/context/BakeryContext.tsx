@@ -2496,15 +2496,95 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       offlineSyncService.processQueue().catch(() => {});
     }
 
-    const isSameArrayFast = (a: any[], b: any[]) => {
+    const isSameProductList = (a: Product[], b: Product[]): boolean => {
       if (a === b) return true;
       if (!a || !b || a.length !== b.length) return false;
-      if (a.length === 0) return true;
-      if (a[0]?.id !== b[0]?.id || a[a.length - 1]?.id !== b[b.length - 1]?.id) return false;
-      if (a.length <= 40) return JSON.stringify(a) === JSON.stringify(b);
-      const firstMatch = a.slice(0, 5).every((item, i) => item.id === b[i]?.id && (item as any).updatedAt === (b[i] as any)?.updatedAt);
-      const lastMatch = a.slice(-5).every((item, i) => item.id === b[b.length - 5 + i]?.id);
-      return firstMatch && lastMatch;
+      for (let i = 0; i < a.length; i++) {
+        const p1 = a[i];
+        const p2 = b[i];
+        if (
+          p1.id !== p2.id ||
+          p1.stockQty !== p2.stockQty ||
+          p1.priceUsd !== p2.priceUsd ||
+          p1.priceKhr !== p2.priceKhr ||
+          p1.updatedAt !== p2.updatedAt ||
+          p1.nameKh !== p2.nameKh ||
+          p1.nameEn !== p2.nameEn ||
+          p1.imageUrl !== p2.imageUrl ||
+          p1.categoryId !== p2.categoryId
+        ) {
+          return false;
+        }
+      }
+      return true;
+    };
+
+    const isSameSaleList = (a: CompletedSale[], b: CompletedSale[]): boolean => {
+      if (a === b) return true;
+      if (!a || !b || a.length !== b.length) return false;
+      for (let i = 0; i < a.length; i++) {
+        const s1 = a[i];
+        const s2 = b[i];
+        if (
+          s1.id !== s2.id ||
+          s1.totalUsd !== s2.totalUsd ||
+          s1.totalKhr !== s2.totalKhr ||
+          s1.paidUsd !== s2.paidUsd ||
+          s1.paidKhr !== s2.paidKhr ||
+          s1.remainingUsd !== s2.remainingUsd ||
+          s1.remainingKhr !== s2.remainingKhr ||
+          s1.isDeposit !== s2.isDeposit ||
+          s1.paymentMethod !== s2.paymentMethod
+        ) {
+          return false;
+        }
+      }
+      return true;
+    };
+
+    const isSameCustomOrderList = (a: CustomCakeOrder[], b: CustomCakeOrder[]): boolean => {
+      if (a === b) return true;
+      if (!a || !b || a.length !== b.length) return false;
+      for (let i = 0; i < a.length; i++) {
+        const o1 = a[i];
+        const o2 = b[i];
+        if (
+          o1.id !== o2.id ||
+          o1.status !== o2.status ||
+          o1.depositKhr !== o2.depositKhr ||
+          o1.depositUsd !== o2.depositUsd ||
+          o1.totalKhr !== o2.totalKhr ||
+          o1.totalUsd !== o2.totalUsd ||
+          o1.pickupDate !== o2.pickupDate ||
+          o1.pickupTime !== o2.pickupTime ||
+          o1.customerName !== o2.customerName ||
+          o1.phone !== o2.phone
+        ) {
+          return false;
+        }
+      }
+      return true;
+    };
+
+    const isSameExpenseList = (a: Expense[], b: Expense[]): boolean => {
+      if (a === b) return true;
+      if (!a || !b || a.length !== b.length) return false;
+      for (let i = 0; i < a.length; i++) {
+        const e1 = a[i];
+        const e2 = b[i];
+        if (
+          e1.id !== e2.id ||
+          e1.amountUsd !== e2.amountUsd ||
+          e1.amountKhr !== e2.amountKhr ||
+          e1.category !== e2.category ||
+          e1.title !== e2.title ||
+          e1.paymentMethod !== e2.paymentMethod ||
+          e1.paymentStatus !== e2.paymentStatus
+        ) {
+          return false;
+        }
+      }
+      return true;
     };
 
     // Subscribe to products (High-speed real-time sync)
@@ -2518,7 +2598,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         );
         if (filtered.length > 0) {
           setProducts((prev) => {
-            if (isSameArrayFast(prev, filtered)) {
+            if (isSameProductList(prev, filtered)) {
               return prev;
             }
             safeSetStorage('bakery_products', JSON.stringify(filtered));
@@ -2538,7 +2618,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
         if (filtered.length > 0) {
           setSales((prev) => {
-            if (isSameArrayFast(prev, filtered)) {
+            if (isSameSaleList(prev, filtered)) {
               return prev;
             }
             safeSetStorage('bakery_sales', JSON.stringify(filtered));
@@ -2555,7 +2635,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         const filtered = cloudOrders.filter((o) => o && o.id && !deletedOrderIds.current.has(o.id));
         if (filtered.length > 0) {
           setCustomOrders((prev) => {
-            if (isSameArrayFast(prev, filtered)) {
+            if (isSameCustomOrderList(prev, filtered)) {
               return prev;
             }
             safeSetStorage('bakery_custom_orders', JSON.stringify(filtered));
@@ -2573,7 +2653,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
         if (deduped.length > 0) {
           setExpenses((prev) => {
-            if (isSameArrayFast(prev, deduped)) {
+            if (isSameExpenseList(prev, deduped)) {
               return prev;
             }
             safeSetStorage('bakery_expenses', JSON.stringify(deduped));
@@ -2787,6 +2867,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             merged.every(
               (a, idx) =>
                 a.id === prev[idx]?.id &&
+                a.stockQty === prev[idx]?.stockQty &&
                 a.nameKh === prev[idx]?.nameKh &&
                 a.priceKhr === prev[idx]?.priceKhr &&
                 a.priceUsd === prev[idx]?.priceUsd
@@ -3985,7 +4066,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       const updated = prev.map((p) => {
         if (p.id === productId) {
           const newStock = Math.max(0, (p.stockQty || 0) + additionalStock);
-          const updatedProd = { ...p, stockQty: newStock };
+          const updatedProd = { ...p, stockQty: newStock, updatedAt: new Date().toISOString() };
           updatedTarget = updatedProd;
           return updatedProd;
         }
@@ -4260,11 +4341,24 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     };
     const newSale = sanitizeSaleKhr(rawSale);
 
-    // Deduct stock for products sold
+    // Deduct stock for products sold (Aggregate quantities in case same product is in cart multiple times)
+    const soldQuantities: Record<string, number> = {};
+    (saleData.items || []).forEach((item) => {
+      if (item.productId && item.quantity > 0) {
+        soldQuantities[item.productId] = (soldQuantities[item.productId] || 0) + item.quantity;
+      }
+    });
+
+    const nowIso = new Date().toISOString();
+
     const updatedProducts = products.map((p) => {
-      const soldItem = saleData.items.find((item) => item.productId === p.id);
-      if (soldItem) {
-        const updated = { ...p, stockQty: Math.max(0, p.stockQty - soldItem.quantity) };
+      const soldQty = soldQuantities[p.id];
+      if (soldQty && soldQty > 0) {
+        const updated = {
+          ...p,
+          stockQty: Math.max(0, p.stockQty - soldQty),
+          updatedAt: nowIso,
+        };
         syncSaveDoc('products', p.id, updated);
         return updated;
       }
@@ -4292,7 +4386,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       });
       setPartyAddons(updatedPartyAddons);
       safeSetStorage('bakery_party_addons', JSON.stringify(updatedPartyAddons));
-      syncSaveDoc('settings', 'partyAddons', { items: updatedPartyAddons });
+      syncSaveDoc('settings', 'partyAddons', { items: updatedPartyAddons, updatedAt: nowIso });
     }
 
     // 1. Immediately atomic save to server
@@ -4430,11 +4524,12 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
     // Restore stock if requested and items exist in the sale
     if (restoreStock && saleToDelete && saleToDelete.items && saleToDelete.items.length > 0) {
+      const nowIso = new Date().toISOString();
       updatedProducts = products.map((p) => {
         const itemToRestore = saleToDelete.items.find((item) => item.productId === p.id);
         if (itemToRestore && itemToRestore.quantity > 0) {
           const restoredStock = (p.stockQty || 0) + itemToRestore.quantity;
-          const updatedProd = { ...p, stockQty: restoredStock };
+          const updatedProd = { ...p, stockQty: restoredStock, updatedAt: nowIso };
           syncSaveDoc('products', p.id, updatedProd);
           return updatedProd;
         }
@@ -4471,7 +4566,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           });
           safeSetStorage('bakery_party_addons', JSON.stringify(updated));
           saveToLanSync({ partyAddons: updated });
-          syncSaveDoc('settings', 'partyAddons', { items: updated });
+          syncSaveDoc('settings', 'partyAddons', { items: updated, updatedAt: nowIso });
           return updated;
         });
       }
@@ -4543,10 +4638,11 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         }
       });
 
+      const nowIso = new Date().toISOString();
       if (Object.keys(stockRestoreMap).length > 0) {
         updatedProducts = products.map((p) => {
           if (stockRestoreMap[p.id]) {
-            const restored = { ...p, stockQty: (p.stockQty || 0) + stockRestoreMap[p.id] };
+            const restored = { ...p, stockQty: (p.stockQty || 0) + stockRestoreMap[p.id], updatedAt: nowIso };
             syncSaveDoc('products', p.id, restored);
             return restored;
           }
@@ -4586,7 +4682,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           });
           safeSetStorage('bakery_party_addons', JSON.stringify(updated));
           saveToLanSync({ partyAddons: updated });
-          syncSaveDoc('settings', 'partyAddons', { items: updated });
+          syncSaveDoc('settings', 'partyAddons', { items: updated, updatedAt: nowIso });
           return updated;
         });
       }

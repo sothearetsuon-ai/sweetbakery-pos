@@ -52,6 +52,7 @@ export const InventoryManagement: React.FC = () => {
     deleteProduct,
     recipes,
     deleteRecipe,
+    triggerAutoCloudSync,
   } = useBakery();
   const text = t[lang];
 
@@ -63,6 +64,20 @@ export const InventoryManagement: React.FC = () => {
   const [productFilter, setProductFilter] = useState<'all' | 'out' | 'low'>('all');
   const [defaultAddCategory, setDefaultAddCategory] = useState<string>('birthday');
   const [isPartyAccessoriesOpen, setIsPartyAccessoriesOpen] = useState(false);
+  const [isSyncingStock, setIsSyncingStock] = useState(false);
+
+  const handleSyncStock = async () => {
+    setIsSyncingStock(true);
+    soundFx.playPop();
+    try {
+      await triggerAutoCloudSync();
+      soundFx.playSuccess();
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setTimeout(() => setIsSyncingStock(false), 800);
+    }
+  };
 
   // Product Add / Edit / Delete modal states
   const [isAddProductOpen, setIsAddProductOpen] = useState(false);
@@ -183,6 +198,19 @@ export const InventoryManagement: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+          {/* Quick Real-time Stock Sync Button */}
+          <button
+            type="button"
+            onClick={handleSyncStock}
+            disabled={isSyncingStock}
+            className="px-3 py-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-xl text-xs font-bold shadow-2xs flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all"
+            title="ធ្វើសមកាលកម្មទិន្នន័យស្តុកជាមួយ Cloud (Sync Real-time Stock across Phone & PC)"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 text-pink-600 ${isSyncingStock ? 'animate-spin' : ''}`} />
+            <span className="hidden sm:inline">ធ្វើសមកាលកម្មស្តុក</span>
+            <span className="inline sm:hidden">Sync</span>
+          </button>
+
           {activeTab === 'cakes' ? (
             <button
               onClick={() => {

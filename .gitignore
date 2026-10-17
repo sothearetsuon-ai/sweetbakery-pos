@@ -16,5 +16,6 @@ android-app/build/
 android-app/.gradle/
 *.zip
 *.exe
+*.idsig
 scratch/
 .vscode/
