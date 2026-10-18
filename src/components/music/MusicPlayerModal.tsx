@@ -23,6 +23,7 @@ import {
   Globe,
   Plus,
   AlertCircle,
+  AlertTriangle,
   Check,
   MapPin,
   Heart,
@@ -79,6 +80,7 @@ export const MusicPlayerModal: React.FC = () => {
     isFloatingMiniVideo,
     toggleFloatingMiniVideo,
     isCurrentVideo,
+    ytErrorTrackIndex,
     vibeMood,
     setVibeMood,
     sleepTimerMinutes,
@@ -566,6 +568,64 @@ export const MusicPlayerModal: React.FC = () => {
                       <span className="hidden sm:inline">ឌីសចម្រៀង</span>
                     </button>
                   </div>
+
+                  {/* YouTube Quick Action & Error 153 Recovery Strip */}
+                  {currentTrack?.category === 'youtube' && (
+                    <div className="p-2.5 rounded-2xl bg-white/5 border border-white/10 space-y-2">
+                      {ytErrorTrackIndex === currentTrackIndex && (
+                        <div className="flex items-center gap-2 text-xs text-amber-300 bg-amber-500/15 border border-amber-500/30 p-2.5 rounded-xl">
+                          <AlertTriangle className="w-4 h-4 shrink-0 text-amber-400 animate-bounce" />
+                          <div className="flex-1 text-[11px] leading-relaxed">
+                            <span>YouTube បង្ហាញ <strong>Error 153 (Embed Restricted)</strong> ដោយសារម្ចាស់កម្មសិទ្ធិវីដេអូកម្រិតមិនឱ្យចាក់លើ Embed។ លោកអ្នកអាចចុច <strong>«បើកមើលលើ YouTube 🔴»</strong> ឬចុច <strong>«ទាញយក MP4 HD 🎬»</strong> ដើម្បី Upload ចាក់ក្នុងម៉ាស៊ីនបានយ៉ាងរលូន!</span>
+                          </div>
+                        </div>
+                      )}
+                      <div className="flex flex-wrap items-center justify-between gap-1.5">
+                        <div className="flex items-center gap-1.5 text-[11px] text-slate-400">
+                          <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+                          <span>ជំនួយការវីដេអូ YouTube៖</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 ml-auto">
+                          <a
+                            href={
+                              currentTrack.url.startsWith('http')
+                                ? currentTrack.url
+                                : `https://www.youtube.com/watch?v=${currentTrack.youtubeId}`
+                            }
+                            target="_blank"
+                            rel="noreferrer"
+                            className="px-2.5 py-1 rounded-xl bg-red-600 hover:bg-red-700 text-white font-black text-[11px] transition-all flex items-center gap-1 shadow-xs cursor-pointer active:scale-95"
+                          >
+                            <ExternalLink className="w-3 h-3" />
+                            <span>បើកមើលលើ YouTube 🔴</span>
+                          </a>
+                          {currentTrack.youtubeId && (
+                            <a
+                              href={`https://www.y2mate.com/youtube/${currentTrack.youtubeId}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="px-2.5 py-1 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-black text-[11px] transition-all flex items-center gap-1 shadow-xs cursor-pointer active:scale-95"
+                              title="ទាញយកវីដេអូ MP4 ទុកចាក់ Offline"
+                            >
+                              <Download className="w-3 h-3" />
+                              <span>ទាញយក MP4 HD 🎬</span>
+                            </a>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              soundFx.playPop();
+                              nextTrack();
+                            }}
+                            className="px-2.5 py-1 rounded-xl bg-white/10 hover:bg-white/20 text-slate-200 font-bold text-[11px] transition-all flex items-center gap-1 cursor-pointer active:scale-95"
+                          >
+                            <SkipForward className="w-3 h-3" />
+                            <span>បទបន្ទាប់</span>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               ) : (
                 /* VINYL DISC TURNTABLE MODE */

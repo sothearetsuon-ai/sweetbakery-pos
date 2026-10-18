@@ -91,6 +91,8 @@ interface MusicContextType {
   setIsFloatingMiniVideo: (floating: boolean) => void;
   toggleFloatingMiniVideo: () => void;
   isCurrentVideo: boolean;
+  ytErrorTrackIndex: number | null;
+  clearYtError: () => void;
 
   vibeMood: VibeMood;
   setVibeMood: (mood: VibeMood) => void;
@@ -269,10 +271,14 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setIsFloatingMiniVideo(!isFloatingMiniVideo);
   };
 
+  const [ytErrorTrackIndex, setYtErrorTrackIndex] = useState<number | null>(null);
+  const clearYtError = () => setYtErrorTrackIndex(null);
+
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const ytPlayerRef = useRef<any>(null);
   const ytTickerRef = useRef<NodeJS.Timeout | null>(null);
+  const pendingVideoIdRef = useRef<string | null>(null);
 
   // Live mutable refs to completely prevent stale closures in event callbacks
   const playlistRef = useRef<AudioTrack[]>(playlist);
@@ -315,6 +321,7 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       const styleTag = document.createElement('style');
       styleTag.id = styleId;
       styleTag.textContent = `
+        #sweetbakery-yt-hidden-player,
         #sweetbakery-yt-hidden-player iframe {
           width: 100% !important;
           height: 100% !important;
@@ -396,28 +403,72 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const initYt = () => {
       try {
         if ((window as any).YT && (window as any).YT.Player) {
+          const appOrigin =
+            typeof window !== 'undefined' && window.location.origin && window.location.origin.startsWith('http')
+              ? window.location.origin
+              : 'https://sothearetsuon-ai.github.io';
+          const appUrl =
+            typeof window !== 'undefined' && window.location.href && window.location.href.startsWith('http')
+              ? window.location.href
+              : 'https://sothearetsuon-ai.github.io/sweetbakery-pos/';
+
           ytPlayerRef.current = new (window as any).YT.Player('sweetbakery-yt-hidden-player', {
-            height: '200',
-            width: '200',
+            height: '100%',
+            width: '100%',
+            host: 'https://www.youtube-nocookie.com',
             playerVars: {
               autoplay: 1,
               controls: 1,
               modestbranding: 1,
               playsinline: 1,
               rel: 0,
+              enablejsapi: 1,
+              origin: appOrigin,
+              widget_referrer: appUrl,
             },
             events: {
+              onReady: () => {
+                try {
+                  const iframe =
+                    document.querySelector('#sweetbakery-yt-hidden-player iframe') ||
+                    document.getElementById('sweetbakery-yt-hidden-player');
+                  if (iframe && (iframe as HTMLElement).tagName === 'IFRAME') {
+                    iframe.setAttribute('referrerpolicy', 'strict-origin-when-cross-origin');
+                    iframe.setAttribute(
+                      'allow',
+                      'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture'
+                    );
+                  }
+                } catch {}
+                if (pendingVideoIdRef.current) {
+                  try {
+                    ytPlayerRef.current.loadVideoById({
+                      videoId: pendingVideoIdRef.current,
+                      suggestedQuality: 'hd720',
+                    });
+                    pendingVideoIdRef.current = null;
+                  } catch (e) {
+                    console.warn('Pending loadVideoById error:', e);
+                  }
+                }
+              },
               onStateChange: (event: any) => {
                 // 1 = PLAYING, 2 = PAUSED, 0 = ENDED
                 if (event.data === 1) {
                   setIsPlaying(true);
                   isPlayingRef.current = true;
+                  setYtErrorTrackIndex(null);
                 } else if (event.data === 2) {
                   setIsPlaying(false);
                   isPlayingRef.current = false;
                 } else if (event.data === 0) {
                   handleEnded();
                 }
+              },
+              onError: (event: any) => {
+                console.warn('YouTube IFrame player error code:', event.data);
+                // 2 = invalid param, 5 = HTML5 error, 100 = not found, 101/150/153 = embed restricted
+                setYtErrorTrackIndex(currentTrackIndexRef.current);
               },
             },
           });
@@ -592,13 +643,21 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       bakeryAmbientAudio.stop();
 
       const videoId = targetTrack.youtubeId || extractYouTubeVideoId(targetTrack.url);
-      if (videoId && ytPlayerRef.current && typeof ytPlayerRef.current.loadVideoById === 'function') {
-        try {
-          ytPlayerRef.current.loadVideoById(videoId);
-          ytPlayerRef.current.setVolume(isMutedRef.current ? 0 : Math.round(volumeRef.current * 100));
-          ytPlayerRef.current.playVideo();
-        } catch (err) {
-          console.warn('YouTube loadVideo error:', err);
+      if (videoId) {
+        if (ytPlayerRef.current && typeof ytPlayerRef.current.loadVideoById === 'function') {
+          try {
+            ytPlayerRef.current.loadVideoById({
+              videoId: videoId,
+              suggestedQuality: 'hd720',
+            });
+            ytPlayerRef.current.setVolume(isMutedRef.current ? 0 : Math.round(volumeRef.current * 100));
+            ytPlayerRef.current.playVideo();
+          } catch (err) {
+            console.warn('YouTube loadVideo error:', err);
+            pendingVideoIdRef.current = videoId;
+          }
+        } else {
+          pendingVideoIdRef.current = videoId;
         }
       }
       setCurrentTime(0);
@@ -1666,6 +1725,8 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         setIsFloatingMiniVideo,
         toggleFloatingMiniVideo,
         isCurrentVideo,
+        ytErrorTrackIndex,
+        clearYtError,
         vibeMood,
         setVibeMood,
         sleepTimerMinutes,

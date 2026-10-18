@@ -42,6 +42,32 @@ function createWindow() {
     return true;
   });
 
+  // Fix YouTube Error 153 (Video player configuration error) in Electron:
+  // Inject valid HTTPS Referer and Origin headers so YouTube embedded players initialize properly
+  session.defaultSession.webRequest.onBeforeSendHeaders(
+    { urls: ['*://*.youtube.com/*', '*://*.youtube-nocookie.com/*', '*://*.googlevideo.com/*'] },
+    (details, callback) => {
+      const requestHeaders = { ...details.requestHeaders };
+      if (!requestHeaders['Referer'] || requestHeaders['Referer'].startsWith('file://')) {
+        requestHeaders['Referer'] = 'https://sothearetsuon-ai.github.io/sweetbakery-pos/';
+      }
+      if (!requestHeaders['Origin'] || requestHeaders['Origin'].startsWith('file://') || requestHeaders['Origin'] === 'null') {
+        requestHeaders['Origin'] = 'https://sothearetsuon-ai.github.io';
+      }
+      callback({ cancel: false, requestHeaders });
+    }
+  );
+
+  session.defaultSession.webRequest.onHeadersReceived(
+    { urls: ['*://*.youtube.com/*', '*://*.youtube-nocookie.com/*'] },
+    (details, callback) => {
+      const responseHeaders = { ...details.responseHeaders };
+      delete responseHeaders['x-frame-options'];
+      delete responseHeaders['X-Frame-Options'];
+      callback({ cancel: false, responseHeaders });
+    }
+  );
+
   // Load the bundled local application (100% offline ready)
   loadAppUrl();
 
