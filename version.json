@@ -1,7 +1,10 @@
 {
-  "version": "1.5.1",
+  "version": "1.5.2",
   "releaseDate": "2026-10-18",
   "releaseNotes": [
+    "🎬 Full HD YouTube Video & Local MP4 Player៖ ចាក់វីដេអូចម្រៀង YouTube និងវីដេអូ MP4/WebM/MKV ក្នុងទំហំ HD 16:9 ពេញលេញ ជាមួយមុខងារប្តូរអេក្រង់ (Video Screen / Vinyl Disc) និងប៊ូតុង Picture-in-Picture (PiP) បង្អួចវីដេអូតូចបណ្តែតលើអេក្រង់ POS!",
+    "📁 Local MP4 Upload & Cloud Storage៖ អាចផ្ទុកឡើង (Upload) វីដេអូឯកសារ MP4 ពីកុំព្យូទ័រ/ទូរស័ព្ទចូលក្នុងបញ្ជីចាក់ចម្រៀង និងរក្សាទុកក្នុង IndexedDB ដោយសុវត្ថិភាព។",
+    "🚀 YouTube MP4 Fast Downloader & Converter Links៖ ប៊ូតុងទាញយក MP4 HD ផ្ទាល់ពី Y2Mate & SaveFrom សម្រាប់រក្សាទុកបទចម្រៀងវីដេអូក្រៅបណ្តាញ (Offline)។",
     "🎵 YouTube Audio In-App Auto Search & Auto Play៖ ស្វែងរក និងចាក់ចម្រៀង YouTube ផ្ទាល់ក្នុងប្រព័ន្ធដោយស្វ័យប្រវត្តិ មិនបាច់បើក YouTube ឬ Copy Link ដោយដៃ។",
     "📋 1-Click Clipboard Auto-Paste for YouTube៖ ប៊ូតុងទាញ Link YouTube ពី Clipboard ស្វ័យប្រវត្តិចុចមួយភ្លែតចាក់ភ្លាម។",
     "📑 Bulk YouTube Playlist Auto-Import៖ នាំចូលបទចម្រៀងទាំងអស់ពី YouTube Playlist មកចាក់ក្នុងម៉ាស៊ីនតែម្តង។",
@@ -15,8 +18,8 @@
     "🎂 ត្រងបង្ហាញតែរសជាតិនំដែលមានក្នុងស្តុក (In-Stock Flavors Only) ក្នុងផ្ទាំងកុម្ម៉ង់ទុកមុន និង Customer Portal ព្រមទាំង AI ប្រាប់ដំណឹងពេលអស់ស្តុក។",
     "⚡ ជួសជុលបញ្ហាលោតភ្លឹបភ្លែតលើ Android (Telegram Sync Loop Fix) និងពង្រឹងល្បឿនប្រព័ន្ធទូទៅ។"
   ],
-  "apkDownloadUrl": "https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.5.1/SweetBakery-Android.apk",
-  "windowsInstallerUrl": "https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.5.1/SweetBakery-POS-Setup.exe",
-  "windowsDownloadUrl": "https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.5.1/SweetBakery-POS-Setup.exe",
+  "apkDownloadUrl": "https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.5.2/SweetBakery-Android.apk",
+  "windowsInstallerUrl": "https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.5.2/SweetBakery-POS-Setup.exe",
+  "windowsDownloadUrl": "https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.5.2/SweetBakery-POS-Setup.exe",
   "mandatory": false
 }

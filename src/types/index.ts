@@ -312,7 +312,7 @@ export interface AudioTrack {
   url: string;
   duration?: number;
   isCustom: boolean;
-  category?: 'cafe' | 'birthday' | 'custom' | 'acoustic' | 'youtube' | 'web';
+  category?: 'cafe' | 'birthday' | 'custom' | 'acoustic' | 'youtube' | 'web' | 'mp4';
   dateAdded?: string;
   storagePath?: string;
   isCloudSynced?: boolean;
@@ -320,6 +320,8 @@ export interface AudioTrack {
   thumbnailUrl?: string;
   isFavorite?: boolean;
   sourceUrl?: string;
+  isVideo?: boolean;
+  mediaType?: 'audio' | 'video';
 }
 
 export interface NotificationConfig {

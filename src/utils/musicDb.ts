@@ -12,6 +12,9 @@ export interface StoredAudioTrack {
   isUrlOnly?: boolean;
   dateAdded: string;
   duration?: number;
+  category?: string;
+  isVideo?: boolean;
+  mediaType?: 'audio' | 'video';
 }
 
 const openDB = (): Promise<IDBDatabase> => {

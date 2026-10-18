@@ -16,6 +16,7 @@ import { SettingsModal, SettingsTab } from './components/settings/SettingsModal'
 import { StaffManagement } from './components/staff/StaffManagement';
 import { MusicPlayerModal } from './components/music/MusicPlayerModal';
 import { MiniMusicPlayer } from './components/music/MiniMusicPlayer';
+import { FloatingMiniVideoPlayer } from './components/music/FloatingMiniVideoPlayer';
 import { NotificationReminderScheduler } from './components/layout/NotificationReminderScheduler';
 import { getSavedTheme, saveTheme, AppTheme } from './utils/themeManager';
 import { ThemePickerModal } from './components/common/ThemePickerModal';
@@ -463,6 +464,7 @@ export const App: React.FC = () => {
       {/* Bakery Music Player Modal & Floating Mini Player */}
       <MusicPlayerModal />
       <MiniMusicPlayer />
+      <FloatingMiniVideoPlayer />
 
       {/* Flying 3D Butterflies & Swimming Lucky Goldfish Effect (Independent toggles) */}
       <ButterflyEffect

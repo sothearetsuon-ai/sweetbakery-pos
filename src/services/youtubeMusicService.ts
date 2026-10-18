@@ -202,10 +202,26 @@ export const getFastDownloadLinks = (youtubeUrl: string): WebConverterTool[] => 
 
   return [
     {
-      id: 'y2mate',
-      name: 'Y2Mate MP3',
+      id: 'y2mate-mp4',
+      name: 'Y2Mate MP4 Video HD',
       url: `https://www.y2mate.is/en?url=${encodedUrl}`,
-      badge: 'ល្បឿនលឿន & ពេញនិយម',
+      badge: '🎬 វីដេអូ MP4 HD',
+      desc: 'ទាញយកវីដេអូចម្រៀង YouTube ជា MP4 (720p / 1080p) មើលបានច្បាស់ត្រជាក់ភ្នែក',
+      icon: '🎬',
+    },
+    {
+      id: 'savefrom',
+      name: 'SaveFrom MP4 HD',
+      url: `https://en.savefrom.net/1-youtube-video-downloader-392/?url=${encodedUrl}`,
+      badge: '🎥 ទាញយកវីដេអូរហ័ស',
+      desc: 'ទាញយកវីដេអូ Full HD MP4 ដោយផ្ទាល់ គាំទ្រទាំងទូរស័ព្ទ និងកុំព្យូទ័រ',
+      icon: '📹',
+    },
+    {
+      id: 'y2mate',
+      name: 'Y2Mate MP3 Audio',
+      url: `https://www.y2mate.is/en?url=${encodedUrl}`,
+      badge: '🎵 សំឡេង MP3',
       desc: 'វេបសាយទាញយកចម្រៀង YouTube ជា MP3 យ៉ាងងាយស្រួលលើទូរស័ព្ទ និង PC',
       icon: '🎵',
     },
@@ -213,7 +229,7 @@ export const getFastDownloadLinks = (youtubeUrl: string): WebConverterTool[] => 
       id: 'onlymp3',
       name: 'OnlyMP3 Studio',
       url: `https://en.onlymp3.to/`,
-      badge: 'ទាញយក MP3 ដោយផ្ទាល់',
+      badge: '⚡ MP3 320kbps',
       desc: 'បិទភ្ជាប់ Link រួចទាញយកជាឯកសារ MP3 គុណភាពខ្ពស់ 320kbps',
       icon: '⚡',
     },
@@ -224,14 +240,6 @@ export const getFastDownloadLinks = (youtubeUrl: string): WebConverterTool[] => 
       badge: 'ស្រួលប្រើលើទូរស័ព្ទ',
       desc: 'ទាញយកបទចម្រៀងពី YouTube បានរហ័សទាន់ចិត្ត',
       icon: '📥',
-    },
-    {
-      id: 'dirpy',
-      name: 'Dirpy Studio',
-      url: `https://dirpy.com/studio?url=${encodedUrl}`,
-      badge: 'អាចកាត់តសំឡេងបាន',
-      desc: 'ស្រង់យកតែសំឡេងសុទ្ធ និងអាចកំណត់កម្រិតសំឡេងតាមចិត្ត',
-      icon: '✂️',
     },
   ];
 };

@@ -39,6 +39,8 @@ import {
   Clipboard,
   ListPlus,
   PlayCircle,
+  Video,
+  Tv,
 } from 'lucide-react';
 import { useMusic, VibeMood } from '../../context/MusicContext';
 import { soundFx } from '../../utils/audio';
@@ -72,6 +74,11 @@ export const MusicPlayerModal: React.FC = () => {
     setIsPlayerOpen,
     isUploading,
     uploadProgress,
+    isVideoMode,
+    setIsVideoMode,
+    isFloatingMiniVideo,
+    toggleFloatingMiniVideo,
+    isCurrentVideo,
     vibeMood,
     setVibeMood,
     sleepTimerMinutes,
@@ -133,6 +140,7 @@ export const MusicPlayerModal: React.FC = () => {
       if (vibeMood === 'acoustic' && track.category !== 'acoustic') return false;
       if (vibeMood === 'custom' && !track.isCustom) return false;
       if (vibeMood === 'youtube' && track.category !== 'youtube') return false;
+      if (vibeMood === 'mp4' && track.category !== 'mp4' && !track.isVideo) return false;
 
       // Search query
       if (searchQuery.trim()) {
@@ -443,95 +451,230 @@ export const MusicPlayerModal: React.FC = () => {
           {/* ============================================================== */}
           {activeTab === 'player' && (
             <div className="space-y-4">
-              {/* Hero Player Section: Vinyl & Visualizer */}
-              <div className="relative rounded-3xl p-5 bg-gradient-to-b from-white/5 to-white/0 border border-white/10 overflow-hidden flex flex-col sm:flex-row items-center gap-5 sm:gap-6">
-                {/* Vinyl Record Artwork */}
-                <div className="relative shrink-0">
-                  <div
-                    className={`w-36 h-36 sm:w-44 sm:h-44 rounded-full bg-slate-900 border-4 border-slate-800 shadow-2xl flex items-center justify-center relative overflow-hidden ${
-                      isPlaying ? 'animate-spin-slow' : ''
-                    }`}
-                    style={{ animationDuration: '8s' }}
-                  >
-                    {/* Vinyl Grooves Texture */}
-                    <div className="absolute inset-2 rounded-full border border-slate-700/50" />
-                    <div className="absolute inset-5 rounded-full border border-slate-700/40" />
-                    <div className="absolute inset-8 rounded-full border border-slate-700/30" />
-                    <div className="absolute inset-11 rounded-full border border-slate-700/20" />
+              {/* Video Mode vs Vinyl Disc Mode Switcher Bar */}
+              {isCurrentVideo && (
+                <div className="flex items-center justify-between bg-white/5 border border-white/10 rounded-2xl p-1.5 px-3">
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        soundFx.playPop();
+                        setIsVideoMode(true);
+                      }}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 ${
+                        isVideoMode
+                          ? 'bg-gradient-to-r from-pink-600 to-rose-600 text-white shadow-md shadow-pink-600/30 ring-1 ring-pink-400'
+                          : 'text-slate-300 hover:text-white hover:bg-white/10'
+                      }`}
+                    >
+                      <Video className="w-3.5 h-3.5" />
+                      <span>អេក្រង់វីដេអូ (Video)</span>
+                    </button>
 
-                    {/* Center Album Art */}
-                    <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-gradient-to-tr from-pink-600 via-rose-500 to-amber-500 flex items-center justify-center overflow-hidden border-2 border-white/40 shadow-inner">
-                      {currentTrack?.thumbnailUrl ? (
-                        <img
-                          src={currentTrack.thumbnailUrl}
-                          alt={currentTrack.title}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <Cake className="w-8 h-8 text-white" />
-                      )}
-                    </div>
-
-                    {/* Center Hole */}
-                    <div className="absolute w-3 h-3 rounded-full bg-slate-950 border border-white/60" />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        soundFx.playPop();
+                        setIsVideoMode(false);
+                      }}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 ${
+                        !isVideoMode
+                          ? 'bg-gradient-to-r from-pink-600 to-rose-600 text-white shadow-md shadow-pink-600/30 ring-1 ring-pink-400'
+                          : 'text-slate-300 hover:text-white hover:bg-white/10'
+                      }`}
+                    >
+                      <Disc3 className="w-3.5 h-3.5" />
+                      <span>ឌីសចម្រៀង (Vinyl Disc)</span>
+                    </button>
                   </div>
 
-                  {/* Pulsing Aura when playing */}
-                  {isPlaying && (
-                    <div className="absolute -inset-2 rounded-full bg-pink-500/20 blur-xl -z-10 animate-pulse" />
-                  )}
-                </div>
-
-                {/* Song Info & Equalizer Spectrum */}
-                <div className="flex-1 text-center sm:text-left min-w-0 space-y-2">
-                  <div className="flex flex-wrap items-center justify-center sm:justify-start gap-1.5">
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-pink-500/20 text-pink-300 border border-pink-500/30">
-                      {currentTrack?.category === 'youtube'
-                        ? 'YouTube Audio 🔴'
-                        : currentTrack?.category === 'birthday'
-                        ? 'Birthday Festival 🎂'
-                        : currentTrack?.category === 'cafe'
-                        ? 'Bakery Cafe ☕'
-                        : 'Offline HQ 🥐'}
+                  {/* Floating Mini Video (PiP) Toggle */}
+                  <button
+                    type="button"
+                    onClick={toggleFloatingMiniVideo}
+                    className={`px-2.5 py-1.5 rounded-xl text-[11px] font-bold border transition-all cursor-pointer flex items-center gap-1.5 ${
+                      isFloatingMiniVideo
+                        ? 'bg-pink-500/20 border-pink-500/40 text-pink-300'
+                        : 'bg-white/5 border-white/10 text-slate-400 hover:text-white'
+                    }`}
+                    title="បើក/បិទ Mini Video អណ្តែតលើអេក្រង់ POS ពេលបិទផ្ទាំងនេះ"
+                  >
+                    <Tv className="w-3.5 h-3.5 text-pink-400" />
+                    <span className="hidden sm:inline">Mini Video (PiP)៖</span>
+                    <span className={isFloatingMiniVideo ? 'text-emerald-400' : 'text-slate-500'}>
+                      {isFloatingMiniVideo ? 'បើក' : 'បិទ'}
                     </span>
+                  </button>
+                </div>
+              )}
 
-                    {/* Sleep Timer Indicator */}
-                    {sleepTimerRemaining !== null && (
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30 flex items-center gap-1">
-                        <Clock className="w-2.5 h-2.5 animate-spin" />
-                        <span>
-                          {Math.floor(sleepTimerRemaining / 60)}:
-                          {(sleepTimerRemaining % 60).toString().padStart(2, '0')}
+              {/* HERO DISPLAY: Video Screen or Vinyl Disc */}
+              {isVideoMode && isCurrentVideo ? (
+                /* 16:9 HD VIDEO SCREEN MODE */
+                <div className="space-y-3">
+                  <div
+                    id="sweetbakery-video-screen-slot"
+                    className="relative w-full aspect-video rounded-3xl bg-black border border-white/15 overflow-hidden shadow-2xl flex items-center justify-center group"
+                    style={{ minHeight: '220px' }}
+                  >
+                    {/* Backplate / Placeholder while persistent video element docks */}
+                    <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-4 bg-gradient-to-b from-slate-900 via-slate-950 to-black">
+                      <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-pink-600 via-rose-500 to-amber-500 flex items-center justify-center mb-2 shadow-lg shadow-pink-500/30">
+                        <Video className="w-7 h-7 text-white animate-pulse" />
+                      </div>
+                      <p className="text-sm font-black text-white">{currentTrack?.title}</p>
+                      <p className="text-xs text-pink-300/80 mt-0.5">
+                        {currentTrack?.category === 'youtube'
+                          ? 'YouTube Music Video HD 🔴'
+                          : 'វីដេអូ MP4 កម្រិតច្បាស់ 🎬'}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Video Meta Info Bar */}
+                  <div className="flex items-center justify-between gap-2 px-1">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-pink-500/20 text-pink-300 border border-pink-500/30">
+                          {currentTrack?.category === 'youtube' ? 'YouTube Video 🔴' : 'MP4 Video 🎬'}
                         </span>
-                      </span>
+                        {sleepTimerRemaining !== null && (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30 flex items-center gap-1">
+                            <Clock className="w-2.5 h-2.5 animate-spin" />
+                            <span>
+                              {Math.floor(sleepTimerRemaining / 60)}:
+                              {(sleepTimerRemaining % 60).toString().padStart(2, '0')}
+                            </span>
+                          </span>
+                        )}
+                      </div>
+                      <h3 className="text-sm sm:text-base font-black text-white truncate drop-shadow-md mt-1">
+                        {currentTrack?.title || 'ជ្រើសរើសបទចម្រៀង'}
+                      </h3>
+                      <p className="text-xs text-slate-300/80 truncate">
+                        {currentTrack?.artist || 'SweetBakery Music'}
+                      </p>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => setIsVideoMode(false)}
+                      className="px-2.5 py-1.5 rounded-xl bg-white/10 hover:bg-white/15 text-slate-300 text-xs font-bold transition-all border border-white/10 flex items-center gap-1 shrink-0 cursor-pointer"
+                      title="ប្តូរទៅឌីសចម្រៀង (Vinyl Disc)"
+                    >
+                      <Disc3 className="w-3.5 h-3.5 text-pink-400" />
+                      <span className="hidden sm:inline">ឌីសចម្រៀង</span>
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                /* VINYL DISC TURNTABLE MODE */
+                <div className="relative rounded-3xl p-5 bg-gradient-to-b from-white/5 to-white/0 border border-white/10 overflow-hidden flex flex-col sm:flex-row items-center gap-5 sm:gap-6">
+                  {/* Vinyl Record Artwork */}
+                  <div className="relative shrink-0">
+                    <div
+                      className={`w-36 h-36 sm:w-44 sm:h-44 rounded-full bg-slate-900 border-4 border-slate-800 shadow-2xl flex items-center justify-center relative overflow-hidden ${
+                        isPlaying ? 'animate-spin-slow' : ''
+                      }`}
+                      style={{ animationDuration: '8s' }}
+                    >
+                      {/* Vinyl Grooves Texture */}
+                      <div className="absolute inset-2 rounded-full border border-slate-700/50" />
+                      <div className="absolute inset-5 rounded-full border border-slate-700/40" />
+                      <div className="absolute inset-8 rounded-full border border-slate-700/30" />
+                      <div className="absolute inset-11 rounded-full border border-slate-700/20" />
+
+                      {/* Center Album Art */}
+                      <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-gradient-to-tr from-pink-600 via-rose-500 to-amber-500 flex items-center justify-center overflow-hidden border-2 border-white/40 shadow-inner">
+                        {currentTrack?.thumbnailUrl ? (
+                          <img
+                            src={currentTrack.thumbnailUrl}
+                            alt={currentTrack.title}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <Cake className="w-8 h-8 text-white" />
+                        )}
+                      </div>
+
+                      {/* Center Hole */}
+                      <div className="absolute w-3 h-3 rounded-full bg-slate-950 border border-white/60" />
+                    </div>
+
+                    {/* Pulsing Aura when playing */}
+                    {isPlaying && (
+                      <div className="absolute -inset-2 rounded-full bg-pink-500/20 blur-xl -z-10 animate-pulse" />
                     )}
                   </div>
 
-                  <h3 className="text-base sm:text-lg font-black text-white truncate drop-shadow-md">
-                    {currentTrack?.title || 'ជ្រើសរើសបទចម្រៀង'}
-                  </h3>
-                  <p className="text-xs text-slate-300/80 truncate">
-                    {currentTrack?.artist || 'SweetBakery Music'}
-                  </p>
+                  {/* Song Info & Equalizer Spectrum */}
+                  <div className="flex-1 text-center sm:text-left min-w-0 space-y-2">
+                    <div className="flex flex-wrap items-center justify-center sm:justify-start gap-1.5">
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-pink-500/20 text-pink-300 border border-pink-500/30">
+                        {currentTrack?.category === 'youtube'
+                          ? 'YouTube Audio 🔴'
+                          : currentTrack?.category === 'mp4'
+                          ? 'MP4 Video 🎬'
+                          : currentTrack?.category === 'birthday'
+                          ? 'Birthday Festival 🎂'
+                          : currentTrack?.category === 'cafe'
+                          ? 'Bakery Cafe ☕'
+                          : 'Offline HQ 🥐'}
+                      </span>
 
-                  {/* Animated Equalizer Waveform Spectrum (Dancing bars) */}
-                  <div className="pt-2 flex items-center justify-center sm:justify-start gap-1">
-                    {[16, 28, 20, 36, 24, 32, 18, 26, 14].map((h, i) => (
-                      <span
-                        key={i}
-                        className={`inline-block w-1.5 rounded-full bg-gradient-to-t from-pink-500 to-amber-400 transition-all ${
-                          isPlaying ? 'animate-pulse' : 'opacity-30'
-                        }`}
-                        style={{
-                          height: isPlaying ? `${h}px` : '6px',
-                          animationDuration: `${0.4 + (i % 4) * 0.2}s`,
-                          animationDelay: `${i * 0.08}s`,
-                        }}
-                      />
-                    ))}
+                      {/* Sleep Timer Indicator */}
+                      {sleepTimerRemaining !== null && (
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30 flex items-center gap-1">
+                          <Clock className="w-2.5 h-2.5 animate-spin" />
+                          <span>
+                            {Math.floor(sleepTimerRemaining / 60)}:
+                            {(sleepTimerRemaining % 60).toString().padStart(2, '0')}
+                          </span>
+                        </span>
+                      )}
+
+                      {/* Video Available Badge (Click to open video screen) */}
+                      {isCurrentVideo && !isVideoMode && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            soundFx.playPop();
+                            setIsVideoMode(true);
+                          }}
+                          className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-gradient-to-r from-pink-600 to-rose-600 text-white shadow-xs flex items-center gap-1 cursor-pointer hover:scale-105 transition-all"
+                        >
+                          <Video className="w-2.5 h-2.5" />
+                          <span>ចុចមើលវីដេអូ 🎬</span>
+                        </button>
+                      )}
+                    </div>
+
+                    <h3 className="text-base sm:text-lg font-black text-white truncate drop-shadow-md">
+                      {currentTrack?.title || 'ជ្រើសរើសបទចម្រៀង'}
+                    </h3>
+                    <p className="text-xs text-slate-300/80 truncate">
+                      {currentTrack?.artist || 'SweetBakery Music'}
+                    </p>
+
+                    {/* Animated Equalizer Waveform Spectrum (Dancing bars) */}
+                    <div className="pt-2 flex items-center justify-center sm:justify-start gap-1">
+                      {[16, 28, 20, 36, 24, 32, 18, 26, 14].map((h, i) => (
+                        <span
+                          key={i}
+                          className={`inline-block w-1.5 rounded-full bg-gradient-to-t from-pink-500 to-amber-400 transition-all ${
+                            isPlaying ? 'animate-pulse' : 'opacity-30'
+                          }`}
+                          style={{
+                            height: isPlaying ? `${h}px` : '6px',
+                            animationDuration: `${0.4 + (i % 4) * 0.2}s`,
+                            animationDelay: `${i * 0.08}s`,
+                          }}
+                        />
+                      ))}
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
 
               {/* Progress Scrubber Slider */}
               <div className="space-y-1.5">
@@ -744,6 +887,7 @@ export const MusicPlayerModal: React.FC = () => {
                     { id: 'birthday' as VibeMood, label: '🎂 Happy Birthday' },
                     { id: 'acoustic' as VibeMood, label: '🥐 Acoustic Guitar' },
                     { id: 'youtube' as VibeMood, label: '🔴 YouTube' },
+                    { id: 'mp4' as VibeMood, label: '🎬 វីដេអូ MP4' },
                     { id: 'favorites' as VibeMood, label: '💖 បទចូលចិត្ត' },
                   ].map((v) => (
                     <button
@@ -1249,16 +1393,16 @@ export const MusicPlayerModal: React.FC = () => {
                   ref={fileInputRef}
                   type="file"
                   multiple
-                  accept="audio/*,.mp3,.wav,.ogg,.m4a,.flac"
+                  accept="audio/*,video/*,.mp3,.wav,.ogg,.m4a,.flac,.mp4,.webm,.mkv"
                   onChange={handleLocalFileChange}
                   className="hidden"
                 />
                 <FolderOpen className="w-8 h-8 text-pink-400 mb-1 animate-bounce" />
                 <div className="text-xs font-black text-white">
-                  ចុចដើម្បីជ្រើសរើសចម្រៀងពីទូរស័ព្ទ ឬកុំព្យូទ័រ
+                  ចុចដើម្បីជ្រើសរើសចម្រៀង ឬវីដេអូ MP4 ពីទូរស័ព្ទ ឬកុំព្យូទ័រ
                 </div>
                 <div className="text-[10px] text-slate-400 mt-0.5">
-                  គាំទ្រឯកសារ MP3, WAV, M4A, OGG (រក្សាទុកក្នុងម៉ាស៊ីនចាក់ភ្លេង)
+                  គាំទ្រ MP3, WAV, MP4, WEBM (មើលវីដេអូ និងចាក់ភ្លេងបានភ្លាមៗ)
                 </div>
               </div>
 

@@ -65,7 +65,7 @@ export interface UploadProgress {
   currentFileName: string;
 }
 
-export type VibeMood = 'all' | 'cafe' | 'birthday' | 'acoustic' | 'custom' | 'youtube' | 'favorites';
+export type VibeMood = 'all' | 'cafe' | 'birthday' | 'acoustic' | 'custom' | 'youtube' | 'mp4' | 'favorites';
 
 interface MusicContextType {
   playlist: AudioTrack[];
@@ -83,7 +83,15 @@ interface MusicContextType {
   isUploading: boolean;
   uploadProgress: UploadProgress | null;
 
-  // Modern App Features
+  // Modern App Features & Video Mode
+  isVideoMode: boolean;
+  setIsVideoMode: (videoMode: boolean) => void;
+  toggleVideoMode: () => void;
+  isFloatingMiniVideo: boolean;
+  setIsFloatingMiniVideo: (floating: boolean) => void;
+  toggleFloatingMiniVideo: () => void;
+  isCurrentVideo: boolean;
+
   vibeMood: VibeMood;
   setVibeMood: (mood: VibeMood) => void;
   sleepTimerMinutes: number | null;
@@ -124,26 +132,27 @@ interface MusicContextType {
 
 const MusicContext = createContext<MusicContextType | undefined>(undefined);
 
-// Helper to determine exact audio duration from File/Blob
-const getAudioDuration = (file: File): Promise<number> => {
+// Helper to determine exact audio or video duration from File/Blob
+const getMediaDuration = (file: File): Promise<number> => {
   return new Promise((resolve) => {
     try {
-      const audio = new Audio();
+      const isVideo = file.type.startsWith('video/') || Boolean(file.name.match(/\.(mp4|webm|mkv|mov)$/i));
+      const media = isVideo ? document.createElement('video') : new Audio();
       const objectUrl = URL.createObjectURL(file);
-      audio.src = objectUrl;
+      media.src = objectUrl;
       const cleanup = (dur: number) => {
         try {
           URL.revokeObjectURL(objectUrl);
         } catch (e) {}
         resolve(dur || 180);
       };
-      audio.addEventListener('loadedmetadata', () => {
-        cleanup(Math.round(audio.duration || 0));
+      media.addEventListener('loadedmetadata', () => {
+        cleanup(Math.round(media.duration || 0));
       });
-      audio.addEventListener('error', () => {
+      media.addEventListener('error', () => {
         cleanup(180);
       });
-      setTimeout(() => cleanup(180), 2000);
+      setTimeout(() => cleanup(180), 2500);
     } catch (e) {
       resolve(180);
     }
@@ -203,7 +212,7 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [isUploading, setIsUploading] = useState<boolean>(false);
   const [uploadProgress, setUploadProgress] = useState<UploadProgress | null>(null);
 
-  // Modern Features State
+  // Modern Features State & Video Mode
   const [vibeMood, setVibeMood] = useState<VibeMood>('all');
   const [sleepTimerMinutes, setSleepTimerMinutes] = useState<number | null>(null);
   const [sleepTimerRemaining, setSleepTimerRemaining] = useState<number | null>(null);
@@ -216,7 +225,52 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   });
 
+  // Video Mode (16:9 Video Screen vs Vinyl Disc)
+  const [isVideoMode, setIsVideoModeState] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem('bakery_music_video_mode');
+      return saved !== null ? saved === 'true' : true;
+    } catch {
+      return true;
+    }
+  });
+
+  // Floating Mini Video (Picture-in-Picture on POS screen when modal closed)
+  const [isFloatingMiniVideo, setIsFloatingMiniVideoState] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem('bakery_music_floating_video');
+      return saved !== null ? saved === 'true' : true;
+    } catch {
+      return true;
+    }
+  });
+
+  const setIsVideoMode = (enabled: boolean) => {
+    setIsVideoModeState(enabled);
+    try {
+      localStorage.setItem('bakery_music_video_mode', String(enabled));
+    } catch {}
+  };
+
+  const toggleVideoMode = () => {
+    soundFx.playPop();
+    setIsVideoMode(!isVideoMode);
+  };
+
+  const setIsFloatingMiniVideo = (enabled: boolean) => {
+    setIsFloatingMiniVideoState(enabled);
+    try {
+      localStorage.setItem('bakery_music_floating_video', String(enabled));
+    } catch {}
+  };
+
+  const toggleFloatingMiniVideo = () => {
+    soundFx.playPop();
+    setIsFloatingMiniVideo(!isFloatingMiniVideo);
+  };
+
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
   const ytPlayerRef = useRef<any>(null);
   const ytTickerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -251,35 +305,106 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     isMutedRef.current = isMuted;
   }, [isMuted]);
 
-  // Load YouTube IFrame API script dynamically
+  // Load YouTube IFrame API script & initialize video elements
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
+    // Inject CSS for YouTube IFrame to fully fill its docked slot
+    const styleId = 'sweetbakery-video-player-styles';
+    if (!document.getElementById(styleId)) {
+      const styleTag = document.createElement('style');
+      styleTag.id = styleId;
+      styleTag.textContent = `
+        #sweetbakery-yt-hidden-player iframe {
+          width: 100% !important;
+          height: 100% !important;
+          border: none !important;
+          display: block !important;
+        }
+      `;
+      document.head.appendChild(styleTag);
+    }
+
+    // 1. YouTube Container
+    let container = document.getElementById('sweetbakery-yt-hidden-player');
+    if (!container) {
+      container = document.createElement('div');
+      container.id = 'sweetbakery-yt-hidden-player';
+      container.style.position = 'fixed';
+      container.style.top = '-9999px';
+      container.style.left = '-9999px';
+      container.style.width = '200px';
+      container.style.height = '200px';
+      container.style.pointerEvents = 'none';
+      container.style.opacity = '0';
+      container.style.zIndex = '99999';
+      container.style.backgroundColor = '#000';
+      document.body.appendChild(container);
+    }
+
+    // 2. Persistent MP4 Video Player
+    let mp4El = document.getElementById('sweetbakery-mp4-persistent-player') as HTMLVideoElement | null;
+    if (!mp4El) {
+      mp4El = document.createElement('video');
+      mp4El.id = 'sweetbakery-mp4-persistent-player';
+      mp4El.style.position = 'fixed';
+      mp4El.style.top = '-9999px';
+      mp4El.style.left = '-9999px';
+      mp4El.style.width = '200px';
+      mp4El.style.height = '200px';
+      mp4El.style.pointerEvents = 'none';
+      mp4El.style.opacity = '0';
+      mp4El.style.zIndex = '99999';
+      mp4El.style.backgroundColor = '#000';
+      mp4El.style.objectFit = 'contain';
+      mp4El.playsInline = true;
+      mp4El.controls = true;
+      mp4El.preload = 'metadata';
+      document.body.appendChild(mp4El);
+    }
+    videoRef.current = mp4El;
+
+    // Attach MP4 Video callbacks
+    const handleVideoTimeUpdate = () => {
+      const cur = playlistRef.current[currentTrackIndexRef.current];
+      const isMp4 = Boolean(cur && (cur.category === 'mp4' || cur.isVideo || cur.url.match(/\.(mp4|webm|mkv|mov)/i)));
+      if (isMp4 && mp4El && isPlayingRef.current) {
+        setCurrentTime(mp4El.currentTime);
+      }
+    };
+
+    const handleVideoLoadedMetadata = () => {
+      const cur = playlistRef.current[currentTrackIndexRef.current];
+      const isMp4 = Boolean(cur && (cur.category === 'mp4' || cur.isVideo || cur.url.match(/\.(mp4|webm|mkv|mov)/i)));
+      if (isMp4 && mp4El) {
+        setDuration(mp4El.duration || 0);
+      }
+    };
+
+    const handleVideoEnded = () => {
+      const cur = playlistRef.current[currentTrackIndexRef.current];
+      const isMp4 = Boolean(cur && (cur.category === 'mp4' || cur.isVideo || cur.url.match(/\.(mp4|webm|mkv|mov)/i)));
+      if (isMp4) {
+        handleEnded();
+      }
+    };
+
+    mp4El.addEventListener('timeupdate', handleVideoTimeUpdate);
+    mp4El.addEventListener('loadedmetadata', handleVideoLoadedMetadata);
+    mp4El.addEventListener('ended', handleVideoEnded);
+
     const initYt = () => {
       try {
-        let container = document.getElementById('sweetbakery-yt-hidden-player');
-        if (!container) {
-          container = document.createElement('div');
-          container.id = 'sweetbakery-yt-hidden-player';
-          container.style.position = 'fixed';
-          container.style.top = '-9999px';
-          container.style.left = '-9999px';
-          container.style.width = '200px';
-          container.style.height = '200px';
-          container.style.pointerEvents = 'none';
-          container.style.opacity = '0';
-          document.body.appendChild(container);
-        }
-
         if ((window as any).YT && (window as any).YT.Player) {
           ytPlayerRef.current = new (window as any).YT.Player('sweetbakery-yt-hidden-player', {
             height: '200',
             width: '200',
             playerVars: {
               autoplay: 1,
-              controls: 0,
-              disablekb: 1,
+              controls: 1,
+              modestbranding: 1,
               playsinline: 1,
+              rel: 0,
             },
             events: {
               onStateChange: (event: any) => {
@@ -311,6 +436,14 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     } else {
       initYt();
     }
+
+    return () => {
+      if (mp4El) {
+        mp4El.removeEventListener('timeupdate', handleVideoTimeUpdate);
+        mp4El.removeEventListener('loadedmetadata', handleVideoLoadedMetadata);
+        mp4El.removeEventListener('ended', handleVideoEnded);
+      }
+    };
   }, []);
 
   // Sleep Timer countdown ticker
@@ -351,6 +484,86 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     });
   };
 
+  // Dynamically pin video containers (#sweetbakery-yt-hidden-player & #sweetbakery-mp4-persistent-player)
+  // to #sweetbakery-video-screen-slot (inside Modal) or #sweetbakery-floating-video-slot (Floating Mini Player)
+  useEffect(() => {
+    const syncVideoPosition = () => {
+      const ytContainer = document.getElementById('sweetbakery-yt-hidden-player');
+      const mp4El = document.getElementById('sweetbakery-mp4-persistent-player');
+      if (!ytContainer && !mp4El) return;
+
+      const track = playlist[currentTrackIndex];
+      const isYt = Boolean(track && (track.category === 'youtube' || track.url.startsWith('youtube:')));
+      const isMp4 = Boolean(
+        track && !isYt && (track.category === 'mp4' || track.isVideo || track.url.match(/\.(mp4|webm|mkv|mov)/i))
+      );
+      const isVideoTrack = isYt || isMp4;
+
+      let targetSlot: HTMLElement | null = null;
+      if (isVideoTrack) {
+        if (isPlayerOpen && isVideoMode) {
+          targetSlot = document.getElementById('sweetbakery-video-screen-slot');
+        } else if (!isPlayerOpen && isFloatingMiniVideo) {
+          targetSlot = document.getElementById('sweetbakery-floating-video-slot');
+        }
+      }
+
+      if (targetSlot) {
+        const rect = targetSlot.getBoundingClientRect();
+        if (rect.width > 0 && rect.height > 0) {
+          const activeEl = isYt ? ytContainer : mp4El;
+          const inactiveEl = isYt ? mp4El : ytContainer;
+
+          if (activeEl) {
+            activeEl.style.position = 'fixed';
+            activeEl.style.top = `${rect.top}px`;
+            activeEl.style.left = `${rect.left}px`;
+            activeEl.style.width = `${rect.width}px`;
+            activeEl.style.height = `${rect.height}px`;
+            activeEl.style.zIndex = '99999';
+            activeEl.style.opacity = '1';
+            activeEl.style.pointerEvents = 'auto';
+            activeEl.style.borderRadius = isPlayerOpen ? '1.25rem' : '0.85rem';
+            activeEl.style.overflow = 'hidden';
+            activeEl.style.boxShadow = '0 20px 25px -5px rgba(0, 0, 0, 0.5)';
+            activeEl.style.transition = 'top 0.12s ease, left 0.12s ease, width 0.12s ease, height 0.12s ease';
+          }
+          if (inactiveEl) {
+            inactiveEl.style.top = '-9999px';
+            inactiveEl.style.left = '-9999px';
+            inactiveEl.style.opacity = '0';
+            inactiveEl.style.pointerEvents = 'none';
+          }
+          return;
+        }
+      }
+
+      // Hide both offscreen
+      if (ytContainer) {
+        ytContainer.style.top = '-9999px';
+        ytContainer.style.left = '-9999px';
+        ytContainer.style.opacity = '0';
+        ytContainer.style.pointerEvents = 'none';
+      }
+      if (mp4El) {
+        mp4El.style.top = '-9999px';
+        mp4El.style.left = '-9999px';
+        mp4El.style.opacity = '0';
+        mp4El.style.pointerEvents = 'none';
+      }
+    };
+
+    const interval = setInterval(syncVideoPosition, 100);
+    window.addEventListener('resize', syncVideoPosition);
+    window.addEventListener('scroll', syncVideoPosition, true);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('resize', syncVideoPosition);
+      window.removeEventListener('scroll', syncVideoPosition, true);
+    };
+  }, [isPlayerOpen, isVideoMode, isFloatingMiniVideo, currentTrackIndex, playlist]);
+
   // Direct playback function that guarantees immediate audio continuation
   const playTrackAtIndex = (index: number) => {
     const list = playlistRef.current;
@@ -371,6 +584,10 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       if (audioRef.current) {
         audioRef.current.pause();
         audioRef.current.removeAttribute('src');
+      }
+      if (videoRef.current) {
+        videoRef.current.pause();
+        videoRef.current.removeAttribute('src');
       }
       bakeryAmbientAudio.stop();
 
@@ -396,7 +613,42 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       } catch {}
     }
 
-    // 2. Synthesized Ambient Music
+    // 2. MP4 Video Track Playback
+    const isMp4 = Boolean(
+      targetTrack.category === 'mp4' ||
+      targetTrack.isVideo ||
+      targetTrack.url.match(/\.(mp4|webm|mkv|mov)(\?.*)?$/i)
+    );
+    if (isMp4) {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.removeAttribute('src');
+      }
+      bakeryAmbientAudio.stop();
+
+      if (videoRef.current) {
+        const vid = videoRef.current;
+        vid.volume = isMutedRef.current ? 0 : volumeRef.current;
+        vid.src = targetTrack.url;
+        vid.currentTime = 0;
+        vid.play().catch((err) => {
+          console.warn('MP4 video playback error:', err);
+        });
+      }
+      setCurrentTime(0);
+      setDuration(targetTrack.duration || 180);
+      return;
+    }
+
+    // Stop MP4 video when switching to normal audio
+    if (videoRef.current) {
+      try {
+        videoRef.current.pause();
+        videoRef.current.removeAttribute('src');
+      } catch {}
+    }
+
+    // 3. Synthesized Ambient Music
     if (targetTrack.url.startsWith('synthesized:')) {
       if (audioRef.current) {
         audioRef.current.pause();
@@ -408,7 +660,7 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       setCurrentTime(0);
       setDuration(targetTrack.duration || 120);
     } else {
-      // 3. Offline WAV / Uploaded custom track or URL via HTML5 Audio
+      // 4. Offline WAV / Uploaded custom track or URL via HTML5 Audio
       bakeryAmbientAudio.stop();
       if (audioRef.current) {
         const currentAudio = audioRef.current;
@@ -449,6 +701,15 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           ytPlayerRef.current.seekTo(0, true);
           ytPlayerRef.current.playVideo();
         } catch {}
+      } else if (
+        currentTrack?.category === 'mp4' ||
+        currentTrack?.isVideo ||
+        currentTrack?.url.match(/\.(mp4|webm|mkv|mov)/i)
+      ) {
+        if (videoRef.current) {
+          videoRef.current.currentTime = 0;
+          videoRef.current.play().catch(() => {});
+        }
       } else if (currentTrack?.url.startsWith('synthesized:')) {
         const trackId = (currentTrack.url.replace('synthesized:', '') as BakerySoundtrackId) || 'cafe';
         bakeryAmbientAudio.play(trackId);
@@ -594,16 +855,19 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             if (!trackUrl) return null;
 
             const isYt = trackUrl.startsWith('youtube:') || item.id.startsWith('yt-');
+            const isMp4 = Boolean(item.isVideo || item.category === 'mp4' || trackUrl.match(/\.(mp4|webm|mkv|mov)/i));
             const ytId = isYt ? extractYouTubeVideoId(trackUrl) || item.id.replace('yt-', '') : undefined;
 
             return {
               id: item.id,
               title: item.title,
-              artist: item.artist || (isYt ? 'YouTube Music 🔴' : item.url ? 'Online Audio Link 🌐' : 'Uploaded Track'),
+              artist: item.artist || (isYt ? 'YouTube Music 🔴' : isMp4 ? 'វីដេអូ MP4 🎬' : item.url ? 'Online Audio Link 🌐' : 'Uploaded Track'),
               url: trackUrl,
               duration: item.duration,
               isCustom: true,
-              category: (isYt ? 'youtube' : 'custom') as any,
+              category: (isYt ? 'youtube' : isMp4 ? 'mp4' : 'custom') as any,
+              isVideo: isMp4,
+              mediaType: isMp4 ? 'video' : 'audio',
               youtubeId: ytId,
               thumbnailUrl: ytId ? `https://img.youtube.com/vi/${ytId}/hqdefault.jpg` : undefined,
               dateAdded: item.dateAdded,
@@ -676,11 +940,24 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const currentTrack = playlist[currentTrackIndex] || null;
 
-  // Handle volume / mute change across HTML5 Audio, YouTube, and Bakery Ambient Audio
+  const isCurrentVideo = Boolean(
+    currentTrack && (
+      currentTrack.category === 'youtube' ||
+      currentTrack.category === 'mp4' ||
+      currentTrack.isVideo ||
+      currentTrack.url.startsWith('youtube:') ||
+      Boolean(currentTrack.url.match(/\.(mp4|webm|mkv|mov)(\?.*)?$/i))
+    )
+  );
+
+  // Handle volume / mute change across HTML5 Audio, Video, YouTube, and Bakery Ambient Audio
   useEffect(() => {
     const effectiveVol = isMuted ? 0 : volume;
     if (audioRef.current) {
       audioRef.current.volume = effectiveVol;
+    }
+    if (videoRef.current) {
+      videoRef.current.volume = effectiveVol;
     }
     if (ytPlayerRef.current && typeof ytPlayerRef.current.setVolume === 'function') {
       try {
@@ -705,6 +982,22 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         try {
           ytPlayerRef.current.playVideo();
         } catch {}
+      }
+      return;
+    }
+
+    const isMp4 = Boolean(
+      track.category === 'mp4' ||
+      track.isVideo ||
+      track.url.match(/\.(mp4|webm|mkv|mov)(\?.*)?$/i)
+    );
+    if (isMp4) {
+      if (videoRef.current) {
+        if (!videoRef.current.src || !videoRef.current.src.includes(track.url)) {
+          videoRef.current.src = track.url;
+        }
+        videoRef.current.volume = isMutedRef.current ? 0 : volumeRef.current;
+        videoRef.current.play().catch(() => {});
       }
       return;
     }
@@ -735,6 +1028,9 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     isPlayingRef.current = false;
     if (audioRef.current) {
       audioRef.current.pause();
+    }
+    if (videoRef.current) {
+      videoRef.current.pause();
     }
     if (ytPlayerRef.current && typeof ytPlayerRef.current.pauseVideo === 'function') {
       try {
@@ -791,6 +1087,15 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         ytPlayerRef.current.seekTo(seconds, true);
       } catch {}
       setCurrentTime(seconds);
+    } else if (
+      track?.category === 'mp4' ||
+      track?.isVideo ||
+      track?.url.match(/\.(mp4|webm|mkv|mov)/i)
+    ) {
+      if (videoRef.current) {
+        videoRef.current.currentTime = seconds;
+        setCurrentTime(seconds);
+      }
     } else if (audioRef.current) {
       audioRef.current.currentTime = seconds;
       setCurrentTime(seconds);
@@ -834,10 +1139,13 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   };
 
-  // Upload custom song files (MP3, WAV, etc.) in batch with real-time progress
+  // Upload custom song or video files (MP3, WAV, MP4, WEBM, etc.) in batch with real-time progress
   const uploadTracks = async (files: FileList | File[]) => {
     const validFiles = Array.from(files).filter(
-      (file) => file.type.startsWith('audio/') || file.name.match(/\.(mp3|wav|ogg|m4a|aac|flac)$/i)
+      (file) =>
+        file.type.startsWith('audio/') ||
+        file.type.startsWith('video/') ||
+        file.name.match(/\.(mp3|wav|ogg|m4a|aac|flac|mp4|webm|mkv|mov)$/i)
     );
     if (validFiles.length === 0) return;
 
@@ -847,6 +1155,7 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     for (let i = 0; i < validFiles.length; i++) {
       const file = validFiles[i];
+      const isVideo = file.type.startsWith('video/') || Boolean(file.name.match(/\.(mp4|webm|mkv|mov)$/i));
       const cleanTitle = file.name.replace(/\.[^/.]+$/, '');
       setUploadProgress({
         current: i + 1,
@@ -854,9 +1163,9 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         currentFileName: cleanTitle,
       });
 
-      const trackDuration = await getAudioDuration(file);
+      const trackDuration = await getMediaDuration(file);
       let trackUrl = URL.createObjectURL(file);
-      let trackId = 'custom-' + Date.now() + '-' + Math.random().toString(36).substring(2, 7);
+      let trackId = (isVideo ? 'video-' : 'custom-') + Date.now() + '-' + Math.random().toString(36).substring(2, 7);
 
       // 1. Try server disk upload if on local node/LAN server
       if (serverActive) {
@@ -873,7 +1182,7 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               title: cleanTitle,
-              artist: 'បទចម្រៀងផ្ទាល់ខ្លួន 🎵',
+              artist: isVideo ? 'វីដេអូ MP4 ផ្ទាល់ខ្លួន 🎬' : 'បទចម្រៀងផ្ទាល់ខ្លួន 🎵',
               filename: file.name,
               audioBase64: base64Str,
               duration: trackDuration,
@@ -896,10 +1205,12 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       const newTrack: AudioTrack = {
         id: trackId,
         title: cleanTitle,
-        artist: 'បទចម្រៀងផ្ទាល់ខ្លួន 🎵',
+        artist: isVideo ? 'វីដេអូ MP4 ផ្ទាល់ខ្លួន 🎬' : 'បទចម្រៀងផ្ទាល់ខ្លួន 🎵',
         url: trackUrl,
         isCustom: true,
-        category: 'custom',
+        category: isVideo ? 'mp4' : 'custom',
+        isVideo: isVideo,
+        mediaType: isVideo ? 'video' : 'audio',
         duration: trackDuration,
         dateAdded: new Date().toISOString().slice(0, 10),
       };
@@ -908,9 +1219,12 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       saveTrackToDB({
         id: trackId,
         title: cleanTitle,
-        artist: 'បទចម្រៀងផ្ទាល់ខ្លួន 🎵',
+        artist: newTrack.artist!,
         blob: file,
         duration: trackDuration,
+        category: isVideo ? 'mp4' : 'custom',
+        isVideo: isVideo,
+        mediaType: isVideo ? 'video' : 'audio',
         dateAdded: newTrack.dateAdded!,
       }).catch(() => {});
 
@@ -975,22 +1289,23 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
 
     const { url, fallbackTitle } = normalizeAudioUrl(rawUrl);
+    const isVideo = Boolean(rawUrl.match(/\.(mp4|webm|mkv|mov)(\?.*)?$/i));
     const title = (customTitle && customTitle.trim()) || fallbackTitle;
-    const artist = (customArtist && customArtist.trim()) || 'Online Web Stream 🌐';
-    const trackId = 'url-' + Date.now() + '-' + Math.random().toString(36).substring(2, 7);
+    const artist = (customArtist && customArtist.trim()) || (isVideo ? 'វីដេអូ Web MP4 🎬' : 'Online Web Stream 🌐');
+    const trackId = (isVideo ? 'video-url-' : 'url-') + Date.now() + '-' + Math.random().toString(36).substring(2, 7);
 
-    // Try to detect duration from audio URL metadata
+    // Try to detect duration from media URL metadata
     const trackDuration = await new Promise<number>((resolve) => {
       try {
-        const tempAudio = new Audio();
-        tempAudio.src = url;
+        const media = isVideo ? document.createElement('video') : new Audio();
+        media.src = url;
         const done = (dur: number) => {
           resolve(dur || 180);
         };
-        tempAudio.addEventListener('loadedmetadata', () => {
-          done(Math.round(tempAudio.duration || 0));
+        media.addEventListener('loadedmetadata', () => {
+          done(Math.round(media.duration || 0));
         });
-        tempAudio.addEventListener('error', () => {
+        media.addEventListener('error', () => {
           done(180);
         });
         setTimeout(() => done(180), 3000);
@@ -1005,7 +1320,9 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       artist,
       url,
       isCustom: true,
-      category: 'custom',
+      category: isVideo ? 'mp4' : 'custom',
+      isVideo: isVideo,
+      mediaType: isVideo ? 'video' : 'audio',
       duration: trackDuration,
       dateAdded: new Date().toISOString().slice(0, 10),
     };
@@ -1018,6 +1335,9 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       url,
       isUrlOnly: true,
       duration: trackDuration,
+      category: isVideo ? 'mp4' : 'custom',
+      isVideo: isVideo,
+      mediaType: isVideo ? 'video' : 'audio',
       dateAdded: newTrack.dateAdded!,
     }).catch(() => {});
 
@@ -1339,6 +1659,13 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         setIsPlayerOpen,
         isUploading,
         uploadProgress,
+        isVideoMode,
+        setIsVideoMode,
+        toggleVideoMode,
+        isFloatingMiniVideo,
+        setIsFloatingMiniVideo,
+        toggleFloatingMiniVideo,
+        isCurrentVideo,
         vibeMood,
         setVibeMood,
         sleepTimerMinutes,
