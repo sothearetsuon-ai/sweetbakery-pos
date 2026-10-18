@@ -1,4 +1,4 @@
-import React, { useRef, useState, useMemo } from 'react';
+import React, { useRef, useState, useMemo, useEffect } from 'react';
 import {
   X,
   Play,
@@ -363,21 +363,47 @@ export const MusicPlayerModal: React.FC = () => {
     }
   };
 
+  // Close modal when pressing Escape key
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setIsPlayerOpen(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [setIsPlayerOpen]);
+
   const isCurrentFavorite = currentTrack ? favoriteTrackIds.includes(currentTrack.id) : false;
   const fastConverters = previewYt ? getFastDownloadLinks(previewYt.id) : getFastDownloadLinks(youtubeInput || 'https://www.youtube.com');
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-200 font-battambang">
-      {/* Frosted Glass Backdrop */}
+      {/* Frosted Glass Backdrop - clicking closes modal */}
       <div
-        className="fixed inset-0 bg-slate-950/70 backdrop-blur-md transition-opacity"
+        className="fixed inset-0 bg-slate-950/80 backdrop-blur-md transition-opacity cursor-pointer"
         onClick={() => setIsPlayerOpen(false)}
+        title="ចុចដើម្បីបិទ (Close)"
       />
 
+      {/* Mobile Emergency Floating Close Button - ALWAYS on topmost layer (z-100000) */}
+      <button
+        type="button"
+        onClick={() => {
+          soundFx.playPop();
+          setIsPlayerOpen(false);
+        }}
+        className="sm:hidden fixed top-3 right-3 z-[100000] px-3.5 py-2 rounded-full bg-rose-600/95 hover:bg-rose-500 text-white font-black text-xs flex items-center gap-1.5 shadow-2xl border-2 border-white/40 active:scale-95 cursor-pointer backdrop-blur-md"
+        title="បិទផ្ទាំងចាក់ភ្លេង (Close)"
+      >
+        <X className="w-4 h-4 stroke-[3]" />
+        <span>បិទ</span>
+      </button>
+
       {/* Main Glassmorphism Modal Box */}
-      <div className="relative z-10 w-full max-w-2xl bg-slate-950/90 text-white rounded-3xl shadow-2xl border border-white/15 overflow-hidden flex flex-col max-h-[92vh] backdrop-blur-2xl">
+      <div className="relative z-10 w-full max-w-2xl bg-slate-950/95 text-white rounded-3xl shadow-2xl border border-white/15 overflow-hidden flex flex-col max-h-[92vh] backdrop-blur-2xl">
         {/* Top Header Bar */}
-        <div className="p-3.5 sm:p-4 border-b border-white/10 flex items-center justify-between bg-gradient-to-r from-pink-950/40 via-purple-950/30 to-amber-950/40">
+        <div className="relative z-[60] p-3.5 sm:p-4 border-b border-white/10 flex items-center justify-between bg-gradient-to-r from-pink-950/40 via-purple-950/30 to-amber-950/40">
           <div className="flex items-center gap-2.5">
             <div className="w-9 h-9 rounded-2xl bg-gradient-to-tr from-pink-600 via-rose-500 to-amber-500 flex items-center justify-center shadow-lg shadow-pink-500/30">
               <Radio className="w-4 h-4 text-white animate-pulse" />
@@ -432,16 +458,18 @@ export const MusicPlayerModal: React.FC = () => {
               </button>
             </div>
 
-            {/* Close Button */}
+            {/* Prominent High-Contrast Close Button */}
             <button
               type="button"
               onClick={() => {
                 soundFx.playPop();
                 setIsPlayerOpen(false);
               }}
-              className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-slate-300 hover:text-white transition-all cursor-pointer ml-1"
+              className="relative z-[70] px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-black text-xs transition-all flex items-center gap-1.5 shadow-md shadow-rose-950/50 cursor-pointer active:scale-95 ml-1 border border-rose-400/40"
+              title="បិទផ្ទាំងចាក់ភ្លេង (Close Player)"
             >
-              <X className="w-4 h-4" />
+              <X className="w-4 h-4 stroke-[2.5]" />
+              <span className="hidden xs:inline">បិទ</span>
             </button>
           </div>
         </div>
@@ -1495,6 +1523,41 @@ export const MusicPlayerModal: React.FC = () => {
               </div>
             </div>
           )}
+        </div>
+
+        {/* Modal Bottom Sticky Footer Bar (Easy 1-Tap Close & Quick Controls) */}
+        <div className="relative z-[60] p-3 sm:p-4 bg-slate-950/95 border-t border-white/10 flex items-center justify-between gap-3 backdrop-blur-xl">
+          <div className="min-w-0 flex items-center gap-2.5">
+            <button
+              type="button"
+              onClick={togglePlay}
+              className="w-9 h-9 rounded-xl bg-gradient-to-r from-pink-600 to-rose-600 text-white flex items-center justify-center shrink-0 shadow-md active:scale-95 transition-all cursor-pointer"
+              title={isPlaying ? 'ផ្អាក (Pause)' : 'ចាក់ (Play)'}
+            >
+              {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 ml-0.5" />}
+            </button>
+            <div className="min-w-0">
+              <div className="text-xs font-black text-white truncate max-w-[170px] sm:max-w-xs">
+                {currentTrack?.title || 'ជ្រើសរើសបទចម្រៀង'}
+              </div>
+              <div className="text-[10px] text-pink-300/80 truncate">
+                {currentTrack?.artist || 'SweetBakery Music'}
+              </div>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => {
+              soundFx.playPop();
+              setIsPlayerOpen(false);
+            }}
+            className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-black text-xs transition-all flex items-center gap-2 border border-rose-400/40 shadow-lg shadow-rose-950/50 cursor-pointer active:scale-95 shrink-0"
+            title="បិទផ្ទាំងនេះ"
+          >
+            <X className="w-4 h-4 stroke-[2.5]" />
+            <span>បិទផ្ទាំងនេះ (Close)</span>
+          </button>
         </div>
       </div>
     </div>

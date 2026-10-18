@@ -227,30 +227,30 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   });
 
-  // Video Mode (16:9 Video Screen vs Vinyl Disc)
+  // Video Mode (16:9 Video Screen vs Vinyl Disc) - Default to false (Classic audio/vinyl disc mode)
   const [isVideoMode, setIsVideoModeState] = useState<boolean>(() => {
     try {
-      const saved = localStorage.getItem('bakery_music_video_mode');
-      return saved !== null ? saved === 'true' : true;
+      const saved = localStorage.getItem('bakery_music_video_mode_v2');
+      return saved === 'true'; // false by default (Vinyl Disc mode)
     } catch {
-      return true;
+      return false;
     }
   });
 
-  // Floating Mini Video (Picture-in-Picture on POS screen when modal closed)
+  // Floating Mini Video (Picture-in-Picture on POS screen when modal closed) - Default to false
   const [isFloatingMiniVideo, setIsFloatingMiniVideoState] = useState<boolean>(() => {
     try {
-      const saved = localStorage.getItem('bakery_music_floating_video');
-      return saved !== null ? saved === 'true' : true;
+      const saved = localStorage.getItem('bakery_music_floating_video_v2');
+      return saved === 'true'; // false by default
     } catch {
-      return true;
+      return false;
     }
   });
 
   const setIsVideoMode = (enabled: boolean) => {
     setIsVideoModeState(enabled);
     try {
-      localStorage.setItem('bakery_music_video_mode', String(enabled));
+      localStorage.setItem('bakery_music_video_mode_v2', String(enabled));
     } catch {}
   };
 
@@ -262,7 +262,7 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const setIsFloatingMiniVideo = (enabled: boolean) => {
     setIsFloatingMiniVideoState(enabled);
     try {
-      localStorage.setItem('bakery_music_floating_video', String(enabled));
+      localStorage.setItem('bakery_music_floating_video_v2', String(enabled));
     } catch {}
   };
 
@@ -535,13 +535,49 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     });
   };
 
-  // Dynamically pin video containers (#sweetbakery-yt-hidden-player & #sweetbakery-mp4-persistent-player)
-  // to #sweetbakery-video-screen-slot (inside Modal) or #sweetbakery-floating-video-slot (Floating Mini Player)
+  // Safely manage persistent video elements (#sweetbakery-yt-hidden-player & #sweetbakery-mp4-persistent-player)
+  // When in Audio/Vinyl mode (default), players stay completely offscreen (-9999px) with zero visual footprint.
   useEffect(() => {
+    const hideBothOffscreen = (ytContainer: HTMLElement | null, mp4El: HTMLElement | null) => {
+      if (ytContainer) {
+        ytContainer.style.position = 'fixed';
+        ytContainer.style.top = '-9999px';
+        ytContainer.style.left = '-9999px';
+        ytContainer.style.width = '200px';
+        ytContainer.style.height = '200px';
+        ytContainer.style.opacity = '0';
+        ytContainer.style.pointerEvents = 'none';
+        ytContainer.style.zIndex = '-1';
+        ytContainer.style.boxShadow = 'none';
+        ytContainer.style.transition = 'none';
+      }
+      if (mp4El) {
+        mp4El.style.position = 'fixed';
+        mp4El.style.top = '-9999px';
+        mp4El.style.left = '-9999px';
+        mp4El.style.width = '200px';
+        mp4El.style.height = '200px';
+        mp4El.style.opacity = '0';
+        mp4El.style.pointerEvents = 'none';
+        mp4El.style.zIndex = '-1';
+        mp4El.style.boxShadow = 'none';
+        mp4El.style.transition = 'none';
+      }
+    };
+
     const syncVideoPosition = () => {
       const ytContainer = document.getElementById('sweetbakery-yt-hidden-player');
       const mp4El = document.getElementById('sweetbakery-mp4-persistent-player');
       if (!ytContainer && !mp4El) return;
+
+      // If user is in classic Vinyl Disc / Audio mode, keep video completely hidden offscreen
+      const shouldShowInModal = isPlayerOpen && isVideoMode;
+      const shouldShowInPiP = !isPlayerOpen && isFloatingMiniVideo;
+
+      if (!shouldShowInModal && !shouldShowInPiP) {
+        hideBothOffscreen(ytContainer, mp4El);
+        return;
+      }
 
       const track = playlist[currentTrackIndex];
       const isYt = Boolean(track && (track.category === 'youtube' || track.url.startsWith('youtube:')));
@@ -550,18 +586,26 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       );
       const isVideoTrack = isYt || isMp4;
 
+      if (!isVideoTrack) {
+        hideBothOffscreen(ytContainer, mp4El);
+        return;
+      }
+
       let targetSlot: HTMLElement | null = null;
-      if (isVideoTrack) {
-        if (isPlayerOpen && isVideoMode) {
-          targetSlot = document.getElementById('sweetbakery-video-screen-slot');
-        } else if (!isPlayerOpen && isFloatingMiniVideo) {
-          targetSlot = document.getElementById('sweetbakery-floating-video-slot');
-        }
+      let targetZIndex = '25';
+
+      if (shouldShowInModal) {
+        targetSlot = document.getElementById('sweetbakery-video-screen-slot');
+        targetZIndex = '25'; // Inside modal body, lower than modal header (z-60) & footer (z-60)
+      } else if (shouldShowInPiP) {
+        targetSlot = document.getElementById('sweetbakery-floating-video-slot');
+        targetZIndex = '45';
       }
 
       if (targetSlot) {
         const rect = targetSlot.getBoundingClientRect();
-        if (rect.width > 0 && rect.height > 0) {
+        // Check that slot is visible in the viewport and not scrolled off
+        if (rect.width > 50 && rect.height > 50 && rect.bottom > 60 && rect.top < window.innerHeight - 60) {
           const activeEl = isYt ? ytContainer : mp4El;
           const inactiveEl = isYt ? mp4El : ytContainer;
 
@@ -571,13 +615,13 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             activeEl.style.left = `${rect.left}px`;
             activeEl.style.width = `${rect.width}px`;
             activeEl.style.height = `${rect.height}px`;
-            activeEl.style.zIndex = '99999';
+            activeEl.style.zIndex = targetZIndex;
             activeEl.style.opacity = '1';
             activeEl.style.pointerEvents = 'auto';
             activeEl.style.borderRadius = isPlayerOpen ? '1.25rem' : '0.85rem';
             activeEl.style.overflow = 'hidden';
-            activeEl.style.boxShadow = '0 20px 25px -5px rgba(0, 0, 0, 0.5)';
-            activeEl.style.transition = 'top 0.12s ease, left 0.12s ease, width 0.12s ease, height 0.12s ease';
+            activeEl.style.boxShadow = 'none';
+            activeEl.style.transition = 'none';
           }
           if (inactiveEl) {
             inactiveEl.style.top = '-9999px';
@@ -589,19 +633,8 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         }
       }
 
-      // Hide both offscreen
-      if (ytContainer) {
-        ytContainer.style.top = '-9999px';
-        ytContainer.style.left = '-9999px';
-        ytContainer.style.opacity = '0';
-        ytContainer.style.pointerEvents = 'none';
-      }
-      if (mp4El) {
-        mp4El.style.top = '-9999px';
-        mp4El.style.left = '-9999px';
-        mp4El.style.opacity = '0';
-        mp4El.style.pointerEvents = 'none';
-      }
+      // Hide offscreen if slot is not visible
+      hideBothOffscreen(ytContainer, mp4El);
     };
 
     const interval = setInterval(syncVideoPosition, 100);
