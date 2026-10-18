@@ -15,8 +15,8 @@
     "🎂 ត្រងបង្ហាញតែរសជាតិនំដែលមានក្នុងស្តុក (In-Stock Flavors Only) ក្នុងផ្ទាំងកុម្ម៉ង់ទុកមុន និង Customer Portal ព្រមទាំង AI ប្រាប់ដំណឹងពេលអស់ស្តុក។",
     "⚡ ជួសជុលបញ្ហាលោតភ្លឹបភ្លែតលើ Android (Telegram Sync Loop Fix) និងពង្រឹងល្បឿនប្រព័ន្ធទូទៅ។"
   ],
-  "apkDownloadUrl": "https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/latest/download/SweetBakery-Android.apk",
-  "windowsInstallerUrl": "https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/latest/download/SweetBakery-POS-Setup.exe",
-  "windowsDownloadUrl": "https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/latest/download/SweetBakery-POS-Setup.exe",
+  "apkDownloadUrl": "https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.5.1/SweetBakery-Android.apk",
+  "windowsInstallerUrl": "https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.5.1/SweetBakery-POS-Setup.exe",
+  "windowsDownloadUrl": "https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.5.1/SweetBakery-POS-Setup.exe",
   "mandatory": false
 }

@@ -123,7 +123,7 @@ export const AppUpdateTab: React.FC = () => {
       urlToUse ||
       customApkUrl.trim() ||
       updateInfo?.apkDownloadUrl ||
-      'https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.2.6/SweetBakery-Android.apk';
+      'https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.5.1/SweetBakery-Android.apk';
 
     if (isAndroidNative) {
       setIsDownloading(true);
@@ -184,7 +184,7 @@ export const AppUpdateTab: React.FC = () => {
     const winUrl =
       updateInfo?.windowsInstallerUrl ||
       updateInfo?.windowsDownloadUrl ||
-      'https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/latest/download/SweetBakery-POS-Setup.exe';
+      'https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.5.1/SweetBakery-POS-Setup.exe';
     openExternalUrl(winUrl);
   };
 
@@ -192,7 +192,7 @@ export const AppUpdateTab: React.FC = () => {
     soundFx.playSuccess();
     const apkUrl =
       updateInfo?.apkDownloadUrl ||
-      'https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/latest/download/SweetBakery-Android.apk';
+      'https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.5.1/SweetBakery-Android.apk';
     if (isAndroidNative) {
       handleStartUpdate(apkUrl);
     } else {
@@ -444,13 +444,15 @@ export const AppUpdateTab: React.FC = () => {
                 <div className="pt-2 border-t border-emerald-200/60 flex flex-col sm:flex-row items-center gap-2.5">
                   <span className="text-xs font-bold text-slate-600">ចង់ទាញយកដំឡើងឡើងវិញ?</span>
                   <a
-                    href="./SweetBakery-Android.apk"
+                    href={updateInfo?.apkDownloadUrl || 'https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.5.1/SweetBakery-Android.apk'}
+                    target="_blank"
+                    rel="noreferrer"
                     download="SweetBakery-Android.apk"
                     onClick={() => soundFx.playSuccess()}
                     className="w-full sm:w-auto px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 shadow-xs text-center"
                   >
                     <Smartphone className="w-3.5 h-3.5" />
-                    <span>📱 ទាញយក APK (v{updateInfo.latestVersion || currentVersion})</span>
+                    <span>📱 ទាញយក APK (v{updateInfo.latestVersion || CURRENT_APP_VERSION})</span>
                   </a>
                   <button
                     type="button"
@@ -503,24 +505,25 @@ export const AppUpdateTab: React.FC = () => {
 
             <div className="space-y-2 pt-2">
               <a
-                href="./SweetBakery-Android.apk"
+                href={updateInfo?.apkDownloadUrl || 'https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.5.1/SweetBakery-Android.apk'}
+                target="_blank"
+                rel="noreferrer"
                 download="SweetBakery-Android.apk"
                 onClick={() => soundFx.playSuccess()}
                 className="w-full py-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-xl text-xs sm:text-sm font-black transition-all flex items-center justify-center gap-2 shadow-md shadow-emerald-600/25 cursor-pointer active:scale-95 text-center"
               >
                 <Download className="w-4 h-4 animate-bounce" />
-                <span>📥 ទាញយក APK ដោយផ្ទាល់ (SweetBakery-Android.apk v{currentVersion})</span>
+                <span>📥 ទាញយក APK ដោយផ្ទាល់ (SweetBakery-Android.apk v{updateInfo?.latestVersion || CURRENT_APP_VERSION})</span>
               </a>
 
               <a
-                href="https://raw.githubusercontent.com/sothearetsuon-ai/sweetbakery-pos/main/SweetBakery-Android.apk"
+                href="https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/tag/v1.5.1"
                 target="_blank"
                 rel="noreferrer"
-                download="SweetBakery-Android.apk"
                 className="w-full py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 border border-slate-300 cursor-pointer active:scale-95"
               >
                 <ExternalLink className="w-3.5 h-3.5 text-slate-500" />
-                <span>ទាញយកពី GitHub Raw Link (Cloud Mirror)</span>
+                <span>មើលទំព័រ GitHub Release v1.5.1 ផ្លូវការ</span>
               </a>
             </div>
           </div>
@@ -544,17 +547,17 @@ export const AppUpdateTab: React.FC = () => {
                 className="w-full py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl text-xs sm:text-sm font-black transition-all flex items-center justify-center gap-2 shadow-md shadow-blue-600/25 cursor-pointer active:scale-95"
               >
                 <Download className="w-4 h-4" />
-                <span>📥 ទាញយក Windows Setup (SweetBakery-POS-Setup.exe v{currentVersion})</span>
+                <span>📥 ទាញយក Windows Setup (SweetBakery-POS-Setup.exe v{updateInfo?.latestVersion || CURRENT_APP_VERSION})</span>
               </button>
 
               <a
-                href="https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/latest"
+                href="https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.5.1/SweetBakery-POS-Windows.zip"
                 target="_blank"
                 rel="noreferrer"
                 className="w-full py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 border border-slate-300 cursor-pointer active:scale-95"
               >
-                <ExternalLink className="w-3.5 h-3.5 text-slate-500" />
-                <span>បើកទំព័រ GitHub Releases ផ្លូវការ (v{currentVersion})</span>
+                <FileArchive className="w-3.5 h-3.5 text-slate-500" />
+                <span>ទាញយក Windows Portable (.zip) v{updateInfo?.latestVersion || CURRENT_APP_VERSION}</span>
               </a>
             </div>
           </div>

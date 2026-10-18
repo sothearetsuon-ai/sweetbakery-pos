@@ -160,7 +160,7 @@ function setupAppMenu() {
             dialog.showMessageBox(mainWindow, {
               type: 'info',
               title: 'អំពី SweetBakery POS',
-              message: 'SweetBakery POS Desktop Edition v1.4.3',
+              message: 'SweetBakery POS Desktop Edition v1.5.1',
               detail: 'ប្រព័ន្ធគ្រប់គ្រងការលក់ និងស្តុកនំខេកទំនើប\nCloud Hosted: https://sothearetsuon-ai.github.io/sweetbakery-pos/\nភ្ជាប់ប្រព័ន្ធស្វ័យប្រវត្តិ (Auto-Update Online)'
             });
           }

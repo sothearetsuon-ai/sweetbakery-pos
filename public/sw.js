@@ -1,5 +1,5 @@
 // Service Worker for SweetBakery POS PWA Offline Support
-const CACHE_NAME = 'sweetbakery-app-v3';
+const CACHE_NAME = 'sweetbakery-pos-v1-5-1';
 const APP_SHELL = [
   './',
   './index.html',
@@ -65,6 +65,12 @@ self.addEventListener('fetch', (event) => {
 
   // 2. Same-origin assets: Cache-First with Network fallback & dynamic caching
   if (url.origin === self.location.origin) {
+    if (url.pathname.includes('version.json')) {
+      event.respondWith(
+        fetch(event.request, { cache: 'no-cache' }).catch(() => caches.match(event.request))
+      );
+      return;
+    }
     event.respondWith(
       caches.match(event.request).then((cached) => {
         if (cached) return cached;
