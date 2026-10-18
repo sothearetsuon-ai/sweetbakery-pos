@@ -76,7 +76,54 @@ export const searchYouTubeVideos = async (query: string): Promise<YouTubeInfo[]>
   if (!query || !query.trim()) return [];
   const cleanQuery = query.trim();
 
-  // 1. Try local server-side YouTube search proxy
+  // 1. Try Windows Electron Desktop App IPC (100% reliable, direct scraping, zero CORS)
+  try {
+    const desktop = (window as any).SweetBakeryDesktop;
+    if (desktop && typeof desktop.searchYouTube === 'function') {
+      const results = await desktop.searchYouTube(cleanQuery);
+      if (Array.isArray(results) && results.length > 0) {
+        return results.map((item: any) => ({
+          id: item.id,
+          title: item.title,
+          author: item.author || 'YouTube',
+          thumbnailUrl: item.thumbnailUrl || `https://img.youtube.com/vi/${item.id}/hqdefault.jpg`,
+          embedUrl: `https://www.youtube.com/embed/${item.id}?autoplay=1&enablejsapi=1`,
+          duration: item.duration,
+          durationSec: parseDurationStringToSeconds(item.duration),
+          url: item.url || `https://www.youtube.com/watch?v=${item.id}`,
+        }));
+      }
+    }
+  } catch (e) {
+    console.warn('Electron desktop YouTube search failed:', e);
+  }
+
+  // 2. Try Android Native Bridge (100% reliable, direct HttpURLConnection, zero CORS)
+  try {
+    const native = (window as any).SweetBakeryNative;
+    if (native && typeof native.searchYouTube === 'function') {
+      const raw = native.searchYouTube(cleanQuery);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed.map((item: any) => ({
+            id: item.id,
+            title: item.title,
+            author: item.author || 'YouTube',
+            thumbnailUrl: item.thumbnailUrl || `https://img.youtube.com/vi/${item.id}/hqdefault.jpg`,
+            embedUrl: `https://www.youtube.com/embed/${item.id}?autoplay=1&enablejsapi=1`,
+            duration: item.duration,
+            durationSec: parseDurationStringToSeconds(item.duration),
+            url: item.url || `https://www.youtube.com/watch?v=${item.id}`,
+          }));
+        }
+      }
+    }
+  } catch (e) {
+    console.warn('Android native YouTube search failed:', e);
+  }
+
+  // 3. Try local server-side YouTube search proxy (during vite dev)
   try {
     const res = await fetch(`/api/youtube-search?q=${encodeURIComponent(cleanQuery)}`);
     if (res.ok) {
@@ -98,7 +145,7 @@ export const searchYouTubeVideos = async (query: string): Promise<YouTubeInfo[]>
     console.warn('Server youtube search endpoint failed, trying fallback...', e);
   }
 
-  // 2. Fallback to curated presets matching query
+  // 4. Fallback to curated presets matching query
   const lowerQ = cleanQuery.toLowerCase();
   const matchedPresets = popularYouTubeBakeryPresets.filter(
     (p) =>
@@ -125,9 +172,54 @@ export const searchYouTubeVideos = async (query: string): Promise<YouTubeInfo[]>
 export const fetchYouTubePlaylistVideos = async (playlistUrlOrId: string): Promise<YouTubeInfo[]> => {
   const listId = extractYouTubePlaylistId(playlistUrlOrId) || playlistUrlOrId;
   if (!listId) return [];
+  const cleanListId = listId.trim();
 
+  // 1. Try Windows Electron Desktop App IPC
   try {
-    const res = await fetch(`/api/youtube-playlist?list=${encodeURIComponent(listId)}`);
+    const desktop = (window as any).SweetBakeryDesktop;
+    if (desktop && typeof desktop.fetchYouTubePlaylist === 'function') {
+      const results = await desktop.fetchYouTubePlaylist(cleanListId);
+      if (Array.isArray(results) && results.length > 0) {
+        return results.map((item: any) => ({
+          id: item.id,
+          title: item.title,
+          author: item.author || 'YouTube Playlist',
+          thumbnailUrl: item.thumbnailUrl || `https://img.youtube.com/vi/${item.id}/hqdefault.jpg`,
+          embedUrl: `https://www.youtube.com/embed/${item.id}?autoplay=1&enablejsapi=1`,
+          url: item.url || `https://www.youtube.com/watch?v=${item.id}`,
+        }));
+      }
+    }
+  } catch (e) {
+    console.warn('Electron desktop playlist extraction failed:', e);
+  }
+
+  // 2. Try Android Native Bridge
+  try {
+    const native = (window as any).SweetBakeryNative;
+    if (native && typeof native.fetchYouTubePlaylist === 'function') {
+      const raw = native.fetchYouTubePlaylist(cleanListId);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed.map((item: any) => ({
+            id: item.id,
+            title: item.title,
+            author: item.author || 'YouTube Playlist',
+            thumbnailUrl: item.thumbnailUrl || `https://img.youtube.com/vi/${item.id}/hqdefault.jpg`,
+            embedUrl: `https://www.youtube.com/embed/${item.id}?autoplay=1&enablejsapi=1`,
+            url: item.url || `https://www.youtube.com/watch?v=${item.id}`,
+          }));
+        }
+      }
+    }
+  } catch (e) {
+    console.warn('Android native playlist extraction failed:', e);
+  }
+
+  // 3. Try local server-side proxy
+  try {
+    const res = await fetch(`/api/youtube-playlist?list=${encodeURIComponent(cleanListId)}`);
     if (res.ok) {
       const data = await res.json();
       if (Array.isArray(data.results) && data.results.length > 0) {

@@ -561,6 +561,191 @@ public class MainActivity extends AppCompatActivity {
             // Use robust direct stream downloader with automatic 302/307 redirect resolution & live progress
             downloadViaDirectStream(cleanUrl);
         }
+
+        @JavascriptInterface
+        public String searchYouTube(String query) {
+            if (query == null || query.trim().isEmpty()) {
+                return "[]";
+            }
+            HttpURLConnection conn = null;
+            try {
+                String encodedQ = java.net.URLEncoder.encode(query.trim(), "UTF-8");
+                URL url = new URL("https://www.youtube.com/results?search_query=" + encodedQ);
+                conn = (HttpURLConnection) url.openConnection();
+                conn.setRequestMethod("GET");
+                conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
+                conn.setRequestProperty("Accept-Language", "km,en;q=0.9");
+                conn.setRequestProperty("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
+                conn.setConnectTimeout(10000);
+                conn.setReadTimeout(12000);
+
+                if (conn.getResponseCode() == HttpURLConnection.HTTP_OK) {
+                    InputStream is = conn.getInputStream();
+                    java.io.BufferedReader reader = new java.io.BufferedReader(new java.io.InputStreamReader(is, "UTF-8"));
+                    StringBuilder sb = new StringBuilder();
+                    String line;
+                    while ((line = reader.readLine()) != null) {
+                        sb.append(line);
+                        if (sb.length() > 2500000) break;
+                    }
+                    reader.close();
+                    is.close();
+
+                    String html = sb.toString();
+                    int startIdx = html.indexOf("ytInitialData = ");
+                    if (startIdx != -1) {
+                        startIdx += 16;
+                    } else {
+                        startIdx = html.indexOf("ytInitialData=");
+                        if (startIdx != -1) startIdx += 14;
+                    }
+
+                    if (startIdx == -1) {
+                        return "[]";
+                    }
+
+                    int endIdx = html.indexOf(";</script>", startIdx);
+                    if (endIdx == -1) endIdx = html.indexOf("</script>", startIdx);
+                    if (endIdx == -1) {
+                        return "[]";
+                    }
+
+                    String jsonStr = html.substring(startIdx, endIdx).trim();
+                    if (jsonStr.endsWith(";")) {
+                        jsonStr = jsonStr.substring(0, jsonStr.length() - 1).trim();
+                    }
+
+                    org.json.JSONObject root = new org.json.JSONObject(jsonStr);
+                    org.json.JSONObject contents = root.optJSONObject("contents");
+                    if (contents != null) {
+                        org.json.JSONObject twoCol = contents.optJSONObject("twoColumnSearchResultsRenderer");
+                        if (twoCol != null) {
+                            org.json.JSONObject primary = twoCol.optJSONObject("primaryContents");
+                            if (primary != null) {
+                                org.json.JSONObject sectionList = primary.optJSONObject("sectionListRenderer");
+                                if (sectionList != null) {
+                                    org.json.JSONArray sections = sectionList.optJSONArray("contents");
+                                    org.json.JSONArray results = new org.json.JSONArray();
+                                    if (sections != null) {
+                                        for (int s = 0; s < sections.length(); s++) {
+                                            org.json.JSONObject section = sections.optJSONObject(s);
+                                            if (section == null) continue;
+                                            org.json.JSONObject itemSection = section.optJSONObject("itemSectionRenderer");
+                                            if (itemSection == null) continue;
+                                            org.json.JSONArray items = itemSection.optJSONArray("contents");
+                                            if (items == null) continue;
+                                            for (int i = 0; i < items.length(); i++) {
+                                                org.json.JSONObject it = items.optJSONObject(i);
+                                                if (it == null) continue;
+                                                org.json.JSONObject v = it.optJSONObject("videoRenderer");
+                                                if (v != null && v.has("videoId")) {
+                                                    String vid = v.optString("videoId");
+                                                    String title = "";
+                                                    org.json.JSONObject titleObj = v.optJSONObject("title");
+                                                    if (titleObj != null) {
+                                                        org.json.JSONArray runs = titleObj.optJSONArray("runs");
+                                                        if (runs != null && runs.length() > 0) {
+                                                            title = runs.optJSONObject(0).optString("text", "");
+                                                        }
+                                                    }
+                                                    String author = "YouTube";
+                                                    org.json.JSONObject ownerObj = v.optJSONObject("ownerText");
+                                                    if (ownerObj != null) {
+                                                        org.json.JSONArray runs = ownerObj.optJSONArray("runs");
+                                                        if (runs != null && runs.length() > 0) {
+                                                            author = runs.optJSONObject(0).optString("text", "YouTube");
+                                                        }
+                                                    }
+                                                    String duration = "";
+                                                    org.json.JSONObject lenObj = v.optJSONObject("lengthText");
+                                                    if (lenObj != null) {
+                                                        duration = lenObj.optString("simpleText", "");
+                                                    }
+
+                                                    org.json.JSONObject resItem = new org.json.JSONObject();
+                                                    resItem.put("id", vid);
+                                                    resItem.put("title", title);
+                                                    resItem.put("author", author);
+                                                    resItem.put("duration", duration);
+                                                    resItem.put("thumbnailUrl", "https://img.youtube.com/vi/" + vid + "/hqdefault.jpg");
+                                                    resItem.put("url", "https://www.youtube.com/watch?v=" + vid);
+                                                    results.put(resItem);
+                                                    if (results.length() >= 30) break;
+                                                }
+                                            }
+                                            if (results.length() >= 30) break;
+                                        }
+                                    }
+                                    return results.toString();
+                                }
+                            }
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            } finally {
+                if (conn != null) conn.disconnect();
+            }
+            return "[]";
+        }
+
+        @JavascriptInterface
+        public String fetchYouTubePlaylist(String listId) {
+            if (listId == null || listId.trim().isEmpty()) {
+                return "[]";
+            }
+            HttpURLConnection conn = null;
+            try {
+                String cleanList = listId.trim();
+                URL url = new URL("https://www.youtube.com/playlist?list=" + java.net.URLEncoder.encode(cleanList, "UTF-8"));
+                conn = (HttpURLConnection) url.openConnection();
+                conn.setRequestMethod("GET");
+                conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
+                conn.setRequestProperty("Accept-Language", "km,en;q=0.9");
+                conn.setConnectTimeout(10000);
+                conn.setReadTimeout(12000);
+
+                if (conn.getResponseCode() == HttpURLConnection.HTTP_OK) {
+                    InputStream is = conn.getInputStream();
+                    java.io.BufferedReader reader = new java.io.BufferedReader(new java.io.InputStreamReader(is, "UTF-8"));
+                    StringBuilder sb = new StringBuilder();
+                    String line;
+                    while ((line = reader.readLine()) != null) {
+                        sb.append(line);
+                        if (sb.length() > 2500000) break;
+                    }
+                    reader.close();
+                    is.close();
+
+                    String html = sb.toString();
+                    java.util.regex.Pattern pattern = java.util.regex.Pattern.compile("\"videoId\":\"([a-zA-Z0-9_-]{11})\"");
+                    java.util.regex.Matcher matcher = pattern.matcher(html);
+                    java.util.Set<String> seen = new java.util.LinkedHashSet<>();
+                    while (matcher.find()) {
+                        seen.add(matcher.group(1));
+                        if (seen.size() >= 50) break;
+                    }
+
+                    org.json.JSONArray results = new org.json.JSONArray();
+                    for (String vid : seen) {
+                        org.json.JSONObject resItem = new org.json.JSONObject();
+                        resItem.put("id", vid);
+                        resItem.put("title", "YouTube Video (" + vid + ")");
+                        resItem.put("author", "YouTube Playlist");
+                        resItem.put("thumbnailUrl", "https://img.youtube.com/vi/" + vid + "/hqdefault.jpg");
+                        resItem.put("url", "https://www.youtube.com/watch?v=" + vid);
+                        results.put(resItem);
+                    }
+                    return results.toString();
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            } finally {
+                if (conn != null) conn.disconnect();
+            }
+            return "[]";
+        }
     }
 
     private void setupDownloadCompleteReceiver() {

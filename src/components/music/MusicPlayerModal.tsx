@@ -1107,18 +1107,37 @@ export const MusicPlayerModal: React.FC = () => {
               {/* Status Message */}
               {downloadMsg && (
                 <div
-                  className={`p-3 rounded-2xl flex items-center gap-2 text-xs font-bold border ${
+                  className={`p-3 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs font-bold border animate-in fade-in ${
                     downloadMsg.type === 'success'
                       ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-300'
                       : 'bg-rose-500/20 border-rose-500/40 text-rose-300'
                   }`}
                 >
-                  {downloadMsg.type === 'success' ? (
-                    <Check className="w-4 h-4 shrink-0 text-emerald-400" />
-                  ) : (
-                    <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
+                  <div className="flex items-center gap-2 min-w-0">
+                    {downloadMsg.type === 'success' ? (
+                      <Check className="w-4 h-4 shrink-0 text-emerald-400" />
+                    ) : (
+                      <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
+                    )}
+                    <span className="leading-snug">{downloadMsg.text}</span>
+                  </div>
+                  {downloadMsg.type === 'error' && youtubeInput.trim() && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const ytSearchUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(youtubeInput.trim())}`;
+                        if ((window as any).SweetBakeryDesktop?.openExternal) {
+                          (window as any).SweetBakeryDesktop.openExternal(ytSearchUrl);
+                        } else {
+                          window.open(ytSearchUrl, '_blank');
+                        }
+                      }}
+                      className="px-2.5 py-1.5 bg-red-600/40 hover:bg-red-600/60 border border-red-500/50 text-white rounded-xl text-[10px] font-black shrink-0 flex items-center justify-center gap-1.5 cursor-pointer transition-all active:scale-95 shadow-sm"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5" />
+                      <span>ស្វែងរកលើ YouTube ផ្ទាល់</span>
+                    </button>
                   )}
-                  <span>{downloadMsg.text}</span>
                 </div>
               )}
 
