@@ -27,8 +27,10 @@ DisableProgramGroupPage=yes
 OutputDir=..
 OutputBaseFilename=SweetBakery-POS-Setup
 SetupIconFile=icon.ico
-Compression=lzma2/fast
+Compression=lzma2/ultra64
 SolidCompression=yes
+LZMAUseSeparateProcess=yes
+LZMADictionarySize=65536
 CloseApplications=force
 RestartApplications=no
 
