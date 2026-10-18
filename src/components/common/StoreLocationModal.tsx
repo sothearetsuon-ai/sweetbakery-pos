@@ -17,7 +17,7 @@ export const StoreLocationModal: React.FC<StoreLocationModalProps> = ({
   storeName = 'ហាងនំខេកអូរយ៉ាដាវ',
   address = 'រតនៈគីរី អូរយ៉ាដាវ',
   phone = '0978707000',
-  mapsUrl = 'https://www.google.com/maps/place/%E1%9E%A0%E1%9E%B6%E1%9E%84%E1%9E%93%E1%9F%86%E1%9E%81%E1%9F%81%E1%9E%80%E1%9E%A2%E1%9E%BC%E1%9E%9A%E1%9E%99%E1%9F%89%E1%9E%B6%E1%9E%8A%E1%9E%B6%E1%9E%9C/@13.6703078,107.3446576,15z/data=!4m7!3m6!1s0x316c55bd358df1af:0xfb9f7bddaf65d259!4b1!8m2!3d13.6708499!4d107.346106!16s%2Fg%2F11n9w1vt9r',
+  mapsUrl,
 }) => {
   if (!isOpen) return null;
 
@@ -27,9 +27,63 @@ export const StoreLocationModal: React.FC<StoreLocationModalProps> = ({
   // OpenStreetMap embed coordinates with bounding box around Oyadav
   const embedMapUrl = `https://www.openstreetmap.org/export/embed.html?bbox=${lng - 0.015}%2C${lat - 0.01}%2C${lng + 0.015}%2C${lat + 0.01}&layer=mapnik&marker=${lat}%2C${lng}`;
 
+  // Default Turn-by-Turn Directions URL to Oyadav Bakery
+  const defaultDirectionsUrl = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
+
+  // Ensure effectiveMapsUrl is ALWAYS a non-empty, valid URL
+  const effectiveMapsUrl = React.useMemo(() => {
+    if (mapsUrl && typeof mapsUrl === 'string' && mapsUrl.trim().startsWith('http')) {
+      return mapsUrl.trim();
+    }
+    return defaultDirectionsUrl;
+  }, [mapsUrl]);
+
   const handleClose = () => {
     soundFx.playPop();
     onClose();
+  };
+
+  const handleOpenDirections = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    soundFx.playPop();
+
+    // 1. If running inside Telegram Mini App (TMA)
+    const tg = (window as any).Telegram?.WebApp;
+    if (tg && typeof tg.openLink === 'function') {
+      tg.openLink(effectiveMapsUrl);
+      return;
+    }
+
+    // 2. If running inside Android Native App
+    const native = (window as any).SweetBakeryNative;
+    if (native && typeof native.openBrowser === 'function') {
+      native.openBrowser(effectiveMapsUrl);
+      return;
+    }
+
+    // 3. If running inside Windows Desktop Electron App
+    const desktop = (window as any).SweetBakeryDesktop;
+    if (desktop && typeof desktop.openExternal === 'function') {
+      desktop.openExternal(effectiveMapsUrl);
+      return;
+    }
+
+    // 4. Default in Browser
+    try {
+      const opened = window.open(effectiveMapsUrl, '_blank', 'noopener,noreferrer');
+      if (!opened || opened.closed || typeof opened.closed === 'undefined') {
+        const tempLink = document.createElement('a');
+        tempLink.href = effectiveMapsUrl;
+        tempLink.target = '_blank';
+        tempLink.rel = 'noopener noreferrer';
+        document.body.appendChild(tempLink);
+        tempLink.click();
+        document.body.removeChild(tempLink);
+      }
+    } catch {
+      window.open(effectiveMapsUrl, '_blank');
+    }
   };
 
   return (
@@ -37,7 +91,10 @@ export const StoreLocationModal: React.FC<StoreLocationModalProps> = ({
       {/* Background click to dismiss */}
       <div className="absolute inset-0" onClick={handleClose} />
 
-      <div className="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-rose-100 overflow-hidden flex flex-col max-h-[92vh] z-10 animate-scaleUp">
+      <div
+        className="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-rose-100 overflow-hidden flex flex-col max-h-[92vh] z-10 animate-scaleUp"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header Bar */}
         <div className="px-4 sm:px-5 py-3.5 bg-gradient-to-r from-rose-500 via-pink-500 to-rose-600 text-white flex items-center justify-between shadow-md">
           <div className="flex items-center gap-2.5 min-w-0">
@@ -58,7 +115,7 @@ export const StoreLocationModal: React.FC<StoreLocationModalProps> = ({
           <button
             type="button"
             onClick={handleClose}
-            className="flex items-center gap-1 px-3 py-1.5 bg-white/20 hover:bg-white text-white hover:text-slate-900 rounded-xl text-xs font-bold transition-all active:scale-95 shrink-0 ml-2"
+            className="flex items-center gap-1 px-3 py-1.5 bg-white/20 hover:bg-white text-white hover:text-slate-900 rounded-xl text-xs font-bold transition-all active:scale-95 shrink-0 ml-2 cursor-pointer"
           >
             <X className="w-4 h-4" />
             <span>ត្រឡប់ទៅហាង</span>
@@ -88,17 +145,18 @@ export const StoreLocationModal: React.FC<StoreLocationModalProps> = ({
               </p>
             </div>
 
-            {/* Direct Google Maps Navigation Link */}
+            {/* Direct Google Maps Navigation Button & Link */}
             <a
-              href={mapsUrl}
+              href={effectiveMapsUrl}
+              onClick={handleOpenDirections}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-md active:scale-95 shrink-0"
+              className="flex items-center gap-1.5 px-3 py-2 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white rounded-xl text-xs font-black transition-all shadow-md shrink-0 cursor-pointer"
               title="បើកកម្មវិធី Google Maps ដើម្បីមើលផ្លូវធ្វើដំណើរ"
             >
               <Navigation className="w-3.5 h-3.5" />
               <span>មើលផ្លូវ</span>
-              <ExternalLink className="w-3 h-3 opacity-75" />
+              <ExternalLink className="w-3 h-3 opacity-80" />
             </a>
           </div>
         </div>
@@ -111,7 +169,7 @@ export const StoreLocationModal: React.FC<StoreLocationModalProps> = ({
           <button
             type="button"
             onClick={handleClose}
-            className="px-5 py-2 bg-gradient-to-r from-pink-600 to-rose-600 hover:from-pink-700 hover:to-rose-700 text-white font-bold text-xs sm:text-sm rounded-xl shadow-md transition-all active:scale-95"
+            className="px-5 py-2 bg-gradient-to-r from-pink-600 to-rose-600 hover:from-pink-700 hover:to-rose-700 text-white font-bold text-xs sm:text-sm rounded-xl shadow-md transition-all active:scale-95 cursor-pointer"
           >
             ✓ ត្រឡប់ទៅរើសនំវិញ
           </button>
