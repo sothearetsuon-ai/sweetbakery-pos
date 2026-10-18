@@ -155,6 +155,18 @@ export const MusicPlayerModal: React.FC = () => {
     });
   }, [playlist, vibeMood, favoriteTrackIds, searchQuery]);
 
+  // Close modal when pressing Escape key (must be declared before any conditional return!)
+  useEffect(() => {
+    if (!isPlayerOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setIsPlayerOpen(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isPlayerOpen, setIsPlayerOpen]);
+
   if (!isPlayerOpen) return null;
 
   const formatTime = (seconds: number) => {
@@ -362,17 +374,6 @@ export const MusicPlayerModal: React.FC = () => {
       await uploadTracks(e.dataTransfer.files);
     }
   };
-
-  // Close modal when pressing Escape key
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        setIsPlayerOpen(false);
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [setIsPlayerOpen]);
 
   const isCurrentFavorite = currentTrack ? favoriteTrackIds.includes(currentTrack.id) : false;
   const fastConverters = previewYt ? getFastDownloadLinks(previewYt.id) : getFastDownloadLinks(youtubeInput || 'https://www.youtube.com');
