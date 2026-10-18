@@ -249,9 +249,16 @@ ipcMain.on('start-desktop-silent-update', async (event, downloadUrl) => {
 
       const curl = spawn('curl.exe', [
         '-L',
+        '-C', '-',
+        '--tcp-nodelay',
+        '--keepalive-time', '10',
         '--connect-timeout', '20',
+        '--speed-limit', '1024',
+        '--speed-time', '15',
         '--max-time', '600',
-        '--retry', '3',
+        '--retry', '5',
+        '--retry-delay', '2',
+        '--retry-connrefused',
         '-o', tempPath,
         targetUrl
       ]);
@@ -262,7 +269,7 @@ ipcMain.on('start-desktop-silent-update', async (event, downloadUrl) => {
           if (fs.existsSync(tempPath)) {
             const stats = fs.statSync(tempPath);
             const downloadedMB = (stats.size / 1024 / 1024).toFixed(1);
-            const estimatedTotalMB = 318;
+            const estimatedTotalMB = 110.6;
             const percent = Math.min(99, Math.round((stats.size / (estimatedTotalMB * 1024 * 1024)) * 100));
             if (percent !== lastPercent) {
               lastPercent = percent;
