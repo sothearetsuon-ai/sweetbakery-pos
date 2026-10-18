@@ -3,6 +3,8 @@
 
 class BirthdaySynthesizer {
   private ctx: AudioContext | null = null;
+  private masterGain: GainNode | null = null;
+  private activeOscillators: OscillatorNode[] = [];
   private isPlaying: boolean = false;
   private currentTimeout: any = null;
 
@@ -11,10 +13,17 @@ class BirthdaySynthesizer {
       const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
       if (AudioCtx) {
         this.ctx = new AudioCtx();
+        this.masterGain = this.ctx.createGain();
+        this.masterGain.connect(this.ctx.destination);
       }
     }
     if (this.ctx && this.ctx.state === 'suspended') {
-      this.ctx.resume();
+      this.ctx.resume().catch(() => {});
+    }
+    if (this.masterGain && this.ctx) {
+      try {
+        this.masterGain.gain.setValueAtTime(1, this.ctx.currentTime);
+      } catch (e) {}
     }
   }
 
@@ -45,7 +54,7 @@ class BirthdaySynthesizer {
   ];
 
   playTone(freq: number, startTime: number, duration: number) {
-    if (!this.ctx) return;
+    if (!this.ctx || !this.masterGain) return;
 
     // Dual-oscillator bell/music-box chime harmonic
     const osc1 = this.ctx.createOscillator();
@@ -66,20 +75,36 @@ class BirthdaySynthesizer {
 
     osc1.connect(gain);
     osc2.connect(gain);
-    gain.connect(this.ctx.destination);
+    gain.connect(this.masterGain);
 
     osc1.start(startTime);
     osc2.start(startTime);
     osc1.stop(startTime + duration);
     osc2.stop(startTime + duration);
+
+    this.activeOscillators.push(osc1, osc2);
+
+    const cleanDelay = Math.max(100, (startTime - this.ctx.currentTime + duration + 0.1) * 1000);
+    setTimeout(() => {
+      const idx1 = this.activeOscillators.indexOf(osc1);
+      if (idx1 !== -1) this.activeOscillators.splice(idx1, 1);
+      const idx2 = this.activeOscillators.indexOf(osc2);
+      if (idx2 !== -1) this.activeOscillators.splice(idx2, 1);
+    }, cleanDelay);
   }
 
   playMelody(onFinish?: () => void) {
     this.stop();
     this.initCtx();
-    if (!this.ctx) return;
+    if (!this.ctx || !this.masterGain) return;
 
     this.isPlaying = true;
+    if (this.masterGain && this.ctx) {
+      try {
+        this.masterGain.gain.cancelScheduledValues(this.ctx.currentTime);
+        this.masterGain.gain.setValueAtTime(1, this.ctx.currentTime);
+      } catch (e) {}
+    }
     const tempo = 110; // beats per minute
     const secondsPerBeat = 60 / tempo;
 
@@ -107,12 +132,21 @@ class BirthdaySynthesizer {
       this.currentTimeout = null;
     }
     this.isPlaying = false;
-    if (this.ctx) {
+
+    if (this.masterGain && this.ctx) {
       try {
-        this.ctx.close().catch(() => {});
+        this.masterGain.gain.cancelScheduledValues(this.ctx.currentTime);
+        this.masterGain.gain.setValueAtTime(0, this.ctx.currentTime);
       } catch (e) {}
-      this.ctx = null;
     }
+
+    for (const osc of this.activeOscillators) {
+      try {
+        osc.stop();
+        osc.disconnect();
+      } catch (e) {}
+    }
+    this.activeOscillators = [];
   }
 
   get active() {

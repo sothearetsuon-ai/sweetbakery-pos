@@ -312,7 +312,7 @@ export interface AudioTrack {
   url: string;
   duration?: number;
   isCustom: boolean;
-  category?: 'cafe' | 'birthday' | 'custom' | 'acoustic' | 'youtube' | 'web' | 'mp4';
+  category?: 'cafe' | 'birthday' | 'custom' | 'acoustic' | 'youtube' | 'web' | 'mp4' | 'pastry';
   dateAdded?: string;
   storagePath?: string;
   isCloudSynced?: boolean;

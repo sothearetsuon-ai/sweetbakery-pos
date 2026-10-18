@@ -19,13 +19,25 @@ import {
   downloadWebAudioBlob,
 } from '../services/youtubeMusicService';
 
+// Helper to sanitize audio URLs so they work 100% across Electron (file:///), Android WebView, and relative paths
+export const resolveSafeAudioUrl = (url: string): string => {
+  if (!url) return '';
+  if (url.startsWith('/audio/')) {
+    return '.' + url;
+  }
+  if (url.startsWith('/uploads/')) {
+    return '.' + url;
+  }
+  return url;
+};
+
 // Default 100% Offline Cafe & Bakery Soundtracks (Bundled locally with zero network dependency)
 const defaultTracks: AudioTrack[] = [
   {
     id: 'default-1',
     title: 'Happy Birthday Celebration 🎂',
     artist: 'SweetBakery Orchestra (Offline)',
-    url: '/audio/birthday.wav',
+    url: './audio/birthday.wav',
     duration: 70,
     isCustom: false,
     category: 'birthday',
@@ -34,7 +46,7 @@ const defaultTracks: AudioTrack[] = [
     id: 'default-2',
     title: 'Sweet Morning Cafe & Bakery ☕',
     artist: 'Acoustic Ambiance (Offline)',
-    url: '/audio/cafe.wav',
+    url: './audio/cafe.wav',
     duration: 64,
     isCustom: false,
     category: 'cafe',
@@ -43,7 +55,7 @@ const defaultTracks: AudioTrack[] = [
     id: 'default-3',
     title: 'Relaxing Pastry Shop Melody 🍰',
     artist: 'Chillout Vibes (Offline)',
-    url: '/audio/pastry.wav',
+    url: './audio/pastry.wav',
     duration: 54,
     isCustom: false,
     category: 'cafe',
@@ -52,7 +64,7 @@ const defaultTracks: AudioTrack[] = [
     id: 'default-4',
     title: 'Acoustic Garden Guitar 🥐',
     artist: 'Acoustic Bakery (Offline)',
-    url: '/audio/acoustic.wav',
+    url: './audio/acoustic.wav',
     duration: 70,
     isCustom: false,
     category: 'acoustic',
@@ -746,7 +758,7 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       if (videoRef.current) {
         const vid = videoRef.current;
         vid.volume = isMutedRef.current ? 0 : volumeRef.current;
-        vid.src = targetTrack.url;
+        vid.src = resolveSafeAudioUrl(targetTrack.url);
         vid.currentTime = 0;
         vid.play().catch((err) => {
           if (err && err.name === 'AbortError') return;
@@ -771,13 +783,35 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     // 5. Offline WAV / Uploaded custom track or URL via HTML5 Audio
     if (audioRef.current) {
       const currentAudio = audioRef.current;
+      const safeUrl = resolveSafeAudioUrl(targetTrack.url);
       currentAudio.volume = isMutedRef.current ? 0 : volumeRef.current;
-      currentAudio.src = targetTrack.url;
+      currentAudio.src = safeUrl;
       currentAudio.currentTime = 0;
-      currentAudio.play().catch((err) => {
-        if (err && err.name === 'AbortError') return;
-        console.warn('Playback error or policy blocked:', err);
-      });
+      const playPromise = currentAudio.play();
+      if (playPromise !== undefined) {
+        playPromise.catch((err) => {
+          if (err && err.name === 'AbortError') return;
+          console.warn('Playback error or policy blocked, falling back to offline synthesizer:', err);
+          if (
+            isPlayingRef.current &&
+            currentTrackIndexRef.current === safeIndex &&
+            targetTrack.category !== 'youtube' &&
+            targetTrack.category !== 'mp4' &&
+            !bakeryAmbientAudio.active
+          ) {
+            const trackCat =
+              targetTrack.category === 'birthday'
+                ? 'birthday'
+                : targetTrack.category === 'acoustic'
+                ? 'acoustic'
+                : targetTrack.category === 'pastry'
+                ? 'pastry'
+                : 'cafe';
+            bakeryAmbientAudio.setVolume(isMutedRef.current ? 0 : volumeRef.current);
+            bakeryAmbientAudio.play(trackCat as BakerySoundtrackId);
+          }
+        });
+      }
     }
   };
 
@@ -889,7 +923,27 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     const handleError = (e: any) => {
       console.warn('Audio playback error on current track:', e);
-      // NEVER auto-play ambient audio on error to prevent double-audio overlap
+      const cur = playlistRef.current[currentTrackIndexRef.current];
+      if (
+        cur &&
+        isPlayingRef.current &&
+        cur.category !== 'youtube' &&
+        cur.category !== 'mp4' &&
+        !cur.isVideo &&
+        !bakeryAmbientAudio.active
+      ) {
+        console.info('Recovering silent audio failure with built-in bakery synthesizer...');
+        const trackCat =
+          cur.category === 'birthday'
+            ? 'birthday'
+            : cur.category === 'acoustic'
+            ? 'acoustic'
+            : cur.category === 'pastry'
+            ? 'pastry'
+            : 'cafe';
+        bakeryAmbientAudio.setVolume(isMutedRef.current ? 0 : volumeRef.current);
+        bakeryAmbientAudio.play(trackCat as BakerySoundtrackId);
+      }
     };
 
     audio.addEventListener('timeupdate', handleTimeUpdate);
@@ -928,12 +982,13 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       if (res.ok) {
         const serverTracks: AudioTrack[] = await res.json();
         if (Array.isArray(serverTracks) && serverTracks.length > 0) {
+          const sanitizedServer = serverTracks.map((st) => ({ ...st, url: resolveSafeAudioUrl(st.url) }));
           setPlaylist((prev) => {
-            const defaults = prev.filter((t) => !t.isCustom);
+            const defaults = prev.filter((t) => !t.isCustom).map((t) => ({ ...t, url: resolveSafeAudioUrl(t.url) }));
             const nonServerCustom = prev.filter(
-              (t) => t.isCustom && !serverTracks.some((st) => st.id === t.id)
+              (t) => t.isCustom && !sanitizedServer.some((st) => st.id === t.id)
             );
-            return [...defaults, ...serverTracks, ...nonServerCustom];
+            return [...defaults, ...sanitizedServer, ...nonServerCustom];
           });
           return;
         }
@@ -955,6 +1010,7 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
               } catch (e) {}
             }
             if (!trackUrl) return null;
+            trackUrl = resolveSafeAudioUrl(trackUrl);
 
             const isYt = trackUrl.startsWith('youtube:') || item.id.startsWith('yt-');
             const isMp4 = Boolean(item.isVideo || item.category === 'mp4' || trackUrl.match(/\.(mp4|webm|mkv|mov)/i));
@@ -978,7 +1034,7 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           .filter(Boolean) as AudioTrack[];
 
         setPlaylist((prev) => {
-          const defaults = prev.filter((t) => !t.isCustom);
+          const defaults = prev.filter((t) => !t.isCustom).map((t) => ({ ...t, url: resolveSafeAudioUrl(t.url) }));
           return [...defaults, ...loadedTracks];
         });
       }
@@ -1095,8 +1151,9 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     );
     if (isMp4) {
       if (videoRef.current) {
-        if (!videoRef.current.src || !videoRef.current.src.includes(track.url)) {
-          videoRef.current.src = track.url;
+        const safeUrl = resolveSafeAudioUrl(track.url);
+        if (!videoRef.current.src || !videoRef.current.src.includes(safeUrl.replace(/^\.\//, ''))) {
+          videoRef.current.src = safeUrl;
         }
         videoRef.current.volume = isMutedRef.current ? 0 : volumeRef.current;
         videoRef.current.play().catch(() => {});
@@ -1113,14 +1170,35 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       bakeryAmbientAudio.play(trackId);
     } else if (audioRef.current) {
       bakeryAmbientAudio.stop();
-      if (!audioRef.current.src || !audioRef.current.src.includes(track.url)) {
-        audioRef.current.src = track.url;
+      const safeUrl = resolveSafeAudioUrl(track.url);
+      if (!audioRef.current.src || !audioRef.current.src.includes(safeUrl.replace(/^\.\//, ''))) {
+        audioRef.current.src = safeUrl;
       }
       audioRef.current.volume = isMutedRef.current ? 0 : volumeRef.current;
-      audioRef.current.play().catch((e) => {
-        if (e && e.name === 'AbortError') return;
-        console.warn('Playback failed:', e);
-      });
+      const playPromise = audioRef.current.play();
+      if (playPromise !== undefined) {
+        playPromise.catch((e) => {
+          if (e && e.name === 'AbortError') return;
+          console.warn('Playback failed, falling back to offline synthesizer:', e);
+          if (
+            isPlayingRef.current &&
+            track.category !== 'youtube' &&
+            track.category !== 'mp4' &&
+            !bakeryAmbientAudio.active
+          ) {
+            const trackCat =
+              track.category === 'birthday'
+                ? 'birthday'
+                : track.category === 'acoustic'
+                ? 'acoustic'
+                : track.category === 'pastry'
+                ? 'pastry'
+                : 'cafe';
+            bakeryAmbientAudio.setVolume(isMutedRef.current ? 0 : volumeRef.current);
+            bakeryAmbientAudio.play(trackCat as BakerySoundtrackId);
+          }
+        });
+      }
     }
   };
 
