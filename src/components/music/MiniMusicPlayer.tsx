@@ -14,6 +14,7 @@ import {
   Clock,
   Sparkles,
   Eye,
+  Square,
 } from 'lucide-react';
 import { useMusic } from '../../context/MusicContext';
 import { soundFx } from '../../utils/audio';
@@ -34,6 +35,7 @@ export const MiniMusicPlayer: React.FC = () => {
     currentTrack,
     isPlaying,
     togglePlay,
+    stop,
     nextTrack,
     setIsPlayerOpen,
     sleepTimerRemaining,
@@ -370,9 +372,26 @@ export const MiniMusicPlayer: React.FC = () => {
               togglePlay();
             }}
             className="w-7 h-7 rounded-full bg-white/15 hover:bg-white/25 active:scale-90 text-white flex items-center justify-center transition-all cursor-pointer shrink-0"
+            title={isPlaying ? 'ផ្អាក (Pause)' : 'ចាក់ (Play)'}
           >
             {isPlaying ? <Pause className="w-3.5 h-3.5 fill-current" /> : <Play className="w-3.5 h-3.5 fill-current ml-0.5" />}
           </button>
+
+          {/* Mini Stop Button */}
+          {isPlaying && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                soundFx.playPop();
+                stop();
+              }}
+              className="w-7 h-7 rounded-full bg-rose-500/25 hover:bg-rose-500/40 text-rose-300 flex items-center justify-center transition-all cursor-pointer shrink-0"
+              title="បិទភ្លេង (Stop)"
+            >
+              <Square className="w-3 h-3 fill-current" />
+            </button>
+          )}
 
           {/* Expand to Full Mini Bar */}
           <button
@@ -503,6 +522,22 @@ export const MiniMusicPlayer: React.FC = () => {
               <Play className="w-3.5 h-3.5 fill-current ml-0.5" />
             )}
           </button>
+
+          {/* Direct Stop Button */}
+          {isPlaying && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                soundFx.playPop();
+                stop();
+              }}
+              className="w-7 h-7 rounded-xl bg-rose-500/25 hover:bg-rose-500/40 text-rose-300 flex items-center justify-center transition-all cursor-pointer active:scale-90 shrink-0 border border-rose-500/30"
+              title="បិទភ្លេង (Stop Music)"
+            >
+              <Square className="w-3.5 h-3.5 fill-current" />
+            </button>
+          )}
 
           {/* Next Track */}
           <button

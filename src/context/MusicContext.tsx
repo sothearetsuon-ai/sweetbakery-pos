@@ -104,6 +104,7 @@ interface MusicContextType {
 
   play: () => void;
   pause: () => void;
+  stop: () => void;
   togglePlay: () => void;
   nextTrack: () => void;
   prevTrack: () => void;
@@ -455,6 +456,22 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
               onStateChange: (event: any) => {
                 // 1 = PLAYING, 2 = PAUSED, 0 = ENDED
                 if (event.data === 1) {
+                  // YouTube started playing: ensure all other audio engines are completely silenced
+                  if (audioRef.current) {
+                    try {
+                      audioRef.current.pause();
+                      audioRef.current.currentTime = 0;
+                    } catch {}
+                  }
+                  if (videoRef.current) {
+                    try {
+                      videoRef.current.pause();
+                      videoRef.current.currentTime = 0;
+                    } catch {}
+                  }
+                  bakeryAmbientAudio.stop();
+                  birthdaySynth.stop();
+
                   setIsPlaying(true);
                   isPlayingRef.current = true;
                   setYtErrorTrackIndex(null);
@@ -648,7 +665,37 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     };
   }, [isPlayerOpen, isVideoMode, isFloatingMiniVideo, currentTrackIndex, playlist]);
 
-  // Direct playback function that guarantees immediate audio continuation
+  // Unconditionally silence all active playback engines across YouTube, HTML5 Audio, Video, and Web Audio synths
+  const stopAllCurrentPlayback = () => {
+    birthdaySynth.stop();
+    bakeryAmbientAudio.stop();
+
+    if (ytPlayerRef.current) {
+      try {
+        if (typeof ytPlayerRef.current.stopVideo === 'function') {
+          ytPlayerRef.current.stopVideo();
+        } else if (typeof ytPlayerRef.current.pauseVideo === 'function') {
+          ytPlayerRef.current.pauseVideo();
+        }
+      } catch {}
+    }
+
+    if (videoRef.current) {
+      try {
+        videoRef.current.pause();
+        videoRef.current.currentTime = 0;
+      } catch {}
+    }
+
+    if (audioRef.current) {
+      try {
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
+      } catch {}
+    }
+  };
+
+  // Direct playback function that guarantees immediate audio continuation with ZERO audio overlap
   const playTrackAtIndex = (index: number) => {
     const list = playlistRef.current;
     if (!list || list.length === 0) return;
@@ -656,25 +703,16 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const targetTrack = list[safeIndex];
     if (!targetTrack) return;
 
+    // 1. Immediately silence ALL prior audio and video playback engines
+    stopAllCurrentPlayback();
+
     currentTrackIndexRef.current = safeIndex;
     setCurrentTrackIndex(safeIndex);
     setIsPlaying(true);
     isPlayingRef.current = true;
 
-    birthdaySynth.stop();
-
-    // 1. YouTube Track Playback
+    // 2. YouTube Track Playback
     if (targetTrack.category === 'youtube' || targetTrack.url.startsWith('youtube:')) {
-      if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current.removeAttribute('src');
-      }
-      if (videoRef.current) {
-        videoRef.current.pause();
-        videoRef.current.removeAttribute('src');
-      }
-      bakeryAmbientAudio.stop();
-
       const videoId = targetTrack.youtubeId || extractYouTubeVideoId(targetTrack.url);
       if (videoId) {
         if (ytPlayerRef.current && typeof ytPlayerRef.current.loadVideoById === 'function') {
@@ -698,32 +736,20 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       return;
     }
 
-    // Stop YouTube audio when switching to normal audio
-    if (ytPlayerRef.current && typeof ytPlayerRef.current.pauseVideo === 'function') {
-      try {
-        ytPlayerRef.current.pauseVideo();
-      } catch {}
-    }
-
-    // 2. MP4 Video Track Playback
+    // 3. MP4 Video Track Playback
     const isMp4 = Boolean(
       targetTrack.category === 'mp4' ||
       targetTrack.isVideo ||
       targetTrack.url.match(/\.(mp4|webm|mkv|mov)(\?.*)?$/i)
     );
     if (isMp4) {
-      if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current.removeAttribute('src');
-      }
-      bakeryAmbientAudio.stop();
-
       if (videoRef.current) {
         const vid = videoRef.current;
         vid.volume = isMutedRef.current ? 0 : volumeRef.current;
         vid.src = targetTrack.url;
         vid.currentTime = 0;
         vid.play().catch((err) => {
+          if (err && err.name === 'AbortError') return;
           console.warn('MP4 video playback error:', err);
         });
       }
@@ -732,39 +758,26 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       return;
     }
 
-    // Stop MP4 video when switching to normal audio
-    if (videoRef.current) {
-      try {
-        videoRef.current.pause();
-        videoRef.current.removeAttribute('src');
-      } catch {}
-    }
-
-    // 3. Synthesized Ambient Music
+    // 4. Synthesized Ambient Music
     if (targetTrack.url.startsWith('synthesized:')) {
-      if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current.removeAttribute('src');
-      }
       const trackId = (targetTrack.url.replace('synthesized:', '') as BakerySoundtrackId) || 'cafe';
       bakeryAmbientAudio.setVolume(isMutedRef.current ? 0 : volumeRef.current);
       bakeryAmbientAudio.play(trackId);
       setCurrentTime(0);
       setDuration(targetTrack.duration || 120);
-    } else {
-      // 4. Offline WAV / Uploaded custom track or URL via HTML5 Audio
-      bakeryAmbientAudio.stop();
-      if (audioRef.current) {
-        const currentAudio = audioRef.current;
-        currentAudio.volume = isMutedRef.current ? 0 : volumeRef.current;
-        currentAudio.src = targetTrack.url;
-        currentAudio.currentTime = 0;
-        currentAudio.play().catch((err) => {
-          console.warn('Playback error or policy blocked, falling back to ambient audio:', err);
-          bakeryAmbientAudio.setVolume(isMutedRef.current ? 0 : volumeRef.current);
-          bakeryAmbientAudio.play('cafe');
-        });
-      }
+      return;
+    }
+
+    // 5. Offline WAV / Uploaded custom track or URL via HTML5 Audio
+    if (audioRef.current) {
+      const currentAudio = audioRef.current;
+      currentAudio.volume = isMutedRef.current ? 0 : volumeRef.current;
+      currentAudio.src = targetTrack.url;
+      currentAudio.currentTime = 0;
+      currentAudio.play().catch((err) => {
+        if (err && err.name === 'AbortError') return;
+        console.warn('Playback error or policy blocked:', err);
+      });
     }
   };
 
@@ -874,12 +887,9 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       }
     };
 
-    const handleError = () => {
-      console.warn('Audio playback error on current track, auto-recovering with ambient audio...');
-      if (isPlayingRef.current) {
-        bakeryAmbientAudio.setVolume(isMutedRef.current ? 0 : volumeRef.current);
-        bakeryAmbientAudio.play('cafe');
-      }
+    const handleError = (e: any) => {
+      console.warn('Audio playback error on current track:', e);
+      // NEVER auto-play ambient audio on error to prevent double-audio overlap
     };
 
     audio.addEventListener('timeupdate', handleTimeUpdate);
@@ -1108,9 +1118,8 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       }
       audioRef.current.volume = isMutedRef.current ? 0 : volumeRef.current;
       audioRef.current.play().catch((e) => {
-        console.warn('Playback failed, falling back to ambient audio:', e);
-        bakeryAmbientAudio.setVolume(isMutedRef.current ? 0 : volumeRef.current);
-        bakeryAmbientAudio.play('cafe');
+        if (e && e.name === 'AbortError') return;
+        console.warn('Playback failed:', e);
       });
     }
   };
@@ -1118,19 +1127,14 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const pause = () => {
     setIsPlaying(false);
     isPlayingRef.current = false;
-    if (audioRef.current) {
-      audioRef.current.pause();
-    }
-    if (videoRef.current) {
-      videoRef.current.pause();
-    }
-    if (ytPlayerRef.current && typeof ytPlayerRef.current.pauseVideo === 'function') {
-      try {
-        ytPlayerRef.current.pauseVideo();
-      } catch {}
-    }
-    bakeryAmbientAudio.stop();
-    birthdaySynth.stop();
+    stopAllCurrentPlayback();
+  };
+
+  const stop = () => {
+    setIsPlaying(false);
+    isPlayingRef.current = false;
+    setCurrentTime(0);
+    stopAllCurrentPlayback();
   };
 
   const togglePlay = () => {
@@ -1227,6 +1231,10 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const playTrackById = (id: string) => {
     const idx = playlistRef.current.findIndex((t) => t.id === id);
     if (idx !== -1) {
+      if (idx === currentTrackIndexRef.current && isPlayingRef.current) {
+        pause();
+        return;
+      }
       playTrackAtIndex(idx);
     }
   };
@@ -1769,6 +1777,7 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         toggleFavorite,
         play,
         pause,
+        stop,
         togglePlay,
         nextTrack,
         prevTrack,

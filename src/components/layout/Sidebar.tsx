@@ -681,6 +681,34 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </span>
         </button>
 
+        {/* Bakery Jukebox / Music Button */}
+        <button
+          type="button"
+          onClick={() => {
+            soundFx.playPop();
+            setIsMusicPlayerOpen(true);
+            onCloseMobile?.();
+          }}
+          className={`w-full flex items-center justify-between px-3.5 py-2 rounded-2xl font-bold text-xs transition-all shadow-2xs cursor-pointer group ${
+            isMusicPlaying
+              ? 'text-pink-700 bg-pink-50 hover:bg-pink-100 border border-pink-300 shadow-xs animate-pulse'
+              : 'text-slate-600 hover:bg-white hover:text-slate-900 border border-transparent hover:border-slate-200/60'
+          }`}
+          title="ម៉ាស៊ីនចាក់ភ្លេងហាងនំ (Bakery Jukebox)"
+        >
+          <div className="flex items-center gap-3">
+            <Music className={`w-4 h-4 ${isMusicPlaying ? 'text-pink-600' : 'text-slate-400'}`} />
+            <span className="font-battambang">ចាក់ភ្លេងហាងនំ</span>
+          </div>
+          <span className={`text-[10px] font-black px-2 py-0.5 rounded-full border ${
+            isMusicPlaying
+              ? 'bg-pink-200 text-pink-800 border-pink-300'
+              : 'bg-slate-100 text-slate-500 border-slate-200'
+          }`}>
+            {isMusicPlaying ? 'កំពុងចាក់ 🎶' : 'Jukebox'}
+          </span>
+        </button>
+
         {/* Settings button */}
         <button
           onClick={() => {

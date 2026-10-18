@@ -263,6 +263,12 @@ class BakeryAmbientAudioEngine {
       this.intervalTicker = null;
     }
     this.isPlaying = false;
+    if (this.ctx) {
+      try {
+        this.ctx.close().catch(() => {});
+      } catch (e) {}
+      this.ctx = null;
+    }
   }
 
   public get active() {

@@ -42,6 +42,7 @@ import {
   PlayCircle,
   Video,
   Tv,
+  Square,
 } from 'lucide-react';
 import { useMusic, VibeMood } from '../../context/MusicContext';
 import { soundFx } from '../../utils/audio';
@@ -90,6 +91,7 @@ export const MusicPlayerModal: React.FC = () => {
     toggleFavorite,
     play,
     pause,
+    stop,
     togglePlay,
     nextTrack,
     prevTrack,
@@ -387,19 +389,35 @@ export const MusicPlayerModal: React.FC = () => {
         title="ចុចដើម្បីបិទ (Close)"
       />
 
-      {/* Mobile Emergency Floating Close Button - ALWAYS on topmost layer (z-100000) */}
-      <button
-        type="button"
-        onClick={() => {
-          soundFx.playPop();
-          setIsPlayerOpen(false);
-        }}
-        className="sm:hidden fixed top-3 right-3 z-[100000] px-3.5 py-2 rounded-full bg-rose-600/95 hover:bg-rose-500 text-white font-black text-xs flex items-center gap-1.5 shadow-2xl border-2 border-white/40 active:scale-95 cursor-pointer backdrop-blur-md"
-        title="បិទផ្ទាំងចាក់ភ្លេង (Close)"
-      >
-        <X className="w-4 h-4 stroke-[3]" />
-        <span>បិទ</span>
-      </button>
+      {/* Mobile Emergency Floating Buttons - ALWAYS on topmost layer (z-100000) */}
+      <div className="sm:hidden fixed top-3 right-3 z-[100000] flex items-center gap-1.5">
+        {isPlaying && (
+          <button
+            type="button"
+            onClick={() => {
+              soundFx.playPop();
+              stop();
+            }}
+            className="px-3 py-2 rounded-full bg-amber-600/95 hover:bg-amber-500 text-white font-black text-xs flex items-center gap-1 shadow-2xl border-2 border-white/40 active:scale-95 cursor-pointer backdrop-blur-md animate-pulse"
+            title="បិទភ្លេងភ្លាមៗ (Stop Music)"
+          >
+            <Square className="w-3.5 h-3.5 fill-current" />
+            <span>បិទភ្លេង</span>
+          </button>
+        )}
+        <button
+          type="button"
+          onClick={() => {
+            soundFx.playPop();
+            setIsPlayerOpen(false);
+          }}
+          className="px-3 py-2 rounded-full bg-rose-600/95 hover:bg-rose-500 text-white font-black text-xs flex items-center gap-1.5 shadow-2xl border-2 border-white/40 active:scale-95 cursor-pointer backdrop-blur-md"
+          title="បិទផ្ទាំង (Close Window)"
+        >
+          <X className="w-4 h-4 stroke-[3]" />
+          <span>បិទផ្ទាំង</span>
+        </button>
+      </div>
 
       {/* Main Glassmorphism Modal Box */}
       <div className="relative z-10 w-full max-w-2xl bg-slate-950/95 text-white rounded-3xl shadow-2xl border border-white/15 overflow-hidden flex flex-col max-h-[92vh] backdrop-blur-2xl">
@@ -459,6 +477,22 @@ export const MusicPlayerModal: React.FC = () => {
               </button>
             </div>
 
+            {/* Direct Stop Music Button when playing */}
+            {isPlaying && (
+              <button
+                type="button"
+                onClick={() => {
+                  soundFx.playPop();
+                  stop();
+                }}
+                className="relative z-[70] px-2.5 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-black text-xs transition-all flex items-center gap-1.5 shadow-md shadow-amber-950/50 cursor-pointer active:scale-95 border border-amber-400/40 animate-pulse"
+                title="បិទភ្លេងភ្លាមៗ (Stop Music)"
+              >
+                <Square className="w-3.5 h-3.5 fill-current" />
+                <span className="hidden xs:inline">បិទភ្លេង</span>
+              </button>
+            )}
+
             {/* Prominent High-Contrast Close Button */}
             <button
               type="button"
@@ -470,7 +504,7 @@ export const MusicPlayerModal: React.FC = () => {
               title="បិទផ្ទាំងចាក់ភ្លេង (Close Player)"
             >
               <X className="w-4 h-4 stroke-[2.5]" />
-              <span className="hidden xs:inline">បិទ</span>
+              <span className="hidden xs:inline">បិទផ្ទាំង</span>
             </button>
           </div>
         </div>
@@ -833,6 +867,23 @@ export const MusicPlayerModal: React.FC = () => {
                   )}
                 </button>
 
+                {/* Direct Stop Button */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    soundFx.playPop();
+                    stop();
+                  }}
+                  className={`w-10 h-10 rounded-full flex items-center justify-center transition-all cursor-pointer active:scale-90 border ${
+                    isPlaying
+                      ? 'bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border-rose-500/40 shadow-xs'
+                      : 'bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white border-white/10'
+                  }`}
+                  title="បិទភ្លេងទាំងស្រុង (Stop Playback)"
+                >
+                  <Square className="w-4 h-4 fill-current" />
+                </button>
+
                 {/* Next Track */}
                 <button
                   type="button"
@@ -1039,24 +1090,33 @@ export const MusicPlayerModal: React.FC = () => {
                             ? 'bg-pink-600/25 border-pink-500/60 shadow-md ring-1 ring-pink-500/40 text-white'
                             : 'bg-white/5 hover:bg-white/10 border-white/10 text-slate-300'
                         }`}
+                        title={isCurrent && isPlaying ? 'កំពុងចាក់ (ចុចដើម្បីផ្អាក/បិទ)' : 'ចុចដើម្បីចាក់'}
                       >
                         <div className="flex items-center gap-2.5 min-w-0 flex-1">
                           {/* Play Status or Disc Icon */}
-                          <div className="w-7 h-7 rounded-xl bg-white/10 flex items-center justify-center shrink-0">
+                          <div className="w-7 h-7 rounded-xl bg-white/10 flex items-center justify-center shrink-0 relative">
                             {isCurrent && isPlaying ? (
-                              <div className="flex items-center gap-0.5">
-                                <span className="inline-block w-1 h-2 bg-emerald-400 rounded-full animate-bounce" />
-                                <span className="inline-block w-1 h-3 bg-emerald-400 rounded-full animate-bounce [animation-delay:0.15s]" />
-                                <span className="inline-block w-1 h-1.5 bg-emerald-400 rounded-full animate-bounce [animation-delay:0.3s]" />
-                              </div>
+                              <>
+                                <div className="flex items-center gap-0.5 group-hover:opacity-0 transition-opacity">
+                                  <span className="inline-block w-1 h-2 bg-emerald-400 rounded-full animate-bounce" />
+                                  <span className="inline-block w-1 h-3 bg-emerald-400 rounded-full animate-bounce [animation-delay:0.15s]" />
+                                  <span className="inline-block w-1 h-1.5 bg-emerald-400 rounded-full animate-bounce [animation-delay:0.3s]" />
+                                </div>
+                                <Pause className="w-3.5 h-3.5 text-rose-300 absolute hidden group-hover:block fill-current" />
+                              </>
                             ) : (
                               <Music className="w-3.5 h-3.5 text-slate-400 group-hover:text-pink-400" />
                             )}
                           </div>
 
                           <div className="min-w-0">
-                            <div className="text-xs font-black truncate leading-tight group-hover:text-pink-300">
-                              {track.title}
+                            <div className="text-xs font-black truncate leading-tight group-hover:text-pink-300 flex items-center gap-1.5">
+                              <span>{track.title}</span>
+                              {isCurrent && isPlaying && (
+                                <span className="text-[9px] px-1.5 py-0.2 rounded-md bg-emerald-500/20 text-emerald-300 font-bold border border-emerald-500/30">
+                                  កំពុងចាក់
+                                </span>
+                              )}
                             </div>
                             <div className="text-[10px] text-slate-400 truncate flex items-center gap-1.5 mt-0.5">
                               <span>{track.artist || 'SweetBakery Music'}</span>

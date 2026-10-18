@@ -9,6 +9,7 @@ import {
   SkipForward,
   SkipBack,
   Tv,
+  Square,
 } from 'lucide-react';
 import { useMusic } from '../../context/MusicContext';
 import { soundFx } from '../../utils/audio';
@@ -23,6 +24,7 @@ export const FloatingMiniVideoPlayer: React.FC = () => {
     setIsFloatingMiniVideo,
     isCurrentVideo,
     togglePlay,
+    stop,
     nextTrack,
     prevTrack,
     isMuted,
@@ -43,6 +45,7 @@ export const FloatingMiniVideoPlayer: React.FC = () => {
     e.stopPropagation();
     soundFx.playPop();
     setIsFloatingMiniVideo(false);
+    stop(); // Immediately silence video/audio when user closes the floating player
   };
 
   return (
@@ -128,6 +131,21 @@ export const FloatingMiniVideoPlayer: React.FC = () => {
               <Play className="w-4 h-4 fill-current ml-0.5" />
             )}
           </button>
+
+          {/* Direct Stop Button */}
+          {isPlaying && (
+            <button
+              type="button"
+              onClick={() => {
+                soundFx.playPop();
+                stop();
+              }}
+              className="w-7 h-7 rounded-lg bg-rose-500/25 hover:bg-rose-500/40 text-rose-300 flex items-center justify-center transition-all cursor-pointer"
+              title="បិទភ្លេង/វីដេអូ (Stop)"
+            >
+              <Square className="w-3.5 h-3.5 fill-current" />
+            </button>
+          )}
 
           <button
             type="button"

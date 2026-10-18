@@ -107,6 +107,12 @@ class BirthdaySynthesizer {
       this.currentTimeout = null;
     }
     this.isPlaying = false;
+    if (this.ctx) {
+      try {
+        this.ctx.close().catch(() => {});
+      } catch (e) {}
+      this.ctx = null;
+    }
   }
 
   get active() {

@@ -109,7 +109,11 @@ export const Navbar: React.FC<NavbarProps> = ({
     demoDevicesCount,
     customOrders,
   } = useBakery();
-  const { isPlaying: isMusicPlaying, setIsPlayerOpen: setIsMusicPlayerOpen } = useMusic();
+  const {
+    isPlaying: isMusicPlaying,
+    setIsPlayerOpen: setIsMusicPlayerOpen,
+    stop: stopMusic,
+  } = useMusic();
   const text = t[lang];
 
   const pendingCakeOrdersCount = (customOrders || []).filter(
@@ -353,6 +357,37 @@ export const Navbar: React.FC<NavbarProps> = ({
               <span className="text-sm">🎙️</span>
               <span className="hidden md:inline font-battambang">POS សំឡេង</span>
             </button>
+          )}
+
+          {/* Active Music Playing Indicator & Quick Stop Button */}
+          {isMusicPlaying && (
+            <div className="flex items-center rounded-2xl bg-gradient-to-r from-pink-500/15 via-rose-500/15 to-amber-500/15 border border-pink-400/40 shadow-xs overflow-hidden shrink-0 animate-pulse">
+              <button
+                type="button"
+                onClick={() => {
+                  soundFx.playPop();
+                  setIsMusicPlayerOpen(true);
+                }}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-black text-pink-700 hover:text-pink-800 transition-colors cursor-pointer"
+                title="ចុចដើម្បីបើកផ្ទាំងចាក់ភ្លេង (Jukebox)"
+              >
+                <span className="text-sm">🎵</span>
+                <span className="hidden sm:inline font-battambang">កំពុងចាក់ភ្លេង</span>
+              </button>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  soundFx.playPop();
+                  stopMusic();
+                }}
+                className="px-2 py-1.5 bg-rose-600/80 hover:bg-rose-600 text-white text-[11px] font-black flex items-center gap-1 transition-colors cursor-pointer"
+                title="បិទភ្លេងភ្លាមៗ (Stop Music)"
+              >
+                <span>⏹️</span>
+                <span className="hidden md:inline font-battambang">បិទភ្លេង</span>
+              </button>
+            </div>
           )}
 
           {/* New Version Available Pulsing Pill Button */}
