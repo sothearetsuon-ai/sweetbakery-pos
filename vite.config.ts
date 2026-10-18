@@ -3,6 +3,7 @@ import react from '@vitejs/plugin-react';
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
+import https from 'https';
 
 function lanSyncPlugin(): Plugin {
   const dbPath = path.resolve(__dirname, 'local_bakery_db.json');
@@ -766,6 +767,143 @@ function lanSyncPlugin(): Plugin {
               res.end(JSON.stringify({ error: err.message }));
             }
           });
+          return;
+        }
+
+        // GET /api/youtube-search?q=... (Fast server-side YouTube search without API key)
+        if (req.url && req.url.startsWith('/api/youtube-search') && req.method === 'GET') {
+          try {
+            const urlObj = new URL(req.url, 'http://localhost');
+            const q = urlObj.searchParams.get('q') || '';
+            if (!q.trim()) {
+              res.writeHead(200, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({ results: [] }));
+              return;
+            }
+            const ytUrl = 'https://www.youtube.com/results?search_query=' + encodeURIComponent(q.trim());
+            const ytReq = https.get(
+              ytUrl,
+              { headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' } },
+              (ytRes) => {
+                let raw = '';
+                ytRes.on('data', (c) => (raw += c));
+                ytRes.on('end', () => {
+                  const match =
+                    raw.match(/ytInitialData\s*=\s*({.+?});<\/script>/s) ||
+                    raw.match(/ytInitialData\s*=\s*({.+?});/s);
+                  if (!match) {
+                    res.writeHead(200, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ results: [] }));
+                    return;
+                  }
+                  try {
+                    const parsed = JSON.parse(match[1]);
+                    const contents =
+                      parsed.contents?.twoColumnSearchResultsRenderer?.primaryContents?.sectionListRenderer?.contents;
+                    const items: any[] = [];
+                    if (contents) {
+                      for (const section of contents) {
+                        for (const item of section?.itemSectionRenderer?.contents || []) {
+                          const v = item.videoRenderer;
+                          if (v && v.videoId) {
+                            items.push({
+                              id: v.videoId,
+                              title: v.title?.runs?.[0]?.text || '',
+                              author: v.ownerText?.runs?.[0]?.text || 'YouTube',
+                              duration: v.lengthText?.simpleText || '',
+                              thumbnailUrl:
+                                v.thumbnail?.thumbnails?.[0]?.url ||
+                                `https://img.youtube.com/vi/${v.videoId}/hqdefault.jpg`,
+                              url: `https://www.youtube.com/watch?v=${v.videoId}`,
+                            });
+                          }
+                        }
+                      }
+                    }
+                    res.writeHead(200, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ results: items.slice(0, 30) }));
+                  } catch (e) {
+                    res.writeHead(200, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ results: [] }));
+                  }
+                });
+              }
+            );
+            ytReq.on('error', () => {
+              res.writeHead(200, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({ results: [] }));
+            });
+            ytReq.setTimeout(8000, () => {
+              ytReq.destroy();
+              res.writeHead(200, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({ results: [] }));
+            });
+          } catch (err: any) {
+            res.writeHead(500, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: err.message, results: [] }));
+          }
+          return;
+        }
+
+        // GET /api/youtube-playlist?list=... (Bulk extract playlist tracks)
+        if (req.url && req.url.startsWith('/api/youtube-playlist') && req.method === 'GET') {
+          try {
+            const urlObj = new URL(req.url, 'http://localhost');
+            const listId = urlObj.searchParams.get('list') || '';
+            if (!listId.trim()) {
+              res.writeHead(200, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({ results: [] }));
+              return;
+            }
+            const plUrl = 'https://www.youtube.com/playlist?list=' + encodeURIComponent(listId.trim());
+            const plReq = https.get(
+              plUrl,
+              { headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' } },
+              (plRes) => {
+                let raw = '';
+                plRes.on('data', (c) => (raw += c));
+                plRes.on('end', () => {
+                  const match =
+                    raw.match(/ytInitialData\s*=\s*({.+?});<\/script>/s) ||
+                    raw.match(/ytInitialData\s*=\s*({.+?});/s);
+                  if (!match) {
+                    res.writeHead(200, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ results: [] }));
+                    return;
+                  }
+                  try {
+                    const str = match[1];
+                    const idMatches = [...str.matchAll(/"videoId":"([a-zA-Z0-9_-]{11})"/g)].map((m) => m[1]);
+                    const uniqueIds = [...new Set(idMatches)].filter((id) => id.length === 11);
+                    const items = uniqueIds.map((id) => ({
+                      id,
+                      title: `YouTube Video (${id})`,
+                      author: 'YouTube Playlist',
+                      thumbnailUrl: `https://img.youtube.com/vi/${id}/hqdefault.jpg`,
+                      url: `https://www.youtube.com/watch?v=${id}`,
+                    }));
+                    res.writeHead(200, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ results: items.slice(0, 50) }));
+                  } catch (e) {
+                    res.writeHead(200, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ results: [] }));
+                  }
+                });
+              }
+            );
+            plReq.on('error', () => {
+              res.writeHead(200, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({ results: [] }));
+            });
+            plReq.setTimeout(8000, () => {
+              plReq.destroy();
+              res.writeHead(200, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({ results: [] }));
+            });
+          } catch (err: any) {
+            res.writeHead(500, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: err.message, results: [] }));
+          }
           return;
         }
 

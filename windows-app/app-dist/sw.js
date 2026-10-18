@@ -1,11 +1,11 @@
 // Auto-generated Service Worker for 100% Offline PWA Support
-const CACHE_NAME = 'sweetbakery-v1792265262973';
+const CACHE_NAME = 'sweetbakery-v1792306418661';
 const APP_SHELL = [
   "./",
   "./index.html",
   "./manifest.json",
-  "./assets/index-DhXi58ve.js",
-  "./assets/index-DWtVgVwe.css"
+  "./assets/index-DJupG-nZ.css",
+  "./assets/index-XJFnfbuW.js"
 ];
 
 self.addEventListener('install', (event) => {

@@ -1,7 +1,11 @@
 {
-  "version": "1.5.0",
+  "version": "1.5.1",
   "releaseDate": "2026-10-18",
   "releaseNotes": [
+    "🎵 YouTube Audio In-App Auto Search & Auto Play៖ ស្វែងរក និងចាក់ចម្រៀង YouTube ផ្ទាល់ក្នុងប្រព័ន្ធដោយស្វ័យប្រវត្តិ មិនបាច់បើក YouTube ឬ Copy Link ដោយដៃ។",
+    "📋 1-Click Clipboard Auto-Paste for YouTube៖ ប៊ូតុងទាញ Link YouTube ពី Clipboard ស្វ័យប្រវត្តិចុចមួយភ្លែតចាក់ភ្លាម។",
+    "📑 Bulk YouTube Playlist Auto-Import៖ នាំចូលបទចម្រៀងទាំងអស់ពី YouTube Playlist មកចាក់ក្នុងម៉ាស៊ីនតែម្តង។",
+    "⚡ 1-Click Bakery & Cafe Category Soundtracks៖ បណ្តុំប្រភេទបទចម្រៀងពេញនិយមសម្រាប់ហាងនំ & កាហ្វេ (Acoustic, Birthday, French Jazz, Khmer Cafe...)។",
     "🤖 AI Cake Photo Analyzer & Auto-Quotation៖ ភ្នែកទិព្វ AI វិភាគរូបថតនំ (Pinterest/TikTok) វាយតម្លៃកម្រិតលំបាក ស្រង់អក្សរលើនំ ណែនាំរសជាតិ និងចេញតម្លៃជាប្រាក់រៀល/ដុល្លារស្វ័យប្រវត្តិ។",
     "🧾 AI Bank Slip Auto-Verification៖ ស្កេនពិនិត្យវិក្កយបត្រធនាគារ (ABA, ACLEDA, Bakong, Wing) ដកស្រង់ទឹកប្រាក់ ឈ្មោះអ្នកផ្ញើ និង Txn ID ផ្ទៀងផ្ទាត់ជាមួយប្រាក់កក់ ការពារការបន្លំស្លីបក្លែងក្លាយ ១០០%។",
     "🎙️ Khmer Voice POS Assistant៖ បញ្ជាលក់ និងកុម្ម៉ង់ដោយសំឡេងភាសាខ្មែរ (Speech-to-Text) បញ្ចូលមុខទំនិញ និងបរិមាណទៅកន្ត្រក POS ដោយស្វ័យប្រវត្តិ។",

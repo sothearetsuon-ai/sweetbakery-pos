@@ -36,14 +36,22 @@ import {
   FolderOpen,
   Coffee,
   Flame,
+  Clipboard,
+  ListPlus,
+  PlayCircle,
 } from 'lucide-react';
 import { useMusic, VibeMood } from '../../context/MusicContext';
 import { soundFx } from '../../utils/audio';
 import {
   extractYouTubeVideoId,
+  extractYouTubePlaylistId,
   fetchYouTubeVideoInfo,
+  searchYouTubeVideos,
+  fetchYouTubePlaylistVideos,
+  readYouTubeUrlFromClipboard,
   getFastDownloadLinks,
   curatedBakeryPresets,
+  popularYouTubeBakeryPresets,
   YouTubeInfo,
   WebConverterTool,
 } from '../../services/youtubeMusicService';
@@ -86,6 +94,7 @@ export const MusicPlayerModal: React.FC = () => {
     uploadTracks,
     addTrackByUrl,
     addYouTubeTrack,
+    addMultipleYouTubeTracks,
     downloadWebAudioTrack,
     deleteTrack,
     clearCustomTracks,
@@ -101,7 +110,11 @@ export const MusicPlayerModal: React.FC = () => {
   // YouTube / Web Importer State
   const [youtubeInput, setYoutubeInput] = useState('');
   const [isFetchingYt, setIsFetchingYt] = useState(false);
+  const [isSearchingYt, setIsSearchingYt] = useState(false);
+  const [ytSearchResults, setYtSearchResults] = useState<YouTubeInfo[]>([]);
   const [previewYt, setPreviewYt] = useState<YouTubeInfo | null>(null);
+  const [detectedPlaylist, setDetectedPlaylist] = useState<{ id: string; count?: number } | null>(null);
+  const [isImportingPlaylist, setIsImportingPlaylist] = useState(false);
   const [webAudioUrl, setWebAudioUrl] = useState('');
   const [webAudioTitle, setWebAudioTitle] = useState('');
   const [isDownloadingWeb, setIsDownloadingWeb] = useState(false);
@@ -155,34 +168,80 @@ export const MusicPlayerModal: React.FC = () => {
     else setLoopMode('all');
   };
 
-  // Handle YouTube URL Lookup
-  const handleLookupYouTube = async () => {
-    if (!youtubeInput.trim()) return;
-    setDownloadMsg(null);
-    setIsFetchingYt(true);
+  // Handle Auto Search or Link Lookup
+  const handleAutoSearchYouTube = async (overrideQuery?: string) => {
+    const q = (overrideQuery !== undefined ? overrideQuery : youtubeInput).trim();
+    if (!q) return;
 
-    const videoId = extractYouTubeVideoId(youtubeInput);
-    if (!videoId) {
-      setIsFetchingYt(false);
-      setDownloadMsg({ type: 'error', text: 'សូមបញ្ចូលលីង YouTube ឱ្យបានត្រឹមត្រូវ' });
+    setDownloadMsg(null);
+    setPreviewYt(null);
+    setDetectedPlaylist(null);
+
+    // 1. Check if it's a playlist URL
+    const playlistId = extractYouTubePlaylistId(q);
+    if (playlistId) {
+      setDetectedPlaylist({ id: playlistId });
+      setDownloadMsg({
+        type: 'success',
+        text: '📑 បានរកឃើញ YouTube Playlist! ចុចប៊ូតុង "នាំចូល Playlist ទាំងមូល" ខាងក្រោមដើម្បីបញ្ចូល',
+      });
       return;
     }
 
+    // 2. Check if it's a single video URL
+    const videoId = extractYouTubeVideoId(q);
+    if (videoId) {
+      setIsFetchingYt(true);
+      try {
+        const info = await fetchYouTubeVideoInfo(videoId);
+        if (info) {
+          setPreviewYt(info);
+        } else {
+          setDownloadMsg({ type: 'error', text: 'មិនអាចស្វែងរកព័ត៌មានពី YouTube បានទេ' });
+        }
+      } catch (err: any) {
+        setDownloadMsg({ type: 'error', text: err.message || 'Error fetching YouTube info' });
+      } finally {
+        setIsFetchingYt(false);
+      }
+      return;
+    }
+
+    // 3. Otherwise treat as search query (song name, artist, keywords)
+    setIsSearchingYt(true);
     try {
-      const info = await fetchYouTubeVideoInfo(videoId);
-      if (info) {
-        setPreviewYt(info);
-      } else {
-        setDownloadMsg({ type: 'error', text: 'មិនអាចស្វែងរកព័ត៌មានពី YouTube បានទេ' });
+      const results = await searchYouTubeVideos(q);
+      setYtSearchResults(results);
+      if (results.length === 0) {
+        setDownloadMsg({
+          type: 'error',
+          text: `មិនមានលទ្ធផលសម្រាប់ "${q}" ទេ សូមសាកល្បងពាក្យគន្លឹះផ្សេងទៀត`,
+        });
       }
     } catch (err: any) {
-      setDownloadMsg({ type: 'error', text: err.message || 'Error fetching YouTube info' });
+      setDownloadMsg({ type: 'error', text: 'បរាជ័យក្នុងការស្វែងរក សូមព្យាយាមម្តងទៀត' });
     } finally {
-      setIsFetchingYt(false);
+      setIsSearchingYt(false);
     }
   };
 
-  // Add YouTube to Playlist
+  // Auto-Detect & Paste from Clipboard
+  const handleAutoPasteFromClipboard = async () => {
+    soundFx.playPop();
+    const url = await readYouTubeUrlFromClipboard();
+    if (url) {
+      setYoutubeInput(url);
+      setDownloadMsg({ type: 'success', text: '📋 បានទាញ Link ពី Clipboard រួចរាល់!' });
+      handleAutoSearchYouTube(url);
+    } else {
+      setDownloadMsg({
+        type: 'error',
+        text: 'មិនមាន Link YouTube នៅក្នុង Clipboard របស់អ្នកទេ (សូម Copy Link ជាមុន)',
+      });
+    }
+  };
+
+  // Add Single YouTube Preview to Playlist
   const handleAddYouTubeToPlaylist = async () => {
     if (!youtubeInput.trim() && !previewYt) return;
     const targetUrl = previewYt ? previewYt.id : youtubeInput;
@@ -193,11 +252,66 @@ export const MusicPlayerModal: React.FC = () => {
     setIsFetchingYt(false);
 
     if (res.success) {
-      setDownloadMsg({ type: 'success', text: `✅ បានបញ្ចូល "${res.track?.title}" ទៅក្នុងម៉ាស៊ីនចាក់ភ្លេងរួចរាល់!` });
+      setDownloadMsg({
+        type: 'success',
+        text: `✅ បានបញ្ចូល "${res.track?.title}" ទៅក្នុងម៉ាស៊ីនចាក់ភ្លេងរួចរាល់!`,
+      });
       setYoutubeInput('');
       setPreviewYt(null);
     } else {
       setDownloadMsg({ type: 'error', text: res.error || 'មិនអាចបញ្ចូលបទនេះបានទេ' });
+    }
+  };
+
+  // Play a Search Result Immediately
+  const handlePlaySearchResult = async (item: YouTubeInfo) => {
+    soundFx.playPop();
+    const res = await addYouTubeTrack(item.id, item.title, item.author, item.durationSec, true);
+    if (res.success) {
+      setDownloadMsg({
+        type: 'success',
+        text: `▶️ កំពុងចាក់ "${item.title}"...`,
+      });
+    }
+  };
+
+  // Add Search Result to Playlist (without switching song immediately)
+  const handleAddSearchResult = async (item: YouTubeInfo) => {
+    soundFx.playPop();
+    const res = await addYouTubeTrack(item.id, item.title, item.author, item.durationSec, false);
+    if (res.success) {
+      setDownloadMsg({
+        type: 'success',
+        text: `➕ បានបន្ថែម "${item.title}" ទៅក្នុង Playlist រួចរាល់!`,
+      });
+    }
+  };
+
+  // Bulk Import Entire Playlist
+  const handleImportPlaylistAll = async () => {
+    if (!detectedPlaylist) return;
+    setIsImportingPlaylist(true);
+    setDownloadMsg(null);
+    try {
+      const items = await fetchYouTubePlaylistVideos(detectedPlaylist.id);
+      if (items.length > 0) {
+        const res = await addMultipleYouTubeTracks(items);
+        setDownloadMsg({
+          type: 'success',
+          text: `🎉 បានទាញយក និងនាំចូលចម្រៀង ${res.addedCount} បទពី YouTube Playlist ដោយជោគជ័យ!`,
+        });
+        setDetectedPlaylist(null);
+        setYoutubeInput('');
+      } else {
+        setDownloadMsg({
+          type: 'error',
+          text: 'មិនអាចទាញយកបទពី Playlist នេះបានទេ (សូមពិនិត្យមើលសិទ្ធិបើកសាធារណៈ)',
+        });
+      }
+    } catch (err: any) {
+      setDownloadMsg({ type: 'error', text: err.message || 'Error importing playlist' });
+    } finally {
+      setIsImportingPlaylist(false);
     }
   };
 
@@ -775,42 +889,144 @@ export const MusicPlayerModal: React.FC = () => {
                 </div>
               )}
 
-              {/* 1. YouTube Audio Importer & Downloader */}
-              <div className="p-4 rounded-3xl bg-gradient-to-b from-red-950/30 to-white/5 border border-red-500/20 space-y-3">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-xl bg-red-600 flex items-center justify-center shadow-md shadow-red-600/30">
-                    <Youtube className="w-4 h-4 text-white" />
+              {/* 1. YouTube Audio Importer & Auto-Search Studio */}
+              <div className="p-4 rounded-3xl bg-gradient-to-b from-red-950/40 via-purple-950/20 to-white/5 border border-red-500/25 space-y-3.5">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-xl bg-red-600 flex items-center justify-center shadow-md shadow-red-600/30">
+                      <Youtube className="w-4 h-4 text-white" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs sm:text-sm font-black text-white flex items-center gap-1.5">
+                        <span>ទាញយក & ចាក់ចម្រៀងពី YouTube ស្វ័យប្រវត្តិ 🔴</span>
+                        <span className="text-[9px] px-1.5 py-0.5 rounded-full font-black bg-red-500/20 text-red-300 border border-red-500/30">
+                          Auto Search
+                        </span>
+                      </h4>
+                      <p className="text-[10px] text-slate-400">
+                        វាយឈ្មោះបទចម្រៀង ឬបិទភ្ជាប់ Link ដើម្បីស្វែងរក និងចាក់ភ្លាមៗ
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <h4 className="text-xs sm:text-sm font-black text-white">
-                      ទាញយក & ចាក់ចម្រៀងពី YouTube 🔴
-                    </h4>
-                    <p className="text-[10px] text-slate-400">
-                      បញ្ចូល Link YouTube ដើម្បីចាក់ក្នុងហាង ឬទាញយកជា MP3
-                    </p>
-                  </div>
-                </div>
 
-                <div className="flex gap-1.5">
-                  <input
-                    type="text"
-                    value={youtubeInput}
-                    onChange={(e) => setYoutubeInput(e.target.value)}
-                    placeholder="បិទភ្ជាប់ Link YouTube (ឧ. https://youtu.be/...)"
-                    className="flex-1 bg-white/5 border border-white/15 rounded-xl px-3 py-2 text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-red-500"
-                  />
+                  {/* 1-Click Clipboard Auto Paste Button */}
                   <button
                     type="button"
-                    onClick={handleLookupYouTube}
-                    disabled={isFetchingYt || !youtubeInput.trim()}
-                    className="px-3 py-2 bg-red-600 hover:bg-red-500 disabled:opacity-50 text-white rounded-xl text-xs font-black transition-all cursor-pointer flex items-center gap-1 shrink-0"
+                    onClick={handleAutoPasteFromClipboard}
+                    className="px-2.5 py-1.5 bg-white/10 hover:bg-white/20 active:scale-95 text-slate-200 hover:text-white rounded-xl text-[11px] font-bold transition-all border border-white/10 flex items-center gap-1.5 cursor-pointer shrink-0"
+                    title="ទាញ Link ពី Clipboard ដោយស្វ័យប្រវត្តិ"
                   >
-                    {isFetchingYt ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Search className="w-3.5 h-3.5" />}
+                    <Clipboard className="w-3.5 h-3.5 text-pink-400" />
+                    <span>ទាញពី Clipboard</span>
+                  </button>
+                </div>
+
+                {/* Search / Input Box with Enter Key support */}
+                <div className="flex gap-1.5">
+                  <div className="relative flex-1">
+                    <input
+                      type="text"
+                      value={youtubeInput}
+                      onChange={(e) => setYoutubeInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleAutoSearchYouTube();
+                        }
+                      }}
+                      placeholder="វាយឈ្មោះបទចម្រៀង (ឧ. ចម្រៀងកាហ្វេ, Birthday) ឬ Paste Link YouTube..."
+                      className="w-full bg-white/5 border border-white/15 rounded-xl pl-3 pr-8 py-2 text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-red-500"
+                    />
+                    {youtubeInput && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setYoutubeInput('');
+                          setYtSearchResults([]);
+                          setPreviewYt(null);
+                          setDetectedPlaylist(null);
+                        }}
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => handleAutoSearchYouTube()}
+                    disabled={isFetchingYt || isSearchingYt || !youtubeInput.trim()}
+                    className="px-3.5 py-2 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 disabled:opacity-50 text-white rounded-xl text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 shrink-0 shadow-md shadow-red-600/20 active:scale-95"
+                  >
+                    {isFetchingYt || isSearchingYt ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <Search className="w-3.5 h-3.5" />
+                    )}
                     <span>ស្វែងរក</span>
                   </button>
                 </div>
 
-                {/* Preview Box if YouTube video found */}
+                {/* Quick Auto-Search Categories (1-Click Query Pills) */}
+                <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                  <span className="text-[10px] text-slate-400 font-bold mr-0.5">ស្វែងរកភ្លាមៗ៖</span>
+                  {[
+                    { label: '☕ កាហ្វេ Chill', q: 'bakery cafe acoustic music chill' },
+                    { label: '🎂 Happy Birthday', q: 'happy birthday song acoustic celebration' },
+                    { label: '🥐 Bakery Morning', q: 'morning coffee cafe acoustic guitar' },
+                    { label: '🥖 Parisian Jazz', q: 'french patisserie jazz accordion bakery' },
+                    { label: '🇰🇭 ចម្រៀងខ្មែរ Acoustic', q: 'ចម្រៀងកាហ្វេ acoustic ខ្មែរ' },
+                    { label: '🎹 Piano Cafe', q: 'relaxing cafe piano instrumental bakery' },
+                  ].map((cat) => (
+                    <button
+                      key={cat.label}
+                      type="button"
+                      onClick={() => {
+                        soundFx.playPop();
+                        setYoutubeInput(cat.label);
+                        handleAutoSearchYouTube(cat.q);
+                      }}
+                      className="px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/15 border border-white/10 hover:border-pink-500/40 text-[10px] font-bold text-slate-300 hover:text-white transition-all cursor-pointer active:scale-95"
+                    >
+                      {cat.label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Playlist Auto-Import Banner if Playlist URL detected */}
+                {detectedPlaylist && (
+                  <div className="p-3.5 rounded-2xl bg-gradient-to-r from-amber-950/40 via-pink-950/30 to-purple-950/40 border border-amber-500/30 flex flex-col sm:flex-row items-center justify-between gap-3 animate-in fade-in">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="w-9 h-9 rounded-xl bg-amber-500/20 text-amber-300 border border-amber-500/30 flex items-center justify-center shrink-0">
+                        <ListPlus className="w-5 h-5" />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="text-xs font-black text-amber-200">
+                          រកឃើញ YouTube Playlist ទាំងមូល 📑
+                        </div>
+                        <div className="text-[10px] text-slate-300 truncate">
+                          អ្នកអាចទាញយក និងនាំចូលគ្រប់បទទាំងអស់ក្នុង Playlist នេះដោយចុចតែ ១ ដង
+                        </div>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleImportPlaylistAll}
+                      disabled={isImportingPlaylist}
+                      className="w-full sm:w-auto px-4 py-2 bg-gradient-to-r from-amber-500 to-pink-600 hover:from-amber-400 hover:to-pink-500 text-white rounded-xl text-xs font-black transition-all shadow-lg active:scale-95 cursor-pointer flex items-center justify-center gap-1.5 shrink-0"
+                    >
+                      {isImportingPlaylist ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        <Download className="w-3.5 h-3.5" />
+                      )}
+                      <span>+ នាំចូល Playlist ទាំងមូល</span>
+                    </button>
+                  </div>
+                )}
+
+                {/* Single Video Preview Box if Direct Link Looked Up */}
                 {previewYt && (
                   <div className="p-3 rounded-2xl bg-white/10 border border-white/15 flex items-center gap-3">
                     <img
@@ -832,11 +1048,110 @@ export const MusicPlayerModal: React.FC = () => {
                   </div>
                 )}
 
-                {/* Friendly Tip: Direct Play vs Download */}
-                <div className="p-2.5 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-[11px] text-amber-200 flex items-start gap-2">
-                  <Sparkles className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
-                  <div className="leading-relaxed">
-                    <span className="font-bold">💡 គន្លឹះងាយស្រួលបំផុត៖</span> លោកអ្នកមិនចាំបាច់ទាញយក File ទេ! គ្រាន់តែ Paste Link YouTube រួចចុច <strong className="text-white">"ស្វែងរក"</strong> និង <strong className="text-pink-300">"+ បញ្ចូលចាក់ភ្លាម"</strong> នោះបទចម្រៀងនឹងចាក់ផ្ទាល់ក្នុងហាងភ្លាមៗ។
+                {/* Search Results Grid (Automatic Video Discovery) */}
+                {ytSearchResults.length > 0 && (
+                  <div className="space-y-2 pt-2 border-t border-white/10">
+                    <div className="flex items-center justify-between text-[11px] font-bold text-slate-300">
+                      <div className="flex items-center gap-1.5">
+                        <Sparkles className="w-3.5 h-3.5 text-pink-400" />
+                        <span>លទ្ធផលស្វែងរកពី YouTube ({ytSearchResults.length} បទ)៖</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setYtSearchResults([])}
+                        className="text-[10px] text-slate-400 hover:text-white"
+                      >
+                        បិទលទ្ធផល
+                      </button>
+                    </div>
+
+                    <div className="max-h-60 overflow-y-auto space-y-1.5 pr-1 custom-scrollbar">
+                      {ytSearchResults.map((item) => (
+                        <div
+                          key={item.id}
+                          className="p-2 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 flex items-center justify-between gap-2.5 transition-all group"
+                        >
+                          <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                            <div className="relative w-14 h-10 rounded-xl overflow-hidden shrink-0 bg-slate-900 shadow-sm">
+                              <img
+                                src={item.thumbnailUrl}
+                                alt={item.title}
+                                className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                              />
+                              {item.duration && (
+                                <span className="absolute bottom-0.5 right-0.5 px-1 rounded bg-black/80 text-[8px] font-mono text-white">
+                                  {item.duration}
+                                </span>
+                              )}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <div className="text-xs font-bold text-white truncate leading-tight group-hover:text-pink-300">
+                                {item.title}
+                              </div>
+                              <div className="text-[10px] text-slate-400 truncate mt-0.5">
+                                {item.author}
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-1 shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => handlePlaySearchResult(item)}
+                              className="px-2.5 py-1.5 bg-gradient-to-r from-pink-600 to-rose-600 hover:from-pink-500 hover:to-rose-500 text-white rounded-xl text-[10px] font-black transition-all flex items-center gap-1 shadow-sm active:scale-95 cursor-pointer"
+                              title="ចាក់បទនេះភ្លាមៗ"
+                            >
+                              <Play className="w-3 h-3 fill-current" />
+                              <span>ចាក់</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleAddSearchResult(item)}
+                              className="w-7 h-7 bg-white/10 hover:bg-white/20 text-slate-300 hover:text-white rounded-xl flex items-center justify-center transition-all cursor-pointer active:scale-95"
+                              title="បន្ថែមទៅ Playlist"
+                            >
+                              <Plus className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Popular YouTube Bakery Presets (1-Click Instant Load) */}
+                <div className="space-y-1.5 pt-1 border-t border-white/10">
+                  <div className="text-[10px] text-slate-400 font-bold flex items-center gap-1">
+                    <Flame className="w-3 h-3 text-rose-400" />
+                    <span>បទ YouTube ពេញនិយមប្រចាំហាង (1-Click Instant Tracks)៖</span>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                    {popularYouTubeBakeryPresets.map((song) => (
+                      <div
+                        key={song.id}
+                        className="p-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 flex items-center justify-between gap-2 transition-all"
+                      >
+                        <div className="min-w-0">
+                          <div className="text-[11px] font-bold text-white truncate">{song.title}</div>
+                          <div className="text-[9px] text-slate-400 truncate flex items-center gap-1">
+                            <span>{song.author}</span>
+                            <span>•</span>
+                            <span>{song.duration}</span>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            soundFx.playPop();
+                            addYouTubeTrack(song.id, song.title, song.author, 210, true);
+                          }}
+                          className="px-2 py-1 bg-red-600/80 hover:bg-red-600 text-white rounded-lg text-[10px] font-bold transition-all shrink-0 cursor-pointer flex items-center gap-0.5 active:scale-95"
+                        >
+                          <Play className="w-2.5 h-2.5 fill-current" />
+                          <span>ចាក់</span>
+                        </button>
+                      </div>
+                    ))}
                   </div>
                 </div>
 

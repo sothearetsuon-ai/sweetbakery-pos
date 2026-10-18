@@ -106,7 +106,16 @@ interface MusicContextType {
   playTrackById: (id: string) => void;
   uploadTracks: (files: FileList | File[]) => Promise<void>;
   addTrackByUrl: (url: string, title?: string, artist?: string) => Promise<{ success: boolean; error?: string }>;
-  addYouTubeTrack: (urlOrId: string, customTitle?: string) => Promise<{ success: boolean; track?: AudioTrack; error?: string }>;
+  addYouTubeTrack: (
+    urlOrId: string,
+    customTitle?: string,
+    customAuthor?: string,
+    customDuration?: number,
+    autoPlay?: boolean
+  ) => Promise<{ success: boolean; track?: AudioTrack; error?: string }>;
+  addMultipleYouTubeTracks: (
+    tracks: Array<{ id: string; title: string; author?: string; duration?: number | string; durationSec?: number }>
+  ) => Promise<{ success: boolean; addedCount: number }>;
   downloadWebAudioTrack: (url: string, title?: string, artist?: string) => Promise<{ success: boolean; track?: AudioTrack; error?: string }>;
   deleteTrack: (id: string) => Promise<void>;
   clearCustomTracks: () => Promise<void>;
@@ -1046,16 +1055,29 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   // Add YouTube Track via oEmbed metadata and background playback
   const addYouTubeTrack = async (
     urlOrId: string,
-    customTitle?: string
+    customTitle?: string,
+    customAuthor?: string,
+    customDuration?: number,
+    autoPlay: boolean = true
   ): Promise<{ success: boolean; track?: AudioTrack; error?: string }> => {
     const videoId = extractYouTubeVideoId(urlOrId);
     if (!videoId) {
       return { success: false, error: 'លីង YouTube មិនត្រឹមត្រូវ (សូមបញ្ចូល Link ពេញលេញ)' };
     }
 
-    const info = await fetchYouTubeVideoInfo(videoId);
-    const title = customTitle?.trim() || info?.title || `YouTube Music (${videoId})`;
-    const artist = info?.author || 'YouTube';
+    let title = customTitle?.trim();
+    let artist = customAuthor?.trim() || 'YouTube';
+    let thumbnailUrl = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
+    let durationSec = customDuration || 210;
+
+    // If metadata not provided, fetch via oEmbed
+    if (!title) {
+      const info = await fetchYouTubeVideoInfo(videoId);
+      title = info?.title || `YouTube Music (${videoId})`;
+      artist = customAuthor?.trim() || info?.author || 'YouTube';
+      if (info?.thumbnailUrl) thumbnailUrl = info.thumbnailUrl;
+    }
+
     const trackId = 'yt-' + videoId;
 
     const newTrack: AudioTrack = {
@@ -1063,11 +1085,11 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       title,
       artist,
       url: `youtube:${videoId}`,
-      duration: 210,
+      duration: durationSec,
       isCustom: true,
       category: 'youtube',
       youtubeId: videoId,
-      thumbnailUrl: info?.thumbnailUrl || `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`,
+      thumbnailUrl,
       sourceUrl: `https://www.youtube.com/watch?v=${videoId}`,
       dateAdded: new Date().toISOString().slice(0, 10),
     };
@@ -1079,7 +1101,7 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       artist,
       url: newTrack.url,
       isUrlOnly: true,
-      duration: 210,
+      duration: durationSec,
       dateAdded: newTrack.dateAdded!,
     }).catch(() => {});
 
@@ -1092,17 +1114,89 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     soundFx.playSuccess();
     confetti({
-      particleCount: 75,
-      spread: 70,
+      particleCount: 65,
+      spread: 60,
       origin: { y: 0.6 },
     });
 
-    setTimeout(() => {
-      const idx = playlistRef.current.findIndex((t) => t.id === trackId);
-      if (idx !== -1) playTrackAtIndex(idx);
-    }, 150);
+    if (autoPlay) {
+      setTimeout(() => {
+        const idx = playlistRef.current.findIndex((t) => t.id === trackId);
+        if (idx !== -1) playTrackAtIndex(idx);
+      }, 150);
+    }
 
     return { success: true, track: newTrack };
+  };
+
+  // Add Multiple YouTube Tracks at once (from search, curated lists, or playlist imports)
+  const addMultipleYouTubeTracks = async (
+    tracks: Array<{ id: string; title: string; author?: string; duration?: number | string; durationSec?: number }>
+  ): Promise<{ success: boolean; addedCount: number }> => {
+    if (!tracks || tracks.length === 0) return { success: false, addedCount: 0 };
+
+    const newTracks: AudioTrack[] = [];
+    const today = new Date().toISOString().slice(0, 10);
+
+    for (const t of tracks) {
+      const videoId = extractYouTubeVideoId(t.id) || t.id;
+      if (!videoId) continue;
+      const trackId = 'yt-' + videoId;
+      const durSec = typeof t.duration === 'number' ? t.duration : t.durationSec || 210;
+      const newTrack: AudioTrack = {
+        id: trackId,
+        title: t.title || `YouTube Music (${videoId})`,
+        artist: t.author || 'YouTube',
+        url: `youtube:${videoId}`,
+        duration: durSec,
+        isCustom: true,
+        category: 'youtube',
+        youtubeId: videoId,
+        thumbnailUrl: `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`,
+        sourceUrl: `https://www.youtube.com/watch?v=${videoId}`,
+        dateAdded: today,
+      };
+
+      saveTrackToDB({
+        id: trackId,
+        title: newTrack.title,
+        artist: newTrack.artist!,
+        url: newTrack.url,
+        isUrlOnly: true,
+        duration: newTrack.duration,
+        dateAdded: today,
+      }).catch(() => {});
+
+      newTracks.push(newTrack);
+    }
+
+    if (newTracks.length > 0) {
+      setPlaylist((prev) => {
+        const existingMap = new Map(prev.map((item) => [item.id, item]));
+        newTracks.forEach((nt) => existingMap.set(nt.id, nt));
+        const updated = Array.from(existingMap.values());
+        playlistRef.current = updated;
+        return updated;
+      });
+
+      soundFx.playSuccess();
+      confetti({
+        particleCount: 80,
+        spread: 70,
+        origin: { y: 0.6 },
+      });
+
+      // Auto-play the first added track
+      setTimeout(() => {
+        const firstId = newTracks[0]?.id;
+        if (firstId) {
+          const idx = playlistRef.current.findIndex((t) => t.id === firstId);
+          if (idx !== -1) playTrackAtIndex(idx);
+        }
+      }, 150);
+    }
+
+    return { success: true, addedCount: newTracks.length };
   };
 
   // Direct Audio Downloader: download online MP3/WAV into IndexedDB blob for offline playback
@@ -1267,6 +1361,7 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         uploadTracks,
         addTrackByUrl,
         addYouTubeTrack,
+        addMultipleYouTubeTracks,
         downloadWebAudioTrack,
         deleteTrack,
         clearCustomTracks,
