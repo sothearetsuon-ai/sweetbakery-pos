@@ -286,8 +286,31 @@ export const App: React.FC = () => {
 
   // Render dedicated Customer Self-Order & Deposit Booking Portal if in customer mode (?order=true)
   if (isCustomerPortalOpen) {
+    const isUrlCustomerOrder =
+      typeof window !== 'undefined' &&
+      (new URLSearchParams(window.location.search).get('order') === 'true' ||
+        window.location.hash === '#order');
+
     return (
       <>
+        {/* Discreet Staff Preview Exit Bar: only shown when staff previews inside POS app, NEVER shown to customers */}
+        {!isUrlCustomerOrder && (
+          <div className="bg-slate-900 text-white px-4 py-2 flex items-center justify-between text-xs sticky top-0 z-50 border-b border-slate-800 shrink-0">
+            <span className="font-bold flex items-center gap-2 text-pink-300">
+              <span>👁️ ផ្ទាំងមើលគំរូសម្រាប់ភ្ញៀវ (Staff Preview)</span>
+            </span>
+            <button
+              type="button"
+              onClick={() => {
+                soundFx.playPop();
+                setIsCustomerPortalOpen(false);
+              }}
+              className="px-3 py-1 bg-white/20 hover:bg-white/30 text-white font-black rounded-lg text-xs flex items-center gap-1 active:scale-95 cursor-pointer transition-all border border-white/20"
+            >
+              <span>✕ ត្រឡប់ទៅ POS វិញ</span>
+            </button>
+          </div>
+        )}
         <CustomerOrderPortal onBackToPos={() => setIsCustomerPortalOpen(false)} />
         <OfflineAutoSyncToast />
       </>
