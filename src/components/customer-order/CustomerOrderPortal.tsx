@@ -553,7 +553,7 @@ export const CustomerOrderPortal: React.FC<CustomerOrderPortalProps> = ({ onBack
         pickupDate,
         pickupTime,
         cakeName: customCakeName,
-        size: finalSize,
+        size: 'ស្តង់ដារ',
         flavor: finalFlavor,
         inscription: inscription.trim(),
         themeNotes: combinedNotes || undefined,
@@ -839,7 +839,7 @@ export const CustomerOrderPortal: React.FC<CustomerOrderPortalProps> = ({ onBack
                     </span>
                   </div>
                   <p className="text-[11px] text-pink-700 font-medium mt-0.5">
-                    ចុចសួរ AI ណែនាំទំហំ រសជាតិឆ្ងាញ់ៗ និងជួយតែងអក្សរជូនពរលើនំបានភ្លាមៗ!
+                    ចុចសួរ AI ណែនាំតម្លៃ រសជាតិឆ្ងាញ់ៗ និងជួយតែងអក្សរជូនពរលើនំបានភ្លាមៗ!
                   </p>
                 </div>
               </div>
@@ -943,9 +943,15 @@ export const CustomerOrderPortal: React.FC<CustomerOrderPortalProps> = ({ onBack
                       </div>
 
                       <div className="pt-2 border-t border-rose-50 flex items-center justify-between">
-                        <div className="text-pink-600 font-bold text-[11px] flex items-center gap-1">
-                          <Sparkles className="w-3 h-3 text-pink-500" />
-                          <span>តម្លៃតាមទំហំ & ម៉ូដ</span>
+                        <div>
+                          <div className="text-xs sm:text-sm font-black text-rose-600 tracking-tight">
+                            {priceKhr > 0 ? `${priceKhr.toLocaleString()} ៛` : 'តម្លៃចរចា'}
+                          </div>
+                          {p.priceUsd > 0 && (
+                            <div className="text-[10px] text-slate-400 font-semibold">
+                              ${p.priceUsd.toFixed(2)}
+                            </div>
+                          )}
                         </div>
                         <button className="px-3 py-1.5 bg-gradient-to-r from-pink-600 to-rose-500 text-white rounded-xl text-[10px] font-black transition-all shadow-2xs group-hover:scale-105 cursor-pointer">
                           រើសម៉ូដនេះ ✨
@@ -972,7 +978,7 @@ export const CustomerOrderPortal: React.FC<CustomerOrderPortalProps> = ({ onBack
                   <span>កំណត់ព័ត៌មាននំ & អក្សរជូនពរ</span>
                 </h2>
                 <p className="text-xs text-slate-500">
-                  ជ្រើសរើសទំហំ រសជាតិ និងសរសេរអក្សរដែលអ្នកចង់ឱ្យជាងនំសរសេរលើនំ
+                  កំណត់តម្លៃ ជ្រើសរើសរសជាតិ និងសរសេរអក្សរដែលអ្នកចង់ឱ្យជាងនំសរសេរលើនំ
                 </p>
               </div>
 
@@ -1008,7 +1014,7 @@ export const CustomerOrderPortal: React.FC<CustomerOrderPortalProps> = ({ onBack
                 />
                 <p className="text-xs text-pink-600 font-bold mt-0.5 flex items-center gap-1">
                   <Sparkles className="w-3.5 h-3.5 text-pink-500" />
-                  <span>តម្លៃគិតតាមទំហំ & ការរចនាជាក់ស្តែង</span>
+                  <span>{cakePriceKhr > 0 ? `តម្លៃនំ៖ ${cakePriceKhr.toLocaleString()} ៛ ($${cakePriceUsd.toFixed(2)})` : 'កំណត់តម្លៃ ឬថវិកាកុម្ម៉ង់'}</span>
                 </p>
               </div>
             </div>
@@ -1033,7 +1039,7 @@ export const CustomerOrderPortal: React.FC<CustomerOrderPortalProps> = ({ onBack
                     className="text-[11px] font-bold text-pink-700 hover:text-pink-800 flex items-center gap-1 cursor-pointer bg-white px-2.5 py-1 rounded-xl border border-pink-200 shadow-2xs hover:bg-pink-50 transition-colors"
                   >
                     <Sparkles className="w-3 h-3 text-pink-500" />
-                    <span>សួរ AI ណែនាំទំហំ</span>
+                    <span>សួរជំនួយការ AI</span>
                   </button>
 
                   <span className="text-xs sm:text-sm font-black text-pink-700 bg-white px-3 py-1 rounded-full border border-pink-200 shadow-2xs">
@@ -1075,9 +1081,6 @@ export const CustomerOrderPortal: React.FC<CustomerOrderPortalProps> = ({ onBack
                         <div className={`text-[10px] ${isSelected ? 'text-pink-100 font-semibold' : 'text-slate-400'}`}>
                           ${usdEquivalent}
                         </div>
-                        <div className={`text-[9px] truncate max-w-full mt-0.5 ${isSelected ? 'text-yellow-200 font-bold' : 'text-pink-600 font-medium'}`}>
-                          {pr.sizeHint.split(' ')[0]} {pr.sizeHint.split(' ')[1] || ''}
-                        </div>
                       </button>
                     );
                   })}
@@ -1104,19 +1107,6 @@ export const CustomerOrderPortal: React.FC<CustomerOrderPortalProps> = ({ onBack
                     <span>|</span>
                     <span className="text-slate-400">${cakePriceUsd.toFixed(2)}</span>
                   </div>
-                </div>
-              </div>
-
-              {/* Size & Portion Estimation Hint */}
-              <div className="p-3 bg-white/70 rounded-2xl border border-pink-100 flex items-start gap-2.5 text-slate-700 text-xs">
-                <span className="text-base shrink-0">📏</span>
-                <div className="space-y-0.5">
-                  <div className="font-black text-pink-700">
-                    ទំហំប្រហាក់ប្រហែល៖ {estimatedSizeText}
-                  </div>
-                  <p className="text-[11px] text-slate-500">
-                    * ជាងនំនឹងរៀបចំទំហំ និងតុបតែងម៉ូដនំឱ្យស្រស់ស្អាតសមស្របទៅតាមកញ្ចប់ថវិការបស់លោកអ្នក។
-                  </p>
                 </div>
               </div>
             </div>
@@ -1329,7 +1319,7 @@ export const CustomerOrderPortal: React.FC<CustomerOrderPortalProps> = ({ onBack
                         រូបគំរូនំបានបញ្ចូលរួចរាល់!
                       </div>
                       <div className="text-[10px] text-purple-700">
-                        ចុចឱ្យ AI ស្វែងយល់ម៉ូដ គណនាទំហំ និងតម្លៃសមរម្យជូនលោកអ្នក
+                        ចុចឱ្យ AI ស្វែងយល់ម៉ូដ និងគណនាតម្លៃសមរម្យជូនលោកអ្នក
                       </div>
                     </div>
                   </div>
@@ -1629,7 +1619,7 @@ export const CustomerOrderPortal: React.FC<CustomerOrderPortalProps> = ({ onBack
             <div className="bg-white rounded-3xl p-5 border border-rose-100 shadow-sm space-y-3">
               <div className="flex items-center justify-between text-xs pb-2 border-b border-slate-100">
                 <span className="text-slate-500 font-bold">នំកុម្ម៉ង់៖</span>
-                <span className="font-black text-slate-800">{customCakeName}{finalSize ? ` (${finalSize})` : ''}</span>
+                <span className="font-black text-slate-800">{customCakeName}</span>
               </div>
 
               <div className="flex items-center justify-between text-xs pb-2 border-b border-slate-100">
@@ -2004,7 +1994,7 @@ export const CustomerOrderPortal: React.FC<CustomerOrderPortalProps> = ({ onBack
               <div className="text-left bg-rose-50/50 p-4 rounded-2xl border border-rose-100 space-y-2 text-xs">
                 <div className="flex justify-between">
                   <span className="text-slate-500">នំកុម្ម៉ង់៖</span>
-                  <span className="font-black text-slate-800">{confirmedOrder.cakeName}{confirmedOrder.size && confirmedOrder.size !== 'ស្តង់ដារ' ? ` (${confirmedOrder.size})` : ''}</span>
+                  <span className="font-black text-slate-800">{confirmedOrder.cakeName}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-500">រសជាតិ៖</span>

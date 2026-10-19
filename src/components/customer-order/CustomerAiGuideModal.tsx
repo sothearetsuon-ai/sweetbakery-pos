@@ -65,7 +65,7 @@ export const CustomerAiGuideModal: React.FC<CustomerAiGuideModalProps> = ({
 
 ខ្ញុំអាចជួយលោកអ្នកបានភ្លាមៗ៖
 • 📋 **ណែនាំរបៀបកុម្ម៉ង់នំងាយៗ ៤ ជំហាន**
-• 👥 **ជួយគិតទំហំនំ & ថវិកាតាមចំនួនមនុស្ស**
+• 👥 **ជួយគិតថវិកា & តម្លៃតាមចំនួនមនុស្ស**
 • 🍓 **ណែនាំរសជាតិនំឆ្ងាញ់ៗប្រចាំហាង**
 • ✍️ **ជួយគិតពាក្យជូនពរលើនំឱ្យពិរោះ**
 • 💳 **របៀបបង់ប្រាក់កក់តាម Bakong KHQR**
@@ -74,7 +74,7 @@ export const CustomerAiGuideModal: React.FC<CustomerAiGuideModalProps> = ({
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       quickReplies: [
         'របៀបកុម្ម៉ង់ ៤ ជំហាន',
-        'ណែនាំទំហំតាមមនុស្ស',
+        'ណែនាំតម្លៃតាមមនុស្ស',
         'ណែនាំរសជាតិពេញនិយម',
         'ជួយតែងអក្សរជូនពរ',
       ],
@@ -390,7 +390,7 @@ export const CustomerAiGuideModal: React.FC<CustomerAiGuideModalProps> = ({
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         quickReplies: [
           'របៀបកុម្ម៉ង់ ៤ ជំហាន',
-          'ណែនាំទំហំតាមមនុស្ស',
+          'ណែនាំតម្លៃតាមមនុស្ស',
           'ណែនាំរសជាតិពេញនិយម',
           'ជួយតែងអក្សរជូនពរ',
         ],
@@ -480,7 +480,7 @@ export const CustomerAiGuideModal: React.FC<CustomerAiGuideModalProps> = ({
             className="px-2.5 py-1 bg-white hover:bg-pink-100 text-pink-800 rounded-xl text-[11px] font-bold border border-pink-200 whitespace-nowrap transition-colors flex items-center gap-1 shadow-2xs cursor-pointer active:scale-95"
           >
             <span>👥</span>
-            <span>ទំហំ & ថវិកាតាមមនុស្ស</span>
+            <span>តម្លៃ & ថវិកាតាមមនុស្ស</span>
           </button>
 
           <button
@@ -738,7 +738,7 @@ export const CustomerAiGuideModal: React.FC<CustomerAiGuideModalProps> = ({
                 type="text"
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
-                placeholder="សួរសំណួរពីទំហំ រសជាតិ របៀបកុម្ម៉ង់..."
+                placeholder="សួរសំណួរពីតម្លៃ រសជាតិ របៀបកុម្ម៉ង់..."
                 className="w-full pl-3.5 pr-8 py-2.5 bg-slate-50 border border-slate-200 focus:bg-white focus:border-pink-500 focus:ring-2 focus:ring-pink-500/20 rounded-2xl text-xs sm:text-sm font-semibold text-slate-800 placeholder-slate-400 focus:outline-none transition-all"
               />
               {inputValue && (

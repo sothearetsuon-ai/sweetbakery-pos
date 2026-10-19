@@ -170,7 +170,7 @@ const ProductCardComponent: React.FC<ProductCardProps> = ({ product, onAddToCart
           <div>
             <div className="inline-flex items-center gap-1 text-[11px] sm:text-xs font-black text-rose-600 bg-rose-50 px-2 py-0.5 rounded-lg border border-rose-200/70 font-battambang">
               <Sparkles className="w-3 h-3 text-rose-500 shrink-0" />
-              <span>តម្លៃតាមទំហំ</span>
+              <span>តម្លៃតាមម៉ូដ</span>
             </div>
             <div className="text-[9px] text-slate-400 font-bold font-battambang mt-0.5">
               (បិទតម្លៃក្នុង Demo)

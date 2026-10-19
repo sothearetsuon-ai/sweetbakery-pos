@@ -226,7 +226,7 @@ const ShowcaseCard: React.FC<ShowcaseCardProps> = ({
             <>
               <span className="text-[11px] font-bold text-[#A82B27] bg-[#FFEAE7] px-2.5 py-1 rounded-xl flex items-center gap-1 border border-[#FFCCC6]">
                 <Sparkles className="w-3 h-3 text-[#E6514D]" />
-                <span>តម្លៃតាមទំហំ & ម៉ូដ</span>
+                <span>តម្លៃតាមម៉ូដ</span>
               </span>
               <span className="px-3 py-1.5 bg-gradient-to-r from-[#FF6F68] to-[#E6514D] text-white rounded-xl text-xs font-black transition-all shadow-2xs group-hover:scale-105">
                 រើសម៉ូដនំ ✨
@@ -974,10 +974,10 @@ export const CustomerShowcase: React.FC = () => {
                   <div className="p-3 bg-gradient-to-r from-pink-50 to-amber-50 border border-pink-200/80 rounded-2xl space-y-1">
                     <span className="text-xs font-black text-pink-700 flex items-center gap-1.5">
                       <Sparkles className="w-4 h-4 text-pink-500" />
-                      <span>តម្លៃគិតតាមទំហំ និងការរចនា (Custom Pricing)</span>
+                      <span>តម្លៃតាមម៉ូដ និងការរចនា (Custom Pricing)</span>
                     </span>
                     <p className="text-[11px] text-slate-500">
-                      លោកអ្នកអាចជ្រើសរើសទំហំនំ និងរសជាតិ ហើយបុគ្គលិកនឹងជួយកំណត់តម្លៃជូន!
+                      លោកអ្នកអាចជ្រើសរើសម៉ូដនំ និងរសជាតិ ហើយបុគ្គលិកនឹងជួយកំណត់តម្លៃជូន!
                     </p>
                   </div>
                 ) : (
@@ -1004,7 +1004,7 @@ export const CustomerShowcase: React.FC = () => {
 
                 <div className="text-xs text-slate-500 space-y-1">
                   <div>• នំដុតថ្មីៗស្រស់ៗរាល់ថ្ងៃ គុណភាពខ្ពស់</div>
-                  <div>• អាចជ្រើសរើសទំហំ និងសរសេរអក្សរជូនពរបានតាមចិត្ត</div>
+                  <div>• អាចសរសេរអក្សរជូនពរបានតាមចិត្ត</div>
                   <div>
                     • ស្តុកសល់៖ {previewProduct.stockQty} {previewProduct.unit}
                   </div>

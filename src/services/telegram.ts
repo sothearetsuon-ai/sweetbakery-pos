@@ -841,7 +841,7 @@ export const notifyTelegramCustomOrder = async (
       `👤 <b>អតិថិជន៖</b> <b>${escapeHtml(order.customerName)}</b>\n` +
       `📞 <b>ទូរស័ព្ទ៖</b> <a href="tel:${order.phone}">${order.phone}</a>\n\n` +
       `🎂 <b>ឈ្មោះនំ៖</b> <b>${escapeHtml(order.cakeName)}</b>\n` +
-      `📏 <b>ទំហំ៖</b> ${escapeHtml(order.size)}\n` +
+      (order.size && order.size !== 'ស្តង់ដារ' ? `📏 <b>ទំហំ៖</b> ${escapeHtml(order.size)}\n` : '') +
       `🍓 <b>រសជាតិ៖</b> ${escapeHtml(order.flavor)}\n` +
       (order.inscription ? `✍️ <b>អក្សរលើនំ៖</b> <i>"${escapeHtml(order.inscription)}"</i>\n` : '') +
       (order.themeNotes ? `📝 <b>ចំណាំ៖</b> ${escapeHtml(order.themeNotes)}\n` : '') +
