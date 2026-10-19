@@ -22,7 +22,7 @@ export interface TelegramConfig {
 const STORAGE_KEY = 'bakery_telegram_config';
 
 export const DEFAULT_TELEGRAM_CONFIG: TelegramConfig = {
-  botToken: '8544004471:AAFsyBJbtmKR6W46zGtqGhNVWjE2AIvzWC4',
+  botToken: '',
   chatId: '-5528089668',
   adminChatId: '8970210109',
   dailyReportRecipient: 'ADMIN_ONLY',
@@ -65,15 +65,9 @@ export const getStoredTelegramConfig = (): TelegramConfig => {
       const parsed = JSON.parse(saved);
       const merged: TelegramConfig = { ...DEFAULT_TELEGRAM_CONFIG, ...parsed };
 
-      // Auto-heal 1: Ensure bot token is the official default if missing or previous default
-      if (!merged.botToken || merged.botToken === DEFAULT_TELEGRAM_CONFIG.botToken || merged.botToken.startsWith('8544004471:')) {
-        merged.botToken = DEFAULT_TELEGRAM_CONFIG.botToken;
-        merged.enabled = true;
-        merged.notifySales = true;
-        merged.notifyCustomOrders = true;
-        merged.notifyExpenses = true;
-        merged.notifyShiftClose = true;
-        merged.notifyDailyReport = true;
+      // If user still has the revoked token string, clear it so they can paste their new token
+      if (merged.botToken === '8544004471:AAFsyBJbtmKR6W46zGtqGhNVWjE2AIvzWC4') {
+        merged.botToken = '';
       }
 
       // Auto-heal 2: Ensure group -5528089668 is always present in chatId
@@ -1308,13 +1302,14 @@ export const generateDailyMonthlySummaryReportText = (params: DailyReportParams)
  */
 export const sendTelegramDailyReport = async (
   params: DailyReportParams,
-  isManual = false
+  isManual = false,
+  customConfig?: TelegramConfig
 ): Promise<{ success: boolean; message: string }> => {
   if (isDemoModeActive()) {
     return { success: false, message: 'Telegram ត្រូវបានបិទក្នុង Demo Mode' };
   }
 
-  const config = await getStoredTelegramConfigAsync();
+  const config = customConfig || (await getStoredTelegramConfigAsync());
   if (!config.enabled || (config.notifyDailyReport === false && !isManual) || !config.botToken) {
     return {
       success: false,

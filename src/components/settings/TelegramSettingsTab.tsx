@@ -112,7 +112,8 @@ export const TelegramSettingsTab: React.FC = () => {
           storeInfo,
           exchangeRate,
         },
-        true // isManual = true
+        true, // isManual = true
+        config // Use active config from component state
       );
       setIsSendingReportTest(false);
       setReportSendResult(res);
@@ -720,6 +721,18 @@ export const TelegramSettingsTab: React.FC = () => {
                       </span>
                     )}
                   </div>
+
+                  {reportSendResult && !reportSendResult.success && reportSendResult.message.includes('Bot Token') && (
+                    <div className="p-3 bg-rose-50 border border-rose-200 rounded-2xl text-xs text-rose-900 space-y-1.5 animate-in fade-in duration-200">
+                      <p className="font-bold flex items-center gap-1.5 text-rose-800">
+                        <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                        <span>Bot Token នេះផុតសុពលភាព ឬត្រូវបាន Telegram Revoke ដោយសារសុវត្ថិភាព</span>
+                      </p>
+                      <p className="text-[11px] text-rose-700 leading-relaxed">
+                        សូមបើក Telegram ស្វែងរក <b>@BotFather</b> រួចផ្ញើសារ <code>/mybots</code> 👉 ជ្រើសរើស Bot របស់អ្នក 👉 ចុច <b>API Token</b> 👉 ចុច <b>Revoke current token</b> ដើម្បីទទួលកូដ Token ថ្មី រួច Copy មកបិទភ្ជាប់ (Paste) ក្នុងប្រអប់ <b>Telegram Bot Token</b> ខាងលើ ហើយចុច <b>រក្សាទុក</b>។
+                      </p>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -743,6 +756,11 @@ export const TelegramSettingsTab: React.FC = () => {
             <div>
               <p className="font-bold">{testResult.success ? 'ជោគជ័យ!' : 'បរាជ័យ!'}</p>
               <p className="mt-0.5 leading-relaxed">{testResult.message}</p>
+              {!testResult.success && testResult.message.includes('Bot Token') && (
+                <p className="mt-2 text-[11px] text-rose-700 bg-white/70 p-2.5 rounded-xl border border-rose-200">
+                  💡 <b>ដំណោះស្រាយ៖</b> បើក <a href="https://t.me/BotFather" target="_blank" rel="noreferrer" className="text-sky-600 font-bold underline">@BotFather</a> 👉 ផ្ញើ <code>/mybots</code> 👉 យក <b>API Token</b> ថ្មីមក Paste ចូលប្រអប់ខាងលើ រួចចុច <b>រក្សាទុក</b>។
+                </p>
+              )}
             </div>
           </div>
         )}
