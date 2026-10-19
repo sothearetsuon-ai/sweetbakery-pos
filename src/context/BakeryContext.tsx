@@ -4424,9 +4424,14 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
     syncSaveDoc('sales', newSale.id, newSale);
     clearCart();
-    notifyTelegramSale(newSale, storeInfo, exchangeRate).catch((err) => {
-      console.error('[BakeryContext] notifyTelegramSale error:', err);
-    });
+
+    // If it's a deposit pre-order, custom cake order alert (notifyTelegramCustomOrder) handles the alert
+    // so we skip notifyTelegramSale here to prevent duplicate alerts.
+    if (!newSale.isDeposit) {
+      notifyTelegramSale(newSale, storeInfo, exchangeRate).catch((err) => {
+        console.error('[BakeryContext] notifyTelegramSale error:', err);
+      });
+    }
 
     // Update shift sales
     if (currentShift && currentShift.status === 'OPEN') {

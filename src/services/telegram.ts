@@ -704,6 +704,16 @@ export const notifyTelegramSale = async (
       return;
     }
 
+    // Prevent duplicate alerts: if this is a deposit pre-order sale and custom cake order alerts are enabled,
+    // let notifyTelegramCustomOrder handle the notification with complete cake & deposit details.
+    if (sale.isDeposit && config.notifyCustomOrders) {
+      console.log(
+        '[Telegram Alert] Skipping POS sale notification for deposit pre-order (handled by Custom Order alert):',
+        sale.orderNumber
+      );
+      return;
+    }
+
     const storeTitle = storeInfo?.nameKh || 'ហាងនំ SweetBakery';
     const totalKhr = sale.totalKhr ?? Math.round(sale.totalUsd * exchangeRate);
     const now = new Date(sale.createdAt || Date.now());
@@ -815,6 +825,15 @@ export const notifyTelegramCustomOrder = async (
     const remainingUsd = Math.max(0, order.totalUsd - order.depositUsd);
     const remainingKhr = Math.round(remainingUsd * exchangeRate);
 
+    const paymentText =
+      order.paymentMethod === 'KHQR_BAKONG'
+        ? '📲 KHQR Bakong / ធនាគារ'
+        : order.paymentMethod === 'CASH_KHR'
+        ? '💵 សាច់ប្រាក់ (៛ រៀល)'
+        : order.paymentMethod === 'CASH_USD'
+        ? '💵 សាច់ប្រាក់ ($ ដុល្លារ)'
+        : '';
+
     const text =
       `🎂 <b>[${escapeHtml(storeTitle)}] — មានភ្ញៀវកុម្ម៉ង់នំខួបកំណើតថ្មី!</b>\n` +
       `━━━━━━━━━━━━━━━━━━\n` +
@@ -830,6 +849,7 @@ export const notifyTelegramCustomOrder = async (
       `⏰ <b>ថ្ងៃ & ម៉ោងមកយក៖</b> <b>${formatDateDMY(order.pickupDate)} វេលាម៉ោង ${order.pickupTime}</b>\n\n` +
       `💵 <b>តម្លៃសរុប៖</b> <b>${totalKhr.toLocaleString()} ៛</b> ($${order.totalUsd.toFixed(2)})\n` +
       `👛 <b>បានកក់រួច៖</b> <b>${depositKhr.toLocaleString()} ៛ ($${order.depositUsd.toFixed(2)})</b>\n` +
+      (paymentText ? `💳 <b>វិធីទូទាត់ប្រាក់កក់៖</b> ${paymentText}\n` : '') +
       (remainingUsd > 0
         ? `⚠️ <b>នៅខ្វះពេលមកយក៖</b> <b>${remainingKhr.toLocaleString()} ៛</b> ($${remainingUsd.toFixed(2)})\n`
         : `✅ <b>បានបង់ប្រាក់គ្រប់ ១០០%</b>\n`);
