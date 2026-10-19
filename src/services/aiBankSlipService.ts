@@ -116,7 +116,8 @@ Return ONLY a valid JSON object matching this schema without any markdown format
       }
 
       const json = await res.json();
-      const candidateText = json.candidates?.[0]?.content?.parts?.[0]?.text;
+      const parts = json.candidates?.[0]?.content?.parts || [];
+      const candidateText = parts.map((p: any) => p.text || '').join('\n').trim();
       if (candidateText) {
         rawJson = candidateText;
         break;
@@ -131,8 +132,7 @@ Return ONLY a valid JSON object matching this schema without any markdown format
   }
 
   try {
-    const cleaned = rawJson.replace(/```json/gi, '').replace(/```/g, '').trim();
-    const parsed = JSON.parse(cleaned);
+    const parsed = safeExtractJsonObject(rawJson);
 
     const currency: 'USD' | 'KHR' = (parsed.currency || 'KHR').toUpperCase() === 'USD' ? 'USD' : 'KHR';
     const amountPaid = Number(parsed.amountPaid) || 0;
@@ -191,4 +191,75 @@ Return ONLY a valid JSON object matching this schema without any markdown format
   } catch (err: any) {
     throw new Error('ការអានវិក្កយបត្របរាជ័យ៖ ' + err.message);
   }
+}
+
+/**
+ * Robust JSON object extractor that handles markdown blocks, preambles, and bullet points
+ */
+function safeExtractJsonObject(text: string): any {
+  if (!text || typeof text !== 'string') {
+    throw new Error('ទិន្នន័យពី AI ទទេស្អាត');
+  }
+
+  const trimmed = text.trim();
+
+  // 1. Direct parse
+  try {
+    return JSON.parse(trimmed);
+  } catch (_) {}
+
+  // 2. Extract from markdown code block ```json ... ``` or ``` ... ```
+  const codeBlockMatch = trimmed.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
+  if (codeBlockMatch && codeBlockMatch[1]) {
+    try {
+      return JSON.parse(codeBlockMatch[1].trim());
+    } catch (_) {}
+  }
+
+  // 3. Find outermost JSON object { ... }
+  const firstBrace = trimmed.indexOf('{');
+  const lastBrace = trimmed.lastIndexOf('}');
+  if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+    const rawSubstring = trimmed.substring(firstBrace, lastBrace + 1);
+    try {
+      return JSON.parse(rawSubstring);
+    } catch (_) {}
+
+    // 4. Sanitize trailing commas and unicode quotes
+    try {
+      const sanitized = rawSubstring
+        .replace(/,\s*([}\]])/g, '$1')
+        .replace(/[\u201C\u201D]/g, '"')
+        .replace(/[\u2018\u2019]/g, "'");
+      return JSON.parse(sanitized);
+    } catch (_) {}
+  }
+
+  // 5. Regex field extraction fallback
+  const extractField = (key: string): string => {
+    const m = trimmed.match(new RegExp(`"${key}"\\s*:\\s*"([^"]+)"`, 'i'));
+    return m ? m[1] : '';
+  };
+  const extractNum = (key: string): number => {
+    const m = trimmed.match(new RegExp(`"${key}"\\s*:\\s*([0-9.]+)`, 'i'));
+    return m ? Number(m[1]) : 0;
+  };
+
+  const amountPaid = extractNum('amountPaid');
+  if (amountPaid > 0 || extractField('transactionId')) {
+    return {
+      isLegitimateReceipt: true,
+      bankName: extractField('bankName') || 'Bakong KHQR',
+      amountPaid: amountPaid,
+      currency: extractField('currency') || 'KHR',
+      transactionId: extractField('transactionId') || 'N/A',
+      transactionDate: extractField('transactionDate') || new Date().toISOString().slice(0, 10),
+      transactionTime: extractField('transactionTime') || '',
+      senderName: extractField('senderName') || '',
+      receiverName: extractField('receiverName') || '',
+      receiverAccount: extractField('receiverAccount') || '',
+    };
+  }
+
+  throw new Error('រកមិនឃើញទិន្នន័យ JSON ត្រឹមត្រូវនៅក្នុងចម្លើយរបស់ AI ឡើយ');
 }

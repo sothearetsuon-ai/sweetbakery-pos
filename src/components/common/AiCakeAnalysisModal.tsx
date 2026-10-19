@@ -45,7 +45,7 @@ export const AiCakeAnalysisModal: React.FC<AiCakeAnalysisModalProps> = ({
                 </span>
               </div>
               <p className="text-[11px] text-pink-100 mt-0.5">
-                ឆ្លាតវៃសម្គាល់ម៉ូដ គណនាថ្លៃដើម និងទំហំសមស្របដោយស្វ័យប្រវត្តិ
+                ឆ្លាតវៃសម្គាល់ម៉ូដ គណនាថ្លៃដើម និងតម្លៃសមស្របដោយស្វ័យប្រវត្តិ
               </p>
             </div>
           </div>
@@ -76,7 +76,7 @@ export const AiCakeAnalysisModal: React.FC<AiCakeAnalysisModalProps> = ({
                   AI កំពុងវិភាគរូបភាពនំ...
                 </h4>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  កំពុងសម្គាល់កម្រិតតុបតែង គណនាទំហំ និងប៉ាន់ស្មានតម្លៃសមរម្យ...
+                  កំពុងសម្គាល់កម្រិតតុបតែង និងប៉ាន់ស្មានតម្លៃសមរម្យ...
                 </p>
               </div>
             </div>
@@ -233,7 +233,7 @@ export const AiCakeAnalysisModal: React.FC<AiCakeAnalysisModalProps> = ({
                 }}
                 className="py-2.5 px-3 bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 rounded-2xl text-xs font-bold transition-all cursor-pointer"
               >
-                យកតែតម្លៃ & ទំហំ
+                យកតែតម្លៃ
               </button>
             )}
           </div>

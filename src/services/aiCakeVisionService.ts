@@ -50,7 +50,10 @@ Guidelines for Pricing & Sizing (Cambodian Bakery Market Standards):
 - Elaborate Vintage / Fondant Figures / 3 ទឹក (~30cm, 15-20 people): 90,000 KHR - 120,000 KHR ($22 - $30)
 - 2-Tier or Multi-Tier Grand Celebration Cake (20+ people): 150,000 KHR - 220,000 KHR+ ($37 - $55+)
 
-Return ONLY a valid JSON object matching the following schema without any markdown formatting or extra text:
+CRITICAL INSTRUCTION:
+Return ONLY the raw JSON object starting with { and ending with }.
+DO NOT write any introductory text, markdown bullet points (such as "* Image:"), notes, or conversational explanations.
+
 {
   "cakeNameKh": "ឈ្មោះម៉ូដនំជាភាសាខ្មែរពិរោះៗ (ឧ. នំខេកកូរ៉េ Daisy Pastel រចនាផ្កាស្រស់)",
   "cakeNameEn": "English Cake Style Name (e.g. Korean Daisy Pastel Birthday Cake)",
@@ -121,7 +124,8 @@ difficultyLevel can be: 'EASY', 'MEDIUM', 'COMPLEX', or 'MASTER'.`;
       }
 
       const json = await res.json();
-      const candidateText = json.candidates?.[0]?.content?.parts?.[0]?.text;
+      const parts = json.candidates?.[0]?.content?.parts || [];
+      const candidateText = parts.map((p: any) => p.text || '').join('\n').trim();
       if (candidateText) {
         rawJson = candidateText;
         break;
@@ -136,9 +140,7 @@ difficultyLevel can be: 'EASY', 'MEDIUM', 'COMPLEX', or 'MASTER'.`;
   }
 
   try {
-    // Clean potential markdown blocks
-    const cleaned = rawJson.replace(/```json/gi, '').replace(/```/g, '').trim();
-    const parsed = JSON.parse(cleaned);
+    const parsed = safeExtractJsonObject(rawJson);
 
     const priceKhr = parsed.suggestedPriceKhr || Math.round((parsed.suggestedPriceUsd || 10) * exchangeRate);
     const priceUsd = parsed.suggestedPriceUsd || Number((priceKhr / exchangeRate).toFixed(2));
@@ -148,19 +150,97 @@ difficultyLevel can be: 'EASY', 'MEDIUM', 'COMPLEX', or 'MASTER'.`;
       cakeNameEn: parsed.cakeNameEn || 'Special Celebration Cake',
       styleCategory: parsed.styleCategory || 'MINIMALIST_KOREAN',
       styleCategoryKh: parsed.styleCategoryKh || 'ម៉ូដពេញនិយម (Standard Style)',
-      estimatedSize: parsed.estimatedSize || '2 ទឹក (~20cm) - សម្រាប់ 6-8 នាក់',
+      estimatedSize: parsed.estimatedSize || '2 ទឹក (~20cm)',
       suggestedPriceKhr: priceKhr,
       suggestedPriceUsd: priceUsd,
       difficultyLevel: parsed.difficultyLevel || 'MEDIUM',
       difficultyKh: parsed.difficultyKh || 'កម្រិតមធ្យម',
-      primaryColors: Array.isArray(parsed.primaryColors) ? parsed.primaryColors : ['ពណ៌ធម្មជាតិ'],
-      recommendedFlavors: Array.isArray(parsed.recommendedFlavors) ? parsed.recommendedFlavors : ['សូកូឡា', 'តយដូង'],
-      recommendedInscriptions: Array.isArray(parsed.recommendedInscriptions) ? parsed.recommendedInscriptions : ['Happy Birthday 🎂🎉'],
+      primaryColors: Array.isArray(parsed.primaryColors) && parsed.primaryColors.length > 0 ? parsed.primaryColors : ['ពណ៌ធម្មជាតិ'],
+      recommendedFlavors: Array.isArray(parsed.recommendedFlavors) && parsed.recommendedFlavors.length > 0 ? parsed.recommendedFlavors : ['សូកូឡា', 'តយដូង'],
+      recommendedInscriptions: Array.isArray(parsed.recommendedInscriptions) && parsed.recommendedInscriptions.length > 0 ? parsed.recommendedInscriptions : ['Happy Birthday 🎂🎉'],
       bakingNotes: parsed.bakingNotes || 'រៀបចំតុបតែងម៉ូដនំតាមរូបភាពគំរូ។',
       occasionKh: parsed.occasionKh || 'ខួបកំណើត (Birthday)',
-      confidence: parsed.confidence || 0.9,
+      confidence: typeof parsed.confidence === 'number' ? parsed.confidence : 0.9,
     };
   } catch (parseErr: any) {
     throw new Error('ការអានទិន្នន័យវិភាគនំមានបញ្ហា៖ ' + parseErr.message);
   }
+}
+
+/**
+ * Robust JSON object extractor that handles markdown blocks, preambles, and bullet points
+ */
+function safeExtractJsonObject(text: string): any {
+  if (!text || typeof text !== 'string') {
+    throw new Error('ទិន្នន័យពី AI ទទេស្អាត');
+  }
+
+  const trimmed = text.trim();
+
+  // 1. Direct parse
+  try {
+    return JSON.parse(trimmed);
+  } catch (_) {}
+
+  // 2. Extract from markdown code block ```json ... ``` or ``` ... ```
+  const codeBlockMatch = trimmed.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
+  if (codeBlockMatch && codeBlockMatch[1]) {
+    try {
+      return JSON.parse(codeBlockMatch[1].trim());
+    } catch (_) {}
+  }
+
+  // 3. Find outermost JSON object { ... }
+  const firstBrace = trimmed.indexOf('{');
+  const lastBrace = trimmed.lastIndexOf('}');
+  if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+    const rawSubstring = trimmed.substring(firstBrace, lastBrace + 1);
+    try {
+      return JSON.parse(rawSubstring);
+    } catch (_) {}
+
+    // 4. Sanitize trailing commas and unicode quotes
+    try {
+      const sanitized = rawSubstring
+        .replace(/,\s*([}\]])/g, '$1')
+        .replace(/[\u201C\u201D]/g, '"')
+        .replace(/[\u2018\u2019]/g, "'");
+      return JSON.parse(sanitized);
+    } catch (_) {}
+  }
+
+  // 5. Regex field extraction fallback
+  const extractField = (key: string): string => {
+    const m = trimmed.match(new RegExp(`"${key}"\\s*:\\s*"([^"]+)"`, 'i'));
+    return m ? m[1] : '';
+  };
+  const extractNum = (key: string): number => {
+    const m = trimmed.match(new RegExp(`"${key}"\\s*:\\s*([0-9.]+)`, 'i'));
+    return m ? Number(m[1]) : 0;
+  };
+
+  const extractedPriceKhr = extractNum('suggestedPriceKhr');
+  const extractedNameKh = extractField('cakeNameKh');
+
+  if (extractedNameKh || extractedPriceKhr > 0) {
+    return {
+      cakeNameKh: extractedNameKh || 'នំខេកខួបកំណើតស្អាតពិសេស',
+      cakeNameEn: extractField('cakeNameEn') || 'Special Celebration Cake',
+      styleCategory: 'MINIMALIST_KOREAN',
+      styleCategoryKh: extractField('styleCategoryKh') || 'ម៉ូដពេញនិយម (Standard Style)',
+      estimatedSize: extractField('estimatedSize') || '2 ទឹក (~20cm)',
+      suggestedPriceKhr: extractedPriceKhr || 40000,
+      suggestedPriceUsd: extractNum('suggestedPriceUsd') || 10,
+      difficultyLevel: 'MEDIUM',
+      difficultyKh: 'កម្រិតមធ្យម',
+      primaryColors: ['ពណ៌ធម្មជាតិ'],
+      recommendedFlavors: ['សូកូឡា', 'តយដូង', 'ស្ត្រប៊ែរី'],
+      recommendedInscriptions: ['Happy Birthday 🎂🎉'],
+      bakingNotes: extractField('bakingNotes') || 'រៀបចំតុបតែងម៉ូដនំតាមរូបភាពគំរូ។',
+      occasionKh: 'ខួបកំណើត (Birthday)',
+      confidence: 0.85,
+    };
+  }
+
+  throw new Error('រកមិនឃើញទិន្នន័យ JSON ត្រឹមត្រូវនៅក្នុងចម្លើយរបស់ AI ឡើយ');
 }
