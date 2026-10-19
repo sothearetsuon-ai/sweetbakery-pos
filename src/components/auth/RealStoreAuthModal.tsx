@@ -62,7 +62,16 @@ export const RealStoreAuthModal: React.FC<RealStoreAuthModalProps> = ({
     }
   }, [isOpen]);
 
-  // Physical Keyboard Support (prevents duplicate keystrokes when input is focused)
+  const pinInputRef = useRef(pinInput);
+  pinInputRef.current = pinInput;
+  const rememberDeviceRef = useRef(rememberDevice);
+  rememberDeviceRef.current = rememberDevice;
+  const selectedStaffIdRef = useRef(selectedStaffId);
+  selectedStaffIdRef.current = selectedStaffId;
+  const realStaffListRef = useRef(realStaffList);
+  realStaffListRef.current = realStaffList;
+
+  // Physical Keyboard Support (single event listener attachment for maximum typing speed)
   useEffect(() => {
     if (!isOpen) return;
 
@@ -89,16 +98,17 @@ export const RealStoreAuthModal: React.FC<RealStoreAuthModalProps> = ({
       }
     };
 
-    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keydown', handleKeyDown, { passive: false });
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, pinInput, rememberDevice, selectedStaffId, realStaffList]);
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
   const handleKeyPress = (char: string) => {
     soundFx.playPop();
-    if (pinInput.length < 12) {
-      const nextPin = pinInput + char;
+    const current = pinInputRef.current;
+    if (current.length < 12) {
+      const nextPin = current + char;
       setPinInput(nextPin);
       setErrorMessage('');
 
@@ -112,7 +122,7 @@ export const RealStoreAuthModal: React.FC<RealStoreAuthModalProps> = ({
   };
 
   const handleInputChange = (val: string) => {
-    soundFx.playPop();
+    // Instantaneous input without audio synthesizer delay
     const clean = val;
     setPinInput(clean);
     setErrorMessage('');
@@ -246,7 +256,7 @@ export const RealStoreAuthModal: React.FC<RealStoreAuthModalProps> = ({
   };
 
   return createPortal(
-    <div className="fixed inset-0 z-[120] flex items-center justify-center p-2.5 sm:p-4 bg-slate-950/80 backdrop-blur-md animate-fadeIn overflow-y-auto">
+    <div className="fixed inset-0 z-[120] flex items-center justify-center p-2.5 sm:p-4 bg-slate-950/85 animate-fadeIn overflow-y-auto">
       <div
         className={`relative w-full max-w-sm sm:max-w-md bg-white rounded-3xl shadow-2xl border border-rose-100 flex flex-col max-h-[92vh] overflow-hidden transition-transform duration-200 ${
           isShaking ? 'animate-shake' : ''
@@ -255,7 +265,7 @@ export const RealStoreAuthModal: React.FC<RealStoreAuthModalProps> = ({
         {/* Compact Top Header Banner */}
         <div className="bg-gradient-to-r from-rose-600 via-pink-600 to-purple-600 px-4 py-3 sm:px-5 sm:py-3.5 text-white flex items-center justify-between shrink-0 shadow-xs">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 sm:w-10 sm:h-10 bg-white/20 rounded-xl flex items-center justify-center shadow-inner backdrop-blur-xs shrink-0">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 bg-white/20 rounded-xl flex items-center justify-center shadow-inner shrink-0">
               <Lock className="w-5 h-5 text-amber-200" />
             </div>
             <div className="text-left">
@@ -342,9 +352,9 @@ export const RealStoreAuthModal: React.FC<RealStoreAuthModalProps> = ({
                 return (
                   <div
                     key={idx}
-                    className={`w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center font-black text-sm sm:text-base transition-all duration-150 border-2 select-none ${
+                    className={`w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center font-black text-sm sm:text-base border-2 select-none ${
                       isFilled
-                        ? 'bg-rose-50 border-rose-500 text-rose-600 scale-105 shadow-2xs'
+                        ? 'bg-rose-50 border-rose-500 text-rose-600 shadow-2xs'
                         : 'border-slate-200 bg-slate-50 text-slate-300'
                     }`}
                   >

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { X, Users, Sparkles, ArrowRight, ShieldCheck, Check, KeyRound } from 'lucide-react';
 import confetti from 'canvas-confetti';
@@ -26,7 +26,12 @@ export const SwitchStaffModal: React.FC<SwitchStaffModalProps> = ({ isOpen, onCl
     }
   }, [isOpen, currentStaff]);
 
-  // Physical Keyboard Support (0-9, Backspace, Escape)
+  const pinInputRef = useRef(pinInput);
+  pinInputRef.current = pinInput;
+  const selectedStaffRef = useRef(selectedStaff);
+  selectedStaffRef.current = selectedStaff;
+
+  // Physical Keyboard Support (0-9, Backspace, Escape) - single listener attachment
   useEffect(() => {
     if (!isOpen) return;
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -48,7 +53,7 @@ export const SwitchStaffModal: React.FC<SwitchStaffModalProps> = ({ isOpen, onCl
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, pinInput, selectedStaff]);
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -61,13 +66,14 @@ export const SwitchStaffModal: React.FC<SwitchStaffModalProps> = ({ isOpen, onCl
 
   const handleKeypadPress = (num: string) => {
     soundFx.playPop();
-    if (pinInput.length < 4) {
-      const nextPin = pinInput + num;
+    const current = pinInputRef.current;
+    if (current.length < 4) {
+      const nextPin = current + num;
       setPinInput(nextPin);
       setErrorMessage('');
 
       if (nextPin.length === 4) {
-        verifyAndSwitch(selectedStaff, nextPin);
+        verifyAndSwitch(selectedStaffRef.current, nextPin);
       }
     }
   };
@@ -134,7 +140,7 @@ export const SwitchStaffModal: React.FC<SwitchStaffModalProps> = ({ isOpen, onCl
   const { labelKh: targetRoleLabel, badgeStyle: targetBadgeStyle } = roleLabel(activeTarget.role);
 
   const modalContent = (
-    <div className="fixed inset-0 z-[100] bg-slate-950/70 backdrop-blur-xs flex items-start justify-center pt-3 sm:pt-6 pb-6 px-3 sm:px-4 overflow-y-auto animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-[100] bg-slate-950/80 flex items-start justify-center pt-3 sm:pt-6 pb-6 px-3 sm:px-4 overflow-y-auto animate-in fade-in duration-200">
       <div className="bg-white rounded-3xl max-w-3xl w-full shadow-2xl border border-rose-100 overflow-hidden flex flex-col max-h-[92vh]">
         {/* Header */}
         <div className="px-5 py-3.5 border-b border-rose-100 flex items-center justify-between bg-gradient-to-r from-rose-50/80 via-pink-50/50 to-amber-50/30">
@@ -274,9 +280,9 @@ export const SwitchStaffModal: React.FC<SwitchStaffModalProps> = ({ isOpen, onCl
                   {[0, 1, 2, 3].map((i) => (
                     <div
                       key={i}
-                      className={`w-7 h-9 rounded-xl border-2 flex items-center justify-center font-black text-base transition-all select-none ${
+                      className={`w-7 h-9 rounded-xl border-2 flex items-center justify-center font-black text-base select-none ${
                         pinInput.length > i
-                          ? 'bg-pink-50 border-pink-600 text-pink-600 scale-105 shadow-xs'
+                          ? 'bg-pink-50 border-pink-600 text-pink-600 shadow-xs'
                           : 'bg-white border-slate-300 text-slate-300'
                       }`}
                     >

@@ -489,10 +489,10 @@ export const App: React.FC = () => {
       <MiniMusicPlayer />
       <FloatingMiniVideoPlayer />
 
-      {/* Flying 3D Butterflies & Swimming Lucky Goldfish Effect (Independent toggles) */}
+      {/* Flying 3D Butterflies & Swimming Lucky Goldfish Effect (Independent toggles, paused during Auth Modal for zero lag) */}
       <ButterflyEffect
-        butterflyEnabled={isButterflyEnabled}
-        goldfishEnabled={isGoldfishEnabled}
+        butterflyEnabled={isButterflyEnabled && !isRealStoreAuthModalOpen}
+        goldfishEnabled={isGoldfishEnabled && !isRealStoreAuthModalOpen}
         butterflyCount={14}
         goldfishCount={7}
       />
