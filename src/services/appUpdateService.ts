@@ -15,7 +15,7 @@ export interface AppUpdateInfo {
   mandatory?: boolean;
 }
 
-export const CURRENT_APP_VERSION = '1.5.3';
+export const CURRENT_APP_VERSION = '1.5.4';
 export const CURRENT_BUILD_DATE = '2026-10-19';
 
 // Storage key for custom update server URL if configured
