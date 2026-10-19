@@ -5,13 +5,53 @@ const https = require('https');
 const http = require('http');
 const { spawn } = require('child_process');
 
+app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
+app.commandLine.appendSwitch('disable-background-timer-throttling');
+app.commandLine.appendSwitch('disable-renderer-backgrounding');
+
 const TARGET_ONLINE_URL = 'https://sothearetsuon-ai.github.io/sweetbakery-pos/';
+const YT_BRIDGE_PORT = 48921;
 
 let mainWindow;
+let ytBridgeServer = null;
+
+function startYtBridgeServer() {
+  if (ytBridgeServer) return;
+  try {
+    ytBridgeServer = http.createServer((req, res) => {
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      const bridgePath = path.join(__dirname, 'yt_bridge.html');
+      if (fs.existsSync(bridgePath)) {
+        res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+        res.end(fs.readFileSync(bridgePath, 'utf8'));
+      } else {
+        res.writeHead(404);
+        res.end('Not found');
+      }
+    });
+
+    ytBridgeServer.listen(YT_BRIDGE_PORT, '127.0.0.1', () => {
+      console.log(`YouTube Audio/Video Bridge running on http://127.0.0.1:${YT_BRIDGE_PORT}`);
+    });
+
+    ytBridgeServer.on('error', (err) => {
+      if (err.code === 'EADDRINUSE') {
+        console.log(`YouTube Bridge port ${YT_BRIDGE_PORT} already in use, assuming active bridge.`);
+      } else {
+        console.warn('YouTube Bridge server error:', err);
+      }
+    });
+  } catch (err) {
+    console.warn('Could not start YouTube bridge server:', err);
+  }
+}
 
 function createWindow() {
   // Clear any stale Service Workers registered under previous online web sessions
   session.defaultSession.clearStorageData({ storages: ['serviceworkers'] }).catch(() => {});
+
+  // Start YouTube Audio/Video Bridge for seamless playback on Windows Desktop
+  startYtBridgeServer();
 
   mainWindow = new BrowserWindow({
     width: 1366,
@@ -42,18 +82,14 @@ function createWindow() {
     return true;
   });
 
-  // Fix YouTube Error 153 (Video player configuration error) in Electron:
+  // Fix YouTube Error 153 & Referer Restrictions in Electron:
   // Inject valid HTTPS Referer and Origin headers so YouTube embedded players initialize properly
   session.defaultSession.webRequest.onBeforeSendHeaders(
     { urls: ['*://*.youtube.com/*', '*://*.youtube-nocookie.com/*', '*://*.googlevideo.com/*'] },
     (details, callback) => {
       const requestHeaders = { ...details.requestHeaders };
-      if (!requestHeaders['Referer'] || requestHeaders['Referer'].startsWith('file://')) {
-        requestHeaders['Referer'] = 'https://sothearetsuon-ai.github.io/sweetbakery-pos/';
-      }
-      if (!requestHeaders['Origin'] || requestHeaders['Origin'].startsWith('file://') || requestHeaders['Origin'] === 'null') {
-        requestHeaders['Origin'] = 'https://sothearetsuon-ai.github.io';
-      }
+      requestHeaders['Referer'] = 'https://sothearetsuon-ai.github.io/sweetbakery-pos/';
+      requestHeaders['Origin'] = 'https://sothearetsuon-ai.github.io';
       callback({ cancel: false, requestHeaders });
     }
   );

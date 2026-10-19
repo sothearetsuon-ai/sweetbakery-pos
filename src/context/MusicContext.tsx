@@ -292,6 +292,8 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const ytPlayerRef = useRef<any>(null);
   const ytTickerRef = useRef<NodeJS.Timeout | null>(null);
   const pendingVideoIdRef = useRef<string | null>(null);
+  const bridgeCurrentTimeRef = useRef<number>(0);
+  const bridgeDurationRef = useRef<number>(0);
 
   // Live mutable refs to completely prevent stale closures in event callbacks
   const playlistRef = useRef<AudioTrack[]>(playlist);
@@ -351,13 +353,13 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       container = document.createElement('div');
       container.id = 'sweetbakery-yt-hidden-player';
       container.style.position = 'fixed';
-      container.style.top = '-9999px';
-      container.style.left = '-9999px';
-      container.style.width = '200px';
-      container.style.height = '200px';
+      container.style.bottom = '0px';
+      container.style.right = '0px';
+      container.style.width = '1px';
+      container.style.height = '1px';
       container.style.pointerEvents = 'none';
-      container.style.opacity = '0';
-      container.style.zIndex = '99999';
+      container.style.opacity = '0.001';
+      container.style.zIndex = '-9999';
       container.style.backgroundColor = '#000';
       document.body.appendChild(container);
     }
@@ -368,13 +370,13 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       mp4El = document.createElement('video');
       mp4El.id = 'sweetbakery-mp4-persistent-player';
       mp4El.style.position = 'fixed';
-      mp4El.style.top = '-9999px';
-      mp4El.style.left = '-9999px';
-      mp4El.style.width = '200px';
-      mp4El.style.height = '200px';
+      mp4El.style.bottom = '0px';
+      mp4El.style.right = '0px';
+      mp4El.style.width = '1px';
+      mp4El.style.height = '1px';
       mp4El.style.pointerEvents = 'none';
-      mp4El.style.opacity = '0';
-      mp4El.style.zIndex = '99999';
+      mp4El.style.opacity = '0.001';
+      mp4El.style.zIndex = '-9999';
       mp4El.style.backgroundColor = '#000';
       mp4El.style.objectFit = 'contain';
       mp4El.playsInline = true;
@@ -413,108 +415,211 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     mp4El.addEventListener('loadedmetadata', handleVideoLoadedMetadata);
     mp4El.addEventListener('ended', handleVideoEnded);
 
-    const initYt = () => {
-      try {
-        if ((window as any).YT && (window as any).YT.Player) {
-          const appOrigin =
-            typeof window !== 'undefined' && window.location.origin && window.location.origin.startsWith('http')
-              ? window.location.origin
-              : 'https://sothearetsuon-ai.github.io';
-          const appUrl =
-            typeof window !== 'undefined' && window.location.href && window.location.href.startsWith('http')
-              ? window.location.href
-              : 'https://sothearetsuon-ai.github.io/sweetbakery-pos/';
+    // Check if running inside SweetBakery Desktop (Electron on Windows)
+    const isDesktop = typeof window !== 'undefined' && Boolean((window as any).SweetBakeryDesktop?.isDesktop);
+    const desktopBridgeUrl =
+      (window as any).SweetBakeryDesktop?.ytBridgeUrl || 'http://127.0.0.1:48921';
 
-          ytPlayerRef.current = new (window as any).YT.Player('sweetbakery-yt-hidden-player', {
-            height: '100%',
-            width: '100%',
-            host: 'https://www.youtube-nocookie.com',
-            playerVars: {
-              autoplay: 1,
-              controls: 1,
-              modestbranding: 1,
-              playsinline: 1,
-              rel: 0,
-              enablejsapi: 1,
-              origin: appOrigin,
-              widget_referrer: appUrl,
-            },
-            events: {
-              onReady: () => {
-                try {
-                  const iframe =
-                    document.querySelector('#sweetbakery-yt-hidden-player iframe') ||
-                    document.getElementById('sweetbakery-yt-hidden-player');
-                  if (iframe && (iframe as HTMLElement).tagName === 'IFRAME') {
-                    iframe.setAttribute('referrerpolicy', 'strict-origin-when-cross-origin');
-                    iframe.setAttribute(
-                      'allow',
-                      'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture'
-                    );
-                  }
-                } catch {}
-                if (pendingVideoIdRef.current) {
-                  try {
-                    ytPlayerRef.current.loadVideoById({
-                      videoId: pendingVideoIdRef.current,
-                      suggestedQuality: 'hd720',
-                    });
-                    pendingVideoIdRef.current = null;
-                  } catch (e) {
-                    console.warn('Pending loadVideoById error:', e);
-                  }
-                }
-              },
-              onStateChange: (event: any) => {
-                // 1 = PLAYING, 2 = PAUSED, 0 = ENDED
-                if (event.data === 1) {
-                  // YouTube started playing: ensure all other audio engines are completely silenced
-                  if (audioRef.current) {
-                    try {
-                      audioRef.current.pause();
-                      audioRef.current.currentTime = 0;
-                    } catch {}
-                  }
-                  if (videoRef.current) {
-                    try {
-                      videoRef.current.pause();
-                      videoRef.current.currentTime = 0;
-                    } catch {}
-                  }
-                  bakeryAmbientAudio.stop();
-                  birthdaySynth.stop();
+    let bridgeMessageHandler: ((event: MessageEvent) => void) | null = null;
 
-                  setIsPlaying(true);
-                  isPlayingRef.current = true;
-                  setYtErrorTrackIndex(null);
-                } else if (event.data === 2) {
-                  setIsPlaying(false);
-                  isPlayingRef.current = false;
-                } else if (event.data === 0) {
-                  handleEnded();
-                }
-              },
-              onError: (event: any) => {
-                console.warn('YouTube IFrame player error code:', event.data);
-                // 2 = invalid param, 5 = HTML5 error, 100 = not found, 101/150/153 = embed restricted
-                setYtErrorTrackIndex(currentTrackIndexRef.current);
-              },
-            },
-          });
-        }
-      } catch (e) {
-        console.warn('YouTube IFrame player initialization warning:', e);
+    if (isDesktop) {
+      let bridgeIframe = document.getElementById('sweetbakery-yt-desktop-bridge') as HTMLIFrameElement | null;
+      if (!bridgeIframe) {
+        bridgeIframe = document.createElement('iframe');
+        bridgeIframe.id = 'sweetbakery-yt-desktop-bridge';
+        bridgeIframe.src = desktopBridgeUrl;
+        bridgeIframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture';
+        bridgeIframe.style.width = '100%';
+        bridgeIframe.style.height = '100%';
+        bridgeIframe.style.border = 'none';
+        bridgeIframe.style.display = 'block';
+        container.appendChild(bridgeIframe);
       }
-    };
 
-    if (!(window as any).YT) {
-      const tag = document.createElement('script');
-      tag.src = 'https://www.youtube.com/iframe_api';
-      const first = document.getElementsByTagName('script')[0];
-      first?.parentNode?.insertBefore(tag, first);
-      (window as any).onYouTubeIframeAPIReady = initYt;
+      ytPlayerRef.current = {
+        loadVideoById: ({ videoId }: { videoId: string }) => {
+          bridgeIframe?.contentWindow?.postMessage({
+            type: 'sweetbakery-yt-cmd',
+            action: 'load',
+            videoId,
+          }, '*');
+        },
+        playVideo: () => {
+          bridgeIframe?.contentWindow?.postMessage({
+            type: 'sweetbakery-yt-cmd',
+            action: 'play',
+          }, '*');
+        },
+        pauseVideo: () => {
+          bridgeIframe?.contentWindow?.postMessage({
+            type: 'sweetbakery-yt-cmd',
+            action: 'pause',
+          }, '*');
+        },
+        stopVideo: () => {
+          bridgeIframe?.contentWindow?.postMessage({
+            type: 'sweetbakery-yt-cmd',
+            action: 'stop',
+          }, '*');
+        },
+        seekTo: (seconds: number) => {
+          bridgeIframe?.contentWindow?.postMessage({
+            type: 'sweetbakery-yt-cmd',
+            action: 'seek',
+            seconds,
+          }, '*');
+        },
+        setVolume: (vol: number) => {
+          bridgeIframe?.contentWindow?.postMessage({
+            type: 'sweetbakery-yt-cmd',
+            action: 'setVolume',
+            volume: vol,
+          }, '*');
+        },
+        getCurrentTime: () => bridgeCurrentTimeRef.current,
+        getDuration: () => bridgeDurationRef.current,
+      };
+
+      bridgeMessageHandler = (event: MessageEvent) => {
+        const data = event.data;
+        if (!data || data.type !== 'sweetbakery-yt') return;
+
+        if (data.event === 'ready') {
+          if (pendingVideoIdRef.current) {
+            ytPlayerRef.current.loadVideoById({ videoId: pendingVideoIdRef.current });
+            pendingVideoIdRef.current = null;
+          }
+        } else if (data.event === 'stateChange') {
+          // 1 = PLAYING, 2 = PAUSED, 0 = ENDED
+          if (data.state === 1) {
+            if (audioRef.current) {
+              try { audioRef.current.pause(); audioRef.current.currentTime = 0; } catch {}
+            }
+            if (videoRef.current) {
+              try { videoRef.current.pause(); videoRef.current.currentTime = 0; } catch {}
+            }
+            bakeryAmbientAudio.stop();
+            birthdaySynth.stop();
+
+            setIsPlaying(true);
+            isPlayingRef.current = true;
+            setYtErrorTrackIndex(null);
+          } else if (data.state === 2) {
+            setIsPlaying(false);
+            isPlayingRef.current = false;
+          } else if (data.state === 0) {
+            handleEnded();
+          }
+        } else if (data.event === 'error') {
+          console.warn('YouTube Desktop Bridge reported error:', data.code);
+          setYtErrorTrackIndex(currentTrackIndexRef.current);
+        } else if (data.event === 'ticker') {
+          bridgeCurrentTimeRef.current = data.currentTime || 0;
+          bridgeDurationRef.current = data.duration || 0;
+          if (isPlayingRef.current) {
+            setCurrentTime(data.currentTime || 0);
+            if (data.duration > 0) setDuration(data.duration);
+          }
+        }
+      };
+
+      window.addEventListener('message', bridgeMessageHandler);
     } else {
-      initYt();
+      // Standard Web & Mobile Browser (YouTube IFrame API)
+      const initYt = () => {
+        try {
+          if ((window as any).YT && (window as any).YT.Player) {
+            const appOrigin =
+              typeof window !== 'undefined' && window.location.origin && window.location.origin.startsWith('http')
+                ? window.location.origin
+                : 'https://sothearetsuon-ai.github.io';
+            const appUrl =
+              typeof window !== 'undefined' && window.location.href && window.location.href.startsWith('http')
+                ? window.location.href
+                : 'https://sothearetsuon-ai.github.io/sweetbakery-pos/';
+
+            ytPlayerRef.current = new (window as any).YT.Player('sweetbakery-yt-hidden-player', {
+              height: '100%',
+              width: '100%',
+              host: 'https://www.youtube.com',
+              playerVars: {
+                autoplay: 1,
+                controls: 1,
+                modestbranding: 1,
+                playsinline: 1,
+                rel: 0,
+                enablejsapi: 1,
+                origin: appOrigin,
+                widget_referrer: appUrl,
+              },
+              events: {
+                onReady: () => {
+                  try {
+                    const iframe =
+                      document.querySelector('#sweetbakery-yt-hidden-player iframe') ||
+                      document.getElementById('sweetbakery-yt-hidden-player');
+                    if (iframe && (iframe as HTMLElement).tagName === 'IFRAME') {
+                      iframe.setAttribute('referrerpolicy', 'strict-origin-when-cross-origin');
+                      iframe.setAttribute(
+                        'allow',
+                        'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture'
+                      );
+                    }
+                  } catch {}
+                  if (pendingVideoIdRef.current) {
+                    try {
+                      ytPlayerRef.current.loadVideoById({
+                        videoId: pendingVideoIdRef.current,
+                        suggestedQuality: 'hd720',
+                      });
+                      pendingVideoIdRef.current = null;
+                    } catch (e) {
+                      console.warn('Pending loadVideoById error:', e);
+                    }
+                  }
+                },
+                onStateChange: (event: any) => {
+                  if (event.data === 1) {
+                    if (audioRef.current) {
+                      try { audioRef.current.pause(); audioRef.current.currentTime = 0; } catch {}
+                    }
+                    if (videoRef.current) {
+                      try { videoRef.current.pause(); videoRef.current.currentTime = 0; } catch {}
+                    }
+                    bakeryAmbientAudio.stop();
+                    birthdaySynth.stop();
+
+                    setIsPlaying(true);
+                    isPlayingRef.current = true;
+                    setYtErrorTrackIndex(null);
+                  } else if (event.data === 2) {
+                    setIsPlaying(false);
+                    isPlayingRef.current = false;
+                  } else if (event.data === 0) {
+                    handleEnded();
+                  }
+                },
+                onError: (event: any) => {
+                  console.warn('YouTube IFrame player error code:', event.data);
+                  setYtErrorTrackIndex(currentTrackIndexRef.current);
+                },
+              },
+            });
+          }
+        } catch (e) {
+          console.warn('YouTube IFrame player initialization warning:', e);
+        }
+      };
+
+      if (!(window as any).YT) {
+        const tag = document.createElement('script');
+        tag.src = 'https://www.youtube.com/iframe_api';
+        const first = document.getElementsByTagName('script')[0];
+        first?.parentNode?.insertBefore(tag, first);
+        (window as any).onYouTubeIframeAPIReady = initYt;
+      } else {
+        initYt();
+      }
     }
 
     return () => {
@@ -522,6 +627,9 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         mp4El.removeEventListener('timeupdate', handleVideoTimeUpdate);
         mp4El.removeEventListener('loadedmetadata', handleVideoLoadedMetadata);
         mp4El.removeEventListener('ended', handleVideoEnded);
+      }
+      if (bridgeMessageHandler) {
+        window.removeEventListener('message', bridgeMessageHandler);
       }
     };
   }, []);
@@ -565,30 +673,34 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   // Safely manage persistent video elements (#sweetbakery-yt-hidden-player & #sweetbakery-mp4-persistent-player)
-  // When in Audio/Vinyl mode (default), players stay completely offscreen (-9999px) with zero visual footprint.
+  // When in Audio/Vinyl mode (default), players stay active at 1px / 0.001 opacity behind view to ensure 100% continuous audio
   useEffect(() => {
     const hideBothOffscreen = (ytContainer: HTMLElement | null, mp4El: HTMLElement | null) => {
       if (ytContainer) {
         ytContainer.style.position = 'fixed';
-        ytContainer.style.top = '-9999px';
-        ytContainer.style.left = '-9999px';
-        ytContainer.style.width = '200px';
-        ytContainer.style.height = '200px';
-        ytContainer.style.opacity = '0';
+        ytContainer.style.bottom = '0px';
+        ytContainer.style.right = '0px';
+        ytContainer.style.top = 'auto';
+        ytContainer.style.left = 'auto';
+        ytContainer.style.width = '1px';
+        ytContainer.style.height = '1px';
+        ytContainer.style.opacity = '0.001';
         ytContainer.style.pointerEvents = 'none';
-        ytContainer.style.zIndex = '-1';
+        ytContainer.style.zIndex = '-9999';
         ytContainer.style.boxShadow = 'none';
         ytContainer.style.transition = 'none';
       }
       if (mp4El) {
         mp4El.style.position = 'fixed';
-        mp4El.style.top = '-9999px';
-        mp4El.style.left = '-9999px';
-        mp4El.style.width = '200px';
-        mp4El.style.height = '200px';
-        mp4El.style.opacity = '0';
+        mp4El.style.bottom = '0px';
+        mp4El.style.right = '0px';
+        mp4El.style.top = 'auto';
+        mp4El.style.left = 'auto';
+        mp4El.style.width = '1px';
+        mp4El.style.height = '1px';
+        mp4El.style.opacity = '0.001';
         mp4El.style.pointerEvents = 'none';
-        mp4El.style.zIndex = '-1';
+        mp4El.style.zIndex = '-9999';
         mp4El.style.boxShadow = 'none';
         mp4El.style.transition = 'none';
       }
@@ -642,6 +754,8 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             activeEl.style.position = 'fixed';
             activeEl.style.top = `${rect.top}px`;
             activeEl.style.left = `${rect.left}px`;
+            activeEl.style.bottom = 'auto';
+            activeEl.style.right = 'auto';
             activeEl.style.width = `${rect.width}px`;
             activeEl.style.height = `${rect.height}px`;
             activeEl.style.zIndex = targetZIndex;
@@ -653,10 +767,16 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             activeEl.style.transition = 'none';
           }
           if (inactiveEl) {
-            inactiveEl.style.top = '-9999px';
-            inactiveEl.style.left = '-9999px';
-            inactiveEl.style.opacity = '0';
+            inactiveEl.style.position = 'fixed';
+            inactiveEl.style.bottom = '0px';
+            inactiveEl.style.right = '0px';
+            inactiveEl.style.top = 'auto';
+            inactiveEl.style.left = 'auto';
+            inactiveEl.style.width = '1px';
+            inactiveEl.style.height = '1px';
+            inactiveEl.style.opacity = '0.001';
             inactiveEl.style.pointerEvents = 'none';
+            inactiveEl.style.zIndex = '-9999';
           }
           return;
         }
