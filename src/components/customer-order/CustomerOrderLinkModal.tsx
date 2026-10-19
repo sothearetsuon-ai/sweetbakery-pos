@@ -12,6 +12,8 @@ import {
   Smartphone,
   MessageCircle,
   Globe,
+  Lock,
+  FlaskConical,
 } from 'lucide-react';
 import { useBakery } from '../../context/BakeryContext';
 import { soundFx } from '../../utils/audio';
@@ -27,8 +29,25 @@ export const CustomerOrderLinkModal: React.FC<CustomerOrderLinkModalProps> = ({
   onClose,
   onOpenCustomerView,
 }) => {
-  const { storeInfo } = useBakery();
+  const { storeInfo, isDemoMode, requestExitDemoMode } = useBakery();
   const [copied, setCopied] = useState(false);
+
+  // Always prefer real store name for the counter standee card & customer sharing
+  const effectiveStoreName = useMemo(() => {
+    try {
+      const raw = localStorage.getItem('bakery_store_info');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed?.nameKh && !parsed.nameKh.includes('Demo') && !parsed.nameKh.includes('សាកល្បង')) {
+          return parsed.nameKh;
+        }
+      }
+    } catch (e) {}
+    if (storeInfo.nameKh && !storeInfo.nameKh.includes('Demo') && !storeInfo.nameKh.includes('សាកល្បង')) {
+      return storeInfo.nameKh;
+    }
+    return 'ហាងនំខកនិងនំបុ័ងវិជ្ជតា';
+  }, [storeInfo.nameKh]);
 
   // Compute public shareable Customer Order Link URL
   // If running locally in Electron desktop (file://) or Android WebView (file:///android_asset/...),
@@ -83,7 +102,7 @@ export const CustomerOrderLinkModal: React.FC<CustomerOrderLinkModalProps> = ({
   };
 
   const handleShareTelegram = () => {
-    const message = `🎂 ជំរាបសួរ! សូមចូលទៅកាន់ Link នេះដើម្បីធ្វើការកុម្ម៉ង់នំខួបកំណើត ឬនំបុ័ងពិសេស និងបង់ប្រាក់កក់តាម KHQR ដោយងាយស្រួលពីហាង ${storeInfo.nameKh}៖\n👉 ${customerOrderUrl}`;
+    const message = `🎂 ជំរាបសួរ! សូមចូលទៅកាន់ Link នេះដើម្បីធ្វើការកុម្ម៉ង់នំខួបកំណើត ឬនំបុ័ងពិសេស និងបង់ប្រាក់កក់តាម KHQR ដោយងាយស្រួលពីហាង ${effectiveStoreName}៖\n👉 ${customerOrderUrl}`;
     const tgUrl = `https://t.me/share/url?url=${encodeURIComponent(customerOrderUrl)}&text=${encodeURIComponent(message)}`;
     window.open(tgUrl, '_blank');
   };
@@ -117,7 +136,38 @@ export const CustomerOrderLinkModal: React.FC<CustomerOrderLinkModalProps> = ({
         </div>
 
         {/* Modal Body */}
-        <div className="p-5 sm:p-6 space-y-5 overflow-y-auto max-h-[85vh]">
+        <div className="p-5 sm:p-6 space-y-4 overflow-y-auto max-h-[85vh]">
+          {/* Demo Mode Notice Banner if POS is currently in Demo Sandbox */}
+          {isDemoMode && (
+            <div className="bg-gradient-to-r from-amber-50 to-orange-50 border-2 border-amber-300 rounded-2xl p-3 flex items-center justify-between gap-3 text-amber-900 shadow-xs">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-amber-500 text-white flex items-center justify-center shrink-0 shadow-xs">
+                  <FlaskConical className="w-4 h-4" />
+                </div>
+                <div className="text-left">
+                  <div className="text-xs font-black text-amber-950 flex items-center gap-1.5">
+                    <span>កម្មវិធី POS កំពុងស្ថិតក្នុង «របៀបសាកល្បង (Demo)»</span>
+                  </div>
+                  <div className="text-[11px] text-amber-800">
+                    សូមចុច <strong>«ចូលហាងពិត»</strong> (PIN: 1111) ដើម្បីប្តូរមកទិន្នន័យជាក់ស្តែង!
+                  </div>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  soundFx.playPop();
+                  onClose();
+                  requestExitDemoMode();
+                }}
+                className="px-3 py-1.5 bg-gradient-to-r from-rose-600 via-pink-600 to-rose-700 hover:from-rose-700 hover:to-pink-700 text-white rounded-xl text-xs font-black shadow-md shrink-0 flex items-center gap-1.5 active:scale-95 cursor-pointer transition-all border border-rose-500/20"
+              >
+                <Lock className="w-3.5 h-3.5 text-amber-200" />
+                <span>ចូលហាងពិត 🔐</span>
+              </button>
+            </div>
+          )}
+
           {/* Quick Explainer */}
           <div className="bg-pink-50/80 border border-pink-200/80 rounded-2xl p-3.5 text-xs text-pink-900 space-y-1">
             <span className="font-black flex items-center gap-1.5 text-pink-800">
@@ -163,7 +213,7 @@ export const CustomerOrderLinkModal: React.FC<CustomerOrderLinkModalProps> = ({
           >
             <div className="space-y-0.5">
               <span className="text-[10px] uppercase font-black tracking-widest text-pink-600 block">
-                {storeInfo.nameKh || 'ហាងនំបុ័ង & នំខួបកំណើត វិជ្ជតា'}
+                {effectiveStoreName}
               </span>
               <h4 className="text-sm font-black text-slate-900">
                 ស្កេនដើម្បីកុម្ម៉ង់នំ & បង់ប្រាក់កក់

@@ -75,6 +75,10 @@ export const getGlobalIsDemoMode = () => globalIsDemoMode;
 export const checkInitialDemoMode = (): boolean => {
   if (typeof window === 'undefined') return false;
   const params = new URLSearchParams(window.location.search);
+  // If customer is opening direct customer ordering portal (?order=true), prioritize real store unless explicitly demo (?demo=true)
+  if ((params.get('order') === 'true' || window.location.hash === '#order') && params.get('demo') !== 'true') {
+    return false;
+  }
   if (params.get('demo') === 'true' || window.location.hash === '#demo') {
     return true;
   }
