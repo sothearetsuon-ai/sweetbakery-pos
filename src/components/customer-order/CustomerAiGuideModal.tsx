@@ -172,11 +172,18 @@ export const CustomerAiGuideModal: React.FC<CustomerAiGuideModalProps> = ({
     }
   }, [isOpen]);
 
-  // Subscribe to Live In-App Chat with Store Cashier
+  // Real-time unread count from staff
+  const unreadStaffCount = useMemo(() => {
+    return liveStoreMessages.filter((m) => m.senderRole === 'STAFF' && !m.isRead).length;
+  }, [liveStoreMessages]);
+
+  // Subscribe to Live In-App Chat with Store Cashier (keep listening whenever modal is open!)
   useEffect(() => {
-    if (!isOpen || activeTab !== 'store-chat') return;
+    if (!isOpen) return;
     const sessId = getCustomerSessionId();
-    markChatAsRead(sessId, 'CUSTOMER');
+    if (activeTab === 'store-chat') {
+      markChatAsRead(sessId, 'CUSTOMER');
+    }
 
     const unsub = subscribeToChatMessages('CUSTOMER', sessId, (msgs) => {
       setLiveStoreMessages(msgs);
@@ -747,7 +754,7 @@ export const CustomerAiGuideModal: React.FC<CustomerAiGuideModalProps> = ({
               soundFx.playPop();
               setActiveTab('store-chat');
             }}
-            className={`flex-1 py-1.5 px-2 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+            className={`flex-1 py-1.5 px-2 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer relative ${
               activeTab === 'store-chat'
                 ? 'bg-white text-pink-700 shadow-xs border border-rose-200/80'
                 : 'text-slate-600 hover:text-pink-600 hover:bg-white/50'
@@ -758,8 +765,39 @@ export const CustomerAiGuideModal: React.FC<CustomerAiGuideModalProps> = ({
               <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
             </span>
             <span className="truncate">ឆាតមកហាងផ្ទាល់</span>
+            {unreadStaffCount > 0 && (
+              <span className="px-1.5 py-0.2 rounded-full text-[9px] font-mono font-black bg-rose-600 text-white animate-bounce shadow-xs">
+                {unreadStaffCount}
+              </span>
+            )}
           </button>
         </div>
+
+        {/* Real-time Alert Banner in AI tab when Staff has replied */}
+        {unreadStaffCount > 0 && activeTab === 'chat' && (
+          <div
+            onClick={() => {
+              soundFx.playPop();
+              setActiveTab('store-chat');
+            }}
+            className="p-2.5 mx-3 mt-2 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white rounded-2xl shadow-md cursor-pointer flex items-center justify-between gap-2 active:scale-98 transition-all shrink-0 animate-in slide-in-from-top duration-200"
+          >
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="text-base animate-bounce shrink-0">👩‍🍳</span>
+              <div className="min-w-0">
+                <span className="text-xs font-black block truncate">
+                  អ្នកលក់បានឆ្លើយតបសាររបស់អ្នក ({unreadStaffCount} សារថ្មី)!
+                </span>
+                <span className="text-[10px] text-blue-100 truncate block">
+                  ចុចទីនេះដើម្បីបើកមើល និងឆ្លើយតបទៅអ្នកលក់
+                </span>
+              </div>
+            </div>
+            <span className="text-xs font-black bg-white text-indigo-700 px-2 py-1 rounded-xl shrink-0 shadow-xs">
+              បើកមើល ➜
+            </span>
+          </div>
+        )}
 
         {/* ========================================================= */}
         {/* TAB 1: AI CONVERSATIONAL CHAT */}

@@ -45,6 +45,8 @@ import { getFlavorEmoji, getUnifiedCakeFlavors, CakeFlavorItem, PRESET_CAKE_FLAV
 import { analyzeCakeImageWithGemini, AiCakeAnalysisResult } from '../../services/aiCakeVisionService';
 import { verifyBankSlipWithGemini, AiBankSlipResult } from '../../services/aiBankSlipService';
 import { AiCakeAnalysisModal } from '../common/AiCakeAnalysisModal';
+import { getCustomerSessionId, subscribeToChatMessages } from '../../services/liveChatService';
+import { ChatMessage } from '../../types';
 
 const CAKE_SIZES = [
   { id: '1.5 ទឹក', label: '1.5 ទឹក (~15cm)', desc: 'សម្រាប់ 2-4 នាក់', priceUsd: 12 },
@@ -222,10 +224,32 @@ export const CustomerOrderPortal: React.FC<CustomerOrderPortalProps> = ({ onBack
   const [isAiGuideOpen, setIsAiGuideOpen] = useState(false);
   const [aiGuideInitialTab, setAiGuideInitialTab] = useState<'chat' | 'browse' | 'store-chat'>('chat');
 
+  // Real-time Chat Subscription for Customer (Listen even when modal is closed!)
+  const [customerUnreadCount, setCustomerUnreadCount] = useState<number>(0);
+  const [incomingStaffToast, setIncomingStaffToast] = useState<ChatMessage | null>(null);
+
+  useEffect(() => {
+    const sessId = getCustomerSessionId();
+    const unsub = subscribeToChatMessages('CUSTOMER', sessId, (msgs) => {
+      const unreadStaff = msgs.filter((m) => m.senderRole === 'STAFF' && !m.isRead);
+      setCustomerUnreadCount(unreadStaff.length);
+
+      // Trigger pop sound & toast notification if new staff reply arrives while chat is not actively viewed
+      const latestStaff = unreadStaff[unreadStaff.length - 1];
+      if (latestStaff && (!isAiGuideOpen || aiGuideInitialTab !== 'store-chat')) {
+        setIncomingStaffToast(latestStaff);
+        soundFx.playPop();
+      }
+    });
+
+    return unsub;
+  }, [isAiGuideOpen, aiGuideInitialTab]);
+
   const handleOpenLiveStoreChat = () => {
     soundFx.playPop();
     setAiGuideInitialTab('store-chat');
     setIsAiGuideOpen(true);
+    setIncomingStaffToast(null);
   };
 
   // Apply suggestions from AI directly to form
@@ -621,7 +645,52 @@ export const CustomerOrderPortal: React.FC<CustomerOrderPortalProps> = ({ onBack
   const displayQrImage = storeInfo.khqrQrImage ? getProductImageUrl(storeInfo.khqrQrImage) : autoQrSrc;
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-rose-50/50 via-white to-pink-50/30 text-slate-800 pb-20 font-sans selection:bg-pink-100 selection:text-pink-700">
+    <div className="min-h-screen bg-gradient-to-b from-rose-50/50 via-white to-pink-50/30 text-slate-800 pb-20 font-sans selection:bg-pink-100 selection:text-pink-700 relative">
+      {/* Floating Real-Time Alert Banner when Store Staff Replies */}
+      {incomingStaffToast && (
+        <div className="fixed top-3 left-3 right-3 sm:left-auto sm:right-6 sm:w-[420px] z-50 animate-in slide-in-from-top duration-300">
+          <div
+            onClick={() => {
+              soundFx.playPop();
+              setAiGuideInitialTab('store-chat');
+              setIsAiGuideOpen(true);
+              setIncomingStaffToast(null);
+            }}
+            className="p-3.5 bg-gradient-to-r from-blue-700 via-indigo-700 to-purple-800 text-white rounded-3xl shadow-2xl border-2 border-white/50 cursor-pointer flex items-center justify-between gap-3 active:scale-95 transition-all hover:shadow-indigo-500/50 ring-4 ring-indigo-400/30"
+          >
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-10 h-10 rounded-2xl bg-white/20 flex items-center justify-center text-xl shrink-0 animate-bounce">
+                👩‍🍳
+              </div>
+              <div className="min-w-0">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs font-black text-amber-300">
+                    {incomingStaffToast.senderName || 'អ្នកលក់'} បានឆ្លើយតប!
+                  </span>
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping shrink-0" />
+                </div>
+                <p className="text-xs font-bold text-white truncate mt-0.5 max-w-[280px]">
+                  "{incomingStaffToast.text}"
+                </p>
+                <span className="text-[10px] text-blue-200 block mt-0.5 underline font-medium">
+                  👉 ចុចទីនេះដើម្បីអានសារ និងតបទៅអ្នកលក់វិញ
+                </span>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setIncomingStaffToast(null);
+              }}
+              className="p-1.5 text-white/70 hover:text-white rounded-full shrink-0"
+              title="បិទ"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
       {/* Telegram Mini App Native Banner */}
       {isTelegramWebApp() && (
         <div className="bg-gradient-to-r from-sky-500 via-blue-600 to-indigo-600 text-white text-[11px] font-bold px-4 py-2 flex items-center justify-between shadow-xs">
@@ -2106,25 +2175,43 @@ export const CustomerOrderPortal: React.FC<CustomerOrderPortalProps> = ({ onBack
           type="button"
           onClick={() => {
             soundFx.playPop();
-            setAiGuideInitialTab('chat');
+            const shouldOpenStore = customerUnreadCount > 0;
+            setAiGuideInitialTab(shouldOpenStore ? 'store-chat' : 'chat');
             setIsAiGuideOpen(true);
+            setIncomingStaffToast(null);
           }}
-          className="group flex items-center gap-2.5 px-3.5 py-2.5 sm:px-4 sm:py-3 bg-gradient-to-r from-pink-600 via-rose-600 to-rose-500 hover:from-pink-700 hover:to-rose-700 text-white rounded-full shadow-lg shadow-pink-600/30 hover:shadow-xl hover:shadow-pink-600/40 border-2 border-white transition-all active:scale-95 cursor-pointer"
+          className={`group flex items-center gap-2.5 px-3.5 py-2.5 sm:px-4 sm:py-3 rounded-full border-2 border-white transition-all active:scale-95 cursor-pointer ${
+            customerUnreadCount > 0
+              ? 'bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white shadow-xl shadow-indigo-600/40 animate-pulse ring-4 ring-indigo-300/60'
+              : 'bg-gradient-to-r from-pink-600 via-rose-600 to-rose-500 hover:from-pink-700 hover:to-rose-700 text-white shadow-lg shadow-pink-600/30'
+          }`}
           title="Chatbot សួរនាំ កុម្ម៉ង់នំ ឬឆាតមកហាងផ្ទាល់"
         >
           <div className="relative shrink-0">
             <span className="text-xl sm:text-2xl group-hover:scale-110 transition-transform block">
               💬
             </span>
-            <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 border-2 border-white absolute -top-0.5 -right-0.5 animate-pulse" />
+            {customerUnreadCount > 0 ? (
+              <span className="w-3.5 h-3.5 rounded-full bg-amber-300 border-2 border-white absolute -top-1 -right-1 animate-ping" />
+            ) : (
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 border-2 border-white absolute -top-0.5 -right-0.5 animate-pulse" />
+            )}
           </div>
-          <div className="text-left">
+          <div className="text-left font-battambang">
             <div className="flex items-center gap-1 leading-none">
-              <span className="text-xs sm:text-sm font-black tracking-tight">Chatbot & ឆាតមកហាង</span>
-              <Sparkles className="w-3 h-3 text-amber-300 animate-spin [animation-duration:4s]" />
+              <span className="text-xs sm:text-sm font-black tracking-tight">
+                {customerUnreadCount > 0 ? 'ហាងបានតបសារ!' : 'Chatbot & ឆាតមកហាង'}
+              </span>
+              {customerUnreadCount > 0 ? (
+                <span className="px-1.5 py-0.2 rounded-full text-[10px] font-mono font-black bg-white text-indigo-700 shadow-xs">
+                  {customerUnreadCount} សារថ្មី
+                </span>
+              ) : (
+                <Sparkles className="w-3 h-3 text-amber-300 animate-spin [animation-duration:4s]" />
+              )}
             </div>
             <span className="text-[10px] text-pink-100 font-medium block mt-0.5">
-              សួរនាំ • កុម្ម៉ង់នំ • ឆាតផ្ទាល់
+              {customerUnreadCount > 0 ? 'ចុចដើម្បីអានសារឆ្លើយតប' : 'សួរនាំ • កុម្ម៉ង់នំ • ឆាតផ្ទាល់'}
             </span>
           </div>
         </button>

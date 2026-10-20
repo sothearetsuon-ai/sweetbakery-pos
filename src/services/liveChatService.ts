@@ -30,10 +30,31 @@ if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
 export function getCustomerSessionId(): string {
   if (typeof window === 'undefined') return 'cust_default';
   try {
+    // 1. Check URL query parameter (?chatSession=... or ?session=...)
+    if (window.location && window.location.search) {
+      const params = new URLSearchParams(window.location.search);
+      const urlSession = params.get('chatSession') || params.get('session');
+      if (urlSession && urlSession.trim()) {
+        const clean = urlSession.trim();
+        localStorage.setItem(STORAGE_CUST_SESSION_ID, clean);
+        try { sessionStorage.setItem(STORAGE_CUST_SESSION_ID, clean); } catch (e) {}
+        return clean;
+      }
+    }
+
+    // 2. Check localStorage
     let id = localStorage.getItem(STORAGE_CUST_SESSION_ID);
+
+    // 3. Check sessionStorage fallback
+    if (!id) {
+      try { id = sessionStorage.getItem(STORAGE_CUST_SESSION_ID); } catch (e) {}
+    }
+
+    // 4. Create new ID if none exists
     if (!id) {
       id = 'cust_' + Date.now().toString(36) + '_' + Math.random().toString(36).substring(2, 7);
       localStorage.setItem(STORAGE_CUST_SESSION_ID, id);
+      try { sessionStorage.setItem(STORAGE_CUST_SESSION_ID, id); } catch (e) {}
     }
     return id;
   } catch (e) {
@@ -223,7 +244,7 @@ export async function sendChatMessage(
     try {
       const sessToSave = sessions.find((s) => s.sessionId === newMsg.sessionId);
       if (sessToSave) {
-        saveFirestoreDoc('live_chat_sessions', sessToSave.sessionId, sessToSave);
+        await saveFirestoreDoc('live_chat_sessions', sessToSave.sessionId, sessToSave);
       }
     } catch (e) {}
 
@@ -235,7 +256,7 @@ export async function sendChatMessage(
 
   // 4. Save message to Firestore for real-time cloud multi-device sync
   try {
-    saveFirestoreDoc('live_chats', newMsg.id, newMsg);
+    await saveFirestoreDoc('live_chats', newMsg.id, newMsg);
   } catch (e) {}
 
   // 5. Notify local listeners and other tabs
@@ -363,6 +384,11 @@ export function subscribeToChatMessages(
           const merged = Array.from(localMap.values());
           saveLocalMessages(merged);
           pushCurrent();
+
+          // Also trigger window event so all UI components update
+          try {
+            window.dispatchEvent(new CustomEvent('bakery_live_chat_update'));
+          } catch (e) {}
         }
       );
     }
@@ -484,3 +510,37 @@ export function getStaffUnreadChatCount(): number {
     return 0;
   }
 }
+
+/**
+ * Get unread message count from Staff for a Customer session
+ */
+export function getCustomerUnreadChatCount(sessionId?: string): number {
+  if (typeof window === 'undefined') return 0;
+  try {
+    const targetId = sessionId || getCustomerSessionId();
+    const msgs = loadLocalMessages();
+    return msgs.filter(
+      (m) => m.channel === 'CUSTOMER' && m.sessionId === targetId && m.senderRole === 'STAFF' && !m.isRead
+    ).length;
+  } catch (e) {
+    return 0;
+  }
+}
+
+/**
+ * Get latest staff reply message for customer
+ */
+export function getLatestStaffReplyForCustomer(sessionId?: string): ChatMessage | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const targetId = sessionId || getCustomerSessionId();
+    const msgs = loadLocalMessages();
+    const staffMsgs = msgs
+      .filter((m) => m.channel === 'CUSTOMER' && m.sessionId === targetId && m.senderRole === 'STAFF')
+      .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+    return staffMsgs[0] || null;
+  } catch (e) {
+    return null;
+  }
+}
+
