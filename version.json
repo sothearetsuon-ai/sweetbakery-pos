@@ -1,7 +1,11 @@
 {
-  "version": "1.5.5",
+  "version": "1.5.6",
   "releaseDate": "2026-10-20",
   "releaseNotes": [
+    "🤖 ជំនួយការ Chatbot ឆ្លាតវៃ ២៤/៧ ផ្ទាំងកុម្ម៉ង់នំ៖ ឆ្លើយតបសំណួរ ណែនាំទំហំ រសជាតិ និងពាក្យជូនពរដោយសំឡេង និងអក្សរ។",
+    "🍰 រើសម៉ូដនំកុម្ម៉ង់ភ្លាមៗក្នុង Chatbot (Order Cakes directly in Chatbot)៖ ស្វែងរកនំ បង្ហាញកាតរូបនំ និងចុច «🛒 កុម្ម៉ង់នំនេះ» រើសយកទៅកំណត់ទំហំ និងរសជាតិភ្លាមៗ។",
+    "💬 ផ្ទាំងឆាតផ្ទាល់មកហាង (Live Store Chat & Direct Telegram Alert)៖ ភ្ញៀវអាចចុច 1-Click ឆាត Telegram ហាង, ខលទូរស័ព្ទ Hotline, ឬផ្ញើសារសួរនាំបន្ទាន់ចូល Telegram របស់ម្ចាស់ហាងភ្លាមៗ។",
+    "🔐 ផ្ទាំងបញ្ចូលលេខសម្ងាត់ថ្មី (Modern Redesigned Auth Screen)៖ បង្ហាញលេខកូដសម្ងាត់ភ្លាមៗពេលបើកកម្មវិធី មិនចាំបាច់រង់ចាំយូរ (0ms Instant Access)។",
     "⚡ បង្កើនល្បឿនប្រព័ន្ធទូទៅ 75% ដំណើរការរហ័សទាន់ចិត្ត (Ultra Fast Performance & 75% Bundle Reduction)៖ បំបែក Lazy Loading Chunks និងបញ្ចូល Font Preconnect កាត់បន្ថយពេលបើក App មកនៅត្រឹមក្រោម 0.5 វិនាទី។",
     "🏪 ប្រព័ន្ធ Multi-Tenant Store Cloud Isolation៖ បែងចែកទិន្នន័យហាងដាច់ពីគ្នា ១០០% ដោយស្វ័យប្រវត្ត មិនប៉ះពាល់ទិន្នន័យហាងគ្នាឡើយ (Zero Conflict)។ ហាងដើមរក្សាទុកដដែល 100%។",
     "📱 ប្រព័ន្ធ Login & Sign Up ទំនើបដូច Telegram / Facebook៖ គាំទ្រទាំងការចុះឈ្មោះ និងចូលប្រើតាមរយៈ លេខទូរស័ព្ទ, អ៊ីមែល, Google 1-Click និង Store ID សម្រាប់ Tablet/ទូរស័ព្ទបុគ្គលិក។",
@@ -21,8 +25,8 @@
     "🎂 Smart Birthday CRM & Auto-Greeting៖ រំលឹកថ្ងៃខួបកំណើតភ្ញៀវក្នុង ១៤ ថ្ងៃខាងមុខ បង្កើតសារជូនពរផ្អែមល្ហែម និង Voucher បញ្ចុះតម្លៃ ព្រមទាំងចុចផ្ញើតាម Telegram ឬខលជូនពរភ្លាមៗ។",
     "🎂 ត្រងបង្ហាញតែរសជាតិនំដែលមានក្នុងស្តុក (In-Stock Flavors Only) ក្នុងផ្ទាំងកុម្ម៉ង់ទុកមុន និង Customer Portal ព្រមទាំង AI ប្រាប់ដំណឹងពេលអស់ស្តុក។"
   ],
-  "apkDownloadUrl": "https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.5.5/SweetBakery-Android.apk",
-  "windowsInstallerUrl": "https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.5.5/SweetBakery-POS-Setup.exe",
-  "windowsDownloadUrl": "https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.5.5/SweetBakery-POS-Setup.exe",
+  "apkDownloadUrl": "https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.5.6/SweetBakery-Android.apk",
+  "windowsInstallerUrl": "https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.5.6/SweetBakery-POS-Setup.exe",
+  "windowsDownloadUrl": "https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.5.6/SweetBakery-POS-Setup.exe",
   "mandatory": false
 }
