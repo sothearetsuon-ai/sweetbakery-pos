@@ -19,15 +19,16 @@ const ProductCardComponent: React.FC<ProductCardProps> = ({ product, onAddToCart
   const [justAdded, setJustAdded] = useState(false);
   const [isLiked, setIsLiked] = useState(false);
   const [imgError, setImgError] = useState(false);
-  const [isImgLoaded, setIsImgLoaded] = useState(false);
+  const [isImgLoaded, setIsImgLoaded] = useState(true);
   const [isRestockOpen, setIsRestockOpen] = useState(false);
   const [addQty, setAddQty] = useState('10');
 
-  // Reset imgError if product changes
+  // Reset imgError if product id or image key changes
+  const imageKey = product.imageUrl || (product.images && product.images.length > 0 ? product.images[0] : '');
   React.useEffect(() => {
     setImgError(false);
-    setIsImgLoaded(false);
-  }, [product.id, product.imageUrl, product.images]);
+    setIsImgLoaded(true);
+  }, [product.id, imageKey]);
 
   const handleAdd = () => {
     soundFx.playPop();
@@ -44,48 +45,45 @@ const ProductCardComponent: React.FC<ProductCardProps> = ({ product, onAddToCart
   const isBestSeller = product.id === 'p1' || product.id === 'p5';
   const isFresh = product.id === 'p2' || product.id === 'p6';
 
-  const defaultCakeFallback =
-    'https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=500&q=80';
-
-  const rawImage =
-    (!imgError && (product.imageUrl || (product.images && product.images.length > 0 ? product.images[0] : ''))) ||
-    '';
-  const displayImage = rawImage ? getProductImageUrl(rawImage) : defaultCakeFallback;
+  const rawImage = (!imgError && imageKey) || '';
+  const displayImage = rawImage ? getProductImageUrl(rawImage) : '';
 
   return (
     <div
       onClick={handleAdd}
-      style={{ contentVisibility: 'auto', containIntrinsicSize: '240px' }}
       className="group bg-white/95 hover:bg-white rounded-3xl border border-rose-100/70 hover:border-pink-400/80 overflow-hidden shadow-xs hover:shadow-xl hover:shadow-pink-500/12 hover:-translate-y-1 transition-all duration-200 cursor-pointer flex flex-col justify-between select-none relative transform-gpu ring-1 ring-black/[0.03]"
     >
       <div>
         {/* Image Frame with Shimmer Skeleton */}
         <div className="relative w-full h-32 sm:h-40 bg-gradient-to-br from-rose-50/80 via-pink-50/50 to-amber-50/50 overflow-hidden flex items-center justify-center">
-          {!isImgLoaded && !imgError && (
-            <div className="absolute inset-0 bg-gradient-to-r from-rose-100/40 via-white/60 to-rose-100/40 animate-pulse flex items-center justify-center">
-              <Cake className="w-8 h-8 text-rose-200/70 animate-bounce" />
+          {displayImage && !imgError ? (
+            <>
+              {!isImgLoaded && (
+                <div className="absolute inset-0 bg-gradient-to-r from-rose-100/40 via-white/60 to-rose-100/40 animate-pulse flex items-center justify-center z-0">
+                  <Cake className="w-8 h-8 text-rose-200/70" />
+                </div>
+              )}
+              <img
+                src={displayImage}
+                alt={name}
+                loading={displayImage.startsWith('data:') ? 'eager' : 'lazy'}
+                decoding="async"
+                onLoad={() => setIsImgLoaded(true)}
+                onError={() => {
+                  setImgError(true);
+                  setIsImgLoaded(true);
+                }}
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 ease-out transform-gpu relative z-[1]"
+              />
+            </>
+          ) : (
+            <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-rose-50 via-pink-50 to-amber-50 text-rose-300 p-2">
+              <Cake className="w-10 h-10 text-rose-300/80" />
+              <span className="text-[10px] font-bold text-slate-400 mt-1 px-2 text-center line-clamp-1">{name}</span>
             </div>
           )}
-          <img
-            src={displayImage}
-            alt={name}
-            loading="lazy"
-            decoding="async"
-            // @ts-ignore
-            fetchPriority="low"
-            onLoad={() => setIsImgLoaded(true)}
-            className={`w-full h-full object-cover group-hover:scale-105 transition-all duration-300 ease-out transform-gpu ${
-              isImgLoaded ? 'opacity-100' : 'opacity-0'
-            }`}
-            onError={() => {
-              if (!imgError) {
-                setImgError(true);
-                setIsImgLoaded(true);
-              }
-            }}
-          />
 
-          <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/10 to-transparent opacity-60 group-hover:opacity-80 transition-opacity" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/10 to-transparent opacity-60 group-hover:opacity-80 transition-opacity z-[2] pointer-events-none" />
 
           {/* Top Badges */}
           <div className="absolute top-2 left-2 sm:top-2.5 sm:left-2.5 flex flex-col gap-1 z-10">

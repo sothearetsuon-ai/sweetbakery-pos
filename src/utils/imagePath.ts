@@ -46,10 +46,21 @@ export function getProductImageUrl(url?: string | null): string {
     cleanPath = cleanPath.slice(7);
   }
 
-  // In the browser, resolve dynamically with origin and subpath for 100% guarantee
+  // In the browser or desktop app, resolve dynamically
   if (typeof window !== 'undefined' && window.location) {
+    // 1. Electron or local file protocol:
+    // When loaded from file:/// or origin is null/file://, use relative path './'
+    if (
+      window.location.protocol === 'file:' ||
+      !window.location.origin ||
+      window.location.origin === 'null' ||
+      window.location.origin === 'file://'
+    ) {
+      return `./${cleanPath}`;
+    }
+
     const origin = window.location.origin;
-    const pathname = window.location.pathname;
+    const pathname = window.location.pathname || '';
     if (pathname.includes('/sweetbakery-pos')) {
       return `${origin}/sweetbakery-pos/${cleanPath}`;
     }
