@@ -43,7 +43,8 @@ export type TabType =
   | 'inventory'
   | 'reports'
   | 'shifts'
-  | 'staff';
+  | 'staff'
+  | 'chat';
 
 interface SidebarProps {
   activeTab: TabType;
@@ -161,6 +162,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
           badgeColor: 'bg-gradient-to-r from-pink-500 to-rose-500 text-white animate-pulse',
           permission: 'canAccessCustomOrders',
         },
+        {
+          id: 'chat' as TabType,
+          label: 'ឆាតផ្ទាល់លើ App 💬',
+          subLabel: 'Live In-App Chat',
+          icon: MessageCircle,
+          iconBg: 'bg-rose-100 text-rose-600',
+          iconColor: 'text-rose-600',
+          badge: unreadChatCount > 0 ? `${unreadChatCount}` : 'Live',
+          badgeColor: unreadChatCount > 0 ? 'bg-rose-600 text-white font-bold animate-pulse' : 'bg-emerald-500 text-white font-bold',
+          permission: 'canAccessPos',
+        },
       ],
     },
     {
@@ -263,6 +275,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
   ];
 
   const handleTabClick = (tab: TabType, permission?: keyof StaffPermissions) => {
+    if (tab === 'chat') {
+      soundFx.playPop();
+      onOpenChatModal?.('CUSTOMER');
+      onCloseMobile?.();
+      return;
+    }
     if (tab === 'staff') {
       if (isDemoMode) {
         soundFx.playPop();

@@ -18,6 +18,7 @@ import { soundFx } from './utils/audio';
 import confetti from 'canvas-confetti';
 import { initTelegramMiniApp, isTelegramWebApp, getTelegramStartParam } from './services/telegramWebApp';
 import { checkForAppUpdates, AppUpdateInfo, getNativeAppVersion } from './services/appUpdateService';
+import { getStaffUnreadChatCount, subscribeToCustomerSessions } from './services/liveChatService';
 import { RealStoreAuthModal } from './components/auth/RealStoreAuthModal';
 import type { SettingsTab } from './components/settings/SettingsModal';
 import type { ChatChannel } from './types';
@@ -97,6 +98,17 @@ export const App: React.FC = () => {
     if (channel) setChatModalInitialTab(channel);
     setIsChatModalOpen(true);
   };
+
+  // Real-time In-App Live Chat Unread Messages Counter (From Customers)
+  const [unreadChatCount, setUnreadChatCount] = useState<number>(() => getStaffUnreadChatCount());
+
+  React.useEffect(() => {
+    const unsub = subscribeToCustomerSessions((sessions) => {
+      const total = sessions.reduce((acc, s) => acc + (s.unreadCountStaff || 0), 0);
+      setUnreadChatCount(total);
+    });
+    return unsub;
+  }, []);
 
   // Store Multi-Tenant Auth Modal (Email/Phone Login, Sign Up, Store ID Join)
   const [isStoreAuthModalOpen, setIsStoreAuthModalOpen] = useState(false);
@@ -328,6 +340,8 @@ export const App: React.FC = () => {
       if (!isDemoMode) {
         handleOpenSettings('staff');
       }
+    } else if (tab === 'chat') {
+      handleOpenChatModal('CUSTOMER');
     } else {
       setActiveTab(tab);
     }
@@ -526,6 +540,46 @@ export const App: React.FC = () => {
         setActiveTab={handleSelectTab}
         onOpenMoreMenu={() => setIsMobileDrawerOpen(true)}
       />
+
+      {/* Floating In-App Live Chat Action Bubble on POS screen */}
+      <div className="fixed bottom-20 right-4 sm:bottom-6 sm:right-6 z-40">
+        <button
+          type="button"
+          onClick={() => handleOpenChatModal('CUSTOMER')}
+          title="ឆាតផ្ទាល់លើ App (In-App Live Chat: ភ្ញៀវ ↔ អ្នកលក់ • AI • ក្រុមការងារ)"
+          className={`group flex items-center gap-2 px-3 py-2 sm:px-4 sm:py-2.5 rounded-full shadow-xl border-2 border-white transition-all active:scale-95 cursor-pointer ${
+            unreadChatCount > 0
+              ? 'bg-gradient-to-r from-pink-600 via-rose-600 to-amber-500 text-white shadow-pink-500/40 animate-pulse ring-4 ring-pink-300/60'
+              : 'bg-gradient-to-r from-slate-950 via-slate-900 to-pink-950 text-white hover:from-pink-600 hover:to-rose-600 shadow-slate-900/30'
+          }`}
+        >
+          <div className="relative shrink-0">
+            <span className="text-xl sm:text-2xl group-hover:scale-110 transition-transform block">
+              💬
+            </span>
+            {unreadChatCount > 0 ? (
+              <span className="w-3.5 h-3.5 rounded-full bg-amber-300 border-2 border-white absolute -top-1 -right-1 animate-ping" />
+            ) : (
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 border-2 border-white absolute -top-0.5 -right-0.5" />
+            )}
+          </div>
+          <div className="text-left font-battambang">
+            <div className="flex items-center gap-1.5 leading-none">
+              <span className="text-xs sm:text-sm font-black tracking-tight">ឆាតលើ App</span>
+              {unreadChatCount > 0 ? (
+                <span className="px-1.5 py-0.2 rounded-full text-[10px] font-mono font-black bg-white text-rose-600 shadow-xs">
+                  {unreadChatCount} ថ្មី
+                </span>
+              ) : (
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              )}
+            </div>
+            <span className="text-[10px] text-pink-200 font-medium block mt-0.5">
+              {unreadChatCount > 0 ? 'មានសារភ្ញៀវថ្មី!' : 'ភ្ញៀវ ↔ អ្នកលក់'}
+            </span>
+          </div>
+        </button>
+      </div>
 
       {/* Global Modals (Lazy Loaded on Demand) */}
       <Suspense fallback={null}>

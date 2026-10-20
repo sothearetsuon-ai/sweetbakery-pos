@@ -493,6 +493,38 @@ export const Navbar: React.FC<NavbarProps> = ({
             </button>
           )}
 
+          {/* Dedicated In-App Live Chat Button with Real-Time Unread Badge */}
+          {onOpenChatModal && (
+            <button
+              type="button"
+              onClick={() => {
+                soundFx.playPop();
+                onOpenChatModal('CUSTOMER');
+              }}
+              title="ឆាតផ្ទាល់លើ App (In-App Live Chat: ភ្ញៀវ ↔ អ្នកលក់ • AI • ក្រុមការងារ)"
+              className={`relative flex items-center gap-1.5 p-1.5 sm:px-3 sm:py-1.5 rounded-2xl border text-xs font-black transition-all shadow-2xs cursor-pointer active:scale-95 ${
+                unreadChatCount > 0
+                  ? 'bg-gradient-to-r from-pink-600 via-rose-600 to-amber-500 text-white border-pink-700 shadow-md shadow-pink-600/30 animate-pulse ring-2 ring-pink-300'
+                  : 'bg-white border-slate-200/90 text-slate-700 hover:bg-pink-50 hover:text-pink-600 hover:border-pink-300'
+              }`}
+            >
+              <div className="relative">
+                <MessageCircle className={`w-3.5 h-3.5 ${unreadChatCount > 0 ? 'text-white' : 'text-pink-600'}`} />
+                {unreadChatCount > 0 ? (
+                  <span className="w-2 h-2 rounded-full bg-amber-300 absolute -top-1 -right-1 animate-ping" />
+                ) : (
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 absolute -bottom-0.5 -right-0.5" />
+                )}
+              </div>
+              <span className="font-battambang">ឆាត</span>
+              {unreadChatCount > 0 && (
+                <span className="px-1.5 py-0.2 rounded-full text-[10px] font-mono font-black bg-white text-rose-600 shadow-xs">
+                  {unreadChatCount}
+                </span>
+              )}
+            </button>
+          )}
+
           {/* 2. Unified Quick Tools & Features Menu Dropdown (All Small Buttons Grouped Here) */}
           <div className="relative" ref={quickToolsRef}>
             <button

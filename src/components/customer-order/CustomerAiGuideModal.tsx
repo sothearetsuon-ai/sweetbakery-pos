@@ -69,6 +69,7 @@ interface CustomerAiGuideModalProps {
   onGoToStep?: (step: 1 | 2 | 3 | 4) => void;
   onOpenStoreLocation?: () => void;
   onSelectProduct?: (product: Product) => void;
+  initialTab?: 'chat' | 'browse' | 'store-chat';
 }
 
 export const CustomerAiGuideModal: React.FC<CustomerAiGuideModalProps> = ({
@@ -82,9 +83,16 @@ export const CustomerAiGuideModal: React.FC<CustomerAiGuideModalProps> = ({
   onGoToStep,
   onOpenStoreLocation,
   onSelectProduct,
+  initialTab = 'chat',
 }) => {
   // Navigation Tabs: 'chat' (AI Q&A) | 'browse' (Cake Catalog) | 'store-chat' (Live Store Contact)
-  const [activeTab, setActiveTab] = useState<'chat' | 'browse' | 'store-chat'>('chat');
+  const [activeTab, setActiveTab] = useState<'chat' | 'browse' | 'store-chat'>(initialTab);
+
+  useEffect(() => {
+    if (isOpen && initialTab) {
+      setActiveTab(initialTab);
+    }
+  }, [isOpen, initialTab]);
 
   // Option to hide cake prices in customer view (defaults to true)
   const hidePrices = storeInfo?.hideCustomerPrices ?? true;
