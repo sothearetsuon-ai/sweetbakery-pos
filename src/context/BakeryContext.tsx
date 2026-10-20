@@ -200,6 +200,7 @@ export const demoStoreInfo: StoreInfo = {
   khqrBakongId: 'demo_bakery@aba',
   khqrAccountNumber: '000000000',
   khqrBankName: 'Demo Bank / Bakong',
+  hideCustomerPrices: true,
 };
 
 export const defaultStoreInfo: StoreInfo = {
@@ -217,6 +218,7 @@ export const defaultStoreInfo: StoreInfo = {
   khqrBankName: 'ACLEDA Bank / Bakong',
   realStorePin: '1111',
   requireRealStorePin: true,
+  hideCustomerPrices: true,
 };
 
 export const initialPartyAddons: PartyAddon[] = [
@@ -836,6 +838,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       khqrBakongId: 'sweet_bakery@aba',
       khqrAccountNumber: '012629160',
       khqrBankName: 'ACLEDA Bank / Bakong',
+      hideCustomerPrices: true,
     };
 
     if (saved) {

@@ -78,6 +78,9 @@ export const CustomerAiGuideModal: React.FC<CustomerAiGuideModalProps> = ({
   // Navigation Tabs: 'chat' (AI Q&A) | 'browse' (Cake Catalog) | 'store-chat' (Live Store Contact)
   const [activeTab, setActiveTab] = useState<'chat' | 'browse' | 'store-chat'>('chat');
 
+  // Option to hide cake prices in customer view (defaults to true)
+  const hidePrices = storeInfo?.hideCustomerPrices ?? true;
+
   // Messages History
   const [messages, setMessages] = useState<CustomerAiMessage[]>(() => [
     {
@@ -1130,19 +1133,28 @@ export const CustomerAiGuideModal: React.FC<CustomerAiGuideModalProps> = ({
                           </div>
 
                           <div className="pt-1.5 border-t border-rose-50">
-                            <div className="text-xs font-black text-rose-600 tracking-tight">
-                              {priceKhr > 0 ? `${priceKhr.toLocaleString()} ៛` : 'តម្លៃចរចា'}
-                            </div>
-                            {p.priceUsd > 0 && (
-                              <div className="text-[10px] text-slate-400">
-                                ${p.priceUsd.toFixed(2)}
+                            {hidePrices ? (
+                              <div className="flex items-center gap-1 text-[10px] font-bold text-pink-700 bg-pink-50 px-2 py-0.5 rounded-lg border border-pink-200 mb-1">
+                                <Sparkles className="w-3 h-3 text-pink-500 shrink-0" />
+                                <span>តម្លៃតាមទំហំ & ម៉ូដ</span>
                               </div>
+                            ) : (
+                              <>
+                                <div className="text-xs font-black text-rose-600 tracking-tight">
+                                  {priceKhr > 0 ? `${priceKhr.toLocaleString()} ៛` : 'តម្លៃចរចា'}
+                                </div>
+                                {p.priceUsd > 0 && (
+                                  <div className="text-[10px] text-slate-400">
+                                    ${p.priceUsd.toFixed(2)}
+                                  </div>
+                                )}
+                              </>
                             )}
 
                             <button
                               type="button"
                               onClick={() => handleSelectCake(p)}
-                              className="mt-2 w-full py-1.5 bg-gradient-to-r from-pink-600 to-rose-500 hover:from-pink-700 hover:to-rose-600 text-white rounded-xl text-[10px] sm:text-xs font-black transition-all shadow-2xs active:scale-95 cursor-pointer flex items-center justify-center gap-1"
+                              className="mt-1.5 w-full py-1.5 bg-gradient-to-r from-pink-600 to-rose-500 hover:from-pink-700 hover:to-rose-600 text-white rounded-xl text-[10px] sm:text-xs font-black transition-all shadow-2xs active:scale-95 cursor-pointer flex items-center justify-center gap-1"
                             >
                               <span>🛒 កុម្ម៉ង់នំនេះ</span>
                             </button>

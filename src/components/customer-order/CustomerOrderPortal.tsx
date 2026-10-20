@@ -86,6 +86,9 @@ export const CustomerOrderPortal: React.FC<CustomerOrderPortalProps> = ({ onBack
     addCustomOrder,
   } = useBakery();
 
+  // Option to hide fixed cake prices on customer display (defaults to true)
+  const hidePrices = storeInfo?.hideCustomerPrices ?? true;
+
   // Current Step: 1 = Catalog/Design, 2 = Customization, 3 = Pickup & Contact, 4 = Deposit & KHQR, 5 = Confirmation
   const [step, setStep] = useState<1 | 2 | 3 | 4 | 5>(1);
 
@@ -943,16 +946,23 @@ export const CustomerOrderPortal: React.FC<CustomerOrderPortalProps> = ({ onBack
                       </div>
 
                       <div className="pt-2 border-t border-rose-50 flex items-center justify-between">
-                        <div>
-                          <div className="text-xs sm:text-sm font-black text-rose-600 tracking-tight">
-                            {priceKhr > 0 ? `${priceKhr.toLocaleString()} ៛` : 'តម្លៃចរចា'}
+                        {hidePrices ? (
+                          <div className="flex items-center gap-1 text-[11px] font-bold text-pink-700 bg-pink-50 px-2.5 py-1 rounded-xl border border-pink-200">
+                            <Sparkles className="w-3 h-3 text-pink-500 shrink-0" />
+                            <span>តម្លៃតាមទំហំ & ម៉ូដ</span>
                           </div>
-                          {p.priceUsd > 0 && (
-                            <div className="text-[10px] text-slate-400 font-semibold">
-                              ${p.priceUsd.toFixed(2)}
+                        ) : (
+                          <div>
+                            <div className="text-xs sm:text-sm font-black text-rose-600 tracking-tight">
+                              {priceKhr > 0 ? `${priceKhr.toLocaleString()} ៛` : 'តម្លៃចរចា'}
                             </div>
-                          )}
-                        </div>
+                            {p.priceUsd > 0 && (
+                              <div className="text-[10px] text-slate-400 font-semibold">
+                                ${p.priceUsd.toFixed(2)}
+                              </div>
+                            )}
+                          </div>
+                        )}
                         <button className="px-3 py-1.5 bg-gradient-to-r from-pink-600 to-rose-500 text-white rounded-xl text-[10px] font-black transition-all shadow-2xs group-hover:scale-105 cursor-pointer">
                           រើសម៉ូដនេះ ✨
                         </button>

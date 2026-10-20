@@ -262,30 +262,33 @@ export const CustomerShowcase: React.FC = () => {
     exchangeRate,
     addToCart,
     storeInfo,
+    updateStoreInfo,
     isDemoMode,
     hideDemoPrices,
     toggleHideDemoPrices,
   } = useBakery();
   const text = t[lang];
 
-  // In demo mode, prioritize hideDemoPrices (defaults to true). In real store mode, use showcase_hide_prices
+  // In demo mode, prioritize hideDemoPrices (defaults to true). In real store mode, use storeInfo.hideCustomerPrices or showcase_hide_prices
   const [localHidePrices, setLocalHidePrices] = useState<boolean>(() => {
+    if (storeInfo?.hideCustomerPrices !== undefined) return storeInfo.hideCustomerPrices;
     const saved = localStorage.getItem('showcase_hide_prices');
     return saved !== null ? saved === 'true' : true;
   });
 
-  const hidePrices = isDemoMode ? hideDemoPrices : localHidePrices;
+  const hidePrices = isDemoMode
+    ? hideDemoPrices
+    : (storeInfo?.hideCustomerPrices ?? localHidePrices);
 
   const handleToggleHidePrices = () => {
     soundFx.playPop();
     if (isDemoMode) {
       toggleHideDemoPrices();
     } else {
-      setLocalHidePrices((prev) => {
-        const next = !prev;
-        localStorage.setItem('showcase_hide_prices', String(next));
-        return next;
-      });
+      const next = !hidePrices;
+      setLocalHidePrices(next);
+      localStorage.setItem('showcase_hide_prices', String(next));
+      updateStoreInfo({ hideCustomerPrices: next });
     }
   };
 
@@ -511,10 +514,19 @@ export const CustomerShowcase: React.FC = () => {
                         {lang === 'km' ? featuredProduct.nameKh : featuredProduct.nameEn}
                       </h3>
                       <div className="flex items-center gap-2 text-xs text-rose-100 font-semibold mt-0.5 flex-wrap">
-                        <span className="font-black text-white text-xs sm:text-sm">
-                          {(roundKhr(featuredProduct.priceKhr ?? (featuredProduct.priceUsd * exchangeRate))).toLocaleString()} ៛
-                        </span>
-                        <span className="text-[11px] sm:text-xs">(~${featuredProduct.priceUsd.toFixed(2)})</span>
+                        {hidePrices ? (
+                          <span className="font-black text-amber-200 text-xs sm:text-sm bg-white/20 px-2.5 py-0.5 rounded-lg border border-white/20 flex items-center gap-1">
+                            <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                            <span>តម្លៃតាមម៉ូដ & ទំហំ</span>
+                          </span>
+                        ) : (
+                          <>
+                            <span className="font-black text-white text-xs sm:text-sm">
+                              {(roundKhr(featuredProduct.priceKhr ?? (featuredProduct.priceUsd * exchangeRate))).toLocaleString()} ៛
+                            </span>
+                            <span className="text-[11px] sm:text-xs">(~${featuredProduct.priceUsd.toFixed(2)})</span>
+                          </>
+                        )}
                         <span className="text-[10px] bg-white/20 px-2 py-0.2 rounded-md text-amber-200 ml-auto hidden sm:inline-block">
                           ចុចមើលលម្អិត 👁️
                         </span>

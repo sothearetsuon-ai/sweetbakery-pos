@@ -154,6 +154,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [telegramChatLink, setTelegramChatLink] = useState(storeInfo?.telegramChatLink || '');
   const [hotlinePhone, setHotlinePhone] = useState(storeInfo?.hotlinePhone || '');
   const [facebookUrl, setFacebookUrl] = useState(storeInfo?.facebookUrl || '');
+  const [hideCustomerPrices, setHideCustomerPrices] = useState(storeInfo?.hideCustomerPrices ?? true);
 
   const [savedSuccess, setSavedSuccess] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -188,6 +189,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       setTelegramChatLink(storeInfo.telegramChatLink || '');
       setHotlinePhone(storeInfo.hotlinePhone || '');
       setFacebookUrl(storeInfo.facebookUrl || '');
+      setHideCustomerPrices(storeInfo.hideCustomerPrices ?? true);
     } else if (!isOpen) {
       isInitializedRef.current = false;
     }
@@ -389,6 +391,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       telegramChatLink: telegramChatLink.trim(),
       hotlinePhone: hotlinePhone.trim(),
       facebookUrl: facebookUrl.trim(),
+      hideCustomerPrices,
     };
 
     updateStoreInfo(updatedStoreData);
@@ -1085,6 +1088,35 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                           />
                         </div>
                       </div>
+                    </div>
+                  </div>
+
+                  {/* Customer View Price Visibility Option */}
+                  <div className="p-4 rounded-2xl bg-gradient-to-r from-amber-50/70 via-pink-50/40 to-rose-50/50 border border-amber-200/90 space-y-2">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-2.5">
+                        <div className="p-2 bg-amber-500 text-white rounded-xl shadow-xs shrink-0">
+                          <EyeOff className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <h4 className="text-xs sm:text-sm font-black text-slate-900 flex items-center gap-1.5">
+                            <span>លាក់តម្លៃនំលើផ្ទាំងភ្ញៀវ (Hide Cake Prices on Customer View)</span>
+                          </h4>
+                          <p className="text-[11px] text-slate-500 mt-0.5 leading-relaxed">
+                            បិទការបង្ហាញតម្លៃលើផ្ទាំងអតិថិជន (Showcase, Kiosk & ផ្ទាំងកុម្ម៉ង់អនឡាញ) និងបង្ហាញជា «✨ តម្លៃតាមទំហំ & ម៉ូដ» ជំនួសវិញ ដើម្បីងាយស្រួលចរចាតាមទំហំ និងការតុបតែងនំ។
+                          </p>
+                        </div>
+                      </div>
+
+                      <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                        <input
+                          type="checkbox"
+                          checked={hideCustomerPrices}
+                          onChange={(e) => setHideCustomerPrices(e.target.checked)}
+                          className="sr-only peer"
+                        />
+                        <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-pink-600"></div>
+                      </label>
                     </div>
                   </div>
 

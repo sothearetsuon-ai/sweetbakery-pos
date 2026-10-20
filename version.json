@@ -1,7 +1,9 @@
 {
-  "version": "1.5.6",
+  "version": "1.5.7",
   "releaseDate": "2026-10-20",
   "releaseNotes": [
+    "🎂 ផ្ទាំងភ្ញៀវបិទតម្លៃនំកុំបង្ហាញ (Hide Cake Prices on Customer View)៖ បិទការបង្ហាញតម្លៃលេខលើផ្ទាំងស្លាយ TV (Showcase), ផ្ទាំងកុម្ម៉ង់ផ្ទាល់ខ្លួនភ្ញៀវ (Portal QR) និងកាតាឡុក Chatbot ដោយបង្ហាញជា «✨ តម្លៃតាមទំហំ & ម៉ូដ» ជំនួសវិញ។",
+    "⚙️ ប៊ូតុងកំណត់ក្នុង Settings ហាង (Store Settings)៖ អាចបើក ឬបិទការលាក់តម្លៃនំលើផ្ទាំងភ្ញៀវបានតាមចិត្ត។",
     "🤖 ជំនួយការ Chatbot ឆ្លាតវៃ ២៤/៧ ផ្ទាំងកុម្ម៉ង់នំ៖ ឆ្លើយតបសំណួរ ណែនាំទំហំ រសជាតិ និងពាក្យជូនពរដោយសំឡេង និងអក្សរ។",
     "🍰 រើសម៉ូដនំកុម្ម៉ង់ភ្លាមៗក្នុង Chatbot (Order Cakes directly in Chatbot)៖ ស្វែងរកនំ បង្ហាញកាតរូបនំ និងចុច «🛒 កុម្ម៉ង់នំនេះ» រើសយកទៅកំណត់ទំហំ និងរសជាតិភ្លាមៗ។",
     "💬 ផ្ទាំងឆាតផ្ទាល់មកហាង (Live Store Chat & Direct Telegram Alert)៖ ភ្ញៀវអាចចុច 1-Click ឆាត Telegram ហាង, ខលទូរស័ព្ទ Hotline, ឬផ្ញើសារសួរនាំបន្ទាន់ចូល Telegram របស់ម្ចាស់ហាងភ្លាមៗ។",
@@ -25,8 +27,8 @@
     "🎂 Smart Birthday CRM & Auto-Greeting៖ រំលឹកថ្ងៃខួបកំណើតភ្ញៀវក្នុង ១៤ ថ្ងៃខាងមុខ បង្កើតសារជូនពរផ្អែមល្ហែម និង Voucher បញ្ចុះតម្លៃ ព្រមទាំងចុចផ្ញើតាម Telegram ឬខលជូនពរភ្លាមៗ។",
     "🎂 ត្រងបង្ហាញតែរសជាតិនំដែលមានក្នុងស្តុក (In-Stock Flavors Only) ក្នុងផ្ទាំងកុម្ម៉ង់ទុកមុន និង Customer Portal ព្រមទាំង AI ប្រាប់ដំណឹងពេលអស់ស្តុក។"
   ],
-  "apkDownloadUrl": "https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.5.6/SweetBakery-Android.apk",
-  "windowsInstallerUrl": "https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.5.6/SweetBakery-POS-Setup.exe",
-  "windowsDownloadUrl": "https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.5.6/SweetBakery-POS-Setup.exe",
+  "apkDownloadUrl": "https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.5.7/SweetBakery-Android.apk",
+  "windowsInstallerUrl": "https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.5.7/SweetBakery-POS-Setup.exe",
+  "windowsDownloadUrl": "https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.5.7/SweetBakery-POS-Setup.exe",
   "mandatory": false
 }

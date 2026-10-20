@@ -23,6 +23,7 @@ export interface StoreInfo {
   facebookUrl?: string;
   hotlinePhone?: string;
   chatbotWelcomeMessage?: string;
+  hideCustomerPrices?: boolean;
 }
 
 export interface Category {
