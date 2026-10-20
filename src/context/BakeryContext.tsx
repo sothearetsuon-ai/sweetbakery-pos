@@ -5616,7 +5616,29 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setActiveReceipt(null);
   };
 
-  const [isRealStoreAuthModalOpen, setIsRealStoreAuthModalOpen] = useState(false);
+  // Real Store Security Passcode Authentication Modal State (Synchronously initialized for 0ms instant display)
+  const [isRealStoreAuthModalOpen, setIsRealStoreAuthModalOpen] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    // In demo mode, don't show auth modal on initial startup
+    if (checkInitialDemoMode()) return false;
+
+    // Check if session or device is already authorized
+    const isUnlockedSession = sessionStorage.getItem('bakery_real_store_unlocked') === 'true';
+    const isTrustedDevice = localStorage.getItem('bakery_real_store_authorized_device') === 'true';
+    if (isUnlockedSession || isTrustedDevice) return false;
+
+    // Check if store requires PIN (defaults to true)
+    let requirePin = true;
+    try {
+      const saved = localStorage.getItem('bakery_store_info');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.requireRealStorePin === false) requirePin = false;
+      }
+    } catch (e) {}
+
+    return requirePin;
+  });
   const [realStoreAuthSuccessCallback, setRealStoreAuthSuccessCallback] = useState<((authenticatedStaff?: StaffMember) => void) | null>(null);
 
   const openRealStoreAuthModal = (onSuccess?: (authenticatedStaff?: StaffMember) => void) => {

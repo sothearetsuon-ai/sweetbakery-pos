@@ -59,7 +59,13 @@ export const RealStoreAuthModal: React.FC<RealStoreAuthModalProps> = ({
   } = useBakery();
 
   // Primary mode: 'NEW_FORM' (Default) or 'PIN'
-  const [authMode, setAuthMode] = useState<'NEW_FORM' | 'PIN'>('NEW_FORM');
+  const [authMode, setAuthMode] = useState<'NEW_FORM' | 'PIN'>(() => {
+    try {
+      const saved = localStorage.getItem('bakery_auth_preferred_mode');
+      if (saved === 'NEW_FORM' || saved === 'PIN') return saved;
+    } catch (e) {}
+    return 'NEW_FORM';
+  });
 
   // Sub-tabs in NEW_FORM: 'LOGIN' | 'SIGNUP' | 'JOIN'
   const [activeFormTab, setActiveFormTab] = useState<'LOGIN' | 'SIGNUP' | 'JOIN'>('LOGIN');
@@ -463,6 +469,9 @@ export const RealStoreAuthModal: React.FC<RealStoreAuthModalProps> = ({
             type="button"
             onClick={() => {
               setAuthMode('NEW_FORM');
+              try {
+                localStorage.setItem('bakery_auth_preferred_mode', 'NEW_FORM');
+              } catch (e) {}
               soundFx.playPop();
             }}
             className={`flex-1 py-2 px-3 rounded-2xl text-xs sm:text-sm font-black transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
@@ -479,6 +488,9 @@ export const RealStoreAuthModal: React.FC<RealStoreAuthModalProps> = ({
             type="button"
             onClick={() => {
               setAuthMode('PIN');
+              try {
+                localStorage.setItem('bakery_auth_preferred_mode', 'PIN');
+              } catch (e) {}
               soundFx.playPop();
             }}
             className={`flex-1 py-2 px-3 rounded-2xl text-xs sm:text-sm font-black transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
@@ -579,6 +591,7 @@ export const RealStoreAuthModal: React.FC<RealStoreAuthModalProps> = ({
                       <input
                         type="text"
                         required
+                        autoFocus
                         value={emailOrPhone}
                         onChange={(e) => setEmailOrPhone(e.target.value)}
                         placeholder="ឧ. 012629160 ឬ owner@bakery.com"

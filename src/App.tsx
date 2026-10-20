@@ -18,6 +18,7 @@ import { soundFx } from './utils/audio';
 import confetti from 'canvas-confetti';
 import { initTelegramMiniApp, isTelegramWebApp, getTelegramStartParam } from './services/telegramWebApp';
 import { checkForAppUpdates, AppUpdateInfo, getNativeAppVersion } from './services/appUpdateService';
+import { RealStoreAuthModal } from './components/auth/RealStoreAuthModal';
 import type { SettingsTab } from './components/settings/SettingsModal';
 
 // High-performance Lazy Loaded Components (Chunks are dynamically loaded on-demand)
@@ -39,7 +40,6 @@ const LicenseRenewalModal = lazy(() => import('./components/license/LicenseRenew
 const SuperAdminPortalModal = lazy(() => import('./components/license/SuperAdminPortalModal').then((m) => ({ default: m.SuperAdminPortalModal })));
 const CustomerOrderPortal = lazy(() => import('./components/customer-order/CustomerOrderPortal').then((m) => ({ default: m.CustomerOrderPortal })));
 const CustomerOrderLinkModal = lazy(() => import('./components/customer-order/CustomerOrderLinkModal').then((m) => ({ default: m.CustomerOrderLinkModal })));
-const RealStoreAuthModal = lazy(() => import('./components/auth/RealStoreAuthModal').then((m) => ({ default: m.RealStoreAuthModal })));
 const StoreAuthModal = lazy(() => import('./components/auth/StoreAuthModal').then((m) => ({ default: m.StoreAuthModal })));
 const ContactModal = lazy(() => import('./components/common/ContactModal').then((m) => ({ default: m.ContactModal })));
 const CakeFlavorsModal = lazy(() => import('./components/pos/CakeFlavorsModal').then((m) => ({ default: m.CakeFlavorsModal })));
@@ -601,13 +601,6 @@ export const App: React.FC = () => {
           }}
         />
 
-        {/* Real Store Passcode Authentication Lock Modal */}
-        <RealStoreAuthModal
-          isOpen={isRealStoreAuthModalOpen}
-          onClose={closeRealStoreAuthModal}
-          onSuccess={realStoreAuthSuccessCallback || undefined}
-        />
-
         {/* System Contact & Software Inquiries Modal */}
         <ContactModal
           isOpen={isContactModalOpen}
@@ -656,6 +649,13 @@ export const App: React.FC = () => {
           onClose={() => setIsStoreAuthModalOpen(false)}
         />
       </Suspense>
+
+      {/* Real Store Passcode & Account Authentication Lock Screen (0ms Instant Direct Render on Frame 0) */}
+      <RealStoreAuthModal
+        isOpen={isRealStoreAuthModalOpen}
+        onClose={closeRealStoreAuthModal}
+        onSuccess={realStoreAuthSuccessCallback || undefined}
+      />
     </div>
   );
 };
