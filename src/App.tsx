@@ -162,16 +162,17 @@ export const App: React.FC = () => {
   const [availableUpdate, setAvailableUpdate] = useState<AppUpdateInfo | null>(() => ({
     hasUpdate: false,
     currentVersion: getNativeAppVersion(),
-    latestVersion: '1.5.5',
+    latestVersion: '1.5.6',
     releaseDate: '2026-10-20',
     releaseNotes: [
-      'ប្រព័ន្ធ In-App Auto Update ស្តង់ដារថ្មី៖ ទាញយកអាប់ដែតបានរលូន និងលឿនរហ័ស ទាំងលើ Windows និង Android',
-      'របារទាញយក Progress Bar ផ្ទាល់៖ បង្ហាញភាគរយ % និងទំហំ MB កំពុងទាញយកជាក់ស្តែង',
-      'ការដំឡើងស្វ័យប្រវត្ត (1-Click Auto Install) ដោយសុវត្ថិភាព មិនបាត់បង់ទិន្នន័យ',
+      '🤖 Customer Smart Chatbot & Cake Ordering: ប៊ូតុង Chatbot ឆ្លាតវៃសម្រាប់សួរនាំព័ត៌មាន មើលកាតាឡុក និងកុម្ម៉ងនំ',
+      '💬 Telegram Live Chat: ឆាតទៅកាន់ Telegram របស់ហាងផ្ទាល់ និងផ្ញើដំណឹងកុម្ម៉ងនំស្វ័យប្រវត្តិ',
+      '⚡ Instant Startup: បើកកម្មវិធីចូលផ្ទាំងលេខសម្ងាត់ភ្លាមៗ មិនបាច់រង់ចាំយូរដូចមុន',
+      '🖼️ Image Protection: ការពារ និងរក្សារូបភាពនំឱ្យច្បាស់ល្អ មិនបាត់បង់',
     ],
-    apkDownloadUrl: 'https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.5.5/SweetBakery-Android.apk',
-    windowsDownloadUrl: 'https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.5.5/SweetBakery-POS-Setup.exe',
-    windowsInstallerUrl: 'https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.5.5/SweetBakery-POS-Setup.exe',
+    apkDownloadUrl: 'https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.5.6/SweetBakery-Android.apk',
+    windowsDownloadUrl: 'https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.5.6/SweetBakery-POS-Setup.exe',
+    windowsInstallerUrl: 'https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.5.6/SweetBakery-POS-Setup.exe',
   }));
   const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
 
