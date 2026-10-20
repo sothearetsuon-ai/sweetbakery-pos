@@ -8,6 +8,7 @@ const { spawn } = require('child_process');
 app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
 app.commandLine.appendSwitch('disable-background-timer-throttling');
 app.commandLine.appendSwitch('disable-renderer-backgrounding');
+app.userAgentFallback = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';
 
 const TARGET_ONLINE_URL = 'https://sothearetsuon-ai.github.io/sweetbakery-pos/';
 const YT_BRIDGE_PORT = 48921;
@@ -82,14 +83,15 @@ function createWindow() {
     return true;
   });
 
-  // Fix YouTube Error 153 & Referer Restrictions in Electron:
-  // Inject valid HTTPS Referer and Origin headers so YouTube embedded players initialize properly
+  // Fix YouTube Error 150/153 & Referer Restrictions in Electron:
+  // Inject valid Chrome User-Agent, HTTPS Referer and Origin headers so YouTube embedded players initialize properly
   session.defaultSession.webRequest.onBeforeSendHeaders(
     { urls: ['*://*.youtube.com/*', '*://*.youtube-nocookie.com/*', '*://*.googlevideo.com/*'] },
     (details, callback) => {
       const requestHeaders = { ...details.requestHeaders };
       requestHeaders['Referer'] = 'https://sothearetsuon-ai.github.io/sweetbakery-pos/';
       requestHeaders['Origin'] = 'https://sothearetsuon-ai.github.io';
+      requestHeaders['User-Agent'] = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';
       callback({ cancel: false, requestHeaders });
     }
   );
@@ -100,6 +102,8 @@ function createWindow() {
       const responseHeaders = { ...details.responseHeaders };
       delete responseHeaders['x-frame-options'];
       delete responseHeaders['X-Frame-Options'];
+      delete responseHeaders['content-security-policy'];
+      delete responseHeaders['Content-Security-Policy'];
       callback({ cancel: false, responseHeaders });
     }
   );

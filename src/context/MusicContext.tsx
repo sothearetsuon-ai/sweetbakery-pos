@@ -678,13 +678,13 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const hideBothOffscreen = (ytContainer: HTMLElement | null, mp4El: HTMLElement | null) => {
       if (ytContainer) {
         ytContainer.style.position = 'fixed';
-        ytContainer.style.bottom = '0px';
-        ytContainer.style.right = '0px';
-        ytContainer.style.top = 'auto';
-        ytContainer.style.left = 'auto';
-        ytContainer.style.width = '1px';
-        ytContainer.style.height = '1px';
-        ytContainer.style.opacity = '0.001';
+        ytContainer.style.top = '-9999px';
+        ytContainer.style.left = '-9999px';
+        ytContainer.style.bottom = 'auto';
+        ytContainer.style.right = 'auto';
+        ytContainer.style.width = '320px';
+        ytContainer.style.height = '180px';
+        ytContainer.style.opacity = '0.01';
         ytContainer.style.pointerEvents = 'none';
         ytContainer.style.zIndex = '-9999';
         ytContainer.style.boxShadow = 'none';
@@ -692,13 +692,13 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       }
       if (mp4El) {
         mp4El.style.position = 'fixed';
-        mp4El.style.bottom = '0px';
-        mp4El.style.right = '0px';
-        mp4El.style.top = 'auto';
-        mp4El.style.left = 'auto';
-        mp4El.style.width = '1px';
-        mp4El.style.height = '1px';
-        mp4El.style.opacity = '0.001';
+        mp4El.style.top = '-9999px';
+        mp4El.style.left = '-9999px';
+        mp4El.style.bottom = 'auto';
+        mp4El.style.right = 'auto';
+        mp4El.style.width = '320px';
+        mp4El.style.height = '180px';
+        mp4El.style.opacity = '0.01';
         mp4El.style.pointerEvents = 'none';
         mp4El.style.zIndex = '-9999';
         mp4El.style.boxShadow = 'none';
@@ -733,11 +733,11 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       }
 
       let targetSlot: HTMLElement | null = null;
-      let targetZIndex = '25';
+      let targetZIndex = '55'; // Sits above modal body (z-50) and under top header bar (z-[60])
 
       if (shouldShowInModal) {
         targetSlot = document.getElementById('sweetbakery-video-screen-slot');
-        targetZIndex = '25'; // Inside modal body, lower than modal header (z-60) & footer (z-60)
+        targetZIndex = '55';
       } else if (shouldShowInPiP) {
         targetSlot = document.getElementById('sweetbakery-floating-video-slot');
         targetZIndex = '45';
@@ -768,13 +768,13 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           }
           if (inactiveEl) {
             inactiveEl.style.position = 'fixed';
-            inactiveEl.style.bottom = '0px';
-            inactiveEl.style.right = '0px';
-            inactiveEl.style.top = 'auto';
-            inactiveEl.style.left = 'auto';
-            inactiveEl.style.width = '1px';
-            inactiveEl.style.height = '1px';
-            inactiveEl.style.opacity = '0.001';
+            inactiveEl.style.top = '-9999px';
+            inactiveEl.style.left = '-9999px';
+            inactiveEl.style.bottom = 'auto';
+            inactiveEl.style.right = 'auto';
+            inactiveEl.style.width = '320px';
+            inactiveEl.style.height = '180px';
+            inactiveEl.style.opacity = '0.01';
             inactiveEl.style.pointerEvents = 'none';
             inactiveEl.style.zIndex = '-9999';
           }
@@ -845,6 +845,10 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     // 2. YouTube Track Playback
     if (targetTrack.category === 'youtube' || targetTrack.url.startsWith('youtube:')) {
+      setIsVideoMode(true);
+      setIsFloatingMiniVideo(true);
+      clearYtError();
+
       const videoId = targetTrack.youtubeId || extractYouTubeVideoId(targetTrack.url);
       if (videoId) {
         if (ytPlayerRef.current && typeof ytPlayerRef.current.loadVideoById === 'function') {
@@ -1256,10 +1260,20 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     birthdaySynth.stop();
 
     if (track.category === 'youtube' || track.url.startsWith('youtube:')) {
+      setIsVideoMode(true);
+      clearYtError();
+      const videoId = track.youtubeId || extractYouTubeVideoId(track.url);
       if (ytPlayerRef.current && typeof ytPlayerRef.current.playVideo === 'function') {
         try {
           ytPlayerRef.current.playVideo();
-        } catch {}
+        } catch {
+          if (videoId && typeof ytPlayerRef.current.loadVideoById === 'function') {
+            ytPlayerRef.current.loadVideoById({ videoId, suggestedQuality: 'hd720' });
+            ytPlayerRef.current.playVideo();
+          }
+        }
+      } else if (videoId) {
+        pendingVideoIdRef.current = videoId;
       }
       return;
     }
