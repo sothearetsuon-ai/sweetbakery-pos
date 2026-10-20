@@ -1,7 +1,7 @@
 import { CompletedSale, CustomCakeOrder, Expense, Shift, StoreInfo } from '../types';
 import { formatDateDMY, formatDateTimeDMY } from '../utils/dateUtils';
 import { idbGet, idbSet } from '../utils/idbStorage';
-import { saveFirestoreDoc } from './firebase';
+import { saveFirestoreDoc, getFirestoreDoc } from './firebase';
 
 export interface TelegramConfig {
   botToken: string;
@@ -219,6 +219,7 @@ const SENT_EVENTS_STORAGE_KEY = 'bakery_sent_telegram_events';
 const sentEventCache = new Set<string>();
 const inFlightSaleEvents = new Set<string>();
 const inFlightCustomOrderEvents = new Set<string>();
+const inFlightDailyReportEvents = new Set<string>();
 
 const loadSentEvents = (): Set<string> => {
   if (typeof window === 'undefined') return sentEventCache;
@@ -1342,6 +1343,9 @@ export const sendTelegramDailyReport = async (
     targetChatIds = Array.from(combined);
   }
 
+  // Deduplicate target chat IDs so that the exact same ID is never sent to multiple times
+  targetChatIds = Array.from(new Set(targetChatIds.map((id) => String(id).trim()).filter(Boolean)));
+
   if (targetChatIds.length === 0) {
     return {
       success: false,
@@ -1352,13 +1356,30 @@ export const sendTelegramDailyReport = async (
   const now = new Date();
   const todayStr = params.targetDate || params.dateStr || now.toISOString().slice(0, 10);
   const timeSlot = config.dailyReportTime || '21:00';
-  const eventKey = `daily_report_${todayStr}_${timeSlot}_${recipientMode}`;
+  // Strictly lock by date so that duplicate reports can never fire for the same calendar day
+  const eventKey = `daily_report_${todayStr}`;
 
-  if (!isManual && hasTelegramEventFired(eventKey)) {
-    return {
-      success: true,
-      message: 'របាយការណ៍ប្រចាំថ្ងៃត្រូវបានផ្ញើរួចហើយសម្រាប់ថ្ងៃនេះ',
-    };
+  if (!isManual) {
+    if (hasTelegramEventFired(eventKey) || inFlightDailyReportEvents.has(eventKey)) {
+      return {
+        success: true,
+        message: 'របាយការណ៍ប្រចាំថ្ងៃត្រូវបានផ្ញើរួចហើយសម្រាប់ថ្ងៃនេះ',
+      };
+    }
+    inFlightDailyReportEvents.add(eventKey);
+
+    // Cross-device cloud deduplication: check if another device (e.g. Phone or PC) already sent it today
+    try {
+      const cloudLog = await getFirestoreDoc<{ sentAt: number }>('daily_report_logs', eventKey);
+      if (cloudLog && cloudLog.sentAt) {
+        markTelegramEventFired(eventKey);
+        inFlightDailyReportEvents.delete(eventKey);
+        return {
+          success: true,
+          message: 'របាយការណ៍ប្រចាំថ្ងៃត្រូវបានផ្ញើរួចហើយសម្រាប់ថ្ងៃនេះតាមរយៈឧបករណ៍ផ្សេង',
+        };
+      }
+    } catch (e) {}
   }
 
   const reportText = generateDailyMonthlySummaryReportText({
@@ -1366,23 +1387,34 @@ export const sendTelegramDailyReport = async (
     reportTimeLabel: isManual ? undefined : timeSlot,
   });
 
-  const res = await sendTelegramMessage(reportText, config, targetChatIds);
-  if (res.success) {
-    markTelegramEventFired(eventKey);
-    let targetDesc = '';
-    if (recipientMode === 'ADMIN_ONLY') {
-      targetDesc = `Admin ផ្ទាល់ខ្លួន (${adminId}) [សម្ងាត់ មិនផ្ញើចូល Group ឡើយ]`;
-    } else if (recipientMode === 'GROUP_ONLY') {
-      targetDesc = 'Telegram Group ហាង';
-    } else {
-      targetDesc = `Admin (${adminId}) និង Group ហាង`;
+  try {
+    const res = await sendTelegramMessage(reportText, config, targetChatIds);
+    if (res.success) {
+      markTelegramEventFired(eventKey);
+      // Persist to Cloud so other POS devices (e.g. Phone/Tablet) will immediately recognize it as already sent
+      saveFirestoreDoc('daily_report_logs', eventKey, {
+        sentAt: Date.now(),
+        date: todayStr,
+        recipients: targetChatIds,
+      }).catch(() => {});
+
+      let targetDesc = '';
+      if (recipientMode === 'ADMIN_ONLY') {
+        targetDesc = `Admin ផ្ទាល់ខ្លួន (${adminId}) [សម្ងាត់ មិនផ្ញើចូល Group ឡើយ]`;
+      } else if (recipientMode === 'GROUP_ONLY') {
+        targetDesc = 'Telegram Group ហាង';
+      } else {
+        targetDesc = `Admin (${adminId}) និង Group ហាង`;
+      }
+      return {
+        success: true,
+        message: `📊 របាយការណ៍បូកសរុបត្រូវបានផ្ញើទៅកាន់ ${targetDesc} ជោគជ័យ!`,
+      };
     }
-    return {
-      success: true,
-      message: `📊 របាយការណ៍បូកសរុបត្រូវបានផ្ញើទៅកាន់ ${targetDesc} ជោគជ័យ!`,
-    };
+    return res;
+  } finally {
+    inFlightDailyReportEvents.delete(eventKey);
   }
-  return res;
 };
 
 

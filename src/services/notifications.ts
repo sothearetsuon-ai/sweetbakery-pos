@@ -352,7 +352,7 @@ export const runPeriodicNotificationChecks = (params: {
   if (tgConfig.enabled && tgConfig.notifyDailyReport !== false && tgConfig.botToken && tgConfig.chatId) {
     const reportTime = tgConfig.dailyReportTime || '21:00';
     if (currentTimeStr === reportTime) {
-      const tag = `tg-daily-report-${todayStr}-${reportTime}`;
+      const tag = `tg-daily-report-${todayStr}`;
       if (!hasFiredToday(tag, todayStr)) {
         markFiredToday(tag, todayStr);
         sendTelegramDailyReport({

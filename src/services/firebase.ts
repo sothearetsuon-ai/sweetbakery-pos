@@ -15,6 +15,7 @@ import {
   Firestore,
   collection,
   doc,
+  getDoc,
   setDoc,
   deleteDoc,
   onSnapshot,
@@ -432,6 +433,27 @@ export const saveFirestoreDoc = async (
     await setDoc(docRef, cleanData, { merge: true });
   } catch (e) {
     console.error(`Error saving document to ${collectionName}/${docId}:`, e);
+  }
+};
+
+/**
+ * Read single document from a collection
+ */
+export const getFirestoreDoc = async <T = any>(
+  collectionName: string,
+  docId: string
+): Promise<T | null> => {
+  const db = getFirestoreDb();
+  if (!db) return null;
+  try {
+    const docRef = getScopedDocRef(db, collectionName, docId);
+    const snap = await getDoc(docRef);
+    if (snap.exists()) {
+      return snap.data() as T;
+    }
+    return null;
+  } catch (e) {
+    return null;
   }
 };
 
