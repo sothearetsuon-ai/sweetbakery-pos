@@ -1087,10 +1087,36 @@ self.addEventListener('fetch', (event) => {
   };
 }
 
-// https://vitejs.dev/config/
 export default defineConfig({
   base: './',
   plugins: [react(), lanSyncPlugin(), pwaGeneratorPlugin()],
+  build: {
+    chunkSizeWarningLimit: 1000,
+    cssCodeSplit: true,
+    sourcemap: false,
+    minify: 'esbuild',
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            if (id.includes('react-dom') || id.includes('react/') || id.includes('scheduler')) {
+              return 'vendor-react';
+            }
+            if (id.includes('firebase')) {
+              return 'vendor-firebase';
+            }
+            if (id.includes('lucide-react')) {
+              return 'vendor-icons';
+            }
+            if (id.includes('canvas-confetti')) {
+              return 'vendor-confetti';
+            }
+            return 'vendor-utils';
+          }
+        },
+      },
+    },
+  },
   server: {
     host: true, // Expose to local network (0.0.0.0) for phone connections
     port: 3000,

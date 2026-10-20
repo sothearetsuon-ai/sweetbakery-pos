@@ -351,7 +351,7 @@ export const PosTerminal: React.FC = () => {
         {/* Search & Category Tabs (Sticky at top when scrolling products) */}
         <div className="sticky -top-3 sm:-top-6 z-20 bg-white/90 backdrop-blur-md pt-3 sm:pt-6 pb-2.5 mb-3 sm:mb-5 space-y-3 sm:space-y-4 border-b border-rose-100/80 shadow-2xs -mx-3 sm:-mx-6 px-3 sm:px-6">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            {/* Search Input with shortcut chip */}
+            {/* Search Input with shortcut chip & instant clear button */}
             <div className="relative flex-1 min-w-[200px] max-w-md">
               <Search className="w-4 h-4 absolute left-3.5 sm:left-4 top-1/2 -translate-y-1/2 text-slate-400" />
               <input
@@ -361,11 +361,26 @@ export const PosTerminal: React.FC = () => {
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onKeyDown={handleSearchKeyDown}
                 placeholder="ស្វែងរកនំ ឬស្កេនបាកូដ..."
-                className="w-full pl-10 sm:pl-11 pr-10 sm:pr-12 py-2.5 sm:py-3 bg-white border border-slate-200 rounded-2xl text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-rose-500/25 focus:border-rose-500 shadow-2xs transition-all font-semibold"
+                className="w-full pl-10 sm:pl-11 pr-16 sm:pr-20 py-2.5 sm:py-3 bg-white/95 border border-rose-100 rounded-2xl text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-rose-500/25 focus:border-rose-400 shadow-xs transition-all font-semibold"
               />
-              <span className="hidden sm:inline-block absolute right-3 top-1/2 -translate-y-1/2 px-2 py-0.5 bg-slate-100 border border-slate-200 text-slate-500 text-[10px] font-mono rounded-lg">
-                /
-              </span>
+              <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
+                {searchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSearchQuery('');
+                      searchInputRef.current?.focus();
+                    }}
+                    className="p-1 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+                    title="សម្អាតការស្វែងរក"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
+                <span className="hidden sm:inline-block px-2 py-0.5 bg-slate-100 border border-slate-200 text-slate-500 text-[10px] font-mono rounded-lg">
+                  /
+                </span>
+              </div>
             </div>
 
             {/* Actions: Add New Product & Mobile Cart Trigger */}
@@ -488,30 +503,40 @@ export const PosTerminal: React.FC = () => {
             </div>
           </div>
 
-          {/* Category Tabs Bar (Includes all categories including party/decorations) */}
+          {/* Category Tabs Bar (Includes all categories with product count badges) */}
           <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
-            {categories
-              .map((cat) => {
-                const isActive = selectedCategory === cat.id;
-                const catName = lang === 'km' ? cat.nameKh : cat.nameEn;
-                return (
-                  <button
-                    key={cat.id}
-                    onClick={() => {
-                      soundFx.playPop();
-                      setSelectedCategory(cat.id);
-                    }}
-                    className={`px-4 py-2 sm:py-2.5 rounded-full text-xs font-black whitespace-nowrap transition-all duration-200 flex items-center gap-2 shadow-2xs active:scale-95 cursor-pointer relative ${
-                      isActive
-                        ? 'bg-gradient-to-r from-[#FF6F68] to-[#E6514D] text-white shadow-md shadow-[#E6514D]/30 scale-102 ring-2 ring-[#FFB4AE]'
-                        : 'bg-white text-slate-800 hover:bg-[#FFF5F2] hover:text-[#E6514D] border border-[#F2DBD3] hover:shadow-xs'
+            {categories.map((cat) => {
+              const isActive = selectedCategory === cat.id;
+              const catName = lang === 'km' ? cat.nameKh : cat.nameEn;
+              const count = cat.id === 'all'
+                ? products.filter((p) => p.categoryId !== 'party').length
+                : products.filter((p) => p.categoryId === cat.id).length;
+
+              return (
+                <button
+                  key={cat.id}
+                  onClick={() => {
+                    soundFx.playPop();
+                    setSelectedCategory(cat.id);
+                  }}
+                  className={`px-4 py-2 sm:py-2.5 rounded-full text-xs font-black whitespace-nowrap transition-all duration-200 flex items-center gap-2 shadow-2xs active:scale-95 cursor-pointer relative ${
+                    isActive
+                      ? 'bg-gradient-to-r from-[#FF6F68] to-[#E6514D] text-white shadow-md shadow-[#E6514D]/30 scale-102 ring-2 ring-[#FFB4AE]'
+                      : 'bg-white/95 text-slate-700 hover:bg-rose-50/70 hover:text-[#E6514D] border border-rose-100/80 hover:shadow-xs'
+                  }`}
+                >
+                  {getCategoryIcon(cat.icon)}
+                  <span>{catName}</span>
+                  <span
+                    className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${
+                      isActive ? 'bg-white/25 text-white' : 'bg-slate-100 text-slate-500'
                     }`}
                   >
-                    {getCategoryIcon(cat.icon)}
-                    <span>{catName}</span>
-                  </button>
-                );
-              })}
+                    {count}
+                  </span>
+                </button>
+              );
+            })}
           </div>
         </div>
 

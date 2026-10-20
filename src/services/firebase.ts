@@ -1,5 +1,16 @@
 import { initializeApp, getApps, FirebaseApp } from 'firebase/app';
 import {
+  getAuth,
+  Auth,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  signInWithPopup,
+  GoogleAuthProvider,
+  signOut,
+  onAuthStateChanged,
+  User,
+} from 'firebase/auth';
+import {
   getFirestore,
   Firestore,
   collection,
@@ -292,6 +303,24 @@ export const getFirestoreDb = (customConfig?: FirebaseConfig): Firestore | null 
     return db;
   } catch (e) {
     console.error('Firestore DB Initialization Error:', e);
+    return null;
+  }
+};
+
+let currentAuth: Auth | null = null;
+
+/**
+ * Get or initialize Firebase Auth
+ */
+export const getFirebaseAuth = (customConfig?: FirebaseConfig): Auth | null => {
+  if (currentAuth) return currentAuth;
+  const app = getFirebaseApp(customConfig);
+  if (!app) return null;
+  try {
+    currentAuth = getAuth(app);
+    return currentAuth;
+  } catch (e) {
+    console.error('Firebase Auth Initialization Error:', e);
     return null;
   }
 };

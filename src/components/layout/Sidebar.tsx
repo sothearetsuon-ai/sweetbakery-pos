@@ -22,6 +22,7 @@ import {
   Link as LinkIcon,
   ShieldCheck,
   Rocket,
+  Store,
 } from 'lucide-react';
 import { useBakery } from '../../context/BakeryContext';
 import { useMusic } from '../../context/MusicContext';
@@ -59,6 +60,7 @@ interface SidebarProps {
   onOpenKds?: () => void;
   onOpenBirthdayCrm?: () => void;
   onOpenBakingForecast?: () => void;
+  onOpenStoreAuthModal?: () => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -78,6 +80,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onOpenKds,
   onOpenBirthdayCrm,
   onOpenBakingForecast,
+  onOpenStoreAuthModal,
 }) => {
   const { lang, customOrders, lowStockCount, expenses, sales, currentStaff, hasPermission, staffMembers, storeInfo, logoutAndLock, isDemoMode, reserveFund } = useBakery();
   const { isPlaying: isMusicPlaying, setIsPlayerOpen: setIsMusicPlayerOpen } = useMusic();
@@ -708,6 +711,28 @@ export const Sidebar: React.FC<SidebarProps> = ({
             {isMusicPlaying ? 'កំពុងចាក់ 🎶' : 'Jukebox'}
           </span>
         </button>
+
+        {/* Multi-Store & Cloud Tenant Account */}
+        {onOpenStoreAuthModal && (
+          <button
+            type="button"
+            onClick={() => {
+              soundFx.playPop();
+              onOpenStoreAuthModal();
+              onCloseMobile?.();
+            }}
+            className="w-full flex items-center justify-between px-3.5 py-2 rounded-2xl font-bold text-xs text-rose-700 bg-rose-50/70 hover:bg-rose-100 border border-rose-200/80 transition-all shadow-2xs cursor-pointer group"
+            title="គណនីហាង & Multi-Store (ចូលគណនី / បង្កើតហាងថ្មី / ភ្ជាប់ Store ID)"
+          >
+            <div className="flex items-center gap-2.5">
+              <Store className="w-4 h-4 text-rose-600 transition-transform group-hover:scale-110" />
+              <span className="font-battambang">គណនីហាង (Multi-Store)</span>
+            </div>
+            <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-rose-200/80 text-rose-800 font-battambang">
+              Tenant
+            </span>
+          </button>
+        )}
 
         {/* Settings button */}
         <button

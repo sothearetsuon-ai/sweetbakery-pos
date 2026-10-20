@@ -19,12 +19,14 @@ const ProductCardComponent: React.FC<ProductCardProps> = ({ product, onAddToCart
   const [justAdded, setJustAdded] = useState(false);
   const [isLiked, setIsLiked] = useState(false);
   const [imgError, setImgError] = useState(false);
+  const [isImgLoaded, setIsImgLoaded] = useState(false);
   const [isRestockOpen, setIsRestockOpen] = useState(false);
   const [addQty, setAddQty] = useState('10');
 
   // Reset imgError if product changes
   React.useEffect(() => {
     setImgError(false);
+    setIsImgLoaded(false);
   }, [product.id, product.imageUrl, product.images]);
 
   const handleAdd = () => {
@@ -54,11 +56,16 @@ const ProductCardComponent: React.FC<ProductCardProps> = ({ product, onAddToCart
     <div
       onClick={handleAdd}
       style={{ contentVisibility: 'auto', containIntrinsicSize: '240px' }}
-      className="group bg-white rounded-3xl border border-slate-200/90 overflow-hidden shadow-xs hover:shadow-xl hover:shadow-pink-500/15 hover:border-pink-400 hover:-translate-y-1.5 transition-all duration-300 cursor-pointer flex flex-col justify-between select-none relative transform-gpu"
+      className="group bg-white/95 hover:bg-white rounded-3xl border border-rose-100/70 hover:border-pink-400/80 overflow-hidden shadow-xs hover:shadow-xl hover:shadow-pink-500/12 hover:-translate-y-1 transition-all duration-200 cursor-pointer flex flex-col justify-between select-none relative transform-gpu ring-1 ring-black/[0.03]"
     >
       <div>
-        {/* Image Frame */}
-        <div className="relative w-full h-32 sm:h-40 bg-gradient-to-br from-rose-50 to-pink-100 overflow-hidden flex items-center justify-center">
+        {/* Image Frame with Shimmer Skeleton */}
+        <div className="relative w-full h-32 sm:h-40 bg-gradient-to-br from-rose-50/80 via-pink-50/50 to-amber-50/50 overflow-hidden flex items-center justify-center">
+          {!isImgLoaded && !imgError && (
+            <div className="absolute inset-0 bg-gradient-to-r from-rose-100/40 via-white/60 to-rose-100/40 animate-pulse flex items-center justify-center">
+              <Cake className="w-8 h-8 text-rose-200/70 animate-bounce" />
+            </div>
+          )}
           <img
             src={displayImage}
             alt={name}
@@ -66,13 +73,19 @@ const ProductCardComponent: React.FC<ProductCardProps> = ({ product, onAddToCart
             decoding="async"
             // @ts-ignore
             fetchPriority="low"
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 ease-out transform-gpu"
+            onLoad={() => setIsImgLoaded(true)}
+            className={`w-full h-full object-cover group-hover:scale-105 transition-all duration-300 ease-out transform-gpu ${
+              isImgLoaded ? 'opacity-100' : 'opacity-0'
+            }`}
             onError={() => {
-              if (!imgError) setImgError(true);
+              if (!imgError) {
+                setImgError(true);
+                setIsImgLoaded(true);
+              }
             }}
           />
 
-          <div className="absolute inset-0 bg-gradient-to-t from-black/45 via-transparent to-transparent opacity-70 group-hover:opacity-85 transition-opacity" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/10 to-transparent opacity-60 group-hover:opacity-80 transition-opacity" />
 
           {/* Top Badges */}
           <div className="absolute top-2 left-2 sm:top-2.5 sm:left-2.5 flex flex-col gap-1 z-10">
@@ -165,10 +178,10 @@ const ProductCardComponent: React.FC<ProductCardProps> = ({ product, onAddToCart
       </div>
 
       {/* Pricing & Add Button (Prioritizing KHR ៛ First!) */}
-      <div className="px-3 sm:px-3.5 pb-3 sm:pb-3.5 pt-1.5 flex items-center justify-between border-t border-slate-100 mt-0.5">
+      <div className="px-3 sm:px-3.5 pb-3 sm:pb-3.5 pt-2 flex items-center justify-between border-t border-rose-50/80 mt-0.5 bg-gradient-to-b from-transparent to-rose-50/20">
         {isDemoMode && hideDemoPrices ? (
           <div>
-            <div className="inline-flex items-center gap-1 text-[11px] sm:text-xs font-black text-rose-600 bg-rose-50 px-2 py-0.5 rounded-lg border border-rose-200/70 font-battambang">
+            <div className="inline-flex items-center gap-1 text-[11px] sm:text-xs font-black text-rose-600 bg-rose-50 px-2.5 py-1 rounded-xl border border-rose-200/70 font-battambang">
               <Sparkles className="w-3 h-3 text-rose-500 shrink-0" />
               <span>តម្លៃតាមម៉ូដ</span>
             </div>
@@ -177,13 +190,14 @@ const ProductCardComponent: React.FC<ProductCardProps> = ({ product, onAddToCart
             </div>
           </div>
         ) : (
-          <div>
-            {/* KHR FIRST in large bold font */}
-            <div className="text-xs sm:text-base font-black text-rose-600 tracking-tight">
-              {priceKhr.toLocaleString()} ៛
+          <div className="space-y-0.5">
+            {/* KHR FIRST in large bold font with font-num */}
+            <div className="text-xs sm:text-base font-black text-rose-600 tracking-tight font-num flex items-baseline gap-1">
+              <span>{priceKhr.toLocaleString()}</span>
+              <span className="text-[11px] sm:text-xs font-bold text-rose-500">៛</span>
             </div>
             {/* USD second */}
-            <div className="text-[10px] sm:text-[11px] text-slate-500 font-bold">
+            <div className="text-[10px] sm:text-[11px] text-slate-500 font-bold font-num bg-slate-100/80 px-1.5 py-0.5 rounded-md w-fit">
               ${priceUsd.toFixed(2)}
             </div>
           </div>
@@ -213,7 +227,7 @@ const ProductCardComponent: React.FC<ProductCardProps> = ({ product, onAddToCart
             className={`w-8 h-8 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl flex items-center justify-center transition-all duration-200 shadow-md ${
               justAdded
                 ? 'bg-emerald-500 text-white scale-110 shadow-emerald-500/30'
-                : 'bg-gradient-to-tr from-pink-600 via-rose-500 to-rose-600 text-white hover:shadow-pink-500/30 group-hover:scale-105 active:scale-95'
+                : 'bg-gradient-to-tr from-pink-600 via-rose-500 to-rose-600 text-white hover:shadow-pink-500/30 group-hover:scale-105 active:scale-90 hover:brightness-105'
             }`}
           >
             {justAdded ? (

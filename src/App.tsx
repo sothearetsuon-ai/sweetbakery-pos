@@ -1,49 +1,73 @@
 import { Phone, Rocket, X } from 'lucide-react';
-import React, { useState } from 'react';
+import React, { useState, Suspense, lazy } from 'react';
 import { Navbar } from './components/layout/Navbar';
 import { Sidebar, TabType } from './components/layout/Sidebar';
 import { BottomNav } from './components/layout/BottomNav';
 import { PosTerminal } from './components/pos/PosTerminal';
-import { CustomerShowcase } from './components/showcase/CustomerShowcase';
-import { CustomOrderPipeline } from './components/custom-orders/CustomOrderPipeline';
-import { SalesHistory } from './components/sales/SalesHistory';
-import { ExpenseManagement } from './components/expenses/ExpenseManagement';
-import { ReserveFundDashboard } from './components/reserve-fund/ReserveFundDashboard';
-import { InventoryManagement } from './components/inventory/InventoryManagement';
-import { ReportsDashboard } from './components/reports/ReportsDashboard';
-import { ShiftModal } from './components/shifts/ShiftModal';
-import { SettingsModal, SettingsTab } from './components/settings/SettingsModal';
-import { StaffManagement } from './components/staff/StaffManagement';
-import { MusicPlayerModal } from './components/music/MusicPlayerModal';
 import { MiniMusicPlayer } from './components/music/MiniMusicPlayer';
-import { FloatingMiniVideoPlayer } from './components/music/FloatingMiniVideoPlayer';
 import { NotificationReminderScheduler } from './components/layout/NotificationReminderScheduler';
 import { getSavedTheme, saveTheme, AppTheme } from './utils/themeManager';
-import { ThemePickerModal } from './components/common/ThemePickerModal';
 import { ButterflyEffect } from './components/common/ButterflyEffect';
 import { getLicenseInfo, syncLicenseFromStorage, syncRemoteLicense, LicenseInfo } from './utils/licenseManager';
-import { LicenseExpiredModal } from './components/license/LicenseExpiredModal';
 import { LicenseWarningBanner } from './components/license/LicenseWarningBanner';
-import { LicenseRenewalModal } from './components/license/LicenseRenewalModal';
-import { SuperAdminPortalModal } from './components/license/SuperAdminPortalModal';
 import { isSuperAdminAuthenticated, onSuperAdminAuthChange, deauthenticateSuperAdmin } from './utils/superAdminAuth';
-import { CustomerOrderPortal } from './components/customer-order/CustomerOrderPortal';
-import { CustomerOrderLinkModal } from './components/customer-order/CustomerOrderLinkModal';
 import { OfflineAutoSyncToast } from './components/common/OfflineAutoSyncToast';
 import { DemoModeBanner } from './components/common/DemoModeBanner';
-import { RealStoreAuthModal } from './components/auth/RealStoreAuthModal';
-import { ContactModal } from './components/common/ContactModal';
 import { useBakery } from './context/BakeryContext';
 import { soundFx } from './utils/audio';
 import confetti from 'canvas-confetti';
 import { initTelegramMiniApp, isTelegramWebApp, getTelegramStartParam } from './services/telegramWebApp';
 import { checkForAppUpdates, AppUpdateInfo, getNativeAppVersion } from './services/appUpdateService';
-import { CakeFlavorsModal } from './components/pos/CakeFlavorsModal';
-import { AppUpdateModal } from './components/common/AppUpdateModal';
-import { KhmerVoicePosModal } from './components/pos/KhmerVoicePosModal';
-import { KitchenDisplayModal } from './components/kds/KitchenDisplayModal';
-import { SmartBirthdayCrmModal } from './components/crm/SmartBirthdayCrmModal';
-import { AiDemandForecastModal } from './components/reports/AiDemandForecastModal';
+import type { SettingsTab } from './components/settings/SettingsModal';
+
+// High-performance Lazy Loaded Components (Chunks are dynamically loaded on-demand)
+const CustomerShowcase = lazy(() => import('./components/showcase/CustomerShowcase').then((m) => ({ default: m.CustomerShowcase })));
+const CustomOrderPipeline = lazy(() => import('./components/custom-orders/CustomOrderPipeline').then((m) => ({ default: m.CustomOrderPipeline })));
+const SalesHistory = lazy(() => import('./components/sales/SalesHistory').then((m) => ({ default: m.SalesHistory })));
+const ExpenseManagement = lazy(() => import('./components/expenses/ExpenseManagement').then((m) => ({ default: m.ExpenseManagement })));
+const ReserveFundDashboard = lazy(() => import('./components/reserve-fund/ReserveFundDashboard').then((m) => ({ default: m.ReserveFundDashboard })));
+const InventoryManagement = lazy(() => import('./components/inventory/InventoryManagement').then((m) => ({ default: m.InventoryManagement })));
+const ReportsDashboard = lazy(() => import('./components/reports/ReportsDashboard').then((m) => ({ default: m.ReportsDashboard })));
+const StaffManagement = lazy(() => import('./components/staff/StaffManagement').then((m) => ({ default: m.StaffManagement })));
+const ShiftModal = lazy(() => import('./components/shifts/ShiftModal').then((m) => ({ default: m.ShiftModal })));
+const SettingsModal = lazy(() => import('./components/settings/SettingsModal').then((m) => ({ default: m.SettingsModal })));
+const MusicPlayerModal = lazy(() => import('./components/music/MusicPlayerModal').then((m) => ({ default: m.MusicPlayerModal })));
+const FloatingMiniVideoPlayer = lazy(() => import('./components/music/FloatingMiniVideoPlayer').then((m) => ({ default: m.FloatingMiniVideoPlayer })));
+const ThemePickerModal = lazy(() => import('./components/common/ThemePickerModal').then((m) => ({ default: m.ThemePickerModal })));
+const LicenseExpiredModal = lazy(() => import('./components/license/LicenseExpiredModal').then((m) => ({ default: m.LicenseExpiredModal })));
+const LicenseRenewalModal = lazy(() => import('./components/license/LicenseRenewalModal').then((m) => ({ default: m.LicenseRenewalModal })));
+const SuperAdminPortalModal = lazy(() => import('./components/license/SuperAdminPortalModal').then((m) => ({ default: m.SuperAdminPortalModal })));
+const CustomerOrderPortal = lazy(() => import('./components/customer-order/CustomerOrderPortal').then((m) => ({ default: m.CustomerOrderPortal })));
+const CustomerOrderLinkModal = lazy(() => import('./components/customer-order/CustomerOrderLinkModal').then((m) => ({ default: m.CustomerOrderLinkModal })));
+const RealStoreAuthModal = lazy(() => import('./components/auth/RealStoreAuthModal').then((m) => ({ default: m.RealStoreAuthModal })));
+const StoreAuthModal = lazy(() => import('./components/auth/StoreAuthModal').then((m) => ({ default: m.StoreAuthModal })));
+const ContactModal = lazy(() => import('./components/common/ContactModal').then((m) => ({ default: m.ContactModal })));
+const CakeFlavorsModal = lazy(() => import('./components/pos/CakeFlavorsModal').then((m) => ({ default: m.CakeFlavorsModal })));
+const AppUpdateModal = lazy(() => import('./components/common/AppUpdateModal').then((m) => ({ default: m.AppUpdateModal })));
+const KhmerVoicePosModal = lazy(() => import('./components/pos/KhmerVoicePosModal').then((m) => ({ default: m.KhmerVoicePosModal })));
+const KitchenDisplayModal = lazy(() => import('./components/kds/KitchenDisplayModal').then((m) => ({ default: m.KitchenDisplayModal })));
+const SmartBirthdayCrmModal = lazy(() => import('./components/crm/SmartBirthdayCrmModal').then((m) => ({ default: m.SmartBirthdayCrmModal })));
+const AiDemandForecastModal = lazy(() => import('./components/reports/AiDemandForecastModal').then((m) => ({ default: m.AiDemandForecastModal })));
+
+// Sleek modern frosted loading skeleton for seamless view transitions
+const ViewLoadingFallback: React.FC = () => (
+  <div className="flex-1 flex flex-col items-center justify-center min-h-[380px] p-8 text-center animate-in fade-in duration-200">
+    <div className="relative">
+      <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-rose-500 via-pink-500 to-amber-500 flex items-center justify-center text-white shadow-xl shadow-pink-500/20 animate-pulse">
+        <span className="text-2xl">🎂</span>
+      </div>
+      <div className="absolute -inset-1 rounded-2xl bg-gradient-to-tr from-rose-500 to-pink-500 opacity-20 blur-sm animate-ping" />
+    </div>
+    <div className="mt-4 flex items-center gap-1.5">
+      <span className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-bounce [animation-delay:-0.3s]" />
+      <span className="w-2.5 h-2.5 rounded-full bg-pink-500 animate-bounce [animation-delay:-0.15s]" />
+      <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-bounce" />
+    </div>
+    <p className="text-xs font-black text-slate-500 font-battambang mt-2.5 tracking-wide">
+      កំពុងដំណើរការទិន្នន័យរហ័ស...
+    </p>
+  </div>
+);
 
 export const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabType>('pos');
@@ -61,6 +85,9 @@ export const App: React.FC = () => {
   const [isKdsOpen, setIsKdsOpen] = useState(false);
   const [isBirthdayCrmOpen, setIsBirthdayCrmOpen] = useState(false);
   const [isBakingForecastOpen, setIsBakingForecastOpen] = useState(false);
+
+  // Store Multi-Tenant Auth Modal (Email/Phone Login, Sign Up, Store ID Join)
+  const [isStoreAuthModalOpen, setIsStoreAuthModalOpen] = useState(false);
 
   // Flying Butterflies Effect State (Independent control - disabled by default for maximum performance)
   const [isButterflyEnabled, setIsButterflyEnabled] = useState<boolean>(() => {
@@ -311,7 +338,9 @@ export const App: React.FC = () => {
             </button>
           </div>
         )}
-        <CustomerOrderPortal onBackToPos={() => setIsCustomerPortalOpen(false)} />
+        <Suspense fallback={<ViewLoadingFallback />}>
+          <CustomerOrderPortal onBackToPos={() => setIsCustomerPortalOpen(false)} />
+        </Suspense>
         <OfflineAutoSyncToast />
       </>
     );
@@ -422,6 +451,7 @@ export const App: React.FC = () => {
         onOpenKds={() => setIsKdsOpen(true)}
         onOpenBirthdayCrm={() => setIsBirthdayCrmOpen(true)}
         onOpenBakingForecast={() => setIsBakingForecastOpen(true)}
+        onOpenStoreAuthModal={() => setIsStoreAuthModalOpen(true)}
       />
 
       {/* Main Workspace with Sidebar & Content */}
@@ -443,23 +473,26 @@ export const App: React.FC = () => {
           onOpenKds={() => setIsKdsOpen(true)}
           onOpenBirthdayCrm={() => setIsBirthdayCrmOpen(true)}
           onOpenBakingForecast={() => setIsBakingForecastOpen(true)}
+          onOpenStoreAuthModal={() => setIsStoreAuthModalOpen(true)}
         />
 
         {/* Dynamic Views */}
         <main className="flex-1 min-h-0 flex flex-col min-w-0 overflow-hidden pb-16 md:pb-0">
-          {activeTab === 'pos' && <PosTerminal />}
-          {activeTab === 'showcase' && <CustomerShowcase />}
-          {activeTab === 'custom-orders' && <CustomOrderPipeline />}
-          {activeTab === 'sales' && <SalesHistory />}
-          {activeTab === 'expenses' && (
-            <ExpenseManagement onNavigateToReserveFund={() => handleSelectTab('reserve-fund')} />
-          )}
-          {activeTab === 'reserve-fund' && (
-            <ReserveFundDashboard onNavigateToExpenses={() => handleSelectTab('expenses')} />
-          )}
-          {activeTab === 'inventory' && <InventoryManagement />}
-          {activeTab === 'reports' && <ReportsDashboard />}
-          {activeTab === 'staff' && !isDemoMode && <StaffManagement />}
+          <Suspense fallback={<ViewLoadingFallback />}>
+            {activeTab === 'pos' && <PosTerminal />}
+            {activeTab === 'showcase' && <CustomerShowcase />}
+            {activeTab === 'custom-orders' && <CustomOrderPipeline />}
+            {activeTab === 'sales' && <SalesHistory />}
+            {activeTab === 'expenses' && (
+              <ExpenseManagement onNavigateToReserveFund={() => handleSelectTab('reserve-fund')} />
+            )}
+            {activeTab === 'reserve-fund' && (
+              <ReserveFundDashboard onNavigateToExpenses={() => handleSelectTab('expenses')} />
+            )}
+            {activeTab === 'inventory' && <InventoryManagement />}
+            {activeTab === 'reports' && <ReportsDashboard />}
+            {activeTab === 'staff' && !isDemoMode && <StaffManagement />}
+          </Suspense>
         </main>
       </div>
 
@@ -470,223 +503,159 @@ export const App: React.FC = () => {
         onOpenMoreMenu={() => setIsMobileDrawerOpen(true)}
       />
 
-      {/* Global Modals */}
-      <ShiftModal
-        isOpen={isShiftModalOpen}
-        onClose={() => setIsShiftModalOpen(false)}
-      />
+      {/* Global Modals (Lazy Loaded on Demand) */}
+      <Suspense fallback={null}>
+        <ShiftModal
+          isOpen={isShiftModalOpen}
+          onClose={() => setIsShiftModalOpen(false)}
+        />
 
-      <SettingsModal
-        isOpen={isSettingsModalOpen}
-        onClose={() => setIsSettingsModalOpen(false)}
-        initialTab={settingsTab}
-        onOpenLicenseModal={() => setIsRenewModalOpen(true)}
-        onOpenSuperAdminPortal={() => setIsSuperAdminModalOpen(true)}
-      />
+        <SettingsModal
+          isOpen={isSettingsModalOpen}
+          onClose={() => setIsSettingsModalOpen(false)}
+          initialTab={settingsTab}
+          onOpenLicenseModal={() => setIsRenewModalOpen(true)}
+          onOpenSuperAdminPortal={() => setIsSuperAdminModalOpen(true)}
+        />
 
-      {/* Bakery Music Player Modal & Floating Mini Player */}
-      <MusicPlayerModal />
-      <MiniMusicPlayer />
-      <FloatingMiniVideoPlayer />
+        {/* Bakery Music Player Modal & Floating Mini Player */}
+        <MusicPlayerModal />
+        <MiniMusicPlayer />
+        <FloatingMiniVideoPlayer />
 
-      {/* Flying 3D Butterflies & Swimming Lucky Goldfish Effect (Independent toggles, paused during Auth Modal for zero lag) */}
-      <ButterflyEffect
-        butterflyEnabled={isButterflyEnabled && !isRealStoreAuthModalOpen}
-        goldfishEnabled={isGoldfishEnabled && !isRealStoreAuthModalOpen}
-        butterflyCount={14}
-        goldfishCount={7}
-      />
+        {/* Flying 3D Butterflies & Swimming Lucky Goldfish Effect (Independent toggles, paused during Auth Modal for zero lag) */}
+        <ButterflyEffect
+          butterflyEnabled={isButterflyEnabled && !isRealStoreAuthModalOpen}
+          goldfishEnabled={isGoldfishEnabled && !isRealStoreAuthModalOpen}
+          butterflyCount={14}
+          goldfishCount={7}
+        />
 
-      {/* Background Theme Customizer Modal */}
-      <ThemePickerModal
-        isOpen={isThemePickerOpen}
-        onClose={() => setIsThemePickerOpen(false)}
-        currentTheme={currentTheme}
-        onSelectTheme={handleSelectTheme}
-        isButterflyEnabled={isButterflyEnabled}
-        onToggleButterfly={handleToggleButterfly}
-        isGoldfishEnabled={isGoldfishEnabled}
-        onToggleGoldfish={handleToggleGoldfish}
-      />
+        {/* Background Theme Customizer Modal */}
+        <ThemePickerModal
+          isOpen={isThemePickerOpen}
+          onClose={() => setIsThemePickerOpen(false)}
+          currentTheme={currentTheme}
+          onSelectTheme={handleSelectTheme}
+          isButterflyEnabled={isButterflyEnabled}
+          onToggleButterfly={handleToggleButterfly}
+          isGoldfishEnabled={isGoldfishEnabled}
+          onToggleGoldfish={handleToggleGoldfish}
+        />
 
-      {/* 35-Day Expiration Lock Modal */}
-      <LicenseExpiredModal
-        isOpen={licenseInfo.isExpired}
-        onRenewSuccess={refreshLicense}
-        isTamper={licenseInfo.tamperDetected}
-      />
+        {/* 35-Day Expiration Lock Modal */}
+        <LicenseExpiredModal
+          isOpen={licenseInfo.isExpired}
+          onRenewSuccess={refreshLicense}
+          isTamper={licenseInfo.tamperDetected}
+        />
 
-      {/* Manual License Renewal Modal (Client Facing Only) */}
-      <LicenseRenewalModal
-        isOpen={isRenewModalOpen}
-        onClose={() => setIsRenewModalOpen(false)}
-        onRenewSuccess={refreshLicense}
-        licenseInfo={licenseInfo}
-        onOpenSuperAdminPortal={() => setIsSuperAdminModalOpen(true)}
-      />
+        {/* Manual License Renewal Modal (Client Facing Only) */}
+        <LicenseRenewalModal
+          isOpen={isRenewModalOpen}
+          onClose={() => setIsRenewModalOpen(false)}
+          onRenewSuccess={refreshLicense}
+          licenseInfo={licenseInfo}
+          onOpenSuperAdminPortal={() => setIsSuperAdminModalOpen(true)}
+        />
 
-      {/* App Super Admin Portal Modal (License Generator & Remote Unlock) */}
-      <SuperAdminPortalModal
-        isOpen={isSuperAdminModalOpen}
-        onClose={() => setIsSuperAdminModalOpen(false)}
-        onLogout={() => {
-          deauthenticateSuperAdmin();
-          setIsSuperAdmin(false);
-          setIsSuperAdminModalOpen(false);
-        }}
-      />
-
-      {/* Customer Order Link & QR Sharing Modal */}
-      <CustomerOrderLinkModal
-        isOpen={isCustomerOrderLinkModalOpen}
-        onClose={() => setIsCustomerOrderLinkModalOpen(false)}
-        onOpenCustomerView={() => {
-          setIsCustomerOrderLinkModalOpen(false);
-          setIsCustomerPortalOpen(true);
-          try {
-            if (typeof window !== 'undefined' && window.location.protocol.startsWith('http')) {
-              window.history.pushState({}, '', '?order=true');
-            }
-          } catch (e) {}
-        }}
-      />
-
-      {/* Global Cake Flavors & Stock Modal */}
-      <CakeFlavorsModal
-        isOpen={isCakeFlavorsModalOpen}
-        onClose={() => setIsCakeFlavorsModalOpen(false)}
-      />
-
-      {/* Dedicated Standard In-App Update Modal */}
-      <AppUpdateModal
-        isOpen={isUpdateModalOpen}
-        onClose={() => setIsUpdateModalOpen(false)}
-        updateInfo={availableUpdate}
-        onCheckAgain={async () => {
-          await performUpdateCheck(true);
-        }}
-      />
-
-      {/* Floating Auto-Update Available Toast */}
-      {availableUpdate && availableUpdate.hasUpdate && (
-        <div className="fixed top-4 right-4 z-50 max-w-sm w-[calc(100vw-32px)] bg-white/95 backdrop-blur-md border-2 border-pink-400 rounded-3xl shadow-2xl p-4 animate-in slide-in-from-top duration-300">
-          <div className="flex items-start gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-pink-500 to-rose-600 text-white flex items-center justify-center shrink-0 shadow-md shadow-pink-500/30">
-              <Rocket className="w-5 h-5 animate-bounce" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center justify-between">
-                <h4 className="text-xs sm:text-sm font-black text-slate-900 flex items-center gap-1.5">
-                  <span>កំណែថ្មី v{availableUpdate.latestVersion}</span>
-                  <span className="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-pink-100 text-pink-700">
-                    New
-                  </span>
-                </h4>
-                <button
-                  type="button"
-                  onClick={() => setAvailableUpdate(null)}
-                  className="text-slate-400 hover:text-slate-600 p-0.5 rounded-lg cursor-pointer"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-              <p className="text-[11px] text-slate-600 mt-1 line-clamp-2">
-                {availableUpdate.releaseNotes?.[0] || 'មានការកែលម្អប្រព័ន្ធ និងបន្ថែមមុខងារថ្មី'}
-              </p>
-              <div className="mt-2.5 flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    soundFx.playSuccess();
-                    setIsUpdateModalOpen(true);
-                  }}
-                  className="flex-1 py-1.5 bg-gradient-to-r from-pink-600 to-rose-600 text-white text-xs font-black rounded-xl shadow-xs hover:from-pink-700 hover:to-rose-700 transition-all cursor-pointer flex items-center justify-center gap-1"
-                >
-                  <span>🚀 អាប់ដេតឥឡូវនេះ (1-Click)</span>
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Floating Offline-to-Cloud Auto-Sync Toast */}
-      <OfflineAutoSyncToast />
-
-      {/* Real Store Passcode Authentication Lock Modal */}
-      <RealStoreAuthModal
-        isOpen={isRealStoreAuthModalOpen}
-        onClose={closeRealStoreAuthModal}
-        onSuccess={realStoreAuthSuccessCallback || undefined}
-      />
-
-      {/* Floating System Contact Quick Pill (Only in Demo Mode) */}
-      {isDemoMode && (
-        <button
-          type="button"
-          onClick={() => {
-            soundFx.playPop();
-            setIsContactModalOpen(true);
+        {/* App Super Admin Portal Modal (License Generator & Remote Unlock) */}
+        <SuperAdminPortalModal
+          isOpen={isSuperAdminModalOpen}
+          onClose={() => setIsSuperAdminModalOpen(false)}
+          onLogout={() => {
+            deauthenticateSuperAdmin();
+            setIsSuperAdmin(false);
+            setIsSuperAdminModalOpen(false);
           }}
-          title="ប្រសិនបើអ្នកមានចំណាប់អារម្មណ៍ចង់ប្រើប្រាស់កម្មវិធីនេះសូមទាក់ទង លេខទូរសព្ទ័៖ 012 629 160"
-          className="fixed bottom-28 sm:bottom-24 right-3 sm:right-5 z-40 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white pl-3 pr-3.5 py-2 rounded-full shadow-xl shadow-emerald-950/25 border-2 border-emerald-300/40 flex items-center gap-2 cursor-pointer transition-all hover:scale-105 active:scale-95 group font-battambang"
-        >
-          <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center animate-pulse shrink-0">
-            <Phone className="w-3.5 h-3.5 text-white" />
-          </div>
-          <div className="text-left">
-            <div className="text-[10px] text-emerald-100 font-bold leading-tight hidden xs:block">
-              ទំនាក់ទំនងប្រើប្រាស់ប្រព័ន្ធ
-            </div>
-            <div className="text-xs font-black font-mono tracking-wide flex items-center gap-1">
-              <span>012 629 160</span>
-              <span className="text-[10px] text-emerald-200 group-hover:translate-x-0.5 transition-transform">✨</span>
-            </div>
-          </div>
-        </button>
-      )}
+        />
 
-      {/* System Contact & Software Inquiries Modal */}
-      <ContactModal
-        isOpen={isContactModalOpen}
-        onClose={() => setIsContactModalOpen(false)}
-      />
+        {/* Customer Order Link & QR Sharing Modal */}
+        <CustomerOrderLinkModal
+          isOpen={isCustomerOrderLinkModalOpen}
+          onClose={() => setIsCustomerOrderLinkModalOpen(false)}
+          onOpenCustomerView={() => {
+            setIsCustomerOrderLinkModalOpen(false);
+            setIsCustomerPortalOpen(true);
+            try {
+              if (typeof window !== 'undefined' && window.location.protocol.startsWith('http')) {
+                window.history.pushState({}, '', '?order=true');
+              }
+            } catch (e) {}
+          }}
+        />
 
-      {/* Smart Voice POS Assistant */}
-      <KhmerVoicePosModal
-        isOpen={isVoicePosOpen}
-        onClose={() => setIsVoicePosOpen(false)}
-        products={products}
-        onAddProduct={(prod, qty) => {
-          for (let i = 0; i < (qty || 1); i++) {
-            addToCart(prod);
-          }
-          setActiveTab('pos');
-        }}
-        onCheckout={() => {
-          setActiveTab('pos');
-        }}
-        onClearCart={clearCart}
-        exchangeRate={exchangeRate}
-      />
+        {/* Global Cake Flavors & Stock Modal */}
+        <CakeFlavorsModal
+          isOpen={isCakeFlavorsModalOpen}
+          onClose={() => setIsCakeFlavorsModalOpen(false)}
+        />
 
-      {/* Real-time Kitchen Display System (KDS) */}
-      <KitchenDisplayModal
-        isOpen={isKdsOpen}
-        onClose={() => setIsKdsOpen(false)}
-      />
+        {/* Dedicated Standard In-App Update Modal */}
+        <AppUpdateModal
+          isOpen={isUpdateModalOpen}
+          onClose={() => setIsUpdateModalOpen(false)}
+          updateInfo={availableUpdate}
+          onCheckAgain={async () => {
+            await performUpdateCheck(true);
+          }}
+        />
 
-      {/* Smart Birthday CRM Modal */}
-      <SmartBirthdayCrmModal
-        isOpen={isBirthdayCrmOpen}
-        onClose={() => setIsBirthdayCrmOpen(false)}
-      />
+        {/* Real Store Passcode Authentication Lock Modal */}
+        <RealStoreAuthModal
+          isOpen={isRealStoreAuthModalOpen}
+          onClose={closeRealStoreAuthModal}
+          onSuccess={realStoreAuthSuccessCallback || undefined}
+        />
 
-      {/* AI Demand Forecasting & Daily Baking Plan */}
-      <AiDemandForecastModal
-        isOpen={isBakingForecastOpen}
-        onClose={() => setIsBakingForecastOpen(false)}
-      />
+        {/* System Contact & Software Inquiries Modal */}
+        <ContactModal
+          isOpen={isContactModalOpen}
+          onClose={() => setIsContactModalOpen(false)}
+        />
+
+        {/* Smart Voice POS Assistant */}
+        <KhmerVoicePosModal
+          isOpen={isVoicePosOpen}
+          onClose={() => setIsVoicePosOpen(false)}
+          products={products}
+          onAddProduct={(prod, qty) => {
+            for (let i = 0; i < (qty || 1); i++) {
+              addToCart(prod);
+            }
+            setActiveTab('pos');
+          }}
+          onCheckout={() => {
+            setActiveTab('pos');
+          }}
+          onClearCart={clearCart}
+          exchangeRate={exchangeRate}
+        />
+
+        {/* Real-time Kitchen Display System (KDS) */}
+        <KitchenDisplayModal
+          isOpen={isKdsOpen}
+          onClose={() => setIsKdsOpen(false)}
+        />
+
+        {/* Smart Birthday CRM Modal */}
+        <SmartBirthdayCrmModal
+          isOpen={isBirthdayCrmOpen}
+          onClose={() => setIsBirthdayCrmOpen(false)}
+        />
+
+        {/* AI Demand Forecasting & Daily Baking Plan */}
+        <AiDemandForecastModal
+          isOpen={isBakingForecastOpen}
+          onClose={() => setIsBakingForecastOpen(false)}
+        />
+
+        {/* Store Multi-Tenant Account & Auth Modal */}
+        <StoreAuthModal
+          isOpen={isStoreAuthModalOpen}
+          onClose={() => setIsStoreAuthModalOpen(false)}
+        />
+      </Suspense>
     </div>
   );
 };

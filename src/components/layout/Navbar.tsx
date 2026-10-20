@@ -26,7 +26,10 @@ import {
   LogOut,
   Phone,
   Rocket,
+  Store,
 } from 'lucide-react';
+import { getStoreId, isDefaultStore } from '../../services/firebase';
+import { getCurrentStoreUser, subscribeStoreUser, StoreUserAccount } from '../../services/authService';
 import { useBakery } from '../../context/BakeryContext';
 import { useMusic } from '../../context/MusicContext';
 import { t } from '../../utils/translations';
@@ -62,6 +65,7 @@ interface NavbarProps {
   onOpenKds?: () => void;
   onOpenBirthdayCrm?: () => void;
   onOpenBakingForecast?: () => void;
+  onOpenStoreAuthModal?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -86,6 +90,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenKds,
   onOpenBirthdayCrm,
   onOpenBakingForecast,
+  onOpenStoreAuthModal,
 }) => {
   const {
     lang,
@@ -130,6 +135,18 @@ export const Navbar: React.FC<NavbarProps> = ({
   const [isQuickToolsOpen, setIsQuickToolsOpen] = useState(false);
   const [isManualSyncing, setIsManualSyncing] = useState(false);
   const quickToolsRef = useRef<HTMLDivElement>(null);
+
+  // Store User & Tenant ID State
+  const [storeUser, setStoreUser] = useState<StoreUserAccount | null>(() => getCurrentStoreUser());
+  const [currentStoreTenantId, setCurrentStoreTenantId] = useState<string>(() => getStoreId());
+
+  useEffect(() => {
+    const unsub = subscribeStoreUser((u) => {
+      setStoreUser(u);
+      setCurrentStoreTenantId(getStoreId());
+    });
+    return unsub;
+  }, []);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -261,6 +278,30 @@ export const Navbar: React.FC<NavbarProps> = ({
 
         {/* Right Side: Clean & Consolidated Actions */}
         <div className="flex items-center gap-1 sm:gap-1.5 shrink-0 justify-end">
+          {/* Store Tenant Pill Button */}
+          {onOpenStoreAuthModal && (
+            <button
+              type="button"
+              onClick={() => {
+                soundFx.playPop();
+                onOpenStoreAuthModal();
+              }}
+              title="គណនីហាង & Multi-Store (ចូលគណនី / បង្កើតហាងថ្មី / ភ្ជាប់ Store ID)"
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-2xl border text-xs font-black transition-all shadow-2xs hover:scale-105 active:scale-95 cursor-pointer shrink-0 font-battambang ${
+                !isDefaultStore(currentStoreTenantId)
+                  ? 'bg-gradient-to-r from-rose-50 to-pink-50 border-rose-300 text-rose-900 ring-1 ring-rose-200'
+                  : 'bg-white hover:bg-slate-50 border-slate-200 text-slate-700'
+              }`}
+            >
+              <span className="text-sm">🏪</span>
+              <span className="hidden xl:inline truncate max-w-[110px]">
+                {storeUser?.storeName || storeInfo.nameKh || 'ហាងវិជ្ជតា'}
+              </span>
+              <span className="text-[10px] font-mono px-1.5 py-0.2 rounded-md bg-slate-100 border border-slate-200 text-slate-700 font-bold">
+                {isDefaultStore(currentStoreTenantId) ? 'Root' : currentStoreTenantId.replace('STORE-', '')}
+              </span>
+            </button>
+          )}
           {/* 1. Unified Cloud Auto-Sync & Status Indicator (Single Clean Pill) */}
           <button
             type="button"
@@ -631,6 +672,39 @@ export const Navbar: React.FC<NavbarProps> = ({
                       </button>
                     )}
                   </div>
+
+                  {/* Multi-Store & Cloud Tenant Account */}
+                  {onOpenStoreAuthModal && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        soundFx.playPop();
+                        setIsQuickToolsOpen(false);
+                        onOpenStoreAuthModal();
+                      }}
+                      className="w-full flex items-center justify-between p-2.5 rounded-2xl bg-gradient-to-r from-rose-50/70 to-pink-50/70 hover:from-rose-100 hover:to-pink-100 text-slate-800 transition-colors cursor-pointer group text-left border border-rose-200/60"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-rose-500 to-pink-600 text-white flex items-center justify-center shadow-xs group-hover:scale-105 transition-transform shrink-0">
+                          <Store className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <div className="text-xs font-black text-rose-900 group-hover:text-rose-700 flex items-center gap-1.5 font-battambang">
+                            <span>គណនីហាង & Multi-Store</span>
+                            <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-rose-200 text-rose-800 font-mono">
+                              {isDefaultStore(currentStoreTenantId) ? 'Default' : currentStoreTenantId}
+                            </span>
+                          </div>
+                          <div className="text-[10px] text-slate-500 font-battambang">
+                            ចូលគណនី (Login) • បង្កើតហាងថ្មី (Sign Up) • ភ្ជាប់ Store ID
+                          </div>
+                        </div>
+                      </div>
+                      <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-rose-200/80 text-rose-800 font-battambang">
+                        បំបែកហាង
+                      </span>
+                    </button>
+                  )}
 
                   {/* 1. KHQR Counter Standee */}
                   <button
