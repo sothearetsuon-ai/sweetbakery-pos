@@ -123,7 +123,7 @@ export const AppUpdateTab: React.FC = () => {
       urlToUse ||
       customApkUrl.trim() ||
       updateInfo?.apkDownloadUrl ||
-      'https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.5.2/SweetBakery-Android.apk';
+      'https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.5.5/SweetBakery-Android.apk';
 
     if (isAndroidNative) {
       setIsDownloading(true);
@@ -184,7 +184,7 @@ export const AppUpdateTab: React.FC = () => {
     const winUrl =
       updateInfo?.windowsInstallerUrl ||
       updateInfo?.windowsDownloadUrl ||
-      'https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.5.2/SweetBakery-POS-Setup.exe';
+      'https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.5.5/SweetBakery-POS-Setup.exe';
     openExternalUrl(winUrl);
   };
 
@@ -192,7 +192,7 @@ export const AppUpdateTab: React.FC = () => {
     soundFx.playSuccess();
     const apkUrl =
       updateInfo?.apkDownloadUrl ||
-      'https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.5.2/SweetBakery-Android.apk';
+      'https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.5.5/SweetBakery-Android.apk';
     if (isAndroidNative) {
       handleStartUpdate(apkUrl);
     } else {
@@ -517,13 +517,13 @@ export const AppUpdateTab: React.FC = () => {
               </a>
 
               <a
-                href="https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/tag/v1.5.2"
+                href="https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/tag/v1.5.5"
                 target="_blank"
                 rel="noreferrer"
                 className="w-full py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 border border-slate-300 cursor-pointer active:scale-95"
               >
                 <ExternalLink className="w-3.5 h-3.5 text-slate-500" />
-                <span>មើលទំព័រ GitHub Release v1.5.2 ផ្លូវការ</span>
+                <span>មើលទំព័រ GitHub Release v1.5.5 ផ្លូវការ</span>
               </a>
             </div>
           </div>
@@ -551,7 +551,7 @@ export const AppUpdateTab: React.FC = () => {
               </button>
 
               <a
-                href="https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.5.2/SweetBakery-POS-Windows.zip"
+                href="https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.5.5/SweetBakery-POS-Windows.zip"
                 target="_blank"
                 rel="noreferrer"
                 className="w-full py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 border border-slate-300 cursor-pointer active:scale-95"

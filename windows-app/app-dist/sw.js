@@ -1,11 +1,46 @@
 // Auto-generated Service Worker for 100% Offline PWA Support
-const CACHE_NAME = 'sweetbakery-v1792422889221';
+const CACHE_NAME = 'sweetbakery-v1792463331306';
 const APP_SHELL = [
   "./",
   "./index.html",
   "./manifest.json",
-  "./assets/index-CcaUTDa4.css",
-  "./assets/index-DLjS6ltw.js"
+  "./assets/AiCakeAnalysisModal-hB2Gy5Wa.js",
+  "./assets/AiDemandForecastModal-IpFLd3l9.js",
+  "./assets/AppUpdateModal-WJ9ifkUC.js",
+  "./assets/CakeFlavorsModal-DPGlx9yW.js",
+  "./assets/CustomerOrderLinkModal-wFoTw2Cg.js",
+  "./assets/CustomerOrderPortal-Br04jvCF.js",
+  "./assets/CustomerShowcase-DR-_9zAj.js",
+  "./assets/CustomOrderPipeline-an1XJPNn.js",
+  "./assets/ExpenseManagement-CrNVtOyL.js",
+  "./assets/flavorUtils-bqTv1_ZW.js",
+  "./assets/FloatingMiniVideoPlayer-DoIR2luC.js",
+  "./assets/index-B7w6Mw--.css",
+  "./assets/index-TbFTJJRD.js",
+  "./assets/InventoryManagement-C20EV3iw.js",
+  "./assets/KhmerVoicePosModal-CiQUw_CA.js",
+  "./assets/KitchenDisplayModal-CsqG7On4.js",
+  "./assets/LicenseExpiredModal-CYSWYAk-.js",
+  "./assets/LicenseRenewalModal-D--_kMef.js",
+  "./assets/MusicPlayerModal-DEK4D6RH.js",
+  "./assets/NewCustomOrderModal-DySKZ-Dr.js",
+  "./assets/RealStoreAuthModal-3-vAiM-W.js",
+  "./assets/ReportsDashboard-DPS5YvTO.js",
+  "./assets/ReserveFundDashboard-LrcJvp9z.js",
+  "./assets/ReserveFundModal-CMV7ay8D.js",
+  "./assets/SalesHistory-BmGfdGY-.js",
+  "./assets/SettingsModal-BOK5iHCm.js",
+  "./assets/ShiftModal-CH74teK8.js",
+  "./assets/SmartBirthdayCrmModal-8bTznaBB.js",
+  "./assets/StaffManagement-c7lM3Ox3.js",
+  "./assets/StoreAuthModal-CcApSSVk.js",
+  "./assets/StoreLocationModal-DRhK5BZX.js",
+  "./assets/SuperAdminPortalModal-IBeO6a1-.js",
+  "./assets/ThemePickerModal-CHXHtZ53.js",
+  "./assets/vendor-confetti-oQXWb4Lk.js",
+  "./assets/vendor-firebase-mpEdFxQ8.js",
+  "./assets/vendor-react-Bp4P0gIE.js",
+  "./assets/vendor-utils-BXPL24B5.js"
 ];
 
 self.addEventListener('install', (event) => {

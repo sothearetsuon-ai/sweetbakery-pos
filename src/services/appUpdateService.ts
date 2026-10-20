@@ -15,8 +15,8 @@ export interface AppUpdateInfo {
   mandatory?: boolean;
 }
 
-export const CURRENT_APP_VERSION = '1.5.4';
-export const CURRENT_BUILD_DATE = '2026-10-19';
+export const CURRENT_APP_VERSION = '1.5.5';
+export const CURRENT_BUILD_DATE = '2026-10-20';
 
 // Storage key for custom update server URL if configured
 const STORAGE_KEY_UPDATE_URL = 'sweetbakery_update_manifest_url';
@@ -121,8 +121,8 @@ export const checkForAppUpdates = async (): Promise<AppUpdateInfo> => {
   const manifestUrl = getStoredUpdateUrl();
   const cacheBuster = manifestUrl.includes('?') ? `&_t=${Date.now()}` : `?_t=${Date.now()}`;
 
-  const defaultApkUrl = 'https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.5.2/SweetBakery-Android.apk';
-  const defaultWinExeUrl = 'https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.5.2/SweetBakery-POS-Setup.exe';
+  const defaultApkUrl = 'https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.5.5/SweetBakery-Android.apk';
+  const defaultWinExeUrl = 'https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.5.5/SweetBakery-POS-Setup.exe';
 
   let foundLatestVersion = currentVer;
   let foundReleaseDate = CURRENT_BUILD_DATE;

@@ -162,16 +162,16 @@ export const App: React.FC = () => {
   const [availableUpdate, setAvailableUpdate] = useState<AppUpdateInfo | null>(() => ({
     hasUpdate: false,
     currentVersion: getNativeAppVersion(),
-    latestVersion: '1.3.0',
-    releaseDate: '2026-10-15',
+    latestVersion: '1.5.5',
+    releaseDate: '2026-10-20',
     releaseNotes: [
       'ប្រព័ន្ធ In-App Auto Update ស្តង់ដារថ្មី៖ ទាញយកអាប់ដែតបានរលូន និងលឿនរហ័ស ទាំងលើ Windows និង Android',
       'របារទាញយក Progress Bar ផ្ទាល់៖ បង្ហាញភាគរយ % និងទំហំ MB កំពុងទាញយកជាក់ស្តែង',
       'ការដំឡើងស្វ័យប្រវត្ត (1-Click Auto Install) ដោយសុវត្ថិភាព មិនបាត់បង់ទិន្នន័យ',
     ],
-    apkDownloadUrl: 'https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.5.1/SweetBakery-Android.apk',
-    windowsDownloadUrl: 'https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.5.1/SweetBakery-POS-Setup.exe',
-    windowsInstallerUrl: 'https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.5.1/SweetBakery-POS-Setup.exe',
+    apkDownloadUrl: 'https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.5.5/SweetBakery-Android.apk',
+    windowsDownloadUrl: 'https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.5.5/SweetBakery-POS-Setup.exe',
+    windowsInstallerUrl: 'https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.5.5/SweetBakery-POS-Setup.exe',
   }));
   const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
 
