@@ -16,6 +16,7 @@ export interface StoreInfo {
   khqrBankName?: string;
   realStorePin?: string;
   requireRealStorePin?: boolean;
+  alwaysRequireLoginOnStartup?: boolean;
   website?: string;
   customerPortalUrl?: string;
   telegramUsername?: string;

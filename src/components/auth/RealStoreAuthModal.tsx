@@ -151,9 +151,14 @@ export const RealStoreAuthModal: React.FC<RealStoreAuthModalProps> = ({
 
     sessionStorage.setItem('bakery_real_store_unlocked', 'true');
     localStorage.setItem('bakery_is_primary_store', 'true');
-    localStorage.setItem('bakery_real_store_authorized_device', 'true');
+    if (rememberDevice) {
+      localStorage.setItem('bakery_real_store_authorized_device', 'true');
+    } else {
+      localStorage.removeItem('bakery_real_store_authorized_device');
+    }
 
-    const finalStaff = staffToPreserve || authenticatedStaffRef.current || currentStaff;
+    const adminStaff = realStaffList.find((s) => s.role === 'ADMIN') || realStaffList[0];
+    const finalStaff = staffToPreserve || authenticatedStaffRef.current || currentStaff || adminStaff;
     if (onSuccess) {
       onSuccess(finalStaff);
     } else {
@@ -183,7 +188,8 @@ export const RealStoreAuthModal: React.FC<RealStoreAuthModalProps> = ({
       if (res.success && res.account) {
         setFormSuccess(`ចូលហាង «${res.account.storeName}» ជោគជ័យ!`);
         setTimeout(() => {
-          unlockAndFinish();
+          const adminStaff = realStaffList.find((s) => s.role === 'ADMIN') || realStaffList[0];
+          unlockAndFinish(adminStaff);
         }, 800);
       } else {
         soundFx.playPop();
@@ -225,7 +231,8 @@ export const RealStoreAuthModal: React.FC<RealStoreAuthModalProps> = ({
       if (res.success && res.account) {
         setFormSuccess(`បង្កើតហាង «${res.account.storeName}» (${res.account.storeId}) ជោគជ័យ!`);
         setTimeout(() => {
-          unlockAndFinish();
+          const adminStaff = realStaffList.find((s) => s.role === 'ADMIN') || realStaffList[0];
+          unlockAndFinish(adminStaff);
         }, 1000);
       } else {
         soundFx.playPop();
@@ -247,7 +254,8 @@ export const RealStoreAuthModal: React.FC<RealStoreAuthModalProps> = ({
       if (res.success && res.account) {
         setFormSuccess(`ចូលហាង «${res.account.storeName}» ដោយ Google ជោគជ័យ!`);
         setTimeout(() => {
-          unlockAndFinish();
+          const adminStaff = realStaffList.find((s) => s.role === 'ADMIN') || realStaffList[0];
+          unlockAndFinish(adminStaff);
         }, 800);
       } else {
         soundFx.playPop();
@@ -628,6 +636,17 @@ export const RealStoreAuthModal: React.FC<RealStoreAuthModalProps> = ({
                       </button>
                     </div>
                   </div>
+
+                  {/* Remember Device Checkbox */}
+                  <label className="flex items-center gap-1.5 cursor-pointer select-none text-[11px] text-slate-600 hover:text-slate-900 justify-center">
+                    <input
+                      type="checkbox"
+                      checked={rememberDevice}
+                      onChange={(e) => setRememberDevice(e.target.checked)}
+                      className="w-3.5 h-3.5 rounded text-rose-600 border-slate-300 focus:ring-rose-500 cursor-pointer"
+                    />
+                    <span>ចងចាំការអនុញ្ញាតលើឧបករណ៍នេះ (Remember device)</span>
+                  </label>
 
                   <button
                     type="submit"

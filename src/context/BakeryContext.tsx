@@ -200,6 +200,7 @@ export const demoStoreInfo: StoreInfo = {
   khqrBakongId: 'demo_bakery@aba',
   khqrAccountNumber: '000000000',
   khqrBankName: 'Demo Bank / Bakong',
+  alwaysRequireLoginOnStartup: true,
   hideCustomerPrices: true,
 };
 
@@ -216,8 +217,9 @@ export const defaultStoreInfo: StoreInfo = {
   khqrBakongId: 'sweet_bakery@aba',
   khqrAccountNumber: '012629160',
   khqrBankName: 'ACLEDA Bank / Bakong',
-  realStorePin: '1111',
+  realStorePin: '660168',
   requireRealStorePin: true,
+  alwaysRequireLoginOnStartup: true,
   hideCustomerPrices: true,
 };
 
@@ -5669,25 +5671,47 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   // Real Store Security Passcode Authentication Modal State (Synchronously initialized for 0ms instant display)
   const [isRealStoreAuthModalOpen, setIsRealStoreAuthModalOpen] = useState<boolean>(() => {
     if (typeof window === 'undefined') return false;
-    // In demo mode, don't show auth modal on initial startup
-    if (checkInitialDemoMode()) return false;
 
-    // Check if session or device is already authorized
+    // If customer order portal or tv showcase link, never show staff auth modal
+    const params = new URLSearchParams(window.location.search);
+    const hash = window.location.hash;
+    if (params.get('order') === 'true' || hash === '#order' || hash === '#customer-view') {
+      return false;
+    }
+
+    // Explicit demo requested in URL (?demo=true or #demo)
+    if (params.get('demo') === 'true' || hash === '#demo') {
+      return false;
+    }
+
+    // Check if session in this window/tab is already unlocked
     const isUnlockedSession = sessionStorage.getItem('bakery_real_store_unlocked') === 'true';
-    const isTrustedDevice = localStorage.getItem('bakery_real_store_authorized_device') === 'true';
-    if (isUnlockedSession || isTrustedDevice) return false;
+    if (isUnlockedSession) return false;
 
-    // Check if store requires PIN (defaults to true)
+    // Check store security configuration
     let requirePin = true;
+    let alwaysRequireLogin = true;
     try {
       const saved = localStorage.getItem('bakery_store_info');
       if (saved) {
         const parsed = JSON.parse(saved);
         if (parsed.requireRealStorePin === false) requirePin = false;
+        if (parsed.alwaysRequireLoginOnStartup === false) alwaysRequireLogin = false;
       }
     } catch (e) {}
 
-    return requirePin;
+    if (!requirePin) return false;
+
+    // By default (alwaysRequireLogin = true), always prompt for login / PIN on fresh launch
+    if (alwaysRequireLogin) {
+      return true;
+    }
+
+    // If startup login is disabled in settings, check if device was remembered
+    const isTrustedDevice = localStorage.getItem('bakery_real_store_authorized_device') === 'true';
+    if (isTrustedDevice) return false;
+
+    return true;
   });
   const [realStoreAuthSuccessCallback, setRealStoreAuthSuccessCallback] = useState<((authenticatedStaff?: StaffMember) => void) | null>(null);
 

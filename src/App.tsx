@@ -129,6 +129,7 @@ export const App: React.FC = () => {
   // Bakery Context for Demo & Real Store Security
   const {
     isDemoMode,
+    exitDemoMode,
     isRealStoreAuthModalOpen,
     closeRealStoreAuthModal,
     openRealStoreAuthModal,
@@ -140,19 +141,26 @@ export const App: React.FC = () => {
     exchangeRate,
   } = useBakery();
 
-  // Check if real store requires authentication on initial visit (if not demo mode and device/session not yet authorized)
+  // Check if real store requires authentication on initial visit (if not customer portal or demo URL)
   React.useEffect(() => {
     if (typeof window === 'undefined') return;
-    if (isDemoMode) return; // In demo mode, auth is only requested when exiting demo
+
+    const params = new URLSearchParams(window.location.search);
+    const hash = window.location.hash;
+    if (params.get('order') === 'true' || hash === '#order' || hash === '#customer-view') return;
+    if (params.get('demo') === 'true' || hash === '#demo') return;
 
     const isUnlockedSession = sessionStorage.getItem('bakery_real_store_unlocked') === 'true';
     const isTrustedDevice = localStorage.getItem('bakery_real_store_authorized_device') === 'true';
+    const alwaysRequireLogin = storeInfo.alwaysRequireLoginOnStartup !== false;
 
-    // If real store passcode is required and neither session nor device is authorized
-    if (storeInfo.requireRealStorePin !== false && !isUnlockedSession && !isTrustedDevice) {
-      openRealStoreAuthModal();
+    // If real store authentication is required and session is not yet unlocked
+    if (storeInfo.requireRealStorePin !== false) {
+      if (!isUnlockedSession && (alwaysRequireLogin || !isTrustedDevice)) {
+        openRealStoreAuthModal();
+      }
     }
-  }, [isDemoMode, storeInfo.requireRealStorePin]);
+  }, [storeInfo.requireRealStorePin, storeInfo.alwaysRequireLoginOnStartup]);
 
   // 35-Day Trial License State
   const [licenseInfo, setLicenseInfo] = useState<LicenseInfo>(() => getLicenseInfo());
@@ -656,7 +664,12 @@ export const App: React.FC = () => {
       <RealStoreAuthModal
         isOpen={isRealStoreAuthModalOpen}
         onClose={closeRealStoreAuthModal}
-        onSuccess={realStoreAuthSuccessCallback || undefined}
+        onSuccess={(authenticatedStaff) => {
+          exitDemoMode(authenticatedStaff);
+          if (realStoreAuthSuccessCallback) {
+            realStoreAuthSuccessCallback(authenticatedStaff);
+          }
+        }}
       />
     </div>
   );

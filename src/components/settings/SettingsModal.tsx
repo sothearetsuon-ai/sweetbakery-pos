@@ -92,6 +92,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     exportSalesCsv,
     exportExpensesCsv,
     isDemoMode,
+    logoutAndLock,
   } = useBakery();
   const text = t[lang];
 
@@ -146,8 +147,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [isStandeeOpen, setIsStandeeOpen] = useState(false);
 
   // Real Store Security Passcode state
-  const [realStorePin, setRealStorePin] = useState(storeInfo?.realStorePin || '1111');
+  const [realStorePin, setRealStorePin] = useState(storeInfo?.realStorePin || '660168');
   const [requireRealStorePin, setRequireRealStorePin] = useState(storeInfo?.requireRealStorePin !== false);
+  const [alwaysRequireLoginOnStartup, setAlwaysRequireLoginOnStartup] = useState(storeInfo?.alwaysRequireLoginOnStartup !== false);
   const [showRealStorePin, setShowRealStorePin] = useState(false);
 
   // Chatbot & Direct Store Contact state
@@ -185,8 +187,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       setKhqrBakongId(storeInfo.khqrBakongId || 'sweet_bakery@aba');
       setKhqrAccountNumber(storeInfo.khqrAccountNumber || '001 234 567');
       setKhqrBankName(storeInfo.khqrBankName || 'ABA Bank / Bakong');
-      setRealStorePin(storeInfo.realStorePin || '1111');
+      setRealStorePin(storeInfo.realStorePin || '660168');
       setRequireRealStorePin(storeInfo.requireRealStorePin !== false);
+      setAlwaysRequireLoginOnStartup(storeInfo.alwaysRequireLoginOnStartup !== false);
       setTelegramUsername(storeInfo.telegramUsername || '');
       setTelegramChatLink(storeInfo.telegramChatLink || '');
       setHotlinePhone(storeInfo.hotlinePhone || '');
@@ -387,8 +390,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       khqrBakongId: khqrBakongId.trim(),
       khqrAccountNumber: khqrAccountNumber.trim(),
       khqrBankName: khqrBankName.trim(),
-      realStorePin: realStorePin.trim() || '1111',
+      realStorePin: realStorePin.trim() || '660168',
       requireRealStorePin: requireRealStorePin,
+      alwaysRequireLoginOnStartup: alwaysRequireLoginOnStartup,
       telegramUsername: telegramUsername.trim(),
       telegramChatLink: telegramChatLink.trim(),
       hotlinePhone: hotlinePhone.trim(),
@@ -1171,7 +1175,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                         </p>
                       </div>
 
-                      <div className="flex flex-col justify-center">
+                      <div className="flex flex-col justify-center space-y-2">
                         <label className="flex items-center gap-2.5 p-2.5 bg-white/80 rounded-xl border border-rose-200/80 cursor-pointer select-none hover:bg-white transition-all">
                           <input
                             type="checkbox"
@@ -1181,14 +1185,49 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                           />
                           <div>
                             <span className="text-xs font-bold text-slate-800 block">
-                              ទាមទារលេខសម្ងាត់ពេលចូលហាងពិត
+                              ទាមទារលេខសម្ងាត់ពេលចូលហាងពិត (Require PIN)
                             </span>
                             <span className="text-[10px] text-slate-500 block">
                               (បើបិទ៖ អាចចូលហាងពិតដោយផ្ទាល់មិនបាច់វាយ PIN)
                             </span>
                           </div>
                         </label>
+
+                        <label className="flex items-center gap-2.5 p-2.5 bg-white/80 rounded-xl border border-rose-200/80 cursor-pointer select-none hover:bg-white transition-all">
+                          <input
+                            type="checkbox"
+                            checked={alwaysRequireLoginOnStartup}
+                            onChange={(e) => setAlwaysRequireLoginOnStartup(e.target.checked)}
+                            className="w-4 h-4 text-rose-600 rounded border-slate-300 focus:ring-rose-500 cursor-pointer"
+                          />
+                          <div>
+                            <span className="text-xs font-bold text-slate-800 block">
+                              🔒 បង្ហាញផ្ទាំង Login / PIN គ្រប់ពេលបើកកម្មវិធី (On Startup)
+                            </span>
+                            <span className="text-[10px] text-slate-500 block">
+                              (ទាមទារឱ្យ Login ឬវាយ PIN ចូលរាល់ពេលបើកកម្មវិធីថ្មី ដើម្បីសុវត្ថិភាព)
+                            </span>
+                          </div>
+                        </label>
                       </div>
+                    </div>
+
+                    {/* Quick Lock & PIN Info Bar */}
+                    <div className="pt-2.5 flex items-center justify-between border-t border-rose-200/60 flex-wrap gap-2">
+                      <p className="text-[10px] text-slate-500">
+                        * PIN ដើមម្ចាស់ហាង៖ <span className="font-mono font-bold text-rose-700 bg-rose-100 px-1.5 py-0.5 rounded">660168</span> | គិតលុយ៖ <span className="font-mono font-bold text-rose-700 bg-rose-100 px-1.5 py-0.5 rounded">0202</span>
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onClose();
+                          logoutAndLock();
+                        }}
+                        className="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-xs active:scale-95 transition-all"
+                      >
+                        <Lock className="w-3.5 h-3.5 text-rose-400" />
+                        <span>🔒 ចាក់សោ & បង្ហាញផ្ទាំង Login ភ្លាមៗ</span>
+                      </button>
                     </div>
                   </div>
 
