@@ -46,7 +46,15 @@ import {
   searchProductsForChat,
   sendDirectCustomerMessageToTelegram,
 } from '../../services/customerAiAssistantService';
-import { Product, StoreInfo } from '../../types';
+import {
+  getCustomerSessionId,
+  getSavedCustomerInfo,
+  saveCustomerInfo,
+  subscribeToChatMessages,
+  sendChatMessage,
+  markChatAsRead,
+} from '../../services/liveChatService';
+import { Product, StoreInfo, ChatMessage } from '../../types';
 import { soundFx } from '../../utils/audio';
 import { getProductImageUrl } from '../../utils/imagePath';
 
@@ -140,6 +148,76 @@ export const CustomerAiGuideModal: React.FC<CustomerAiGuideModalProps> = ({
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const speechRecognitionRef = useRef<any>(null);
+
+  // Real-Time In-App Live Store Chat State (Customer ↔ Store Cashier)
+  const [liveStoreMessages, setLiveStoreMessages] = useState<ChatMessage[]>([]);
+  const [liveStoreInput, setLiveStoreInput] = useState('');
+  const [isSendingLiveStore, setIsSendingLiveStore] = useState(false);
+  const liveStoreEndRef = useRef<HTMLDivElement>(null);
+
+  // Auto-fill saved customer profile
+  useEffect(() => {
+    if (isOpen) {
+      const saved = getSavedCustomerInfo();
+      if (saved.name && !custName) setCustName(saved.name);
+      if (saved.phone && !custPhone) setCustPhone(saved.phone);
+    }
+  }, [isOpen]);
+
+  // Subscribe to Live In-App Chat with Store Cashier
+  useEffect(() => {
+    if (!isOpen || activeTab !== 'store-chat') return;
+    const sessId = getCustomerSessionId();
+    markChatAsRead(sessId, 'CUSTOMER');
+
+    const unsub = subscribeToChatMessages('CUSTOMER', sessId, (msgs) => {
+      setLiveStoreMessages(msgs);
+    });
+    return unsub;
+  }, [isOpen, activeTab]);
+
+  useEffect(() => {
+    if (activeTab === 'store-chat') {
+      setTimeout(() => {
+        liveStoreEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      }, 100);
+    }
+  }, [liveStoreMessages, activeTab]);
+
+  const handleSendLiveStoreChat = async (textToSend?: string) => {
+    const text = (textToSend || liveStoreInput).trim();
+    if (!text || isSendingLiveStore) return;
+
+    const sessId = getCustomerSessionId();
+    const name = custName.trim() || 'អតិថិជន';
+    const phone = custPhone.trim();
+
+    if (custName.trim() || custPhone.trim()) {
+      saveCustomerInfo(custName.trim(), custPhone.trim());
+    }
+
+    setIsSendingLiveStore(true);
+    try {
+      await sendChatMessage(
+        {
+          channel: 'CUSTOMER',
+          sessionId: sessId,
+          senderName: name,
+          customerPhone: phone,
+          senderRole: 'CUSTOMER',
+          senderAvatar: '👤',
+          text,
+        },
+        storeInfo
+      );
+      soundFx.playPop();
+      setLiveStoreInput('');
+    } catch (e) {
+      console.error('Failed to send live chat', e);
+    } finally {
+      setIsSendingLiveStore(false);
+    }
+  };
 
   // Auto scroll to bottom of messages
   const scrollToBottom = () => {
@@ -1173,205 +1251,259 @@ export const CustomerAiGuideModal: React.FC<CustomerAiGuideModalProps> = ({
         {/* TAB 3: LIVE DIRECT STORE CHAT & CONTACT */}
         {/* ========================================================= */}
         {activeTab === 'store-chat' && (
-          <div className="flex-1 overflow-y-auto p-4 sm:p-5 bg-slate-50/60 space-y-4">
-            {/* Quick Contact Buttons Row */}
-            <div className="grid grid-cols-2 gap-2.5">
-              {telegramUrl ? (
-                <a
-                  href={telegramUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={() => soundFx.playPop()}
-                  className="flex items-center gap-2.5 p-3 bg-gradient-to-r from-sky-500 to-blue-600 text-white rounded-2xl shadow-sm hover:shadow-md transition-all active:scale-95 group"
-                >
-                  <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center text-lg shrink-0">
-                    ✈️
+          <div className="flex-1 flex flex-col overflow-hidden bg-slate-50/70">
+            {/* Top Store Contact Banner & Hotline */}
+            <div className="p-3 bg-white border-b border-rose-100 shrink-0 space-y-2">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 min-w-0">
+                  <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white flex items-center justify-center text-sm shadow-xs shrink-0">
+                    💬
                   </div>
                   <div className="min-w-0">
-                    <span className="text-[10px] text-sky-100 font-bold block uppercase tracking-wider">
-                      ឆាត Telegram
-                    </span>
-                    <span className="text-xs font-black truncate block">
-                      @{telegramHandle || 'SweetBakery'}
-                    </span>
-                  </div>
-                  <ExternalLink className="w-3.5 h-3.5 text-white/80 ml-auto shrink-0 group-hover:translate-x-0.5 transition-transform" />
-                </a>
-              ) : (
-                <div className="flex items-center gap-2.5 p-3 bg-sky-50 text-sky-800 rounded-2xl border border-sky-200/80">
-                  <div className="w-9 h-9 rounded-xl bg-sky-200/60 flex items-center justify-center text-lg shrink-0">
-                    ✈️
-                  </div>
-                  <div className="min-w-0">
-                    <span className="text-[10px] text-sky-600 font-bold block uppercase">
-                      Telegram ហាង
-                    </span>
-                    <span className="text-xs font-black truncate block">
-                      ទាក់ទងតាមទូរស័ព្ទ
-                    </span>
-                  </div>
-                </div>
-              )}
-
-              <a
-                href={`tel:${storePhone}`}
-                onClick={() => soundFx.playPop()}
-                className="flex items-center gap-2.5 p-3 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-2xl shadow-sm hover:shadow-md transition-all active:scale-95 group"
-              >
-                <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center text-lg shrink-0">
-                  📞
-                </div>
-                <div className="min-w-0">
-                  <span className="text-[10px] text-emerald-100 font-bold block uppercase tracking-wider">
-                    ទូរស័ព្ទទាន់ហេតុការណ៍
-                  </span>
-                  <span className="text-xs font-black truncate block">{storePhone}</span>
-                </div>
-                <Phone className="w-3.5 h-3.5 text-white/80 ml-auto shrink-0 group-hover:rotate-12 transition-transform" />
-              </a>
-            </div>
-
-            {/* Store Location Info Card */}
-            <div className="bg-white rounded-2xl p-3.5 border border-rose-100 shadow-2xs flex items-center justify-between gap-3">
-              <div className="flex items-center gap-2.5 min-w-0">
-                <div className="w-8 h-8 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center shrink-0">
-                  <MapPin className="w-4 h-4" />
-                </div>
-                <div className="min-w-0">
-                  <h5 className="text-xs font-black text-slate-800 truncate">
-                    {storeInfo?.nameKh || context.storeName || 'Sweet Bakery'}
-                  </h5>
-                  <p className="text-[11px] text-slate-500 truncate">
-                    📍 {storeInfo?.address || context.storeAddress || 'រតនៈគីរី អូរយ៉ាដាវ'}
-                  </p>
-                </div>
-              </div>
-
-              {onOpenStoreLocation && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    soundFx.playPop();
-                    onOpenStoreLocation();
-                  }}
-                  className="px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer"
-                >
-                  មើលផែនទី
-                </button>
-              )}
-            </div>
-
-            {/* Direct Inquiry Form (Sends Telegram Message to Store Owner) */}
-            <div className="bg-white rounded-3xl p-4 sm:p-5 border border-rose-100 shadow-sm space-y-3.5">
-              <div className="flex items-center gap-2 pb-2 border-b border-rose-50">
-                <div className="w-7 h-7 rounded-xl bg-pink-100 text-pink-600 flex items-center justify-center text-sm font-black">
-                  ✉️
-                </div>
-                <div>
-                  <h4 className="text-xs sm:text-sm font-black text-slate-800">
-                    ផ្ញើសារសួរនាំផ្ទាល់ទៅកាន់ម្ចាស់ហាង (Direct Telegram Alert)
-                  </h4>
-                  <p className="text-[10px] text-slate-400">
-                    ប្រព័ន្ធនឹងបញ្ជូនសាររបស់អ្នកទៅកាន់ Telegram របស់ម្ចាស់ហាងភ្លាមៗ
-                  </p>
-                </div>
-              </div>
-
-              {directSendStatus.message && (
-                <div
-                  className={`p-3 rounded-2xl text-xs font-bold flex items-start gap-2 ${
-                    directSendStatus.type === 'success'
-                      ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
-                      : 'bg-rose-50 text-rose-800 border border-rose-200'
-                  }`}
-                >
-                  {directSendStatus.type === 'success' ? (
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-                  ) : (
-                    <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
-                  )}
-                  <span>{directSendStatus.message}</span>
-                </div>
-              )}
-
-              <form onSubmit={handleSendDirectInquiry} className="space-y-3">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                  <div>
-                    <label className="text-[11px] font-bold text-slate-700 block mb-1">
-                      ឈ្មោះរបស់អ្នក (Customer Name)
-                    </label>
-                    <input
-                      type="text"
-                      value={custName}
-                      onChange={(e) => setCustName(e.target.value)}
-                      placeholder="ឧ. សុខា"
-                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:bg-white focus:border-pink-500 rounded-xl text-xs font-semibold focus:outline-none transition-all"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-[11px] font-bold text-slate-700 block mb-1">
-                      លេខទូរស័ព្ទដើម្បីទាក់ទងមកវិញ <span className="text-rose-500">*</span>
-                    </label>
-                    <input
-                      type="tel"
-                      value={custPhone}
-                      onChange={(e) => setCustPhone(e.target.value)}
-                      placeholder="ឧ. 012 345 678"
-                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:bg-white focus:border-pink-500 rounded-xl text-xs font-semibold focus:outline-none transition-all"
-                    />
+                    <h4 className="text-xs font-black text-slate-800 flex items-center gap-1.5 truncate">
+                      <span>ឆាតផ្ទាល់ជាមួយអ្នកលក់ (In-App Live Chat)</span>
+                      <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+                    </h4>
+                    <p className="text-[10px] text-slate-400 truncate">
+                      {storeInfo?.nameKh || context.storeName || 'Sweet Bakery'} • ឆ្លើយតបផ្ទាល់លើ POS
+                    </p>
                   </div>
                 </div>
 
-                <div>
-                  <label className="text-[11px] font-bold text-slate-700 block mb-1">
-                    នំដែលអ្នកចាប់អារម្មណ៍ (Cake of Interest - បើមាន)
-                  </label>
-                  <select
-                    value={custCakeInterest}
-                    onChange={(e) => setCustCakeInterest(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:bg-white focus:border-pink-500 rounded-xl text-xs font-medium focus:outline-none transition-all"
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <a
+                    href={`tel:${storePhone}`}
+                    onClick={() => soundFx.playPop()}
+                    className="p-1.5 px-2.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 text-[11px] font-black flex items-center gap-1 transition-all active:scale-95 cursor-pointer shadow-2xs"
+                    title="ខលទាន់ហេតុការណ៍"
                   >
-                    <option value="">-- ជ្រើសរើសនំ ឬទុកទំនេរ --</option>
-                    {(context.availableProducts || []).map((p) => (
-                      <option key={p.id} value={p.nameKh}>
-                        {p.nameKh} ({p.nameEn || p.unit || 'Cake'})
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                    <Phone className="w-3 h-3" />
+                    <span className="hidden sm:inline">{storePhone}</span>
+                  </a>
 
-                <div>
-                  <label className="text-[11px] font-bold text-slate-700 block mb-1">
-                    ខ្លឹមសារសារសួរនាំ ឬកុម្ម៉ង់ម៉ូដពិសេស <span className="text-rose-500">*</span>
-                  </label>
-                  <textarea
-                    rows={3}
-                    value={custMessage}
-                    onChange={(e) => setCustMessage(e.target.value)}
-                    placeholder="សរសេរសំណួររបស់អ្នកនៅទីនេះ (ឧ. ចង់សួរពីម៉ូដនំ ថ្ងៃទទួលនំ ឬតម្លៃនំពិសេស...)"
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:bg-white focus:border-pink-500 rounded-xl text-xs font-medium focus:outline-none transition-all resize-none"
+                  {telegramUrl && (
+                    <a
+                      href={telegramUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={() => soundFx.playPop()}
+                      className="p-1.5 px-2.5 rounded-xl bg-sky-50 hover:bg-sky-100 text-sky-700 border border-sky-200 text-[11px] font-black flex items-center gap-1 transition-all active:scale-95 cursor-pointer shadow-2xs"
+                      title="ឆាត Telegram"
+                    >
+                      <span>✈️</span>
+                      <span className="hidden sm:inline">Telegram</span>
+                    </a>
+                  )}
+                </div>
+              </div>
+
+              {/* Customer Identity Bar (Name & Phone) */}
+              <div className="flex items-center gap-2 p-1.5 px-2.5 rounded-xl bg-rose-50/70 border border-rose-200/70 text-[11px]">
+                <div className="flex-1 flex items-center gap-1.5 min-w-0">
+                  <span className="text-rose-500 font-bold shrink-0">👤</span>
+                  <input
+                    type="text"
+                    value={custName}
+                    onChange={(e) => setCustName(e.target.value)}
+                    placeholder="ឈ្មោះរបស់អ្នក"
+                    className="w-24 sm:w-28 bg-white px-2 py-0.5 rounded-lg border border-rose-200 text-xs font-bold text-slate-800 focus:outline-none focus:border-pink-500 truncate"
+                  />
+                  <span className="text-slate-300">|</span>
+                  <span className="text-rose-500 font-bold shrink-0">📞</span>
+                  <input
+                    type="tel"
+                    value={custPhone}
+                    onChange={(e) => setCustPhone(e.target.value)}
+                    placeholder="លេខទូរស័ព្ទ (ចាំបាច់)"
+                    className="flex-1 bg-white px-2 py-0.5 rounded-lg border border-rose-200 text-xs font-bold text-slate-800 focus:outline-none focus:border-pink-500 truncate"
                   />
                 </div>
+                <span className="text-[10px] text-slate-400 font-medium hidden sm:inline shrink-0">
+                  (សម្រាប់បុគ្គលិកទាក់ទងមកវិញ)
+                </span>
+              </div>
+            </div>
 
+            {/* Chat Messages Stream Area */}
+            <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-3">
+              {liveStoreMessages.length === 0 ? (
+                <div className="space-y-3 py-4">
+                  <div className="p-4 rounded-3xl bg-white border border-rose-100 shadow-sm text-center space-y-2 max-w-md mx-auto">
+                    <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-pink-500 to-rose-600 text-white flex items-center justify-center text-2xl mx-auto shadow-md shadow-pink-500/20">
+                      🧁
+                    </div>
+                    <h5 className="text-xs sm:text-sm font-black text-slate-800">
+                      សូមស្វាគមន៍មកកាន់ {storeInfo?.nameKh || context.storeName || 'Sweet Bakery'}!
+                    </h5>
+                    <p className="text-[11px] text-slate-500 leading-relaxed font-medium">
+                      លោកអ្នកអាចវាយសារ ឬចុចសំណួររហ័សខាងក្រោម ដើម្បីសាកសួរតម្លៃនំ ម៉ូដនំ ឬការកុម្ម៉ង់ភ្លាមៗ។
+                      បុគ្គលិកអ្នកលក់នឹងឆ្លើយតបមកវិញនៅលើផ្ទាំងនេះភ្លាមៗ!
+                    </p>
+                  </div>
+
+                  {/* Quick question chips */}
+                  <div className="max-w-md mx-auto space-y-1.5">
+                    <div className="text-[10px] font-bold text-slate-400 text-center uppercase tracking-wider">
+                      សំណួររហ័សដែលពេញនិយមសួរ៖
+                    </div>
+                    <div className="flex flex-wrap gap-1.5 justify-center">
+                      {[
+                        '👋 សួស្តីបាទ! ខ្ញុំចង់សួរពីតម្លៃនំ',
+                        '🎂 តើអាចកុម្ម៉ង់ម៉ូដពិសេសតាមរូបថតបានទេ?',
+                        '⏰ ត្រូវកុម្ម៉ង់ទុកមុនប៉ុន្មានម៉ោងដែរ?',
+                        '🛵 ខាងហាងមានសេវាដឹកជញ្ជូនដែរទេ?',
+                        '💳 អាចបង់ប្រាក់កក់តាម Bakong KHQR បានទេ?',
+                      ].map((chip) => (
+                        <button
+                          key={chip}
+                          type="button"
+                          onClick={() => {
+                            soundFx.playPop();
+                            handleSendLiveStoreChat(chip);
+                          }}
+                          className="px-2.5 py-1.5 rounded-full bg-white hover:bg-pink-50 border border-rose-200/80 text-slate-700 hover:text-pink-700 text-[11px] font-bold shadow-2xs transition-all active:scale-95 cursor-pointer"
+                        >
+                          {chip}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                liveStoreMessages.map((msg) => {
+                  const isCust = msg.senderRole === 'CUSTOMER';
+                  const isSys = msg.senderRole === 'SYSTEM';
+
+                  if (isSys) {
+                    return (
+                      <div key={msg.id} className="flex justify-center my-2">
+                        <span className="px-3 py-1 rounded-full bg-slate-200/80 text-slate-600 text-[10px] font-bold">
+                          {msg.text}
+                        </span>
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div
+                      key={msg.id}
+                      className={`flex gap-2 items-end ${isCust ? 'justify-end' : 'justify-start'}`}
+                    >
+                      {!isCust && (
+                        <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-pink-600 to-rose-600 text-white flex items-center justify-center text-sm shadow-xs shrink-0">
+                          👩‍🍳
+                        </div>
+                      )}
+
+                      <div
+                        className={`max-w-[82%] sm:max-w-[75%] rounded-3xl p-3 shadow-xs space-y-1 ${
+                          isCust
+                            ? 'bg-gradient-to-r from-pink-600 to-rose-600 text-white rounded-br-xs'
+                            : 'bg-white border border-rose-100 text-slate-800 rounded-bl-xs'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-3 text-[10px] opacity-80">
+                          <span className="font-bold">
+                            {isCust ? 'អ្នក (Customer)' : msg.senderName || 'អ្នកលក់ (Staff)'}
+                          </span>
+                          <span>{msg.timestamp}</span>
+                        </div>
+
+                        <p className="text-xs sm:text-sm font-semibold whitespace-pre-wrap leading-relaxed">
+                          {msg.text}
+                        </p>
+                      </div>
+
+                      {isCust && (
+                        <div className="w-7 h-7 rounded-full bg-rose-100 text-rose-700 flex items-center justify-center text-xs font-bold shrink-0">
+                          👤
+                        </div>
+                      )}
+                    </div>
+                  );
+                })
+              )}
+              <div ref={liveStoreEndRef} />
+            </div>
+
+            {/* Quick chips when already chatting */}
+            {liveStoreMessages.length > 0 && (
+              <div className="px-3 py-1 bg-white/70 border-t border-rose-100 flex items-center gap-1.5 overflow-x-auto no-scrollbar shrink-0">
+                <span className="text-[10px] font-bold text-slate-400 shrink-0">ឆ្លើយតបរហ័ស៖</span>
+                {['បាទ/ចាស អរគុណ!', 'តម្លៃប៉ុន្មានដែរ?', 'ខ្ញុំសម្រេចចិត្តកុម្ម៉ង់យកមួយនេះ', 'ដឹកជញ្ជូនដល់ណាដែរ?'].map((c) => (
+                  <button
+                    key={c}
+                    type="button"
+                    onClick={() => handleSendLiveStoreChat(c)}
+                    className="px-2 py-0.5 rounded-full bg-rose-50 hover:bg-rose-100 text-rose-700 text-[10px] font-bold shrink-0 transition-colors cursor-pointer border border-rose-200"
+                  >
+                    {c}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* Bottom Message Input Bar */}
+            <div className="p-3 bg-white border-t border-rose-100 shrink-0">
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  handleSendLiveStoreChat();
+                }}
+                className="flex items-center gap-2"
+              >
+                {/* Voice Input Mic Button */}
+                <button
+                  type="button"
+                  onClick={handleToggleVoiceInput}
+                  className={`p-2.5 rounded-2xl border transition-all cursor-pointer flex items-center justify-center shrink-0 ${
+                    isListening
+                      ? 'bg-rose-600 text-white border-rose-600 animate-pulse shadow-md'
+                      : 'bg-rose-50/70 hover:bg-rose-100 text-rose-700 border-rose-200/80 shadow-2xs'
+                  }`}
+                  title={isListening ? 'កំពុងស្តាប់... (ចុចដើម្បីឈប់)' : 'ចុចនិយាយតាមសំឡេង (Mic)'}
+                >
+                  {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+                </button>
+
+                {/* Text Input */}
+                <div className="relative flex-1">
+                  <input
+                    type="text"
+                    value={liveStoreInput}
+                    onChange={(e) => setLiveStoreInput(e.target.value)}
+                    placeholder="វាយសារសួរនាំមកកាន់ហាងនៅទីនេះ..."
+                    className="w-full pl-3.5 pr-8 py-2.5 bg-slate-50 border border-slate-200 focus:bg-white focus:border-pink-500 focus:ring-2 focus:ring-pink-500/20 rounded-2xl text-xs sm:text-sm font-semibold text-slate-800 placeholder-slate-400 focus:outline-none transition-all"
+                  />
+                  {liveStoreInput && (
+                    <button
+                      type="button"
+                      onClick={() => setLiveStoreInput('')}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5 cursor-pointer"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+
+                {/* Send Button */}
                 <button
                   type="submit"
-                  disabled={isSendingDirect}
-                  className="w-full py-2.5 bg-gradient-to-r from-pink-600 via-rose-600 to-rose-500 hover:from-pink-700 hover:to-rose-700 disabled:opacity-50 text-white rounded-xl text-xs sm:text-sm font-black shadow-md shadow-pink-600/25 transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95"
+                  disabled={!liveStoreInput.trim() || isSendingLiveStore}
+                  className="p-2.5 sm:px-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-2xl text-xs font-black shadow-md shadow-blue-600/20 transition-all flex items-center gap-1.5 shrink-0 cursor-pointer active:scale-95"
                 >
-                  {isSendingDirect ? (
-                    <>
-                      <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                      <span>កំពុងផ្ញើសារទៅកាន់ហាង...</span>
-                    </>
+                  {isSendingLiveStore ? (
+                    <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                   ) : (
-                    <>
-                      <SendHorizontal className="w-4 h-4" />
-                      <span>🚀 ផ្ញើសារសួរនាំទៅកាន់ហាងឥឡូវនេះ</span>
-                    </>
+                    <Send className="w-4 h-4" />
                   )}
+                  <span className="hidden sm:inline">ផ្ញើ</span>
                 </button>
               </form>
+
+              <p className="text-[10px] text-slate-400 text-center mt-2 font-medium">
+                💬 សារត្រូវបានបញ្ជូនទៅកាន់អេក្រង់ POS របស់ហាងភ្លាមៗ • បុគ្គលិកឆ្លើយតបមកវិញភ្លាមៗ
+              </p>
             </div>
           </div>
         )}

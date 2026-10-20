@@ -23,13 +23,15 @@ import {
   ShieldCheck,
   Rocket,
   Store,
+  MessageCircle,
 } from 'lucide-react';
 import { useBakery } from '../../context/BakeryContext';
 import { useMusic } from '../../context/MusicContext';
 import { t } from '../../utils/translations';
 import { soundFx } from '../../utils/audio';
-import { StaffPermissions } from '../../types';
+import { StaffPermissions, ChatChannel } from '../../types';
 import { AppTheme } from '../../utils/themeManager';
+import { getStaffUnreadChatCount, subscribeToCustomerSessions } from '../../services/liveChatService';
 
 export type TabType =
   | 'pos'
@@ -61,6 +63,7 @@ interface SidebarProps {
   onOpenBirthdayCrm?: () => void;
   onOpenBakingForecast?: () => void;
   onOpenStoreAuthModal?: () => void;
+  onOpenChatModal?: (channel?: ChatChannel) => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -81,10 +84,22 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onOpenBirthdayCrm,
   onOpenBakingForecast,
   onOpenStoreAuthModal,
+  onOpenChatModal,
 }) => {
   const { lang, customOrders, lowStockCount, expenses, sales, currentStaff, hasPermission, staffMembers, storeInfo, logoutAndLock, isDemoMode, reserveFund } = useBakery();
   const { isPlaying: isMusicPlaying, setIsPlayerOpen: setIsMusicPlayerOpen } = useMusic();
   const text = t[lang];
+
+  // Unread live chat count
+  const [unreadChatCount, setUnreadChatCount] = React.useState<number>(() => getStaffUnreadChatCount());
+
+  React.useEffect(() => {
+    const unsub = subscribeToCustomerSessions((sessions) => {
+      const total = sessions.reduce((acc, s) => acc + (s.unreadCountStaff || 0), 0);
+      setUnreadChatCount(total);
+    });
+    return unsub;
+  }, []);
 
   const pendingCakeOrdersCount = customOrders.filter(
     (o) => o.status === 'PENDING' || o.status === 'BAKING' || o.status === 'DECORATING'
@@ -446,6 +461,42 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </span>
           )}
         </div>
+
+        {/* In-App Live Chat Suite Button */}
+        {onOpenChatModal && (
+          <button
+            type="button"
+            onClick={() => {
+              soundFx.playPop();
+              onOpenChatModal('CUSTOMER');
+              onCloseMobile?.();
+            }}
+            className="w-full flex items-center justify-between p-3 rounded-2xl bg-gradient-to-r from-blue-500/10 via-indigo-500/10 to-sky-500/10 hover:from-blue-500/20 hover:to-indigo-500/20 border border-blue-300/80 shadow-2xs transition-all active:scale-95 cursor-pointer group"
+          >
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white flex items-center justify-center text-sm shadow-sm shadow-blue-500/25 group-hover:scale-105 transition-transform">
+                <MessageCircle className="w-4 h-4" />
+              </div>
+              <div className="text-left">
+                <div className="text-xs font-black text-blue-950 flex items-center gap-1.5 font-battambang">
+                  <span>ឆាតផ្ទាល់លើ App</span>
+                </div>
+                <div className="text-[10px] text-blue-700/80 font-medium">
+                  ភ្ញៀវ ↔ អ្នកលក់ • AI • ក្រុមការងារ
+                </div>
+              </div>
+            </div>
+            {unreadChatCount > 0 ? (
+              <span className="text-[10px] font-black bg-rose-600 text-white px-2 py-0.5 rounded-full shadow-2xs animate-bounce">
+                {unreadChatCount} ថ្មី
+              </span>
+            ) : (
+              <span className="text-[10px] font-black bg-blue-600 text-white px-2 py-0.5 rounded-full shadow-2xs">
+                Live
+              </span>
+            )}
+          </button>
+        )}
 
         {/* Customer Self-Ordering Link Button */}
         {onOpenCustomerOrderLinkModal && (

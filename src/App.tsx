@@ -20,6 +20,7 @@ import { initTelegramMiniApp, isTelegramWebApp, getTelegramStartParam } from './
 import { checkForAppUpdates, AppUpdateInfo, getNativeAppVersion } from './services/appUpdateService';
 import { RealStoreAuthModal } from './components/auth/RealStoreAuthModal';
 import type { SettingsTab } from './components/settings/SettingsModal';
+import type { ChatChannel } from './types';
 
 // High-performance Lazy Loaded Components (Chunks are dynamically loaded on-demand)
 const CustomerShowcase = lazy(() => import('./components/showcase/CustomerShowcase').then((m) => ({ default: m.CustomerShowcase })));
@@ -48,6 +49,7 @@ const KhmerVoicePosModal = lazy(() => import('./components/pos/KhmerVoicePosModa
 const KitchenDisplayModal = lazy(() => import('./components/kds/KitchenDisplayModal').then((m) => ({ default: m.KitchenDisplayModal })));
 const SmartBirthdayCrmModal = lazy(() => import('./components/crm/SmartBirthdayCrmModal').then((m) => ({ default: m.SmartBirthdayCrmModal })));
 const AiDemandForecastModal = lazy(() => import('./components/reports/AiDemandForecastModal').then((m) => ({ default: m.AiDemandForecastModal })));
+const InAppChatModal = lazy(() => import('./components/chat/InAppChatModal').then((m) => ({ default: m.InAppChatModal })));
 
 // Sleek modern frosted loading skeleton for seamless view transitions
 const ViewLoadingFallback: React.FC = () => (
@@ -85,6 +87,16 @@ export const App: React.FC = () => {
   const [isKdsOpen, setIsKdsOpen] = useState(false);
   const [isBirthdayCrmOpen, setIsBirthdayCrmOpen] = useState(false);
   const [isBakingForecastOpen, setIsBakingForecastOpen] = useState(false);
+
+  // In-App Live Chat Suite Modal (Customer Live Chat, AI Assistant, Staff Team Chat)
+  const [isChatModalOpen, setIsChatModalOpen] = useState(false);
+  const [chatModalInitialTab, setChatModalInitialTab] = useState<ChatChannel>('CUSTOMER');
+
+  const handleOpenChatModal = (channel?: ChatChannel) => {
+    soundFx.playPop();
+    if (channel) setChatModalInitialTab(channel);
+    setIsChatModalOpen(true);
+  };
 
   // Store Multi-Tenant Auth Modal (Email/Phone Login, Sign Up, Store ID Join)
   const [isStoreAuthModalOpen, setIsStoreAuthModalOpen] = useState(false);
@@ -462,6 +474,7 @@ export const App: React.FC = () => {
         onOpenBirthdayCrm={() => setIsBirthdayCrmOpen(true)}
         onOpenBakingForecast={() => setIsBakingForecastOpen(true)}
         onOpenStoreAuthModal={() => setIsStoreAuthModalOpen(true)}
+        onOpenChatModal={handleOpenChatModal}
       />
 
       {/* Main Workspace with Sidebar & Content */}
@@ -484,6 +497,7 @@ export const App: React.FC = () => {
           onOpenBirthdayCrm={() => setIsBirthdayCrmOpen(true)}
           onOpenBakingForecast={() => setIsBakingForecastOpen(true)}
           onOpenStoreAuthModal={() => setIsStoreAuthModalOpen(true)}
+          onOpenChatModal={handleOpenChatModal}
         />
 
         {/* Dynamic Views */}
@@ -657,6 +671,13 @@ export const App: React.FC = () => {
         <StoreAuthModal
           isOpen={isStoreAuthModalOpen}
           onClose={() => setIsStoreAuthModalOpen(false)}
+        />
+
+        {/* Full In-App Live Chat Suite (Customer ↔ Staff Live Chat, AI Chatbot, Staff Internal Team) */}
+        <InAppChatModal
+          isOpen={isChatModalOpen}
+          onClose={() => setIsChatModalOpen(false)}
+          initialTab={chatModalInitialTab}
         />
       </Suspense>
 

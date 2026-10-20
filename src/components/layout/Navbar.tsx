@@ -27,6 +27,7 @@ import {
   Phone,
   Rocket,
   Store,
+  MessageCircle,
 } from 'lucide-react';
 import { getStoreId, isDefaultStore } from '../../services/firebase';
 import { getCurrentStoreUser, subscribeStoreUser, StoreUserAccount } from '../../services/authService';
@@ -42,6 +43,8 @@ import { MobileConnectModal } from './MobileConnectModal';
 import { SettingsTab } from '../settings/SettingsModal';
 import { AppTheme } from '../../utils/themeManager';
 import { AppUpdateInfo } from '../../services/appUpdateService';
+import { ChatChannel } from '../../types';
+import { getStaffUnreadChatCount, subscribeToCustomerSessions } from '../../services/liveChatService';
 
 interface NavbarProps {
   onOpenShiftModal: () => void;
@@ -66,6 +69,7 @@ interface NavbarProps {
   onOpenBirthdayCrm?: () => void;
   onOpenBakingForecast?: () => void;
   onOpenStoreAuthModal?: () => void;
+  onOpenChatModal?: (channel?: ChatChannel) => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -91,6 +95,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenBirthdayCrm,
   onOpenBakingForecast,
   onOpenStoreAuthModal,
+  onOpenChatModal,
 }) => {
   const {
     lang,
@@ -124,6 +129,17 @@ export const Navbar: React.FC<NavbarProps> = ({
   const pendingCakeOrdersCount = (customOrders || []).filter(
     (o) => o.status === 'PENDING' || o.status === 'BAKING' || o.status === 'DECORATING'
   ).length;
+
+  // Unread live chat count
+  const [unreadChatCount, setUnreadChatCount] = useState<number>(() => getStaffUnreadChatCount());
+
+  useEffect(() => {
+    const unsub = subscribeToCustomerSessions((sessions) => {
+      const total = sessions.reduce((acc, s) => acc + (s.unreadCountStaff || 0), 0);
+      setUnreadChatCount(total);
+    });
+    return unsub;
+  }, []);
 
   // Sound state
   const [soundEnabled, setSoundEnabled] = useState(true);
@@ -400,6 +416,29 @@ export const Navbar: React.FC<NavbarProps> = ({
             </button>
           )}
 
+          {/* In-App Live Chat Direct Pill Button with Live Unread Badge */}
+          {onOpenChatModal && (
+            <button
+              type="button"
+              onClick={() => {
+                soundFx.playPop();
+                onOpenChatModal('CUSTOMER');
+              }}
+              title="ឆាតផ្ទាល់លើ App (In-App Live Chat: ភ្ញៀវ & អ្នកលក់, AI Chatbot, ក្រុមការងារ)"
+              className="relative flex items-center gap-1.5 px-2.5 py-1.5 rounded-2xl bg-gradient-to-r from-blue-50 to-indigo-50 hover:from-blue-100 hover:to-indigo-100 border border-blue-200/90 text-blue-900 text-xs font-black transition-all shadow-2xs hover:scale-105 active:scale-95 cursor-pointer shrink-0"
+            >
+              <MessageCircle className="w-3.5 h-3.5 text-blue-600" />
+              <span className="hidden sm:inline font-battambang">ឆាតផ្ទាល់</span>
+              {unreadChatCount > 0 ? (
+                <span className="px-1.5 py-0.2 rounded-full text-[10px] font-mono font-black bg-rose-600 text-white animate-bounce shadow-xs">
+                  {unreadChatCount}
+                </span>
+              ) : (
+                <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
+              )}
+            </button>
+          )}
+
           {/* Active Music Playing Indicator & Quick Stop Button */}
           {isMusicPlaying && (
             <div className="flex items-center rounded-2xl bg-gradient-to-r from-pink-500/15 via-rose-500/15 to-amber-500/15 border border-pink-400/40 shadow-xs overflow-hidden shrink-0 animate-pulse">
@@ -669,6 +708,42 @@ export const Navbar: React.FC<NavbarProps> = ({
                         <span className="text-[10px] font-black px-1.5 py-0.2 rounded-full bg-emerald-100 text-emerald-700 font-mono">
                           AI Plan
                         </span>
+                      </button>
+                    )}
+
+                    {/* In-App Live Chat Suite */}
+                    {onOpenChatModal && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          soundFx.playPop();
+                          setIsQuickToolsOpen(false);
+                          onOpenChatModal('CUSTOMER');
+                        }}
+                        className="w-full flex items-center justify-between p-2 rounded-xl hover:bg-white/80 text-slate-800 transition-colors cursor-pointer group text-left border border-transparent hover:border-blue-200 shadow-2xs"
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-blue-500 to-indigo-600 text-white flex items-center justify-center text-xs shadow-xs group-hover:scale-105 transition-transform shrink-0">
+                            💬
+                          </div>
+                          <div>
+                            <div className="text-xs font-black text-slate-800 group-hover:text-blue-600">
+                              ឆាតផ្ទាល់លើ App (Live Chat)
+                            </div>
+                            <div className="text-[10px] text-slate-400">
+                              ភ្ញៀវ ↔ អ្នកលក់ • AI Chatbot • ក្រុមការងារ
+                            </div>
+                          </div>
+                        </div>
+                        {unreadChatCount > 0 ? (
+                          <span className="text-[10px] font-black px-1.5 py-0.2 rounded-full bg-rose-600 text-white font-mono animate-bounce">
+                            {unreadChatCount} ថ្មី
+                          </span>
+                        ) : (
+                          <span className="text-[10px] font-black px-1.5 py-0.2 rounded-full bg-blue-100 text-blue-700 font-mono">
+                            Live Chat
+                          </span>
+                        )}
                       </button>
                     )}
                   </div>

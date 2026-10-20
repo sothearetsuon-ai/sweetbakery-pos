@@ -385,3 +385,42 @@ export interface DemoDevicesSummary {
   tabletCount: number;
   lastUpdated: string;
 }
+
+export type ChatChannel = 'CUSTOMER' | 'AI_ASSISTANT' | 'STAFF_TEAM';
+export type ChatSenderRole = 'CUSTOMER' | 'STAFF' | 'AI' | 'SYSTEM';
+
+export interface ChatMessage {
+  id: string;
+  channel: ChatChannel;
+  sessionId?: string; // Unique for each customer session (e.g. cust-8b42f)
+  senderName: string;
+  senderRole: ChatSenderRole;
+  senderId?: string; // Staff member ID or Customer session ID
+  senderAvatar?: string;
+  text: string;
+  imageUrl?: string;
+  timestamp?: string; // e.g. "10:45 AM"
+  createdAt: number; // Unix timestamp ms for sorting
+  isRead?: boolean;
+  customerPhone?: string;
+  quickReplies?: string[];
+  productRef?: {
+    id: string;
+    nameKh: string;
+    priceKhr?: number;
+    priceUsd?: number;
+    imageUrl?: string;
+  };
+}
+
+export interface CustomerChatSession {
+  sessionId: string;
+  customerName: string;
+  customerPhone?: string;
+  lastMessage: string;
+  lastTimestamp: number;
+  unreadCountStaff: number; // Unread count for cashier/admin
+  unreadCountCustomer: number; // Unread count for customer
+  createdAt: number;
+  status: 'ACTIVE' | 'RESOLVED';
+}
