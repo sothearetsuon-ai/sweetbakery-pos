@@ -121,8 +121,8 @@ export const checkForAppUpdates = async (): Promise<AppUpdateInfo> => {
   const manifestUrl = getStoredUpdateUrl();
   const cacheBuster = manifestUrl.includes('?') ? `&_t=${Date.now()}` : `?_t=${Date.now()}`;
 
-  const defaultApkUrl = 'https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.5.7/SweetBakery-Android.apk';
-  const defaultWinExeUrl = 'https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.5.7/SweetBakery-POS-Setup.exe';
+  const defaultApkUrl = 'https://github.com/sothearetsuon-ai/sweetbakery-pos/raw/main/SweetBakery-Android.apk';
+  const defaultWinExeUrl = 'https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.5.8/SweetBakery-POS-Setup.exe';
 
   let foundLatestVersion = currentVer;
   let foundReleaseDate = CURRENT_BUILD_DATE;
