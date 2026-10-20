@@ -24,7 +24,7 @@
     "📊 AI Demand Forecasting & Daily Baking Plan៖ វិភាគប្រវត្តិលក់ និងការកុម្ម៉ង់ទុកមុន ដើម្បីណែនាំផែនការដុតនំ និងគ្រឿងផ្សំសម្រាប់ថ្ងៃស្អែក ការពារការសល់នំខូចគុណភាព។",
     "🎂 Smart Birthday CRM & Auto-Greeting៖ រំលឹកថ្ងៃខួបកំណើតភ្ញៀវក្នុង ១៤ ថ្ងៃខាងមុខ បង្កើតសារជូនពរផ្អែមល្ហែម និង Voucher បញ្ចុះតម្លៃ ព្រមទាំងចុចផ្ញើតាម Telegram ឬខលជូនពរភ្លាមៗ។"
   ],
-  "apkDownloadUrl": "https://github.com/sothearetsuon-ai/sweetbakery-pos/raw/main/SweetBakery-Android.apk",
+  "apkDownloadUrl": "https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.5.8/SweetBakery-Android.apk",
   "windowsInstallerUrl": "https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.5.8/SweetBakery-POS-Setup.exe",
   "windowsDownloadUrl": "https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.5.8/SweetBakery-POS-Setup.exe",
   "mandatory": false
