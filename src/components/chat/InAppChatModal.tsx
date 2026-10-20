@@ -21,6 +21,7 @@ import {
   AlertCircle,
   Plus,
   Flame,
+  ChevronLeft,
   ChevronRight,
   Cake,
   RefreshCw,
@@ -84,7 +85,12 @@ export const InAppChatModal: React.FC<InAppChatModalProps> = ({
   useEffect(() => {
     if (isOpen) {
       if (initialTab) setActiveTab(initialTab);
-      if (initialSessionId) setSelectedSessionId(initialSessionId);
+      if (initialSessionId) {
+        setSelectedSessionId(initialSessionId);
+      } else if (typeof window !== 'undefined' && window.innerWidth < 640) {
+        // On mobile, start at customer session list if no specific session is requested
+        setSelectedSessionId(null);
+      }
     }
   }, [isOpen, initialTab, initialSessionId]);
 
@@ -93,8 +99,8 @@ export const InAppChatModal: React.FC<InAppChatModalProps> = ({
     if (!isOpen) return;
     const unsub = subscribeToCustomerSessions((list) => {
       setSessions(list);
-      // Auto-select first session if none selected
-      if (!selectedSessionId && list.length > 0) {
+      // Auto-select first session ONLY on desktop (sm: 640px+)
+      if (!selectedSessionId && list.length > 0 && typeof window !== 'undefined' && window.innerWidth >= 640) {
         setSelectedSessionId(list[0].sessionId);
       }
     });
@@ -345,25 +351,25 @@ export const InAppChatModal: React.FC<InAppChatModalProps> = ({
   if (!isOpen) return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-[110] flex items-center justify-center p-2 sm:p-4 bg-slate-950/80 backdrop-blur-md animate-fadeIn font-battambang">
-      <div className="relative w-full max-w-4xl h-[92vh] max-h-[850px] bg-white rounded-3xl shadow-2xl border border-rose-100 flex flex-col overflow-hidden">
+    <div className="fixed inset-0 z-[110] flex items-center justify-center p-1 sm:p-4 bg-slate-950/80 backdrop-blur-md animate-fadeIn font-battambang">
+      <div className="relative w-full max-w-4xl h-[96vh] sm:h-[92vh] max-h-[850px] bg-white rounded-2xl sm:rounded-3xl shadow-2xl border border-rose-100 flex flex-col overflow-hidden">
         {/* MODAL HEADER */}
-        <div className="bg-gradient-to-r from-slate-900 via-rose-950 to-pink-900 text-white p-3.5 sm:p-4 shrink-0 shadow-xs flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-rose-500 to-pink-400 p-0.5 shadow-md flex items-center justify-center text-white shrink-0 text-xl">
+        <div className="bg-gradient-to-r from-slate-900 via-rose-950 to-pink-900 text-white p-3 sm:p-4 shrink-0 shadow-xs flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-gradient-to-tr from-rose-500 to-pink-400 p-0.5 shadow-md flex items-center justify-center text-white shrink-0 text-lg sm:text-xl">
               💬
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h3 className="font-black text-sm sm:text-base tracking-wide">
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+                <h3 className="font-black text-xs sm:text-base tracking-wide !text-white text-white truncate">
                   មជ្ឈមណ្ឌលជជែកផ្ទាល់ក្នុង App (In-App Chat Suite)
                 </h3>
-                <span className="text-[10px] bg-emerald-500/20 text-emerald-300 font-bold px-2 py-0.5 rounded-full border border-emerald-400/30 flex items-center gap-1">
+                <span className="text-[9px] sm:text-[10px] bg-emerald-500/20 text-emerald-300 font-bold px-1.5 sm:px-2 py-0.5 rounded-full border border-emerald-400/30 flex items-center gap-1 shrink-0">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
                   Live Sync
                 </span>
               </div>
-              <p className="text-[11px] text-rose-200/90 leading-tight">
+              <p className="text-[10px] sm:text-[11px] !text-rose-100/90 leading-tight truncate">
                 ជជែកផ្ទាល់ជាមួយភ្ញៀវ, ប្រើ AI ជំនួយការឆ្លាតវៃ និងផ្ញើសារក្នុងក្រុមការងារហាង
               </p>
             </div>
@@ -385,7 +391,11 @@ export const InAppChatModal: React.FC<InAppChatModalProps> = ({
           <button
             type="button"
             onClick={() => {
-              setActiveTab('CUSTOMER');
+              if (activeTab === 'CUSTOMER') {
+                setSelectedSessionId(null);
+              } else {
+                setActiveTab('CUSTOMER');
+              }
               soundFx.playPop();
             }}
             className={`flex-1 py-2 px-3 rounded-2xl text-xs sm:text-sm font-black transition-all cursor-pointer flex items-center justify-center gap-2 whitespace-nowrap ${
@@ -444,7 +454,11 @@ export const InAppChatModal: React.FC<InAppChatModalProps> = ({
           {activeTab === 'CUSTOMER' && (
             <div className="flex-1 flex overflow-hidden">
               {/* Left Pane: Customer Session List */}
-              <div className="w-full sm:w-80 border-r border-slate-200 bg-slate-50/70 flex flex-col shrink-0">
+              <div
+                className={`w-full sm:w-80 border-r border-slate-200 bg-slate-50/70 flex flex-col shrink-0 ${
+                  selectedSessionId ? 'hidden sm:flex' : 'flex'
+                }`}
+              >
                 <div className="p-3 border-b border-slate-200 bg-white">
                   <div className="relative">
                     <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -525,21 +539,38 @@ export const InAppChatModal: React.FC<InAppChatModalProps> = ({
               </div>
 
               {/* Right Pane: Active Conversation */}
-              <div className="flex-1 flex flex-col bg-slate-50/40 overflow-hidden">
+              <div
+                className={`flex-1 flex-col bg-slate-50/40 overflow-hidden w-full ${
+                  selectedSessionId ? 'flex' : 'hidden sm:flex'
+                }`}
+              >
                 {selectedSessionId ? (
                   <>
                     {/* Active Chat Header */}
-                    <div className="p-3 border-b border-slate-200 bg-white flex items-center justify-between gap-2 shrink-0 shadow-2xs">
-                      <div className="flex items-center gap-2.5">
-                        <div className="w-9 h-9 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center font-black text-sm">
-                          👤
+                    <div className="p-2.5 sm:p-3 border-b border-slate-200 bg-white flex items-center justify-between gap-2 shrink-0 shadow-2xs">
+                      <div className="flex items-center gap-2 min-w-0">
+                        {/* Mobile Back Button to return to session list */}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedSessionId(null);
+                            soundFx.playPop();
+                          }}
+                          className="sm:hidden p-1.5 -ml-1 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center justify-center cursor-pointer active:scale-95 shrink-0"
+                          title="ត្រឡប់ទៅបញ្ជីភ្ញៀវ"
+                        >
+                          <ChevronLeft className="w-5 h-5 text-slate-700" />
+                        </button>
+
+                        <div className="w-9 h-9 rounded-2xl bg-gradient-to-tr from-pink-500 to-rose-400 text-white flex items-center justify-center font-black text-sm shrink-0 shadow-2xs">
+                          {currentSession?.customerName ? currentSession.customerName.charAt(0) : '👤'}
                         </div>
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <h4 className="font-black text-xs sm:text-sm text-slate-800">
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <h4 className="font-black text-xs sm:text-sm text-slate-800 truncate">
                               {currentSession?.customerName || 'អតិថិជន'}
                             </h4>
-                            <span className="text-[10px] px-1.5 py-0.2 rounded bg-emerald-100 text-emerald-800 font-bold">
+                            <span className="text-[10px] px-1.5 py-0.2 rounded bg-emerald-100 text-emerald-800 font-bold shrink-0">
                               កំពុងជជែក
                             </span>
                           </div>
@@ -552,13 +583,13 @@ export const InAppChatModal: React.FC<InAppChatModalProps> = ({
                               <span>{currentSession.customerPhone}</span>
                             </a>
                           ) : (
-                            <span className="text-[10px] text-slate-400">អតិថិជនតាម Online Order Portal</span>
+                            <span className="text-[10px] text-slate-400 truncate block">អតិថិជនតាម Online Order Portal</span>
                           )}
                         </div>
                       </div>
 
                       {/* Cashier indicator */}
-                      <div className="text-right hidden sm:block">
+                      <div className="text-right hidden sm:block shrink-0">
                         <span className="text-[10px] text-slate-400 block">អ្នកឆ្លើយតបបច្ចុប្បន្ន</span>
                         <span className="text-xs font-black text-slate-700">
                           {currentStaff?.name || 'Cashier វិជ្ជតា'} ({currentStaff?.role || 'Admin'})
