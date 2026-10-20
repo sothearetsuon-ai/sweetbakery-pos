@@ -10,6 +10,7 @@
 import { idbGet, idbSet } from './idbStorage';
 import {
   saveFirestoreDoc,
+  deleteFirestoreDoc,
   subscribeToFirestoreDoc,
   subscribeToFirestoreCollection,
   getStoreId,
@@ -43,6 +44,8 @@ export interface ClientLicenseRecord {
   daysRemaining?: number;
   lastSeen?: string;
   active?: boolean;
+  blocked?: boolean;
+  isSuspended?: boolean;
   updatedAt?: string;
 }
 
@@ -308,6 +311,16 @@ export const syncRemoteLicense = (
 
     const now = Date.now();
 
+    // If owner locked / suspended the store or device (only apply to client devices)
+    if ((remoteData.active === false || remoteData.blocked === true || remoteData.isSuspended === true) && !isPrimaryStoreDevice()) {
+      localStorage.setItem(STORAGE_IS_PERMANENT, 'false');
+      idbSet(STORAGE_IS_PERMANENT, 'false').catch(() => {});
+      localStorage.setItem(STORAGE_EXPIRES_AT, '0');
+      idbSet(STORAGE_EXPIRES_AT, '0').catch(() => {});
+      window.dispatchEvent(new CustomEvent('bakery_license_changed'));
+      return;
+    }
+
     // If owner unlocked permanently
     if (remoteData.permanent === true) {
       localStorage.setItem(STORAGE_IS_PERMANENT, 'true');
@@ -362,6 +375,8 @@ export const remoteUnlockClientDevice = async (
 
     const updatePayload: any = {
       active: true,
+      blocked: false,
+      isSuspended: false,
       storeId: finalStoreId,
       updatedAt: new Date().toISOString(),
     };
@@ -372,16 +387,56 @@ export const remoteUnlockClientDevice = async (
 
     if (durationDays === 'permanent') {
       updatePayload.permanent = true;
+      updatePayload.isPermanent = true;
       await saveFirestoreDoc('system_licenses', targetDeviceId, updatePayload);
       return { success: true, message: `បានដោះសោអចិន្ត្រៃយ៍ពីចម្ងាយសម្រាប់ ${targetDeviceId} (ហាង៖ ${finalStoreId})` };
     } else {
       const newExpiresAt = now + durationDays * MS_PER_DAY;
       updatePayload.expiresAt = newExpiresAt;
+      updatePayload.permanent = false;
+      updatePayload.isPermanent = false;
       await saveFirestoreDoc('system_licenses', targetDeviceId, updatePayload);
       return { success: true, message: `បានពន្យារ ${durationDays} ថ្ងៃពីចម្ងាយសម្រាប់ ${targetDeviceId} (ហាង៖ ${finalStoreId})` };
     }
   } catch (err: any) {
     return { success: false, message: `កំហុសក្នុងការតភ្ជាប់: ${err?.message || 'Error'}` };
+  }
+};
+
+/**
+ * Remote Lock/Suspend client store or device (បិទដំណើរការហាងពីចម្ងាយ)
+ */
+export const remoteLockClientDevice = async (
+  targetDeviceId: string
+): Promise<{ success: boolean; message: string }> => {
+  try {
+    const updatePayload: any = {
+      active: false,
+      blocked: true,
+      isSuspended: true,
+      permanent: false,
+      isPermanent: false,
+      expiresAt: 0,
+      updatedAt: new Date().toISOString(),
+    };
+    await saveFirestoreDoc('system_licenses', targetDeviceId, updatePayload);
+    return { success: true, message: `បានបិទ/ចាក់សោរហាង (${targetDeviceId}) ពីចម្ងាយដោយជោគជ័យ!` };
+  } catch (err: any) {
+    return { success: false, message: `កំហុសក្នុងការតភ្ជាប់: ${err?.message || 'Error'}` };
+  }
+};
+
+/**
+ * Delete client store license record completely from system_licenses (លុបហាងចេញពីប្រព័ន្ធ)
+ */
+export const deleteClientStoreLicense = async (
+  targetDeviceId: string
+): Promise<{ success: boolean; message: string }> => {
+  try {
+    await deleteFirestoreDoc('system_licenses', targetDeviceId);
+    return { success: true, message: `បានលុបហាង (${targetDeviceId}) ចេញពីប្រព័ន្ធដោយជោគជ័យ!` };
+  } catch (err: any) {
+    return { success: false, message: `កំហុសក្នុងការលុប: ${err?.message || 'Error'}` };
   }
 };
 
