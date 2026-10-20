@@ -556,6 +556,25 @@ export const CustomerAiGuideModal: React.FC<CustomerAiGuideModalProps> = ({
           message: result.message,
         });
 
+        // Also register into In-App Live Chat sessions so it immediately enters POS App as well!
+        try {
+          const sessId = getCustomerSessionId();
+          await sendChatMessage(
+            {
+              channel: 'CUSTOMER',
+              sessionId: sessId,
+              senderName: custName.trim() || 'ភ្ញៀវ',
+              customerPhone: custPhone.trim(),
+              senderRole: 'CUSTOMER',
+              senderAvatar: '👤',
+              text: custMessage.trim() + (custCakeInterest ? ` (ចាប់អារម្មណ៍នំ៖ ${custCakeInterest})` : ''),
+            },
+            storeInfo
+          );
+        } catch (e) {
+          console.warn('Failed to mirror direct inquiry to live chat', e);
+        }
+
         // Also append record to chat messages
         setMessages((prev) => [
           ...prev,

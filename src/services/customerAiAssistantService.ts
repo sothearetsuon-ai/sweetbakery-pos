@@ -316,14 +316,16 @@ export async function sendDirectCustomerMessageToTelegram(params: {
   const telegramHtml = `💬 <b>សារសួរនាំផ្ទាល់ពីអតិថិជន (Direct Customer Chat)</b>
 ━━━━━━━━━━━━━━━━━━━━━
 👤 <b>អតិថិជន៖</b> ${escapeHtml(name)}
-📞 <b>លេខទូរស័ព្ទ៖</b> <a href="tel:${escapeHtml(phone)}">${escapeHtml(phone)}</a>
+📞 <b>លេខទូរស័ព្ទ៖</b> <code>${escapeHtml(phone)}</code>
 ${params.cakeName ? `🎂 <b>នំដែលចាប់អារម្មណ៍៖</b> ${escapeHtml(params.cakeName)}\n` : ''}
 📝 <b>ខ្លឹមសារសារសួរនាំ៖</b>
 <i>${escapeHtml(textMsg)}</i>
 ━━━━━━━━━━━━━━━━━━━━━
 ⏰ <b>ម៉ោង៖</b> ${nowStr}
 📍 <b>ប្រភព៖</b> Chatbot ផ្ទាំងកុម្ម៉ង់នំ (${escapeHtml(params.storeInfo?.nameKh || 'Sweet Bakery')})
-⚡ <i>សូមមេត្តាទាក់ទងឆ្លើយតបទៅកាន់អតិថិជនឱ្យបានទាន់ពេលវេលា!</i>`;
+👉 <b>របៀបឆ្លើយតបទៅកាន់ភ្ញៀវវិញ៖</b>
+1️⃣ <b>បើក App POS</b> ➜ ចូលផ្ទាំង <b>«💬 ឆាត»</b> ដើម្បីវាយតបផ្ទាល់
+2️⃣ ឬខល/ឆាត Telegram ទៅកាន់លេខ <code>${escapeHtml(phone)}</code>`;
 
   try {
     const res = await sendTelegramMessage(telegramHtml);

@@ -254,18 +254,21 @@ async function notifyTelegramCustomerChat(msg: ChatMessage, storeInfo?: StoreInf
 
     const storeTitle = storeInfo?.nameKh || 'Sweet Bakery';
     const custName = msg.senderName || 'អតិថិជន';
-    const custPhone = msg.customerPhone ? ` (${msg.customerPhone})` : '';
+    const custPhone = msg.customerPhone ? msg.customerPhone.trim() : '';
 
     const text = `💬 <b>សារសួរនាំផ្ទាល់លើ App ពីអតិថិជន (In-App Live Chat)</b>
-
-👤 <b>ភ្ញៀវ៖</b> ${escapeHtml(custName)}${escapeHtml(custPhone)}
+━━━━━━━━━━━━━━━━━━━━━
+👤 <b>ភ្ញៀវ៖</b> ${escapeHtml(custName)}
+${custPhone ? `📞 <b>លេខទូរស័ព្ទ៖</b> <code>${escapeHtml(custPhone)}</code>` : '📞 <i>(មិនបានផ្ដល់លេខទូរស័ព្ទ)</i>'}
 ⏰ <b>ម៉ោង៖</b> ${escapeHtml(msg.timestamp)}
 📍 <b>ហាង៖</b> ${escapeHtml(storeTitle)}
 
 📝 <b>ខ្លឹមសារសារ៖</b>
 <i>${escapeHtml(msg.text)}</i>
-
-👉 <i>សូមបើកកម្មវិធី POS ចូលផ្ទាំង <b>«💬 ឆាតផ្ទាល់ (Live Chat)»</b> ដើម្បីឆ្លើយតបទៅកាន់ភ្ញៀវវិញភ្លាមៗ!</i>`;
+━━━━━━━━━━━━━━━━━━━━━
+👉 <b>របៀបឆ្លើយតបទៅកាន់ភ្ញៀវវិញ៖</b>
+1️⃣ <b>បើក App POS</b> ➜ ចុចប៊ូតុង <b>«💬 ឆាត»</b> ដើម្បីវាយតបទៅភ្ញៀវផ្ទាល់ (ភ្ញៀវនឹងឃើញសារលើទូរស័ព្ទរបស់គាត់ភ្លាមៗ)
+${custPhone ? `2️⃣ ឬចុចខលទូរស័ព្ទ / Search Telegram ទៅកាន់លេខ <code>${escapeHtml(custPhone)}</code> ដើម្បីទាក់ទងភ្ញៀវផ្ទាល់` : ''}`;
 
     await sendTelegramMessage(text);
   } catch (e) {
