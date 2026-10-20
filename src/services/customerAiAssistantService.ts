@@ -1,25 +1,41 @@
 import { getGeminiApiKey, getGeminiApiKeyAsync, getUsableGeminiModels } from './geminiInvoiceService';
-import { Product } from '../types';
+import { Product, StoreInfo } from '../types';
+import { sendTelegramMessage, escapeHtml } from './telegram';
+import { formatDateTimeDMY } from '../utils/dateUtils';
 
 export interface CustomerAiAction {
-  type: 'SET_SIZE_BUDGET' | 'SET_FLAVOR' | 'SET_INSCRIPTION' | 'SET_STEP' | 'SELECT_PRODUCT' | 'OPEN_LOCATION';
+  type:
+    | 'SET_SIZE_BUDGET'
+    | 'SET_FLAVOR'
+    | 'SET_INSCRIPTION'
+    | 'SET_STEP'
+    | 'SELECT_PRODUCT'
+    | 'OPEN_LOCATION'
+    | 'OPEN_TELEGRAM'
+    | 'CALL_PHONE'
+    | 'SWITCH_DIRECT_CHAT'
+    | 'OPEN_BROWSE_CAKES';
   label: string;
   payload?: any;
 }
 
 export interface CustomerAiMessage {
   id: string;
-  sender: 'user' | 'assistant';
+  sender: 'user' | 'assistant' | 'system';
   text: string;
   timestamp: string;
   quickReplies?: string[];
   actions?: CustomerAiAction[];
+  recommendedProducts?: Product[];
 }
 
 export interface CustomerAiContext {
   storeName: string;
   storePhone: string;
   storeAddress: string;
+  telegramUsername?: string;
+  telegramChatLink?: string;
+  facebookUrl?: string;
   exchangeRate: number;
   availableProducts: Product[];
   availableFlavors: { label: string; nameKh: string; isAvailable?: boolean }[];
@@ -187,6 +203,150 @@ export const PICKUP_TIME_GUIDE: CustomerAiMessage = {
 };
 
 // -------------------------------------------------------------
+// Product Search & Direct Store Chat Helpers
+// -------------------------------------------------------------
+
+/**
+ * Smart product search across available bakery products
+ */
+export function searchProductsForChat(query: string, products: Product[]): Product[] {
+  if (!products || products.length === 0) return [];
+  const cleanQ = (query || '').toLowerCase().trim();
+  if (!cleanQ) return products.slice(0, 6);
+
+  // Split query into terms
+  const terms = cleanQ.split(/\s+/).filter(Boolean);
+
+  const matched = products.filter((p) => {
+    const nameKh = (p.nameKh || '').toLowerCase();
+    const nameEn = (p.nameEn || '').toLowerCase();
+    const cat = (p.categoryId || '').toLowerCase();
+    const desc = (p.description || '').toLowerCase();
+
+    return terms.some(
+      (term) =>
+        nameKh.includes(term) ||
+        nameEn.includes(term) ||
+        cat.includes(term) ||
+        desc.includes(term)
+    );
+  });
+
+  if (matched.length > 0) return matched.slice(0, 6);
+  return products.slice(0, 6);
+}
+
+/**
+ * Direct Live Store Contact Guide (Telegram, Hotline, In-App Message)
+ */
+export const DIRECT_STORE_CHAT_GUIDE = (context: CustomerAiContext): CustomerAiMessage => {
+  const telegramHandle = (context.telegramUsername || '').replace(/^@/, '').trim();
+  const telegramLink =
+    context.telegramChatLink ||
+    (telegramHandle ? `https://t.me/${telegramHandle}` : undefined);
+  const phone = context.storePhone || '0978707000';
+
+  const actions: CustomerAiAction[] = [
+    {
+      type: 'SWITCH_DIRECT_CHAT',
+      label: '💬 បើកផ្ទាំងឆាតផ្ទាល់មកហាង (Live Chat)',
+    },
+  ];
+
+  if (telegramLink) {
+    actions.push({
+      type: 'OPEN_TELEGRAM',
+      label: `✈️ ឆាត Telegram (@${telegramHandle || 'ហាង'})`,
+      payload: { url: telegramLink },
+    });
+  }
+
+  actions.push({
+    type: 'CALL_PHONE',
+    label: `📞 ខលទូរស័ព្ទ (${phone})`,
+    payload: { phone },
+  });
+
+  return {
+    id: 'guide-store-contact-' + Date.now(),
+    sender: 'assistant',
+    text: `💬 **ឆាត ឬទាក់ទងមកកាន់ហាងផ្ទាល់៖**
+
+លោកអ្នកអាចទាក់ទងមកកាន់ក្រុមការងារ និងជាងនំរបស់ **${context.storeName || 'Sweet Bakery'}** បានយ៉ាងងាយស្រួល៖
+
+✈️ **Telegram ហាង៖** ${telegramHandle ? `@${telegramHandle}` : 'ទាក់ទងតាមប្រព័ន្ធ Telegram ហាង'}
+📞 **លេខទូរស័ព្ទ / Hotline៖** ${phone}
+📍 **ទីតាំងហាង៖** ${context.storeAddress || 'រតនៈគីរី អូរយ៉ាដាវ'}
+
+💡 *លោកអ្នកអាចចុចប៊ូតុង **"💬 បើកផ្ទាំងឆាតផ្ទាល់មកហាង"** ខាងក្រោមដើម្បីវាយបញ្ចូលសំណួរ និងលេខទូរស័ព្ទរបស់អ្នក រួចផ្ញើដំណឹងផ្ទាល់ទៅកាន់ម្ចាស់ហាងភ្លាមៗ ឬចុចបើក Telegram / ខលទូរស័ព្ទបានភ្លាមៗ!*`,
+    timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    actions,
+  };
+};
+
+/**
+ * Send Direct Customer Inquiry Message to Bakery Store via Telegram Bot
+ */
+export async function sendDirectCustomerMessageToTelegram(params: {
+  customerName: string;
+  customerPhone: string;
+  message: string;
+  cakeName?: string;
+  storeInfo?: StoreInfo;
+}): Promise<{ success: boolean; message: string }> {
+  const name = params.customerName.trim() || 'ភ្ញៀវទូទៅ';
+  const phone = params.customerPhone.trim();
+  const textMsg = params.message.trim();
+
+  if (!phone) {
+    return {
+      success: false,
+      message: 'សូមបញ្ចូលលេខទូរស័ព្ទរបស់អ្នកដើម្បីឱ្យហាងអាចទាក់ទងត្រឡប់មកវិញបាន!',
+    };
+  }
+  if (!textMsg) {
+    return {
+      success: false,
+      message: 'សូមសរសេរសារ ឬសំណួរដែលអ្នកចង់សួរនាំ!',
+    };
+  }
+
+  const nowStr = formatDateTimeDMY(new Date());
+
+  const telegramHtml = `💬 <b>សារសួរនាំផ្ទាល់ពីអតិថិជន (Direct Customer Chat)</b>
+━━━━━━━━━━━━━━━━━━━━━
+👤 <b>អតិថិជន៖</b> ${escapeHtml(name)}
+📞 <b>លេខទូរស័ព្ទ៖</b> <a href="tel:${escapeHtml(phone)}">${escapeHtml(phone)}</a>
+${params.cakeName ? `🎂 <b>នំដែលចាប់អារម្មណ៍៖</b> ${escapeHtml(params.cakeName)}\n` : ''}
+📝 <b>ខ្លឹមសារសារសួរនាំ៖</b>
+<i>${escapeHtml(textMsg)}</i>
+━━━━━━━━━━━━━━━━━━━━━
+⏰ <b>ម៉ោង៖</b> ${nowStr}
+📍 <b>ប្រភព៖</b> Chatbot ផ្ទាំងកុម្ម៉ង់នំ (${escapeHtml(params.storeInfo?.nameKh || 'Sweet Bakery')})
+⚡ <i>សូមមេត្តាទាក់ទងឆ្លើយតបទៅកាន់អតិថិជនឱ្យបានទាន់ពេលវេលា!</i>`;
+
+  try {
+    const res = await sendTelegramMessage(telegramHtml);
+    if (res.success) {
+      return {
+        success: true,
+        message: 'សាររបស់អ្នកត្រូវបានផ្ញើជូនទៅកាន់ម្ចាស់ហាងរួចរាល់ហើយ! បុគ្គលិកហាងនឹងទាក់ទងមកអ្នកយ៉ាងលឿនបំផុត 🙏',
+      };
+    } else {
+      return {
+        success: false,
+        message: res.message || 'មិនអាចផ្ញើសារបានទេ សូមសាកល្បងខលទូរស័ព្ទមកហាងផ្ទាល់!',
+      };
+    }
+  } catch (err: any) {
+    return {
+      success: false,
+      message: 'មានបញ្ហាក្នុងការផ្ញើសារ សូមសាកល្បងម្តងទៀត ឬខលទូរស័ព្ទមកហាង!',
+    };
+  }
+}
+
+// -------------------------------------------------------------
 // Intent Matching for zero-latency instant responses
 // -------------------------------------------------------------
 export function matchLocalIntent(
@@ -194,6 +354,84 @@ export function matchLocalIntent(
   context: CustomerAiContext
 ): CustomerAiMessage | null {
   const q = query.toLowerCase().trim();
+
+  // Direct Live Store Chat & Contact
+  if (
+    q.includes('ឆាត') ||
+    q.includes('ទាក់ទង') ||
+    q.includes('ជជែក') ||
+    q.includes('ម្ចាស់ហាង') ||
+    q.includes('បុគ្គលិក') ||
+    q.includes('telegram') ||
+    q.includes('chat') ||
+    q.includes('contact') ||
+    q.includes('phone') ||
+    q.includes('call') ||
+    q.includes('ទូរស័ព្ទ') ||
+    q.includes('និយាយផ្ទាល់') ||
+    q.includes('សួរផ្ទាល់')
+  ) {
+    return DIRECT_STORE_CHAT_GUIDE(context);
+  }
+
+  // Cake Ordering / Product Catalog Search & Selection
+  if (
+    q.includes('កុម្ម៉ង់នំ') ||
+    q.includes('ចង់កុម្ម៉ង់') ||
+    q.includes('រើសនំ') ||
+    q.includes('order cake') ||
+    q.includes('ទិញនំ') ||
+    q.includes('មាននំអីខ្លះ') ||
+    q.includes('នំខួបកំណើត') ||
+    q.includes('ម៉ូដនំ') ||
+    q.includes('catalog') ||
+    q.includes('មើលនំ')
+  ) {
+    const cleanSearch = q
+      .replace(/កុម្ម៉ង់នំ|ចង់កុម្ម៉ង់|រើសនំ|order cake|ទិញនំ|មាននំអីខ្លះ|នំខួបកំណើត|ម៉ូដនំ|catalog|មើលនំ|ចង់បាន/g, '')
+      .trim();
+    const matchedProducts = searchProductsForChat(cleanSearch, context.availableProducts);
+
+    return {
+      id: 'msg-cake-catalog-' + Date.now(),
+      sender: 'assistant',
+      text: `🎂 **ខាងក្រោមនេះជានំស្អាតៗ និងពេញនិយមបំផុតដែលលោកអ្នកអាចកុម្ម៉ង់បានភ្លាមៗ៖**\n\nលោកអ្នកអាចចុចលើប៊ូតុង **"🛒 កុម្ម៉ង់នំនេះ"** នៅលើរូបនំនីមួយៗ ដើម្បីជ្រើសរើស និងកំណត់ទំហំ រសជាតិ និងពាក្យជូនពរបានភ្លាមៗបាទ/ចាស! ✨`,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      recommendedProducts: matchedProducts,
+      actions: [
+        {
+          type: 'OPEN_BROWSE_CAKES',
+          label: '🍰 មើលម៉ូដនំទាំងអស់ (Browse Catalog)',
+        },
+      ],
+      quickReplies: ['ណែនាំទំហំតាមមនុស្ស', 'ណែនាំរសជាតិពេញនិយម', '💬 ឆាតមកហាងផ្ទាល់'],
+    };
+  }
+
+  // Check if query mentions a specific product name from catalog
+  if (context.availableProducts && context.availableProducts.length > 0) {
+    const matched = context.availableProducts.filter((p) => {
+      const nKh = (p.nameKh || '').toLowerCase();
+      const nEn = (p.nameEn || '').toLowerCase();
+      return (nKh && q.includes(nKh)) || (nEn && q.includes(nEn));
+    });
+
+    if (matched.length > 0) {
+      return {
+        id: 'msg-product-match-' + Date.now(),
+        sender: 'assistant',
+        text: `🎂 **ខ្ញុំបានរកឃើញនំដែលត្រូវនឹងការស្វែងរករបស់អ្នក៖**\n\nលោកអ្នកអាចចុច **"🛒 កុម្ម៉ង់នំនេះ"** ដើម្បីរើសយកទៅតុបតែងម៉ូដបានភ្លាមៗ! ✨`,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        recommendedProducts: matched.slice(0, 4),
+        actions: [
+          {
+            type: 'OPEN_BROWSE_CAKES',
+            label: '🍰 មើលម៉ូដនំផ្សេងទៀត',
+          },
+        ],
+      };
+    }
+  }
 
   // How to order / steps
   if (
@@ -549,8 +787,40 @@ function generateFallbackAiResponse(
     }
   }
 
-  if (q.includes('រសជាតិ')) {
-    return { ...FLAVOR_RECOMMENDATIONS_GUIDE(context.availableFlavors, context.outOfStockFlavors), id: 'fb-' + Date.now() };
+  if (
+    q.includes('ឆាត') ||
+    q.includes('ទាក់ទង') ||
+    q.includes('ជជែក') ||
+    q.includes('telegram') ||
+    q.includes('chat') ||
+    q.includes('phone') ||
+    q.includes('ទូរស័ព្ទ')
+  ) {
+    return DIRECT_STORE_CHAT_GUIDE(context);
+  }
+
+  if (
+    q.includes('កុម្ម៉ង់') ||
+    q.includes('រើសនំ') ||
+    q.includes('order') ||
+    q.includes('នំ') ||
+    q.includes('cake')
+  ) {
+    const matched = searchProductsForChat(q.replace(/កុម្ម៉ង់|រើសនំ|order|នំ|cake/g, '').trim(), context.availableProducts);
+    return {
+      id: 'fb-cake-' + Date.now(),
+      sender: 'assistant',
+      text: `🎂 **ខាងក្រោមនេះជានំស្អាតៗ និងពេញនិយមបំផុតដែលលោកអ្នកអាចកុម្ម៉ង់បានភ្លាមៗ៖**\n\nលោកអ្នកអាចចុចលើប៊ូតុង **"🛒 កុម្ម៉ង់នំនេះ"** នៅលើរូបនំនីមួយៗ ដើម្បីជ្រើសរើស និងកំណត់ទំហំ រសជាតិ និងពាក្យជូនពរបានភ្លាមៗបាទ/ចាស! ✨`,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      recommendedProducts: matched,
+      actions: [
+        {
+          type: 'OPEN_BROWSE_CAKES',
+          label: '🍰 មើលម៉ូដនំទាំងអស់ (Browse Catalog)',
+        },
+      ],
+      quickReplies: ['ណែនាំទំហំតាមមនុស្ស', 'ណែនាំរសជាតិពេញនិយម', '💬 ឆាតមកហាងផ្ទាល់'],
+    };
   }
 
   return {
@@ -559,7 +829,8 @@ function generateFallbackAiResponse(
     text: `🎂 **សួស្តីបាទ/ចាស!** ខ្ញុំជាជំនួយការ AI របស់ ${context.storeName || 'Sweet Bakery'} ✨
 
 តើលោកអ្នកចង់ឱ្យខ្ញុំជួយណែនាំអំពីអ្វីខ្លះ?
-• 📋 **របៀបកុម្ម៉ង់ ៤ ជំហានងាយៗ**
+• 🍰 **កុម្ម៉ង់នំខួបកំណើត & រើសម៉ូដនំស្អាតៗ**
+• 💬 **ឆាត ឬទាក់ទងផ្ទាល់មកកាន់ម្ចាស់ហាង**
 • 🎂 **ណែនាំទំហំនំ & ថវិកាតាមចំនួនភ្ញៀវ**
 • 🍓 **ណែនាំរសជាតិនំឆ្ងាញ់ៗប្រចាំហាង**
 • ✍️ **ជួយគិតពាក្យជូនពរពិរោះៗលើនំ**
@@ -568,14 +839,16 @@ function generateFallbackAiResponse(
 សូមជ្រើសរើសជម្រើសខាងក្រោម ឬសរសេរសំណួររបស់អ្នកបានភ្លាមៗ!`,
     timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     quickReplies: [
-      'របៀបកុម្ម៉ង់ ៤ ជំហាន',
+      'កុម្ម៉ង់នំខួបកំណើត',
+      '💬 ឆាតមកហាងផ្ទាល់',
       'ណែនាំទំហំតាមមនុស្ស',
       'ណែនាំរសជាតិពេញនិយម',
       'ជួយតែងអក្សរជូនពរ',
     ],
     actions: [
+      { type: 'OPEN_BROWSE_CAKES', label: '🍰 រើសម៉ូដនំកុម្ម៉ង់' },
+      { type: 'SWITCH_DIRECT_CHAT', label: '💬 ឆាតផ្ទាល់មកហាង' },
       { type: 'SET_STEP', label: '👉 ទៅជំហានទី ១ (រើសម៉ូដ)', payload: { step: 1 } },
-      { type: 'SET_STEP', label: '👉 ទៅជំហានទី ២ (កំណត់ទំហំ & រសជាតិ)', payload: { step: 2 } },
     ],
   };
 }

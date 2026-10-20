@@ -36,6 +36,7 @@ import {
   Rocket,
   ChevronRight,
   Lock,
+  MessageSquare,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { useBakery } from '../../context/BakeryContext';
@@ -148,6 +149,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [requireRealStorePin, setRequireRealStorePin] = useState(storeInfo?.requireRealStorePin !== false);
   const [showRealStorePin, setShowRealStorePin] = useState(false);
 
+  // Chatbot & Direct Store Contact state
+  const [telegramUsername, setTelegramUsername] = useState(storeInfo?.telegramUsername || '');
+  const [telegramChatLink, setTelegramChatLink] = useState(storeInfo?.telegramChatLink || '');
+  const [hotlinePhone, setHotlinePhone] = useState(storeInfo?.hotlinePhone || '');
+  const [facebookUrl, setFacebookUrl] = useState(storeInfo?.facebookUrl || '');
+
   const [savedSuccess, setSavedSuccess] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
@@ -177,6 +184,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       setKhqrBankName(storeInfo.khqrBankName || 'ABA Bank / Bakong');
       setRealStorePin(storeInfo.realStorePin || '1111');
       setRequireRealStorePin(storeInfo.requireRealStorePin !== false);
+      setTelegramUsername(storeInfo.telegramUsername || '');
+      setTelegramChatLink(storeInfo.telegramChatLink || '');
+      setHotlinePhone(storeInfo.hotlinePhone || '');
+      setFacebookUrl(storeInfo.facebookUrl || '');
     } else if (!isOpen) {
       isInitializedRef.current = false;
     }
@@ -374,6 +385,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       khqrBankName: khqrBankName.trim(),
       realStorePin: realStorePin.trim() || '1111',
       requireRealStorePin: requireRealStorePin,
+      telegramUsername: telegramUsername.trim(),
+      telegramChatLink: telegramChatLink.trim(),
+      hotlinePhone: hotlinePhone.trim(),
+      facebookUrl: facebookUrl.trim(),
     };
 
     updateStoreInfo(updatedStoreData);
@@ -1016,6 +1031,60 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                         className="w-full px-4 py-2.5 sm:py-3 text-sm sm:text-base border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 font-semibold text-emerald-700"
                       />
                       <p className="text-xs text-slate-400 mt-1">បើក Google Maps → ចុច Share → Copy Link → Paste ទីនេះ</p>
+                    </div>
+
+                    {/* Customer Chatbot & Direct Contact Section */}
+                    <div className="sm:col-span-2 pt-3 border-t border-rose-100/80">
+                      <h4 className="text-xs font-black text-slate-700 uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
+                        <MessageSquare className="w-4 h-4 text-pink-600" />
+                        <span>ការកំណត់ Chatbot & ឆាតមកហាងផ្ទាល់ (Direct Store Chat)</span>
+                      </h4>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-xs font-bold text-slate-700 mb-1">
+                            Telegram Username ឬ Chat Link សម្រាប់ភ្ញៀវឆាត
+                          </label>
+                          <input
+                            type="text"
+                            value={telegramUsername}
+                            onChange={(e) => setTelegramUsername(e.target.value)}
+                            placeholder="ឧ. @sweetbakery_admin ឬ t.me/..."
+                            className="w-full px-4 py-2.5 text-xs sm:text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 font-semibold"
+                          />
+                          <p className="text-[10px] text-slate-400 mt-1">
+                            ភ្ញៀវអាចចុច 1-Click ដើម្បីឆាតផ្ទាល់ទៅ Telegram របស់ហាង
+                          </p>
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-bold text-slate-700 mb-1">
+                            លេខទូរស័ព្ទបន្ទាន់ / Hotline សម្រាប់ Chatbot
+                          </label>
+                          <input
+                            type="tel"
+                            value={hotlinePhone}
+                            onChange={(e) => setHotlinePhone(e.target.value)}
+                            placeholder="ឧ. 097 870 7000"
+                            className="w-full px-4 py-2.5 text-xs sm:text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 font-semibold"
+                          />
+                          <p className="text-[10px] text-slate-400 mt-1">
+                            បង្ហាញលើផ្ទាំង Chatbot សម្រាប់ភ្ញៀវចុចខលសួរផ្ទាល់
+                          </p>
+                        </div>
+
+                        <div className="sm:col-span-2">
+                          <label className="block text-xs font-bold text-slate-700 mb-1">
+                            Link ផេក Facebook ហាង (Optional)
+                          </label>
+                          <input
+                            type="url"
+                            value={facebookUrl}
+                            onChange={(e) => setFacebookUrl(e.target.value)}
+                            placeholder="https://facebook.com/..."
+                            className="w-full px-4 py-2.5 text-xs sm:text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-semibold"
+                          />
+                        </div>
+                      </div>
                     </div>
                   </div>
 

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import {
   Sparkles,
   Bot,
@@ -21,6 +21,15 @@ import {
   MessageSquare,
   Flame,
   AlertCircle,
+  Phone,
+  Search,
+  ShoppingCart,
+  ExternalLink,
+  MessageCircle,
+  CheckCircle2,
+  Store,
+  MapPin,
+  SendHorizontal,
 } from 'lucide-react';
 import {
   CustomerAiMessage,
@@ -32,31 +41,44 @@ import {
   INSCRIPTIONS_IDEAS_GUIDE,
   BAKONG_PAYMENT_GUIDE,
   PICKUP_TIME_GUIDE,
+  DIRECT_STORE_CHAT_GUIDE,
   queryCustomerAiAssistant,
+  searchProductsForChat,
+  sendDirectCustomerMessageToTelegram,
 } from '../../services/customerAiAssistantService';
+import { Product, StoreInfo } from '../../types';
 import { soundFx } from '../../utils/audio';
+import { getProductImageUrl } from '../../utils/imagePath';
 
 interface CustomerAiGuideModalProps {
   isOpen: boolean;
   onClose: () => void;
   context: CustomerAiContext;
+  storeInfo?: StoreInfo;
   onApplySizeBudget?: (khr: number, sizeHint?: string) => void;
   onApplyFlavor?: (flavorLabel: string, isOther?: boolean, customText?: string) => void;
   onApplyInscription?: (text: string) => void;
   onGoToStep?: (step: 1 | 2 | 3 | 4) => void;
   onOpenStoreLocation?: () => void;
+  onSelectProduct?: (product: Product) => void;
 }
 
 export const CustomerAiGuideModal: React.FC<CustomerAiGuideModalProps> = ({
   isOpen,
   onClose,
   context,
+  storeInfo,
   onApplySizeBudget,
   onApplyFlavor,
   onApplyInscription,
   onGoToStep,
   onOpenStoreLocation,
+  onSelectProduct,
 }) => {
+  // Navigation Tabs: 'chat' (AI Q&A) | 'browse' (Cake Catalog) | 'store-chat' (Live Store Contact)
+  const [activeTab, setActiveTab] = useState<'chat' | 'browse' | 'store-chat'>('chat');
+
+  // Messages History
   const [messages, setMessages] = useState<CustomerAiMessage[]>(() => [
     {
       id: 'welcome-1',
@@ -64,8 +86,10 @@ export const CustomerAiGuideModal: React.FC<CustomerAiGuideModalProps> = ({
       text: `👋 **សួស្តីបាទ/ចាស! ខ្ញុំជាជំនួយការ AI របស់ ${context.storeName || 'Sweet Bakery'} 🎂✨**
 
 ខ្ញុំអាចជួយលោកអ្នកបានភ្លាមៗ៖
+• 🍰 **កុម្ម៉ង់នំខួបកំណើត & រើសម៉ូដនំស្អាតៗ**
+• 💬 **ឆាត ឬទាក់ទងផ្ទាល់មកកាន់ហាង**
 • 📋 **ណែនាំរបៀបកុម្ម៉ង់នំងាយៗ ៤ ជំហាន**
-• 👥 **ជួយគិតថវិកា & តម្លៃតាមចំនួនមនុស្ស**
+• 👥 **ជួយគិតថវិកា & ទំហំតាមចំនួនមនុស្ស**
 • 🍓 **ណែនាំរសជាតិនំឆ្ងាញ់ៗប្រចាំហាង**
 • ✍️ **ជួយគិតពាក្យជូនពរលើនំឱ្យពិរោះ**
 • 💳 **របៀបបង់ប្រាក់កក់តាម Bakong KHQR**
@@ -73,6 +97,8 @@ export const CustomerAiGuideModal: React.FC<CustomerAiGuideModalProps> = ({
 តើលោកអ្នកចង់ឱ្យខ្ញុំជួយណែនាំពីអ្វីខ្លះថ្ងៃនេះ?`,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       quickReplies: [
+        'កុម្ម៉ង់នំខួបកំណើត',
+        '💬 ឆាតមកហាងផ្ទាល់',
         'របៀបកុម្ម៉ង់ ៤ ជំហាន',
         'ណែនាំតម្លៃតាមមនុស្ស',
         'ណែនាំរសជាតិពេញនិយម',
@@ -90,6 +116,24 @@ export const CustomerAiGuideModal: React.FC<CustomerAiGuideModalProps> = ({
   const [appliedActionKey, setAppliedActionKey] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
+  // Browse Catalog Tab State
+  const [catalogSearch, setCatalogSearch] = useState('');
+  const [catalogCategory, setCatalogCategory] = useState<string>('all');
+
+  // Direct Telegram Store Message Form State
+  const [custName, setCustName] = useState('');
+  const [custPhone, setCustPhone] = useState('');
+  const [custCakeInterest, setCustCakeInterest] = useState('');
+  const [custMessage, setCustMessage] = useState('');
+  const [isSendingDirect, setIsSendingDirect] = useState(false);
+  const [directSendStatus, setDirectSendStatus] = useState<{
+    type: 'idle' | 'success' | 'error';
+    message: string;
+  }>({
+    type: 'idle',
+    message: '',
+  });
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const speechRecognitionRef = useRef<any>(null);
@@ -102,21 +146,33 @@ export const CustomerAiGuideModal: React.FC<CustomerAiGuideModalProps> = ({
   useEffect(() => {
     if (isOpen) {
       setTimeout(() => {
-        scrollToBottom();
-        inputRef.current?.focus();
+        if (activeTab === 'chat') {
+          scrollToBottom();
+          inputRef.current?.focus();
+        }
       }, 150);
     } else {
-      // Stop speech if modal closes
       if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
         window.speechSynthesis.cancel();
       }
       setIsSpeakingId(null);
     }
-  }, [isOpen]);
+  }, [isOpen, activeTab]);
 
   useEffect(() => {
-    scrollToBottom();
-  }, [messages, isTyping]);
+    if (activeTab === 'chat') {
+      scrollToBottom();
+    }
+  }, [messages, isTyping, activeTab]);
+
+  // Handle select a cake for order -> Step 2
+  const handleSelectCake = (product: Product) => {
+    soundFx.playSuccess();
+    if (onSelectProduct) {
+      onSelectProduct(product);
+    }
+    onClose();
+  };
 
   // Voice speech synthesis
   const handleToggleSpeak = (msg: CustomerAiMessage) => {
@@ -132,7 +188,6 @@ export const CustomerAiGuideModal: React.FC<CustomerAiGuideModalProps> = ({
     }
 
     window.speechSynthesis.cancel();
-    // Clean markdown symbols for cleaner speech
     const cleanSpeech = msg.text
       .replace(/[*#_~`]/g, '')
       .replace(/\[.*?\]/g, '')
@@ -142,7 +197,6 @@ export const CustomerAiGuideModal: React.FC<CustomerAiGuideModalProps> = ({
     utterance.rate = 0.95;
     utterance.pitch = 1.05;
 
-    // Pick Khmer voice if available, else standard
     const voices = window.speechSynthesis.getVoices();
     const kmVoice = voices.find((v) => v.lang.includes('km') || v.lang.includes('kh'));
     if (kmVoice) {
@@ -204,84 +258,44 @@ export const CustomerAiGuideModal: React.FC<CustomerAiGuideModalProps> = ({
       return;
     }
 
-    // 3. Web Speech API availability check
+    // 3. Web Speech API
     const SpeechRecognition =
       (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
 
     if (!SpeechRecognition) {
-      setVoiceError(
-        'Browser ឬឧបករណ៍នេះមិនទាន់គាំទ្រការនិយាយបញ្ចូលសំឡេងទេ (Web Speech API)។ សូមប្រើប្រាស់ Google Chrome ឬចុចលើប៊ូតុងសំណួររហ័សខាងលើ។'
-      );
+      setVoiceError('កម្មវិធីរុករករបស់អ្នកមិនគាំទ្រ Voice Input ទេ សូមវាយបញ្ចូលអក្សរជំនួសវិញ។');
       return;
-    }
-
-    // 4. Request microphone permission explicitly via getUserMedia if supported
-    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        stream.getTracks().forEach((track) => track.stop());
-      } catch (err: any) {
-        console.warn('Microphone permission check error:', err);
-        if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-          setVoiceError('សូមអនុញ្ញាតសិទ្ធិប្រើប្រាស់ Microphone (Allow Microphone) នៅក្នុង Browser Settings។');
-          return;
-        }
-      }
     }
 
     try {
       const recognition = new SpeechRecognition();
+      speechRecognitionRef.current = recognition;
       recognition.continuous = false;
       recognition.interimResults = true;
-      recognition.maxAlternatives = 1;
       recognition.lang = 'km-KH';
 
       recognition.onstart = () => {
         setIsListening(true);
-        setVoiceStatusText('🎙️ កំពុងស្តាប់សំឡេង... សូមនិយាយសំណួររបស់អ្នក...');
+        setVoiceStatusText('🎙️ កំពុងស្តាប់ភាសាខ្មែរ... សូមនិយាយសំណួររបស់អ្នក');
         soundFx.playPop();
       };
 
       recognition.onresult = (event: any) => {
-        let interimTranscript = '';
-        let finalTranscript = '';
-
-        for (let i = event.resultIndex; i < event.results.length; ++i) {
-          const item = event.results[i];
-          if (item.isFinal) {
-            finalTranscript += item[0].transcript;
-          } else {
-            interimTranscript += item[0].transcript;
-          }
+        let transcript = '';
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          transcript += event.results[i][0].transcript;
         }
-
-        const transcript = finalTranscript || interimTranscript;
         if (transcript) {
-          setInputValue(transcript);
+          setInputValue((prev) => (prev ? `${prev} ${transcript}` : transcript));
         }
       };
 
       recognition.onerror = (event: any) => {
-        console.warn('SpeechRecognition error:', event.error);
+        console.warn('Speech recognition error:', event.error);
         setIsListening(false);
         setVoiceStatusText(null);
-
-        if (event.error === 'not-allowed') {
-          setVoiceError('សូមអនុញ្ញាតសិទ្ធិប្រើ Microphone នៅក្នុងកម្មវិធីរុករករបស់អ្នក (Microphone Permission Blocked)។');
-        } else if (event.error === 'no-speech') {
-          setVoiceError('មិនបានឮសំឡេងនិយាយទេ សូមសាកល្បងចុចនិយាយម្តងទៀត។');
-        } else if (event.error === 'network') {
-          setVoiceError('មិនអាចភ្ជាប់ទៅកាន់សេវាបកប្រែសំឡេងបានទេ (Network Error) សូមពិនិត្យមើលអ៊ីនធឺណិត។');
-        } else if (event.error === 'language-not-supported') {
-          try {
-            recognition.lang = navigator.language || 'en-US';
-            recognition.start();
-            return;
-          } catch (e) {
-            setVoiceError('ភាសានេះមិនទាន់គាំទ្រលើឧបករណ៍របស់អ្នកទេ');
-          }
-        } else if (event.error !== 'aborted') {
-          setVoiceError(`បញ្ហា Microphone: ${event.error}`);
+        if (event.error !== 'no-speech' && event.error !== 'aborted') {
+          setVoiceError(`មិនអាចស្តាប់បាន (${event.error})`);
         }
       };
 
@@ -290,32 +304,30 @@ export const CustomerAiGuideModal: React.FC<CustomerAiGuideModalProps> = ({
         setVoiceStatusText(null);
       };
 
-      speechRecognitionRef.current = recognition;
       recognition.start();
     } catch (e: any) {
-      console.error('Failed to start SpeechRecognition:', e);
       setIsListening(false);
       setVoiceStatusText(null);
-      setVoiceError('មិនអាចបើក Microphone បានទេ: ' + (e?.message || 'សូមពិនិត្យមើលសិទ្ធិ'));
+      setVoiceError('មិនអាចដំណើរការ Voice Input បានទេ');
     }
   };
 
-  // Handle Sending a Question
-  const handleSendMessage = async (customText?: string) => {
-    const textToSend = (customText || inputValue).trim();
+  // Send message
+  const handleSendMessage = async (text?: string) => {
+    const textToSend = (text !== undefined ? text : inputValue).trim();
     if (!textToSend || isTyping) return;
 
     soundFx.playPop();
-    setInputValue('');
 
     const userMsg: CustomerAiMessage = {
-      id: 'usr-' + Date.now(),
+      id: 'user-' + Date.now(),
       sender: 'user',
       text: textToSend,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     };
 
     setMessages((prev) => [...prev, userMsg]);
+    setInputValue('');
     setIsTyping(true);
 
     try {
@@ -338,7 +350,7 @@ export const CustomerAiGuideModal: React.FC<CustomerAiGuideModalProps> = ({
   };
 
   // Handle Quick Topic Click
-  const handleQuickTopic = (topic: 'steps' | 'sizes' | 'flavors' | 'inscriptions' | 'payment' | 'pickup') => {
+  const handleQuickTopic = (topic: 'steps' | 'sizes' | 'flavors' | 'inscriptions' | 'payment' | 'pickup' | 'store') => {
     soundFx.playPop();
     let guideMsg: CustomerAiMessage;
     if (topic === 'steps') guideMsg = { ...ORDERING_STEPS_GUIDE, id: 'guide-' + Date.now() };
@@ -346,7 +358,8 @@ export const CustomerAiGuideModal: React.FC<CustomerAiGuideModalProps> = ({
     else if (topic === 'flavors') guideMsg = { ...FLAVOR_RECOMMENDATIONS_GUIDE(context.availableFlavors, context.outOfStockFlavors), id: 'guide-' + Date.now() };
     else if (topic === 'inscriptions') guideMsg = { ...INSCRIPTIONS_IDEAS_GUIDE, id: 'guide-' + Date.now() };
     else if (topic === 'payment') guideMsg = { ...BAKONG_PAYMENT_GUIDE, id: 'guide-' + Date.now() };
-    else guideMsg = { ...PICKUP_TIME_GUIDE, id: 'guide-' + Date.now() };
+    else if (topic === 'pickup') guideMsg = { ...PICKUP_TIME_GUIDE, id: 'guide-' + Date.now() };
+    else guideMsg = DIRECT_STORE_CHAT_GUIDE(context);
 
     setMessages((prev) => [...prev, guideMsg]);
   };
@@ -357,7 +370,19 @@ export const CustomerAiGuideModal: React.FC<CustomerAiGuideModalProps> = ({
     setAppliedActionKey(key);
     setTimeout(() => setAppliedActionKey(null), 2500);
 
-    if (action.type === 'SET_SIZE_BUDGET' && onApplySizeBudget && action.payload) {
+    if (action.type === 'SELECT_PRODUCT' && action.payload?.product) {
+      handleSelectCake(action.payload.product);
+    } else if (action.type === 'SWITCH_DIRECT_CHAT') {
+      soundFx.playPop();
+      setActiveTab('store-chat');
+    } else if (action.type === 'OPEN_BROWSE_CAKES') {
+      soundFx.playPop();
+      setActiveTab('browse');
+    } else if (action.type === 'OPEN_TELEGRAM' && action.payload?.url) {
+      window.open(action.payload.url, '_blank', 'noopener,noreferrer');
+    } else if (action.type === 'CALL_PHONE' && action.payload?.phone) {
+      window.location.href = `tel:${action.payload.phone}`;
+    } else if (action.type === 'SET_SIZE_BUDGET' && onApplySizeBudget && action.payload) {
       onApplySizeBudget(action.payload.khr, action.payload.size);
     } else if (action.type === 'SET_FLAVOR' && onApplyFlavor && action.payload) {
       onApplyFlavor(action.payload.flavor, action.payload.isOther, action.payload.customText);
@@ -389,6 +414,8 @@ export const CustomerAiGuideModal: React.FC<CustomerAiGuideModalProps> = ({
         text: `👋 **សួស្តីបាទ/ចាស! ការជជែកត្រូវបានចាប់ផ្តើមឡើងវិញ។**\n\nតើលោកអ្នកចង់ឱ្យខ្ញុំជួយណែនាំពីអ្វីខ្លះ?`,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         quickReplies: [
+          'កុម្ម៉ង់នំខួបកំណើត',
+          '💬 ឆាតមកហាងផ្ទាល់',
           'របៀបកុម្ម៉ង់ ៤ ជំហាន',
           'ណែនាំតម្លៃតាមមនុស្ស',
           'ណែនាំរសជាតិពេញនិយម',
@@ -398,12 +425,114 @@ export const CustomerAiGuideModal: React.FC<CustomerAiGuideModalProps> = ({
     ]);
   };
 
+  // Direct Telegram Store Message Form Submission
+  const handleSendDirectInquiry = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (isSendingDirect) return;
+
+    if (!custPhone.trim()) {
+      soundFx.playPop();
+      setDirectSendStatus({
+        type: 'error',
+        message: 'សូមបញ្ចូលលេខទូរស័ព្ទរបស់អ្នក ដើម្បីឱ្យខាងហាងអាចទាក់ទងមកវិញបាន!',
+      });
+      return;
+    }
+
+    if (!custMessage.trim()) {
+      soundFx.playPop();
+      setDirectSendStatus({
+        type: 'error',
+        message: 'សូមសរសេរសារ ឬសំណួរដែលអ្នកចង់សួរនាំ!',
+      });
+      return;
+    }
+
+    setIsSendingDirect(true);
+    setDirectSendStatus({ type: 'idle', message: '' });
+
+    try {
+      const result = await sendDirectCustomerMessageToTelegram({
+        customerName: custName,
+        customerPhone: custPhone,
+        message: custMessage,
+        cakeName: custCakeInterest || undefined,
+        storeInfo,
+      });
+
+      if (result.success) {
+        soundFx.playSuccess();
+        setDirectSendStatus({
+          type: 'success',
+          message: result.message,
+        });
+
+        // Also append record to chat messages
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: 'inquiry-' + Date.now(),
+            sender: 'user',
+            text: `💬 **ខ្ញុំបានផ្ញើសារសួរនាំទៅកាន់ហាង៖**\n• 👤 ឈ្មោះ៖ ${custName || 'ភ្ញៀវ'}\n• 📞 លេខទូរស័ព្ទ៖ ${custPhone}\n${custCakeInterest ? `• 🎂 នំ៖ ${custCakeInterest}\n` : ''}• 📝 សារ៖ "${custMessage}"`,
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          },
+          {
+            id: 'inquiry-ack-' + Date.now(),
+            sender: 'assistant',
+            text: `✅ **សាររបស់អ្នកត្រូវបានបញ្ជូនទៅកាន់ម្ចាស់ហាងតាម Telegram រួចរាល់ហើយ!**\n\nបុគ្គលិកហាងនឹងពិនិត្យមើល និងខលទាក់ទងមកកាន់លេខ **${custPhone}** របស់អ្នកយ៉ាងឆាប់រហ័សបំផុត។ សូមអរគុណ! 🙏`,
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          },
+        ]);
+
+        // Reset message field
+        setCustMessage('');
+      } else {
+        soundFx.playPop();
+        setDirectSendStatus({
+          type: 'error',
+          message: result.message,
+        });
+      }
+    } catch (err: any) {
+      soundFx.playPop();
+      setDirectSendStatus({
+        type: 'error',
+        message: 'មានបញ្ហាក្នុងការផ្ញើសារ សូមសាកល្បងខលទូរស័ព្ទមកហាងផ្ទាល់!',
+      });
+    } finally {
+      setIsSendingDirect(false);
+    }
+  };
+
+  // Filter products for Browse Catalog tab
+  const filteredCatalogProducts = useMemo(() => {
+    return (context.availableProducts || []).filter((p) => {
+      const q = catalogSearch.toLowerCase().trim();
+      const matchSearch =
+        !q ||
+        (p.nameKh && p.nameKh.toLowerCase().includes(q)) ||
+        (p.nameEn && p.nameEn.toLowerCase().includes(q)) ||
+        (p.description && p.description.toLowerCase().includes(q));
+
+      const matchCat = catalogCategory === 'all' || p.categoryId === catalogCategory;
+      return matchSearch && matchCat;
+    });
+  }, [context.availableProducts, catalogSearch, catalogCategory]);
+
+  const telegramHandle = (storeInfo?.telegramUsername || context.telegramUsername || '')
+    .replace(/^@/, '')
+    .trim();
+  const telegramUrl =
+    storeInfo?.telegramChatLink ||
+    context.telegramChatLink ||
+    (telegramHandle ? `https://t.me/${telegramHandle}` : null);
+  const storePhone = storeInfo?.phone || context.storePhone || '0978707000';
+
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-[120] bg-slate-950/70 backdrop-blur-md flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-200">
-      <div className="bg-white w-full sm:max-w-lg rounded-t-3xl sm:rounded-3xl shadow-2xl flex flex-col h-[90vh] sm:h-[82vh] max-h-[850px] overflow-hidden border border-rose-100 animate-in slide-in-from-bottom sm:zoom-in-95 duration-200">
-        
+      <div className="bg-white w-full sm:max-w-xl rounded-t-3xl sm:rounded-3xl shadow-2xl flex flex-col h-[92vh] sm:h-[85vh] max-h-[880px] overflow-hidden border border-rose-100 animate-in slide-in-from-bottom sm:zoom-in-95 duration-200">
         {/* ========================================================= */}
         {/* TOP HEADER */}
         {/* ========================================================= */}
@@ -411,7 +540,7 @@ export const CustomerAiGuideModal: React.FC<CustomerAiGuideModalProps> = ({
           <div className="flex items-center gap-3">
             <div className="relative">
               <div className="w-10 h-10 rounded-2xl bg-white/20 backdrop-blur-md border border-white/30 flex items-center justify-center text-xl shadow-xs">
-                🤖
+                {activeTab === 'chat' ? '🤖' : activeTab === 'browse' ? '🍰' : '💬'}
               </div>
               <span className="w-3 h-3 rounded-full bg-emerald-400 border-2 border-white absolute -bottom-0.5 -right-0.5 animate-pulse" />
             </div>
@@ -419,28 +548,40 @@ export const CustomerAiGuideModal: React.FC<CustomerAiGuideModalProps> = ({
             <div>
               <div className="flex items-center gap-1.5">
                 <h3 className="font-black text-sm sm:text-base tracking-tight leading-none">
-                  ជំនួយការ AI ផ្ទាំងកុម្ម៉ង់
+                  {activeTab === 'chat'
+                    ? 'ជំនួយការ AI ផ្ទាំងកុម្ម៉ង់'
+                    : activeTab === 'browse'
+                    ? 'រើសម៉ូដនំកុម្ម៉ង់'
+                    : 'ឆាតផ្ទាល់មកហាង'}
                 </h3>
                 <span className="px-2 py-0.5 bg-white/20 rounded-full text-[10px] font-black uppercase tracking-wider text-pink-100">
-                  Smart AI
+                  {activeTab === 'chat' ? 'Smart AI' : activeTab === 'browse' ? 'Catalog' : 'Live Chat'}
                 </span>
               </div>
               <p className="text-[11px] text-pink-100 font-medium mt-0.5 flex items-center gap-1">
                 <Sparkles className="w-3 h-3 text-amber-300" />
-                <span>ឆ្លើយតប និងណែនាំពីរបៀបកុម្ម៉ង់នំ ២៤/៧</span>
+                <span>
+                  {activeTab === 'chat'
+                    ? 'ឆ្លើយតប សួរនាំ និងណែនាំពីរបៀបកុម្ម៉ង់ ២៤/៧'
+                    : activeTab === 'browse'
+                    ? 'ជ្រើសរើសម៉ូដនំស្អាតៗកុម្ម៉ង់បានភ្លាមៗ'
+                    : 'ផ្ញើសារ ឬខលមកកាន់ម្ចាស់ហាងផ្ទាល់'}
+                </span>
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-1">
-            <button
-              type="button"
-              onClick={handleResetChat}
-              className="p-2 hover:bg-white/20 rounded-xl text-white/80 hover:text-white transition-colors cursor-pointer"
-              title="ជម្រះការជជែក (Reset Chat)"
-            >
-              <RotateCcw className="w-4 h-4" />
-            </button>
+            {activeTab === 'chat' && (
+              <button
+                type="button"
+                onClick={handleResetChat}
+                className="p-2 hover:bg-white/20 rounded-xl text-white/80 hover:text-white transition-colors cursor-pointer"
+                title="ជម្រះការជជែក (Reset Chat)"
+              >
+                <RotateCcw className="w-4 h-4" />
+              </button>
+            )}
 
             <button
               type="button"
@@ -457,317 +598,771 @@ export const CustomerAiGuideModal: React.FC<CustomerAiGuideModalProps> = ({
         </div>
 
         {/* ========================================================= */}
-        {/* QUICK TOPIC PILLS BAR */}
+        {/* MODE TABS: 🤖 Cake Bot | 🍰 Browse & Order | 💬 Live Store Chat */}
         {/* ========================================================= */}
-        <div className="px-3 py-2 bg-rose-50/70 border-b border-rose-100/80 flex items-center gap-1.5 overflow-x-auto scrollbar-none shrink-0">
-          <span className="text-[10px] font-black text-pink-800 shrink-0 flex items-center gap-1 mr-0.5">
-            <Flame className="w-3 h-3 text-rose-500" />
-            <span>សំណួរញឹកញាប់៖</span>
-          </span>
-
+        <div className="bg-rose-50/70 p-1.5 border-b border-rose-100 flex items-center gap-1 shrink-0">
           <button
             type="button"
-            onClick={() => handleQuickTopic('steps')}
-            className="px-2.5 py-1 bg-white hover:bg-pink-100 text-pink-800 rounded-xl text-[11px] font-bold border border-pink-200 whitespace-nowrap transition-colors flex items-center gap-1 shadow-2xs cursor-pointer active:scale-95"
+            onClick={() => {
+              soundFx.playPop();
+              setActiveTab('chat');
+            }}
+            className={`flex-1 py-1.5 px-2 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+              activeTab === 'chat'
+                ? 'bg-white text-pink-700 shadow-xs border border-rose-200/80'
+                : 'text-slate-600 hover:text-pink-600 hover:bg-white/50'
+            }`}
           >
-            <span>📋</span>
-            <span>របៀបកុម្ម៉ង់ ៤ ជំហាន</span>
+            <span>🤖</span>
+            <span className="truncate">ជំនួយការ AI</span>
           </button>
 
           <button
             type="button"
-            onClick={() => handleQuickTopic('sizes')}
-            className="px-2.5 py-1 bg-white hover:bg-pink-100 text-pink-800 rounded-xl text-[11px] font-bold border border-pink-200 whitespace-nowrap transition-colors flex items-center gap-1 shadow-2xs cursor-pointer active:scale-95"
+            onClick={() => {
+              soundFx.playPop();
+              setActiveTab('browse');
+            }}
+            className={`flex-1 py-1.5 px-2 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+              activeTab === 'browse'
+                ? 'bg-white text-pink-700 shadow-xs border border-rose-200/80'
+                : 'text-slate-600 hover:text-pink-600 hover:bg-white/50'
+            }`}
           >
-            <span>👥</span>
-            <span>តម្លៃ & ថវិកាតាមមនុស្ស</span>
+            <span>🍰</span>
+            <span className="truncate">រើសម៉ូដនំកុម្ម៉ង់</span>
           </button>
 
           <button
             type="button"
-            onClick={() => handleQuickTopic('flavors')}
-            className="px-2.5 py-1 bg-white hover:bg-pink-100 text-pink-800 rounded-xl text-[11px] font-bold border border-pink-200 whitespace-nowrap transition-colors flex items-center gap-1 shadow-2xs cursor-pointer active:scale-95"
+            onClick={() => {
+              soundFx.playPop();
+              setActiveTab('store-chat');
+            }}
+            className={`flex-1 py-1.5 px-2 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+              activeTab === 'store-chat'
+                ? 'bg-white text-pink-700 shadow-xs border border-rose-200/80'
+                : 'text-slate-600 hover:text-pink-600 hover:bg-white/50'
+            }`}
           >
-            <span>🍓</span>
-            <span>រសជាតិឆ្ងាញ់ប្រចាំហាង</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => handleQuickTopic('inscriptions')}
-            className="px-2.5 py-1 bg-white hover:bg-pink-100 text-pink-800 rounded-xl text-[11px] font-bold border border-pink-200 whitespace-nowrap transition-colors flex items-center gap-1 shadow-2xs cursor-pointer active:scale-95"
-          >
-            <span>✍️</span>
-            <span>តែងពាក្យជូនពរលើនំ</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => handleQuickTopic('payment')}
-            className="px-2.5 py-1 bg-white hover:bg-pink-100 text-pink-800 rounded-xl text-[11px] font-bold border border-pink-200 whitespace-nowrap transition-colors flex items-center gap-1 shadow-2xs cursor-pointer active:scale-95"
-          >
-            <span>💳</span>
-            <span>បង់ប្រាក់កក់ KHQR</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => handleQuickTopic('pickup')}
-            className="px-2.5 py-1 bg-white hover:bg-pink-100 text-pink-800 rounded-xl text-[11px] font-bold border border-pink-200 whitespace-nowrap transition-colors flex items-center gap-1 shadow-2xs cursor-pointer active:scale-95"
-          >
-            <span>⏰</span>
-            <span>ពេលណាអាចមកយក?</span>
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+            </span>
+            <span className="truncate">ឆាតមកហាងផ្ទាល់</span>
           </button>
         </div>
 
         {/* ========================================================= */}
-        {/* CHAT MESSAGES BODY */}
+        {/* TAB 1: AI CONVERSATIONAL CHAT */}
         {/* ========================================================= */}
-        <div className="flex-1 overflow-y-auto p-3.5 sm:p-4 space-y-4 bg-gradient-to-b from-slate-50/50 via-white to-pink-50/20">
-          {messages.map((msg, index) => {
-            const isUser = msg.sender === 'user';
-            const isSpeaking = isSpeakingId === msg.id;
+        {activeTab === 'chat' && (
+          <>
+            {/* QUICK TOPIC PILLS BAR */}
+            <div className="px-3 py-2 bg-white border-b border-rose-50 flex items-center gap-1.5 overflow-x-auto scrollbar-none shrink-0">
+              <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 shrink-0 mr-1 flex items-center gap-1">
+                <Flame className="w-3 h-3 text-amber-500" />
+                <span>សួររហ័ស៖</span>
+              </span>
 
-            return (
-              <div
-                key={msg.id || index}
-                className={`flex gap-2.5 ${isUser ? 'justify-end' : 'justify-start'} animate-in fade-in duration-200`}
+              <button
+                type="button"
+                onClick={() => handleSendMessage('កុម្ម៉ង់នំខួបកំណើត')}
+                className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-pink-50 hover:bg-pink-100 text-pink-700 border border-pink-200/80 shrink-0 transition-all flex items-center gap-1 shadow-2xs cursor-pointer active:scale-95"
               >
-                {!isUser && (
-                  <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-pink-500 to-rose-400 text-white flex items-center justify-center text-sm shadow-xs shrink-0 self-start mt-0.5">
-                    🤖
-                  </div>
-                )}
+                <span>🍰 កុម្ម៉ង់នំ</span>
+              </button>
 
-                <div className={`max-w-[85%] sm:max-w-[80%] flex flex-col ${isUser ? 'items-end' : 'items-start'}`}>
-                  {/* Bubble */}
+              <button
+                type="button"
+                onClick={() => setActiveTab('store-chat')}
+                className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200/80 shrink-0 transition-all flex items-center gap-1 shadow-2xs cursor-pointer active:scale-95"
+              >
+                <span>💬 ឆាតមកហាង</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleQuickTopic('steps')}
+                className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 shrink-0 transition-all flex items-center gap-1 shadow-2xs cursor-pointer active:scale-95"
+              >
+                <span>📋 របៀបកុម្ម៉ង់</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleQuickTopic('sizes')}
+                className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 shrink-0 transition-all flex items-center gap-1 shadow-2xs cursor-pointer active:scale-95"
+              >
+                <span>🎂 ទំហំ & តម្លៃ</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleQuickTopic('flavors')}
+                className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 shrink-0 transition-all flex items-center gap-1 shadow-2xs cursor-pointer active:scale-95"
+              >
+                <span>🍓 រសជាតិស្តុក</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleQuickTopic('inscriptions')}
+                className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 shrink-0 transition-all flex items-center gap-1 shadow-2xs cursor-pointer active:scale-95"
+              >
+                <span>✍️ ពាក្យជូនពរ</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleQuickTopic('payment')}
+                className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 shrink-0 transition-all flex items-center gap-1 shadow-2xs cursor-pointer active:scale-95"
+              >
+                <span>💳 បង់ប្រាក់ KHQR</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleQuickTopic('pickup')}
+                className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 shrink-0 transition-all flex items-center gap-1 shadow-2xs cursor-pointer active:scale-95"
+              >
+                <span>⏰ ម៉ោងមកយក</span>
+              </button>
+            </div>
+
+            {/* MESSAGES LIST */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50/60">
+              {messages.map((msg) => {
+                const isUser = msg.sender === 'user';
+                const isSpeaking = isSpeakingId === msg.id;
+
+                return (
                   <div
-                    className={`p-3.5 rounded-2xl text-xs sm:text-[13px] leading-relaxed shadow-xs whitespace-pre-wrap ${
-                      isUser
-                        ? 'bg-gradient-to-r from-pink-600 to-rose-600 text-white rounded-br-xs font-medium'
-                        : 'bg-white border border-rose-100 text-slate-800 rounded-bl-xs'
-                    }`}
+                    key={msg.id}
+                    className={`flex gap-2.5 ${isUser ? 'justify-end' : 'justify-start'}`}
                   >
-                    {msg.text}
-                  </div>
+                    {!isUser && (
+                      <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-pink-500 to-rose-400 text-white flex items-center justify-center text-sm shadow-xs shrink-0 self-start mt-0.5">
+                        🤖
+                      </div>
+                    )}
 
-                  {/* Actions & Utilities Bar (Under Assistant messages) */}
-                  {!isUser && (
-                    <div className="mt-1.5 flex flex-wrap items-center gap-1 text-[10px] text-slate-400">
-                      <span>{msg.timestamp}</span>
-
-                      <button
-                        type="button"
-                        onClick={() => handleCopyText(msg)}
-                        className="p-1 hover:text-slate-700 rounded-md transition-colors flex items-center gap-0.5 cursor-pointer ml-1"
-                        title="ចម្លងអត្ថបទ"
-                      >
-                        {copiedId === msg.id ? (
-                          <Check className="w-3 h-3 text-emerald-600" />
-                        ) : (
-                          <Copy className="w-3 h-3" />
-                        )}
-                        <span>{copiedId === msg.id ? 'បានចម្លង' : 'ចម្លង'}</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => handleToggleSpeak(msg)}
-                        className={`p-1 rounded-md transition-colors flex items-center gap-0.5 cursor-pointer ${
-                          isSpeaking ? 'text-pink-600 font-bold' : 'hover:text-slate-700'
+                    <div
+                      className={`max-w-[85%] sm:max-w-[80%] flex flex-col ${
+                        isUser ? 'items-end' : 'items-start'
+                      }`}
+                    >
+                      {/* Message Bubble */}
+                      <div
+                        className={`p-3.5 rounded-2xl text-xs sm:text-sm leading-relaxed whitespace-pre-wrap break-words shadow-2xs ${
+                          isUser
+                            ? 'bg-gradient-to-r from-pink-600 to-rose-600 text-white rounded-br-xs font-medium'
+                            : 'bg-white text-slate-800 border border-rose-100 rounded-bl-xs'
                         }`}
-                        title="ស្តាប់សំឡេងអាន"
                       >
-                        {isSpeaking ? (
-                          <>
-                            <VolumeX className="w-3 h-3 animate-pulse text-pink-600" />
-                            <span className="text-pink-600">កំពុងអាន...</span>
-                          </>
-                        ) : (
-                          <>
-                            <Volume2 className="w-3 h-3" />
-                            <span>ស្តាប់</span>
-                          </>
-                        )}
-                      </button>
-                    </div>
-                  )}
+                        {msg.text}
+                      </div>
 
-                  {/* Interactive Action Buttons attached to AI message */}
-                  {!isUser && msg.actions && msg.actions.length > 0 && (
-                    <div className="mt-2.5 flex flex-wrap gap-1.5 w-full">
-                      {msg.actions.map((act, actIdx) => {
-                        const actKey = `${msg.id}-${actIdx}`;
-                        const isApplied = appliedActionKey === actKey;
+                      {/* Recommended Products Carousel / Cards inside Chat Message */}
+                      {!isUser && msg.recommendedProducts && msg.recommendedProducts.length > 0 && (
+                        <div className="mt-3 space-y-2 w-full">
+                          <div className="text-[11px] font-black text-pink-700 flex items-center gap-1">
+                            <span>🍰</span>
+                            <span>នំដែលបានណែនាំ ({msg.recommendedProducts.length} ម៉ូដ)៖</span>
+                          </div>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            {msg.recommendedProducts.map((prod) => {
+                              const priceKhr =
+                                prod.priceKhr ??
+                                Math.round(prod.priceUsd * (context.exchangeRate || 4100));
+                              return (
+                                <div
+                                  key={prod.id}
+                                  className="bg-white rounded-2xl p-2 border border-rose-200/90 shadow-2xs hover:shadow-md transition-all flex flex-col justify-between group"
+                                >
+                                  <div className="flex items-center gap-2.5">
+                                    <img
+                                      src={getProductImageUrl(
+                                        prod.imageUrl ||
+                                          'https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=300'
+                                      )}
+                                      alt={prod.nameKh}
+                                      className="w-14 h-14 rounded-xl object-cover shrink-0 border border-rose-100 group-hover:scale-105 transition-transform"
+                                      loading="lazy"
+                                    />
+                                    <div className="min-w-0 flex-1">
+                                      <h5 className="font-black text-slate-800 text-xs truncate group-hover:text-pink-600 transition-colors">
+                                        {prod.nameKh}
+                                      </h5>
+                                      <p className="text-[10px] text-slate-400 truncate">
+                                        {prod.nameEn || prod.unit || 'នំខួបកំណើត'}
+                                      </p>
+                                      <div className="text-xs font-black text-rose-600 mt-0.5">
+                                        {priceKhr > 0
+                                          ? `${priceKhr.toLocaleString()} ៛`
+                                          : 'តម្លៃចរចា'}
+                                        {prod.priceUsd > 0 && (
+                                          <span className="text-[10px] text-slate-400 font-normal ml-1">
+                                            (${prod.priceUsd.toFixed(2)})
+                                          </span>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleSelectCake(prod)}
+                                    className="mt-2 w-full py-1.5 px-2 bg-gradient-to-r from-pink-600 to-rose-500 hover:from-pink-700 hover:to-rose-600 text-white rounded-xl text-[11px] font-black transition-all flex items-center justify-center gap-1 shadow-2xs active:scale-95 cursor-pointer"
+                                  >
+                                    <span>🛒 កុម្ម៉ង់នំនេះ</span>
+                                    <ArrowRight className="w-3 h-3 text-white" />
+                                  </button>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
 
-                        return (
+                      {/* Actions & Utilities Bar (Under Assistant messages) */}
+                      {!isUser && (
+                        <div className="mt-1.5 flex flex-wrap items-center gap-1 text-[10px] text-slate-400">
+                          <span>{msg.timestamp}</span>
+
                           <button
-                            key={actIdx}
                             type="button"
-                            onClick={() => handleExecuteAction(act, actKey)}
-                            className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs active:scale-95 ${
-                              isApplied
-                                ? 'bg-emerald-600 text-white shadow-emerald-600/20'
-                                : 'bg-gradient-to-r from-pink-50 to-rose-50 hover:from-pink-100 hover:to-rose-100 text-pink-800 border border-pink-200/90'
-                            }`}
+                            onClick={() => handleCopyText(msg)}
+                            className="p-1 hover:text-slate-700 rounded-md transition-colors flex items-center gap-0.5 cursor-pointer ml-1"
+                            title="ចម្លងអត្ថបទ"
                           >
-                            {isApplied ? (
+                            {copiedId === msg.id ? (
+                              <Check className="w-3 h-3 text-emerald-600" />
+                            ) : (
+                              <Copy className="w-3 h-3" />
+                            )}
+                            <span>{copiedId === msg.id ? 'បានចម្លង' : 'ចម្លង'}</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => handleToggleSpeak(msg)}
+                            className={`p-1 rounded-md transition-colors flex items-center gap-0.5 cursor-pointer ${
+                              isSpeaking ? 'text-pink-600 font-bold' : 'hover:text-slate-700'
+                            }`}
+                            title="ស្តាប់សំឡេងអាន"
+                          >
+                            {isSpeaking ? (
                               <>
-                                <Check className="w-3.5 h-3.5 text-white" />
-                                <span>បានអនុវត្តជោគជ័យ!</span>
+                                <VolumeX className="w-3 h-3 animate-pulse text-pink-600" />
+                                <span className="text-pink-600">កំពុងអាន...</span>
                               </>
                             ) : (
                               <>
-                                <span>{act.label}</span>
-                                <ArrowRight className="w-3 h-3 text-pink-600 shrink-0" />
+                                <Volume2 className="w-3 h-3" />
+                                <span>ស្តាប់</span>
                               </>
                             )}
                           </button>
-                        );
-                      })}
-                    </div>
-                  )}
+                        </div>
+                      )}
 
-                  {/* Quick Replies Buttons */}
-                  {!isUser && msg.quickReplies && msg.quickReplies.length > 0 && (
-                    <div className="mt-2 flex flex-wrap gap-1.5">
-                      {msg.quickReplies.map((qr, qIdx) => (
-                        <button
-                          key={qIdx}
-                          type="button"
-                          onClick={() => handleSendMessage(qr)}
-                          className="px-2.5 py-1 bg-white hover:bg-pink-50 text-slate-700 hover:text-pink-700 border border-slate-200 hover:border-pink-300 rounded-xl text-[11px] font-bold transition-all shadow-2xs cursor-pointer active:scale-95"
-                        >
-                          💬 {qr}
-                        </button>
-                      ))}
+                      {/* Interactive Action Buttons attached to AI message */}
+                      {!isUser && msg.actions && msg.actions.length > 0 && (
+                        <div className="mt-2.5 flex flex-wrap gap-1.5 w-full">
+                          {msg.actions.map((act, actIdx) => {
+                            const actKey = `${msg.id}-${actIdx}`;
+                            const isApplied = appliedActionKey === actKey;
+
+                            return (
+                              <button
+                                key={actIdx}
+                                type="button"
+                                onClick={() => handleExecuteAction(act, actKey)}
+                                className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs active:scale-95 ${
+                                  isApplied
+                                    ? 'bg-emerald-600 text-white shadow-emerald-600/20'
+                                    : 'bg-gradient-to-r from-pink-50 to-rose-50 hover:from-pink-100 hover:to-rose-100 text-pink-800 border border-pink-200/90'
+                                }`}
+                              >
+                                {isApplied ? (
+                                  <>
+                                    <Check className="w-3.5 h-3.5 text-white" />
+                                    <span>បានអនុវត្តជោគជ័យ!</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <span>{act.label}</span>
+                                    <ArrowRight className="w-3 h-3 text-pink-600 shrink-0" />
+                                  </>
+                                )}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+
+                      {/* Quick Replies Buttons */}
+                      {!isUser && msg.quickReplies && msg.quickReplies.length > 0 && (
+                        <div className="mt-2 flex flex-wrap gap-1.5">
+                          {msg.quickReplies.map((qr, qIdx) => (
+                            <button
+                              key={qIdx}
+                              type="button"
+                              onClick={() => {
+                                if (qr.includes('ឆាតមកហាង')) {
+                                  setActiveTab('store-chat');
+                                } else {
+                                  handleSendMessage(qr);
+                                }
+                              }}
+                              className="px-2.5 py-1 bg-white hover:bg-pink-50 text-slate-700 hover:text-pink-700 border border-slate-200 hover:border-pink-300 rounded-xl text-[11px] font-bold transition-all shadow-2xs cursor-pointer active:scale-95"
+                            >
+                              💬 {qr}
+                            </button>
+                          ))}
+                        </div>
+                      )}
                     </div>
+
+                    {isUser && (
+                      <div className="w-8 h-8 rounded-xl bg-slate-200 text-slate-700 flex items-center justify-center text-xs font-black shadow-xs shrink-0 self-start mt-0.5">
+                        👤
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+
+              {/* AI Thinking Animation */}
+              {isTyping && (
+                <div className="flex gap-2.5 items-center animate-in fade-in duration-200">
+                  <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-pink-500 to-rose-400 text-white flex items-center justify-center text-sm shadow-xs shrink-0">
+                    🤖
+                  </div>
+                  <div className="px-4 py-3 bg-white border border-rose-100 rounded-2xl rounded-bl-xs shadow-xs flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-pink-500 animate-bounce" />
+                    <span className="w-2 h-2 rounded-full bg-pink-500 animate-bounce [animation-delay:0.2s]" />
+                    <span className="w-2 h-2 rounded-full bg-pink-500 animate-bounce [animation-delay:0.4s]" />
+                    <span className="text-[11px] font-bold text-pink-700 ml-1.5">
+                      AI កំពុងគិតឆ្លើយ...
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              <div ref={messagesEndRef} />
+            </div>
+
+            {/* Voice Listening Banner */}
+            {isListening && (
+              <div className="px-4 py-2.5 bg-gradient-to-r from-rose-500 via-pink-500 to-rose-600 text-white flex items-center justify-between gap-2 animate-in slide-in-from-bottom duration-150 shrink-0 shadow-md">
+                <div className="flex items-center gap-2.5 text-xs font-bold min-w-0">
+                  <span className="w-2.5 h-2.5 rounded-full bg-white animate-ping shrink-0" />
+                  <span className="truncate">
+                    {voiceStatusText || '🎙️ កំពុងស្តាប់សំឡេង... សូមនិយាយសំណួររបស់អ្នក'}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleToggleVoiceInput}
+                  className="px-2.5 py-1 bg-white/20 hover:bg-white/30 text-white rounded-lg text-xs font-black shrink-0 cursor-pointer shadow-xs active:scale-95 transition-all"
+                >
+                  បញ្ឈប់
+                </button>
+              </div>
+            )}
+
+            {/* Voice Error Notification */}
+            {voiceError && (
+              <div className="px-3.5 py-2.5 bg-amber-50 border-t border-amber-200 text-amber-900 flex items-center justify-between gap-2 animate-in fade-in shrink-0">
+                <div className="flex items-center gap-2 text-xs font-semibold min-w-0">
+                  <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+                  <span>{voiceError}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setVoiceError(null)}
+                  className="text-xs font-bold text-amber-700 hover:text-amber-900 px-2 py-0.5 rounded cursor-pointer shrink-0"
+                >
+                  ✕
+                </button>
+              </div>
+            )}
+
+            {/* INPUT BAR */}
+            <div className="p-3 bg-white border-t border-rose-100 shrink-0">
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  handleSendMessage();
+                }}
+                className="flex items-center gap-2"
+              >
+                {/* Voice Input Mic Button */}
+                <button
+                  type="button"
+                  onClick={handleToggleVoiceInput}
+                  className={`p-2.5 rounded-2xl border transition-all cursor-pointer flex items-center justify-center shrink-0 ${
+                    isListening
+                      ? 'bg-rose-600 text-white border-rose-600 animate-pulse shadow-md'
+                      : 'bg-rose-50/70 hover:bg-rose-100 text-rose-700 border-rose-200/80 shadow-2xs'
+                  }`}
+                  title={isListening ? 'កំពុងស្តាប់... (ចុចដើម្បីឈប់)' : 'ចុចនិយាយតាមសំឡេង (Mic)'}
+                >
+                  {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+                </button>
+
+                {/* Text Input */}
+                <div className="relative flex-1">
+                  <input
+                    ref={inputRef}
+                    type="text"
+                    value={inputValue}
+                    onChange={(e) => setInputValue(e.target.value)}
+                    placeholder="សួរសំណួរពីតម្លៃ រសជាតិ នំកុម្ម៉ង់ របៀបបង់ប្រាក់..."
+                    className="w-full pl-3.5 pr-8 py-2.5 bg-slate-50 border border-slate-200 focus:bg-white focus:border-pink-500 focus:ring-2 focus:ring-pink-500/20 rounded-2xl text-xs sm:text-sm font-semibold text-slate-800 placeholder-slate-400 focus:outline-none transition-all"
+                  />
+                  {inputValue && (
+                    <button
+                      type="button"
+                      onClick={() => setInputValue('')}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5 cursor-pointer"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
                   )}
                 </div>
 
-                {isUser && (
-                  <div className="w-8 h-8 rounded-xl bg-slate-200 text-slate-700 flex items-center justify-center text-xs font-black shadow-xs shrink-0 self-start mt-0.5">
-                    👤
-                  </div>
+                {/* Send Button */}
+                <button
+                  type="submit"
+                  disabled={!inputValue.trim() || isTyping}
+                  className="p-2.5 sm:px-4 bg-gradient-to-r from-pink-600 to-rose-600 hover:from-pink-700 hover:to-rose-700 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-2xl text-xs font-black shadow-md shadow-pink-600/20 transition-all flex items-center gap-1.5 shrink-0 cursor-pointer active:scale-95"
+                >
+                  <Send className="w-4 h-4" />
+                  <span className="hidden sm:inline">ផ្ញើ</span>
+                </button>
+              </form>
+
+              <p className="text-[10px] text-slate-400 text-center mt-2 font-medium">
+                💡 ជំនួយការ AI ឆ្លើយតបភាសាខ្មែរ ២៤/៧ • ឆ្លើយសំណួរ ណែនាំនំ និងជួយកុម្ម៉ង់បានភ្លាមៗ
+              </p>
+            </div>
+          </>
+        )}
+
+        {/* ========================================================= */}
+        {/* TAB 2: BROWSE & ORDER CAKES CATALOG */}
+        {/* ========================================================= */}
+        {activeTab === 'browse' && (
+          <div className="flex-1 flex flex-col overflow-hidden bg-slate-50/60">
+            {/* Search & Filter Header */}
+            <div className="p-3 bg-white border-b border-rose-100 shrink-0 space-y-2">
+              <div className="relative">
+                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  type="text"
+                  value={catalogSearch}
+                  onChange={(e) => setCatalogSearch(e.target.value)}
+                  placeholder="ស្វែងរកឈ្មោះនំ (សូកូឡា, ស្ត្របឺរី, ផេនដា...)"
+                  className="w-full pl-9 pr-8 py-2 bg-slate-50 border border-slate-200 focus:bg-white focus:border-pink-500 rounded-xl text-xs font-medium focus:outline-none transition-all"
+                />
+                {catalogSearch && (
+                  <button
+                    type="button"
+                    onClick={() => setCatalogSearch('')}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 p-0.5"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
                 )}
               </div>
-            );
-          })}
-
-          {/* AI Thinking Animation */}
-          {isTyping && (
-            <div className="flex gap-2.5 items-center animate-in fade-in duration-200">
-              <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-pink-500 to-rose-400 text-white flex items-center justify-center text-sm shadow-xs shrink-0">
-                🤖
-              </div>
-              <div className="px-4 py-3 bg-white border border-rose-100 rounded-2xl rounded-bl-xs shadow-xs flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-pink-500 animate-bounce" />
-                <span className="w-2 h-2 rounded-full bg-pink-500 animate-bounce [animation-delay:0.2s]" />
-                <span className="w-2 h-2 rounded-full bg-pink-500 animate-bounce [animation-delay:0.4s]" />
-                <span className="text-[11px] font-bold text-pink-700 ml-1.5">AI កំពុងគិតឆ្លើយ...</span>
-              </div>
+              <p className="text-[11px] text-slate-500 font-medium">
+                ចុច **"🛒 កុម្ម៉ង់នំនេះ"** ដើម្បីរើសយកទៅតុបតែងទំហំ រសជាតិ និងពាក្យជូនពរភ្លាមៗ!
+              </p>
             </div>
-          )}
 
-          <div ref={messagesEndRef} />
-        </div>
+            {/* Catalog Grid */}
+            <div className="flex-1 overflow-y-auto p-3 sm:p-4">
+              {filteredCatalogProducts.length === 0 ? (
+                <div className="text-center py-12 text-slate-400 space-y-2">
+                  <Cake className="w-10 h-10 mx-auto text-rose-300" />
+                  <p className="text-xs font-bold">រកមិនឃើញនំដែលត្រូវនឹងការស្វែងរកនេះទេ</p>
+                  <button
+                    type="button"
+                    onClick={() => setCatalogSearch('')}
+                    className="text-xs font-black text-pink-600 underline cursor-pointer"
+                  >
+                    បង្ហាញនំទាំងអស់
+                  </button>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 sm:gap-3">
+                  {filteredCatalogProducts.map((p) => {
+                    const priceKhr =
+                      p.priceKhr ??
+                      Math.round(p.priceUsd * (context.exchangeRate || 4100));
+                    return (
+                      <div
+                        key={p.id}
+                        className="bg-white rounded-2xl border border-rose-100 overflow-hidden shadow-2xs hover:shadow-md transition-all flex flex-col justify-between group"
+                      >
+                        <div className="relative w-full h-28 sm:h-36 bg-rose-50 overflow-hidden">
+                          <img
+                            src={getProductImageUrl(
+                              p.imageUrl ||
+                                'https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=300'
+                            )}
+                            alt={p.nameKh}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                            loading="lazy"
+                          />
+                        </div>
 
-        {/* Voice Listening Banner */}
-        {isListening && (
-          <div className="px-4 py-2.5 bg-gradient-to-r from-rose-500 via-pink-500 to-rose-600 text-white flex items-center justify-between gap-2 animate-in slide-in-from-bottom duration-150 shrink-0 shadow-md">
-            <div className="flex items-center gap-2.5 text-xs font-bold min-w-0">
-              <span className="w-2.5 h-2.5 rounded-full bg-white animate-ping shrink-0" />
-              <span className="truncate">{voiceStatusText || '🎙️ កំពុងស្តាប់សំឡេង... សូមនិយាយសំណួររបស់អ្នក'}</span>
+                        <div className="p-2 sm:p-2.5 flex-1 flex flex-col justify-between space-y-1.5">
+                          <div>
+                            <h4 className="font-black text-slate-800 text-xs line-clamp-1 group-hover:text-pink-600 transition-colors">
+                              {p.nameKh}
+                            </h4>
+                            <p className="text-[10px] text-slate-400 line-clamp-1">
+                              {p.nameEn || p.unit || 'នំខួបកំណើត'}
+                            </p>
+                          </div>
+
+                          <div className="pt-1.5 border-t border-rose-50">
+                            <div className="text-xs font-black text-rose-600 tracking-tight">
+                              {priceKhr > 0 ? `${priceKhr.toLocaleString()} ៛` : 'តម្លៃចរចា'}
+                            </div>
+                            {p.priceUsd > 0 && (
+                              <div className="text-[10px] text-slate-400">
+                                ${p.priceUsd.toFixed(2)}
+                              </div>
+                            )}
+
+                            <button
+                              type="button"
+                              onClick={() => handleSelectCake(p)}
+                              className="mt-2 w-full py-1.5 bg-gradient-to-r from-pink-600 to-rose-500 hover:from-pink-700 hover:to-rose-600 text-white rounded-xl text-[10px] sm:text-xs font-black transition-all shadow-2xs active:scale-95 cursor-pointer flex items-center justify-center gap-1"
+                            >
+                              <span>🛒 កុម្ម៉ង់នំនេះ</span>
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
-            <button
-              type="button"
-              onClick={handleToggleVoiceInput}
-              className="px-2.5 py-1 bg-white/20 hover:bg-white/30 text-white rounded-lg text-xs font-black shrink-0 cursor-pointer shadow-xs active:scale-95 transition-all"
-            >
-              បញ្ឈប់
-            </button>
-          </div>
-        )}
-
-        {/* Voice Error Notification */}
-        {voiceError && (
-          <div className="px-3.5 py-2.5 bg-amber-50 border-t border-amber-200 text-amber-900 flex items-center justify-between gap-2 animate-in fade-in shrink-0">
-            <div className="flex items-center gap-2 text-xs font-semibold min-w-0">
-              <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
-              <span>{voiceError}</span>
-            </div>
-            <button
-              type="button"
-              onClick={() => setVoiceError(null)}
-              className="text-xs font-bold text-amber-700 hover:text-amber-900 px-2 py-0.5 rounded cursor-pointer shrink-0"
-            >
-              ✕
-            </button>
           </div>
         )}
 
         {/* ========================================================= */}
-        {/* INPUT BAR */}
+        {/* TAB 3: LIVE DIRECT STORE CHAT & CONTACT */}
         {/* ========================================================= */}
-        <div className="p-3 bg-white border-t border-rose-100 shrink-0">
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              handleSendMessage();
-            }}
-            className="flex items-center gap-2"
-          >
-            {/* Voice Input Mic Button */}
-            <button
-              type="button"
-              onClick={handleToggleVoiceInput}
-              className={`p-2.5 rounded-2xl border transition-all cursor-pointer flex items-center justify-center shrink-0 ${
-                isListening
-                  ? 'bg-rose-600 text-white border-rose-600 animate-pulse shadow-md'
-                  : 'bg-rose-50/70 hover:bg-rose-100 text-rose-700 border-rose-200/80 shadow-2xs'
-              }`}
-              title={isListening ? 'កំពុងស្តាប់... (ចុចដើម្បីឈប់)' : 'ចុចនិយាយតាមសំឡេង (Mic)'}
-            >
-              {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
-            </button>
+        {activeTab === 'store-chat' && (
+          <div className="flex-1 overflow-y-auto p-4 sm:p-5 bg-slate-50/60 space-y-4">
+            {/* Quick Contact Buttons Row */}
+            <div className="grid grid-cols-2 gap-2.5">
+              {telegramUrl ? (
+                <a
+                  href={telegramUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => soundFx.playPop()}
+                  className="flex items-center gap-2.5 p-3 bg-gradient-to-r from-sky-500 to-blue-600 text-white rounded-2xl shadow-sm hover:shadow-md transition-all active:scale-95 group"
+                >
+                  <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center text-lg shrink-0">
+                    ✈️
+                  </div>
+                  <div className="min-w-0">
+                    <span className="text-[10px] text-sky-100 font-bold block uppercase tracking-wider">
+                      ឆាត Telegram
+                    </span>
+                    <span className="text-xs font-black truncate block">
+                      @{telegramHandle || 'SweetBakery'}
+                    </span>
+                  </div>
+                  <ExternalLink className="w-3.5 h-3.5 text-white/80 ml-auto shrink-0 group-hover:translate-x-0.5 transition-transform" />
+                </a>
+              ) : (
+                <div className="flex items-center gap-2.5 p-3 bg-sky-50 text-sky-800 rounded-2xl border border-sky-200/80">
+                  <div className="w-9 h-9 rounded-xl bg-sky-200/60 flex items-center justify-center text-lg shrink-0">
+                    ✈️
+                  </div>
+                  <div className="min-w-0">
+                    <span className="text-[10px] text-sky-600 font-bold block uppercase">
+                      Telegram ហាង
+                    </span>
+                    <span className="text-xs font-black truncate block">
+                      ទាក់ទងតាមទូរស័ព្ទ
+                    </span>
+                  </div>
+                </div>
+              )}
 
-            {/* Text Input */}
-            <div className="relative flex-1">
-              <input
-                ref={inputRef}
-                type="text"
-                value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
-                placeholder="សួរសំណួរពីតម្លៃ រសជាតិ របៀបកុម្ម៉ង់..."
-                className="w-full pl-3.5 pr-8 py-2.5 bg-slate-50 border border-slate-200 focus:bg-white focus:border-pink-500 focus:ring-2 focus:ring-pink-500/20 rounded-2xl text-xs sm:text-sm font-semibold text-slate-800 placeholder-slate-400 focus:outline-none transition-all"
-              />
-              {inputValue && (
+              <a
+                href={`tel:${storePhone}`}
+                onClick={() => soundFx.playPop()}
+                className="flex items-center gap-2.5 p-3 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-2xl shadow-sm hover:shadow-md transition-all active:scale-95 group"
+              >
+                <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center text-lg shrink-0">
+                  📞
+                </div>
+                <div className="min-w-0">
+                  <span className="text-[10px] text-emerald-100 font-bold block uppercase tracking-wider">
+                    ទូរស័ព្ទទាន់ហេតុការណ៍
+                  </span>
+                  <span className="text-xs font-black truncate block">{storePhone}</span>
+                </div>
+                <Phone className="w-3.5 h-3.5 text-white/80 ml-auto shrink-0 group-hover:rotate-12 transition-transform" />
+              </a>
+            </div>
+
+            {/* Store Location Info Card */}
+            <div className="bg-white rounded-2xl p-3.5 border border-rose-100 shadow-2xs flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-8 h-8 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center shrink-0">
+                  <MapPin className="w-4 h-4" />
+                </div>
+                <div className="min-w-0">
+                  <h5 className="text-xs font-black text-slate-800 truncate">
+                    {storeInfo?.nameKh || context.storeName || 'Sweet Bakery'}
+                  </h5>
+                  <p className="text-[11px] text-slate-500 truncate">
+                    📍 {storeInfo?.address || context.storeAddress || 'រតនៈគីរី អូរយ៉ាដាវ'}
+                  </p>
+                </div>
+              </div>
+
+              {onOpenStoreLocation && (
                 <button
                   type="button"
-                  onClick={() => setInputValue('')}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5 cursor-pointer"
+                  onClick={() => {
+                    soundFx.playPop();
+                    onOpenStoreLocation();
+                  }}
+                  className="px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer"
                 >
-                  <X className="w-3.5 h-3.5" />
+                  មើលផែនទី
                 </button>
               )}
             </div>
 
-            {/* Send Button */}
-            <button
-              type="submit"
-              disabled={!inputValue.trim() || isTyping}
-              className="p-2.5 sm:px-4 bg-gradient-to-r from-pink-600 to-rose-600 hover:from-pink-700 hover:to-rose-700 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-2xl text-xs font-black shadow-md shadow-pink-600/20 transition-all flex items-center gap-1.5 shrink-0 cursor-pointer active:scale-95"
-            >
-              <Send className="w-4 h-4" />
-              <span className="hidden sm:inline">ផ្ញើ</span>
-            </button>
-          </form>
+            {/* Direct Inquiry Form (Sends Telegram Message to Store Owner) */}
+            <div className="bg-white rounded-3xl p-4 sm:p-5 border border-rose-100 shadow-sm space-y-3.5">
+              <div className="flex items-center gap-2 pb-2 border-b border-rose-50">
+                <div className="w-7 h-7 rounded-xl bg-pink-100 text-pink-600 flex items-center justify-center text-sm font-black">
+                  ✉️
+                </div>
+                <div>
+                  <h4 className="text-xs sm:text-sm font-black text-slate-800">
+                    ផ្ញើសារសួរនាំផ្ទាល់ទៅកាន់ម្ចាស់ហាង (Direct Telegram Alert)
+                  </h4>
+                  <p className="text-[10px] text-slate-400">
+                    ប្រព័ន្ធនឹងបញ្ជូនសាររបស់អ្នកទៅកាន់ Telegram របស់ម្ចាស់ហាងភ្លាមៗ
+                  </p>
+                </div>
+              </div>
 
-          <p className="text-[10px] text-slate-400 text-center mt-2 font-medium">
-            💡 ជំនួយការ AI អាចឆ្លើយជាភាសាខ្មែរ និងអង់គ្លេស • ជួយសម្រួលការកុម្ម៉ង់ឱ្យកាន់តែលឿន
-          </p>
-        </div>
+              {directSendStatus.message && (
+                <div
+                  className={`p-3 rounded-2xl text-xs font-bold flex items-start gap-2 ${
+                    directSendStatus.type === 'success'
+                      ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                      : 'bg-rose-50 text-rose-800 border border-rose-200'
+                  }`}
+                >
+                  {directSendStatus.type === 'success' ? (
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                  ) : (
+                    <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                  )}
+                  <span>{directSendStatus.message}</span>
+                </div>
+              )}
 
+              <form onSubmit={handleSendDirectInquiry} className="space-y-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  <div>
+                    <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                      ឈ្មោះរបស់អ្នក (Customer Name)
+                    </label>
+                    <input
+                      type="text"
+                      value={custName}
+                      onChange={(e) => setCustName(e.target.value)}
+                      placeholder="ឧ. សុខា"
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:bg-white focus:border-pink-500 rounded-xl text-xs font-semibold focus:outline-none transition-all"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                      លេខទូរស័ព្ទដើម្បីទាក់ទងមកវិញ <span className="text-rose-500">*</span>
+                    </label>
+                    <input
+                      type="tel"
+                      value={custPhone}
+                      onChange={(e) => setCustPhone(e.target.value)}
+                      placeholder="ឧ. 012 345 678"
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:bg-white focus:border-pink-500 rounded-xl text-xs font-semibold focus:outline-none transition-all"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                    នំដែលអ្នកចាប់អារម្មណ៍ (Cake of Interest - បើមាន)
+                  </label>
+                  <select
+                    value={custCakeInterest}
+                    onChange={(e) => setCustCakeInterest(e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:bg-white focus:border-pink-500 rounded-xl text-xs font-medium focus:outline-none transition-all"
+                  >
+                    <option value="">-- ជ្រើសរើសនំ ឬទុកទំនេរ --</option>
+                    {(context.availableProducts || []).map((p) => (
+                      <option key={p.id} value={p.nameKh}>
+                        {p.nameKh} ({p.nameEn || p.unit || 'Cake'})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                    ខ្លឹមសារសារសួរនាំ ឬកុម្ម៉ង់ម៉ូដពិសេស <span className="text-rose-500">*</span>
+                  </label>
+                  <textarea
+                    rows={3}
+                    value={custMessage}
+                    onChange={(e) => setCustMessage(e.target.value)}
+                    placeholder="សរសេរសំណួររបស់អ្នកនៅទីនេះ (ឧ. ចង់សួរពីម៉ូដនំ ថ្ងៃទទួលនំ ឬតម្លៃនំពិសេស...)"
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:bg-white focus:border-pink-500 rounded-xl text-xs font-medium focus:outline-none transition-all resize-none"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={isSendingDirect}
+                  className="w-full py-2.5 bg-gradient-to-r from-pink-600 via-rose-600 to-rose-500 hover:from-pink-700 hover:to-rose-700 disabled:opacity-50 text-white rounded-xl text-xs sm:text-sm font-black shadow-md shadow-pink-600/25 transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95"
+                >
+                  {isSendingDirect ? (
+                    <>
+                      <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      <span>កំពុងផ្ញើសារទៅកាន់ហាង...</span>
+                    </>
+                  ) : (
+                    <>
+                      <SendHorizontal className="w-4 h-4" />
+                      <span>🚀 ផ្ញើសារសួរនាំទៅកាន់ហាងឥឡូវនេះ</span>
+                    </>
+                  )}
+                </button>
+              </form>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

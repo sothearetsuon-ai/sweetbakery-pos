@@ -2068,7 +2068,7 @@ export const CustomerOrderPortal: React.FC<CustomerOrderPortalProps> = ({ onBack
         mapsUrl={storeInfo.mapsUrl}
       />
 
-      {/* Floating AI Assistant Launcher Button */}
+      {/* Floating Chatbot & Store Chat Launcher Button */}
       {step < 5 && (
         <div className="fixed bottom-5 right-4 sm:bottom-6 sm:right-6 z-40">
           <button
@@ -2078,35 +2078,42 @@ export const CustomerOrderPortal: React.FC<CustomerOrderPortalProps> = ({ onBack
               setIsAiGuideOpen(true);
             }}
             className="group flex items-center gap-2.5 px-3.5 py-2.5 sm:px-4 sm:py-3 bg-gradient-to-r from-pink-600 via-rose-600 to-rose-500 hover:from-pink-700 hover:to-rose-700 text-white rounded-full shadow-lg shadow-pink-600/30 hover:shadow-xl hover:shadow-pink-600/40 border-2 border-white transition-all active:scale-95 cursor-pointer"
-            title="ចុចសួរជំនួយការ AI ពីរបៀបកុម្ម៉ង់"
+            title="Chatbot សួរនាំ កុម្ម៉ង់នំ ឬឆាតមកហាងផ្ទាល់"
           >
             <div className="relative shrink-0">
               <span className="text-xl sm:text-2xl group-hover:scale-110 transition-transform block">
-                🤖
+                💬
               </span>
               <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 border-2 border-white absolute -top-0.5 -right-0.5 animate-pulse" />
             </div>
             <div className="text-left">
               <div className="flex items-center gap-1 leading-none">
-                <span className="text-xs sm:text-sm font-black tracking-tight">ជំនួយការ AI</span>
+                <span className="text-xs sm:text-sm font-black tracking-tight">Chatbot & ឆាតមកហាង</span>
                 <Sparkles className="w-3 h-3 text-amber-300 animate-spin [animation-duration:4s]" />
               </div>
-              <span className="text-[10px] text-pink-100 font-medium block mt-0.5">ណែនាំរបៀបកុម្ម៉ង់</span>
+              <span className="text-[10px] text-pink-100 font-medium block mt-0.5">
+                សួរនាំ • កុម្ម៉ង់នំ • ឆាតផ្ទាល់
+              </span>
             </div>
           </button>
         </div>
       )}
 
-      {/* AI Ordering Assistant Guide Modal */}
+      {/* AI Ordering Assistant Guide Modal & Chatbot */}
       <CustomerAiGuideModal
         isOpen={isAiGuideOpen}
         onClose={() => setIsAiGuideOpen(false)}
         context={aiContext}
+        storeInfo={storeInfo}
         onApplySizeBudget={handleApplySizeBudget}
         onApplyFlavor={handleApplyFlavor}
         onApplyInscription={handleApplyInscription}
         onGoToStep={handleGoToStep}
         onOpenStoreLocation={() => setIsLocationModalOpen(true)}
+        onSelectProduct={(product) => {
+          handleSelectProduct(product);
+          setIsAiGuideOpen(false);
+        }}
       />
 
       {/* AI Cake Photo Analysis & Quotation Modal */}

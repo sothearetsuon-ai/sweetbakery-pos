@@ -18,6 +18,11 @@ export interface StoreInfo {
   requireRealStorePin?: boolean;
   website?: string;
   customerPortalUrl?: string;
+  telegramUsername?: string;
+  telegramChatLink?: string;
+  facebookUrl?: string;
+  hotlinePhone?: string;
+  chatbotWelcomeMessage?: string;
 }
 
 export interface Category {
