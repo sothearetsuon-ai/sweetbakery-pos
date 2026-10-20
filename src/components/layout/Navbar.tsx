@@ -303,7 +303,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 onOpenStoreAuthModal();
               }}
               title="គណនីហាង & Multi-Store (ចូលគណនី / បង្កើតហាងថ្មី / ភ្ជាប់ Store ID)"
-              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-2xl border text-xs font-black transition-all shadow-2xs hover:scale-105 active:scale-95 cursor-pointer shrink-0 font-battambang ${
+              className={`hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-2xl border text-xs font-black transition-all shadow-2xs hover:scale-105 active:scale-95 cursor-pointer shrink-0 font-battambang ${
                 !isDefaultStore(currentStoreTenantId)
                   ? 'bg-gradient-to-r from-rose-50 to-pink-50 border-rose-300 text-rose-900 ring-1 ring-rose-200'
                   : 'bg-white hover:bg-slate-50 border-slate-200 text-slate-700'
@@ -372,7 +372,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 onOpenCakeFlavors();
               }}
               title="គ្រប់គ្រងរសជាតិនំ & ស្តុកមាន/អស់ (Cake Flavors & Stock)"
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-2xl bg-gradient-to-r from-purple-50 to-pink-50 hover:from-purple-100 hover:to-pink-100 border border-purple-200/90 text-purple-900 text-xs font-black transition-all shadow-2xs hover:scale-105 active:scale-95 cursor-pointer shrink-0"
+              className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-2xl bg-gradient-to-r from-purple-50 to-pink-50 hover:from-purple-100 hover:to-pink-100 border border-purple-200/90 text-purple-900 text-xs font-black transition-all shadow-2xs hover:scale-105 active:scale-95 cursor-pointer shrink-0"
             >
               <span className="text-sm">🧁</span>
               <span className="hidden sm:inline font-battambang">រសជាតិនំ & ស្តុក</span>
@@ -388,7 +388,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 onOpenKds();
               }}
               title="អេក្រង់ផ្ទះបាយ KDS (Kitchen Display System) - សម្រាប់ជាងនំ"
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-2xl bg-gradient-to-r from-amber-50 to-orange-50 hover:from-amber-100 hover:to-orange-100 border border-orange-200/90 text-orange-900 text-xs font-black transition-all shadow-2xs hover:scale-105 active:scale-95 cursor-pointer shrink-0"
+              className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-2xl bg-gradient-to-r from-amber-50 to-orange-50 hover:from-amber-100 hover:to-orange-100 border border-orange-200/90 text-orange-900 text-xs font-black transition-all shadow-2xs hover:scale-105 active:scale-95 cursor-pointer shrink-0"
             >
               <span className="text-sm">👨‍🍳</span>
               <span className="hidden sm:inline font-battambang">ផ្ទះបាយ KDS</span>
@@ -409,39 +409,16 @@ export const Navbar: React.FC<NavbarProps> = ({
                 onOpenVoicePos();
               }}
               title="POS បញ្ជាដោយសំឡេងខ្មែរ (Khmer Voice POS Assistant)"
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-2xl bg-gradient-to-r from-pink-50 to-rose-50 hover:from-pink-100 hover:to-rose-100 border border-pink-200/90 text-pink-900 text-xs font-black transition-all shadow-2xs hover:scale-105 active:scale-95 cursor-pointer shrink-0"
+              className="hidden md:flex items-center gap-1.5 px-2.5 py-1.5 rounded-2xl bg-gradient-to-r from-pink-50 to-rose-50 hover:from-pink-100 hover:to-rose-100 border border-pink-200/90 text-pink-900 text-xs font-black transition-all shadow-2xs hover:scale-105 active:scale-95 cursor-pointer shrink-0"
             >
               <span className="text-sm">🎙️</span>
               <span className="hidden md:inline font-battambang">POS សំឡេង</span>
             </button>
           )}
 
-          {/* In-App Live Chat Direct Pill Button with Live Unread Badge */}
-          {onOpenChatModal && (
-            <button
-              type="button"
-              onClick={() => {
-                soundFx.playPop();
-                onOpenChatModal('CUSTOMER');
-              }}
-              title="ឆាតផ្ទាល់លើ App (In-App Live Chat: ភ្ញៀវ & អ្នកលក់, AI Chatbot, ក្រុមការងារ)"
-              className="relative flex items-center gap-1.5 px-2.5 py-1.5 rounded-2xl bg-gradient-to-r from-blue-50 to-indigo-50 hover:from-blue-100 hover:to-indigo-100 border border-blue-200/90 text-blue-900 text-xs font-black transition-all shadow-2xs hover:scale-105 active:scale-95 cursor-pointer shrink-0"
-            >
-              <MessageCircle className="w-3.5 h-3.5 text-blue-600" />
-              <span className="hidden sm:inline font-battambang">ឆាតផ្ទាល់</span>
-              {unreadChatCount > 0 ? (
-                <span className="px-1.5 py-0.2 rounded-full text-[10px] font-mono font-black bg-rose-600 text-white animate-bounce shadow-xs">
-                  {unreadChatCount}
-                </span>
-              ) : (
-                <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
-              )}
-            </button>
-          )}
-
           {/* Active Music Playing Indicator & Quick Stop Button */}
           {isMusicPlaying && (
-            <div className="flex items-center rounded-2xl bg-gradient-to-r from-pink-500/15 via-rose-500/15 to-amber-500/15 border border-pink-400/40 shadow-xs overflow-hidden shrink-0 animate-pulse">
+            <div className="hidden sm:flex items-center rounded-2xl bg-gradient-to-r from-pink-500/15 via-rose-500/15 to-amber-500/15 border border-pink-400/40 shadow-xs overflow-hidden shrink-0 animate-pulse">
               <button
                 type="button"
                 onClick={() => {
@@ -483,7 +460,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 }
               }}
               title={`មានកំណែថ្មី v${availableUpdate.latestVersion}! ចុចដើម្បីអាប់ដេត`}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-2xl bg-gradient-to-r from-pink-600 via-rose-600 to-amber-500 hover:from-pink-700 hover:to-rose-700 text-white text-xs font-black shadow-md shadow-pink-500/30 transition-all hover:scale-105 active:scale-95 cursor-pointer shrink-0 animate-pulse font-battambang"
+              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-2xl bg-gradient-to-r from-pink-600 via-rose-600 to-amber-500 hover:from-pink-700 hover:to-rose-700 text-white text-xs font-black shadow-md shadow-pink-500/30 transition-all hover:scale-105 active:scale-95 cursor-pointer shrink-0 animate-pulse font-battambang"
             >
               <Rocket className="w-3.5 h-3.5 animate-bounce text-amber-200" />
               <span>កំណែថ្មី</span>
@@ -1396,6 +1373,101 @@ export const Navbar: React.FC<NavbarProps> = ({
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Mobile Secondary Quick-Action Strip (Horizontally Scrollable) */}
+      <div className="sm:hidden flex items-center gap-1.5 overflow-x-auto px-2.5 py-1.5 bg-gradient-to-r from-rose-50/70 via-pink-50/50 to-amber-50/50 border-t border-rose-100/70 scrollbar-none">
+        {onOpenStoreAuthModal && (
+          <button
+            type="button"
+            onClick={() => {
+              soundFx.playPop();
+              onOpenStoreAuthModal();
+            }}
+            className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-white border border-rose-200 text-rose-900 text-[11px] font-bold shrink-0 shadow-2xs active:scale-95"
+            title="គណនីហាង & Multi-Store"
+          >
+            <span>🏪</span>
+            <span className="max-w-[90px] truncate font-battambang">
+              {storeUser?.storeName || storeInfo.nameKh || 'ហាង'}
+            </span>
+          </button>
+        )}
+        {onOpenCakeFlavors && (
+          <button
+            type="button"
+            onClick={() => {
+              soundFx.playPop();
+              onOpenCakeFlavors();
+            }}
+            className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-purple-50 hover:bg-purple-100 border border-purple-200 text-purple-900 text-[11px] font-bold shrink-0 shadow-2xs active:scale-95"
+            title="គ្រប់គ្រងរសជាតិនំ & ស្តុក"
+          >
+            <span>🧁</span>
+            <span className="font-battambang">រសជាតិនំ & ស្តុក</span>
+          </button>
+        )}
+        {onOpenKds && (
+          <button
+            type="button"
+            onClick={() => {
+              soundFx.playPop();
+              onOpenKds();
+            }}
+            className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-amber-50 hover:bg-amber-100 border border-orange-200 text-orange-900 text-[11px] font-bold shrink-0 shadow-2xs active:scale-95"
+            title="អេក្រង់ផ្ទះបាយ KDS"
+          >
+            <span>👨‍🍳</span>
+            <span className="font-battambang">ផ្ទះបាយ KDS</span>
+            {pendingCakeOrdersCount > 0 && (
+              <span className="px-1.5 py-0.2 rounded-full text-[9px] font-mono font-black bg-rose-600 text-white animate-pulse">
+                {pendingCakeOrdersCount}
+              </span>
+            )}
+          </button>
+        )}
+        {onOpenVoicePos && (
+          <button
+            type="button"
+            onClick={() => {
+              soundFx.playPop();
+              onOpenVoicePos();
+            }}
+            className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-pink-50 hover:bg-pink-100 border border-pink-200 text-pink-900 text-[11px] font-bold shrink-0 shadow-2xs active:scale-95"
+            title="POS បញ្ជាដោយសំឡេងខ្មែរ"
+          >
+            <span>🎙️</span>
+            <span className="font-battambang">POS សំឡេង</span>
+          </button>
+        )}
+        {isMusicPlaying && (
+          <button
+            type="button"
+            onClick={() => {
+              soundFx.playPop();
+              setIsMusicPlayerOpen(true);
+            }}
+            className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-pink-500/15 border border-pink-400 text-pink-700 text-[11px] font-bold shrink-0 shadow-2xs active:scale-95 animate-pulse"
+            title="កំពុងចាក់ភ្លេង (ចុចដើម្បីបើក)"
+          >
+            <span>🎵</span>
+            <span className="font-battambang">ចាក់ភ្លេង</span>
+          </button>
+        )}
+        {availableUpdate && availableUpdate.hasUpdate && (
+          <button
+            type="button"
+            onClick={() => {
+              soundFx.playSuccess();
+              if (onOpenUpdateModal) onOpenUpdateModal();
+            }}
+            className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-gradient-to-r from-pink-600 to-amber-500 text-white text-[11px] font-bold shrink-0 shadow-2xs active:scale-95 animate-bounce"
+            title="មានកំណែថ្មី v"
+          >
+            <span>🚀</span>
+            <span className="font-battambang">អាប់ដែត v{availableUpdate.latestVersion}</span>
+          </button>
+        )}
       </div>
 
       {/* Mobile Connect QR Modal */}

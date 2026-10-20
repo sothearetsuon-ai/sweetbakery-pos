@@ -57,6 +57,14 @@ export const MiniMusicPlayer: React.FC = () => {
     return typeof window !== 'undefined' ? window.innerWidth < 768 : false;
   });
 
+  // Dismissed state (allows user to easily close/hide the mini widget)
+  const [isDismissed, setIsDismissed] = useState(false);
+
+  // Re-enable if current track changes
+  useEffect(() => {
+    setIsDismissed(false);
+  }, [currentTrack?.id]);
+
   const [position, setPosition] = useState<Position | null>(() => {
     if (typeof window === 'undefined') return null;
     try {
@@ -64,6 +72,11 @@ export const MiniMusicPlayer: React.FC = () => {
       if (saved) {
         const parsed = JSON.parse(saved);
         if (typeof parsed.x === 'number' && typeof parsed.y === 'number') {
+          const isMobile = window.innerWidth < 768;
+          // If on mobile and previously saved y was near the top (< 120), reset to bottom so it never blocks top menu
+          if (isMobile && parsed.y < 120) {
+            return { x: 12, y: Math.max(120, window.innerHeight - 135) };
+          }
           return parsed;
         }
       }
@@ -88,11 +101,13 @@ export const MiniMusicPlayer: React.FC = () => {
   const clampPosition = useCallback((x: number, y: number, elemWidth = 320, elemHeight = 56): Position => {
     if (typeof window === 'undefined') return { x, y };
     const margin = 8;
+    const isMobile = window.innerWidth < 768;
+    const minY = isMobile ? 120 : margin; // Never cover the top navbar / search bar on mobile!
     const maxX = Math.max(margin, window.innerWidth - elemWidth - margin);
-    const maxY = Math.max(margin, window.innerHeight - elemHeight - margin);
+    const maxY = Math.max(minY, window.innerHeight - elemHeight - (isMobile ? 75 : margin));
     return {
       x: Math.min(Math.max(margin, x), maxX),
-      y: Math.min(Math.max(margin, y), maxY),
+      y: Math.min(Math.max(minY, y), maxY),
     };
   }, []);
 
@@ -103,7 +118,7 @@ export const MiniMusicPlayer: React.FC = () => {
       const width = isPillMode ? 180 : (isMobile ? 290 : 330);
       const height = isPillMode ? 44 : 56;
       const defaultX = isMobile ? 12 : window.innerWidth - width - 20;
-      const defaultY = isMobile ? window.innerHeight - 84 : window.innerHeight - 76;
+      const defaultY = isMobile ? Math.max(120, window.innerHeight - 135) : window.innerHeight - 76;
       const clamped = clampPosition(defaultX, defaultY, width, height);
       setPosition(clamped);
     }
@@ -276,7 +291,7 @@ export const MiniMusicPlayer: React.FC = () => {
     window.addEventListener('mouseup', handleMouseUp);
   };
 
-  if (!currentTrack || position === null) return null;
+  if (isDismissed || !currentTrack || position === null) return null;
 
   const isFavorited = favoriteTrackIds.includes(currentTrack.id);
 
@@ -405,6 +420,20 @@ export const MiniMusicPlayer: React.FC = () => {
             title="ពង្រីកផ្ទាំងចាក់"
           >
             <Maximize2 className="w-3 h-3" />
+          </button>
+
+          {/* Dismiss / Close Pill Button */}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              soundFx.playPop();
+              setIsDismissed(true);
+            }}
+            className="w-6 h-6 rounded-full hover:bg-rose-500/30 text-slate-400 hover:text-rose-300 flex items-center justify-center transition-all cursor-pointer shrink-0"
+            title="បិទផ្ទាំងនេះជាបណ្ដោះអាសន្ន"
+          >
+            <X className="w-3.5 h-3.5" />
           </button>
         </div>
       ) : (
@@ -579,6 +608,20 @@ export const MiniMusicPlayer: React.FC = () => {
             title="បង្រួមជាគ្រាប់ថ្នាំតូច (Pill Mode)"
           >
             <Minimize2 className="w-3 h-3" />
+          </button>
+
+          {/* Dismiss / Close Mini Bar Button */}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              soundFx.playPop();
+              setIsDismissed(true);
+            }}
+            className="w-6 h-6 rounded-lg hover:bg-rose-500/30 text-slate-400 hover:text-rose-300 flex items-center justify-center transition-all cursor-pointer shrink-0 ml-0.5"
+            title="បិទផ្ទាំងនេះជាបណ្ដោះអាសន្ន"
+          >
+            <X className="w-3.5 h-3.5" />
           </button>
         </div>
       )}

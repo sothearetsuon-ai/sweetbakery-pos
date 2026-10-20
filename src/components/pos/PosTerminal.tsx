@@ -349,11 +349,11 @@ export const PosTerminal: React.FC = () => {
       {/* Products catalog area */}
       <div className="flex-1 flex flex-col min-w-0 p-3 sm:p-6 overflow-y-auto pb-28 lg:pb-6">
         {/* Search & Category Tabs (Sticky at top when scrolling products) */}
-        <div className="sticky -top-3 sm:-top-6 z-20 bg-white/90 backdrop-blur-md pt-3 sm:pt-6 pb-2.5 mb-3 sm:mb-5 space-y-3 sm:space-y-4 border-b border-rose-100/80 shadow-2xs -mx-3 sm:-mx-6 px-3 sm:px-6">
-          <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="sticky -top-3 sm:-top-6 z-20 bg-white/95 backdrop-blur-md pt-2 sm:pt-6 pb-2 sm:pb-2.5 mb-2.5 sm:mb-5 space-y-2 sm:space-y-4 border-b border-rose-100/80 shadow-2xs -mx-3 sm:-mx-6 px-3 sm:px-6">
+          <div className="flex flex-wrap items-center justify-between gap-2 sm:gap-3">
             {/* Search Input with shortcut chip & instant clear button */}
-            <div className="relative flex-1 min-w-[200px] max-w-md">
-              <Search className="w-4 h-4 absolute left-3.5 sm:left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+            <div className="relative flex-1 min-w-[170px] max-w-md">
+              <Search className="w-4 h-4 absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 text-slate-400" />
               <input
                 ref={searchInputRef}
                 type="text"
@@ -361,9 +361,9 @@ export const PosTerminal: React.FC = () => {
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onKeyDown={handleSearchKeyDown}
                 placeholder="ស្វែងរកនំ ឬស្កេនបាកូដ..."
-                className="w-full pl-10 sm:pl-11 pr-16 sm:pr-20 py-2.5 sm:py-3 bg-white/95 border border-rose-100 rounded-2xl text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-rose-500/25 focus:border-rose-400 shadow-xs transition-all font-semibold"
+                className="w-full pl-9 sm:pl-11 pr-14 sm:pr-20 py-2 sm:py-3 bg-white/95 border border-rose-200/80 rounded-2xl text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-rose-500/25 focus:border-rose-400 shadow-xs transition-all font-semibold"
               />
-              <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
+              <div className="absolute right-2.5 top-1/2 -translate-y-1/2 flex items-center gap-1">
                 {searchQuery && (
                   <button
                     type="button"
@@ -384,7 +384,7 @@ export const PosTerminal: React.FC = () => {
             </div>
 
             {/* Actions: Add New Product & Mobile Cart Trigger */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
               {/* Quick KHQR Standee Trigger Button */}
               <button
                 type="button"
@@ -392,10 +392,10 @@ export const PosTerminal: React.FC = () => {
                   soundFx.playPop();
                   setIsKhqrStandeeOpen(true);
                 }}
-                className="px-3 sm:px-3.5 py-2 sm:py-2.5 rounded-2xl text-xs font-black bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200/90 shadow-2xs flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all"
+                className="px-2.5 sm:px-3.5 py-1.5 sm:py-2.5 rounded-2xl text-[11px] sm:text-xs font-black bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200/90 shadow-2xs flex items-center gap-1 cursor-pointer active:scale-95 transition-all"
                 title="បង្ហាញផ្ទាំងស្កេន KHQR លើតុគិតប្រាក់ (Counter Standee)"
               >
-                <QrCode className="w-4 h-4 text-red-600" />
+                <QrCode className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-red-600" />
                 <span className="hidden sm:inline">KHQR ហាង</span>
                 <span className="sm:hidden">KHQR</span>
               </button>
@@ -415,7 +415,7 @@ export const PosTerminal: React.FC = () => {
                   soundFx.playPop();
                   setIsCartDrawerOpen((prev) => !prev);
                 }}
-                className={`px-3 sm:px-4 py-2 sm:py-2.5 rounded-2xl text-xs font-black transition-all shadow-md flex items-center gap-2 cursor-pointer active:scale-95 ${
+                className={`px-2.5 sm:px-4 py-1.5 sm:py-2.5 rounded-2xl text-[11px] sm:text-xs font-black transition-all shadow-md flex items-center gap-1.5 sm:gap-2 cursor-pointer active:scale-95 ${
                   totalCartItems > 0
                     ? 'bg-gradient-to-r from-pink-600 via-rose-600 to-amber-500 hover:from-pink-500 hover:to-amber-500 text-white shadow-pink-500/25 ring-2 ring-pink-300'
                     : 'bg-white hover:bg-slate-50 text-slate-700 border border-slate-200'
@@ -423,7 +423,7 @@ export const PosTerminal: React.FC = () => {
                 title="បើកមើលកន្ត្រកទំនិញ (Cart) ឬចុច F2"
               >
                 <div className="relative">
-                  <ShoppingBag className="w-4 h-4" />
+                  <ShoppingBag className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                   {totalCartItems > 0 && (
                     <span className="absolute -top-1.5 -right-2 bg-white text-pink-600 font-black text-[9px] w-4 h-4 rounded-full flex items-center justify-center shadow-xs">
                       {totalCartItems}
@@ -451,7 +451,7 @@ export const PosTerminal: React.FC = () => {
                     soundFx.playPop();
                     toggleHideDemoPrices();
                   }}
-                  className={`px-3 py-2 rounded-2xl text-xs font-black transition-all flex items-center gap-1.5 border shadow-2xs cursor-pointer active:scale-95 ${
+                  className={`px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-2xl text-[11px] sm:text-xs font-black transition-all flex items-center gap-1 border shadow-2xs cursor-pointer active:scale-95 ${
                     hideDemoPrices
                       ? 'bg-amber-500/15 hover:bg-amber-500/25 text-amber-800 border-amber-300 ring-2 ring-amber-300/30'
                       : 'bg-white hover:bg-rose-50 text-slate-700 border-slate-200'
@@ -481,12 +481,12 @@ export const PosTerminal: React.FC = () => {
                   soundFx.playPop();
                   setIsPartyAccessoriesOpen(true);
                 }}
-                className="px-3 sm:px-3.5 py-2 sm:py-2.5 bg-gradient-to-r from-amber-500/10 via-rose-500/10 to-pink-500/10 hover:from-amber-500/20 hover:to-pink-500/20 text-pink-700 border border-pink-200/80 rounded-2xl text-xs font-black transition-all shadow-2xs flex items-center gap-1.5 active:scale-95 cursor-pointer"
+                className="px-2.5 sm:px-3.5 py-1.5 sm:py-2.5 bg-gradient-to-r from-amber-500/10 via-rose-500/10 to-pink-500/10 hover:from-amber-500/20 hover:to-pink-500/20 text-pink-700 border border-pink-200/80 rounded-2xl text-[11px] sm:text-xs font-black transition-all shadow-2xs flex items-center gap-1 active:scale-95 cursor-pointer"
                 title="គ្រប់គ្រង & ទិញគ្រឿងបន្ថែមសម្រាប់កម្មវិធី (Party Accessories)"
               >
-                <Sparkles className="w-4 h-4 text-amber-500" />
+                <Sparkles className="w-3.5 h-3.5 text-amber-500" />
                 <span className="hidden sm:inline">🎉 Party Add-ons</span>
-                <span className="sm:hidden">🎉 Party</span>
+                <span className="sm:hidden">Party</span>
               </button>
 
               <button
@@ -494,17 +494,17 @@ export const PosTerminal: React.FC = () => {
                   soundFx.playPop();
                   setIsAddProductOpen(true);
                 }}
-                className="px-3.5 sm:px-4 py-2 sm:py-2.5 bg-gradient-to-r from-[#FF6F68] to-[#E6514D] hover:brightness-105 text-white font-black rounded-2xl text-xs transition-all shadow-md shadow-[#E6514D]/25 flex items-center gap-1.5 active:scale-95 cursor-pointer"
+                className="px-3 sm:px-4 py-1.5 sm:py-2.5 bg-gradient-to-r from-[#FF6F68] to-[#E6514D] hover:brightness-105 text-white font-black rounded-2xl text-[11px] sm:text-xs transition-all shadow-md shadow-[#E6514D]/25 flex items-center gap-1 active:scale-95 cursor-pointer"
               >
-                <Plus className="w-4 h-4 stroke-[3]" />
+                <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4 stroke-[3]" />
                 <span className="hidden sm:inline">+ បញ្ចូលទំនិញ / នំថ្មី</span>
-                <span className="sm:hidden">+ ទំនិញថ្មី</span>
+                <span className="sm:hidden">+ នំថ្មី</span>
               </button>
             </div>
           </div>
 
           {/* Category Tabs Bar (Includes all categories with product count badges) */}
-          <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+          <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto pb-1 scrollbar-none">
             {categories.map((cat) => {
               const isActive = selectedCategory === cat.id;
               const catName = lang === 'km' ? cat.nameKh : cat.nameEn;
@@ -519,7 +519,7 @@ export const PosTerminal: React.FC = () => {
                     soundFx.playPop();
                     setSelectedCategory(cat.id);
                   }}
-                  className={`px-4 py-2 sm:py-2.5 rounded-full text-xs font-black whitespace-nowrap transition-all duration-200 flex items-center gap-2 shadow-2xs active:scale-95 cursor-pointer relative ${
+                  className={`px-3 sm:px-4 py-1.5 sm:py-2.5 rounded-full text-[11px] sm:text-xs font-black whitespace-nowrap transition-all duration-200 flex items-center gap-1.5 shadow-2xs active:scale-95 cursor-pointer relative ${
                     isActive
                       ? 'bg-gradient-to-r from-[#FF6F68] to-[#E6514D] text-white shadow-md shadow-[#E6514D]/30 scale-102 ring-2 ring-[#FFB4AE]'
                       : 'bg-white/95 text-slate-700 hover:bg-rose-50/70 hover:text-[#E6514D] border border-rose-100/80 hover:shadow-xs'
@@ -528,7 +528,7 @@ export const PosTerminal: React.FC = () => {
                   {getCategoryIcon(cat.icon)}
                   <span>{catName}</span>
                   <span
-                    className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${
+                    className={`text-[9px] sm:text-[10px] px-1.5 py-0.2 rounded-full font-mono ${
                       isActive ? 'bg-white/25 text-white' : 'bg-slate-100 text-slate-500'
                     }`}
                   >
@@ -550,7 +550,7 @@ export const PosTerminal: React.FC = () => {
             <p className="text-xs text-slate-400 mt-1">សូមសាកល្បងស្វែងរកឈ្មោះផ្សេង ឬចុច Upload នំថ្មី</p>
           </div>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-3 sm:gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-2.5 sm:gap-4 pt-1 sm:pt-2">
             {filteredProducts.map((product) => (
               <ProductCard
                 key={product.id}
