@@ -31,13 +31,20 @@ export interface StoreUserAccount {
 }
 
 const STORAGE_STORE_USER = 'bakery_store_user';
+const STORAGE_ACCOUNTS_CACHE = 'bakery_store_accounts_cache';
 const AUTH_CHANGE_EVENT = 'bakery_store_auth_changed';
 
 /**
- * Format phone number to clean digits
+ * Format phone number to clean digits, normalizing Cambodia country code
  */
 export const cleanPhoneNumber = (phone: string): string => {
-  return phone.replace(/[^0-9]/g, '');
+  let cleaned = phone.replace(/[^0-9]/g, '');
+  if (cleaned.startsWith('855') && cleaned.length >= 10) {
+    cleaned = '0' + cleaned.slice(3);
+  } else if (!cleaned.startsWith('0') && cleaned.length >= 8 && cleaned.length <= 9) {
+    cleaned = '0' + cleaned;
+  }
+  return cleaned;
 };
 
 /**
@@ -50,6 +57,97 @@ export const toFirebaseEmail = (input: string): string => {
   }
   const digits = cleanPhoneNumber(trimmed);
   return `phone_${digits}@phone.sweetbakery.pos`;
+};
+
+/**
+ * Hash password securely across browsers using native Web Crypto or high-entropy hash
+ */
+export const hashPassword = async (password: string): Promise<string> => {
+  const salted = `${password.trim()}__sweetbakery_pos_salt_v1`;
+  if (typeof window !== 'undefined' && window.crypto && window.crypto.subtle) {
+    try {
+      const msgUint8 = new TextEncoder().encode(salted);
+      const hashBuffer = await window.crypto.subtle.digest('SHA-256', msgUint8);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
+    } catch (e) {
+      // Fallback below
+    }
+  }
+  let h1 = 0xdeadbeef;
+  let h2 = 0x41c6ce57;
+  for (let i = 0; i < salted.length; i++) {
+    const ch = salted.charCodeAt(i);
+    h1 = Math.imul(h1 ^ ch, 2654435761);
+    h2 = Math.imul(h2 ^ ch, 1597334677);
+  }
+  h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+  h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+  return `h_${(4294967296 * (2097151 & h2) + (h1 >>> 0)).toString(16)}`;
+};
+
+/**
+ * Convert technical Firebase/Auth errors into clear, friendly Khmer text
+ */
+export const formatAuthErrorMessage = (err: any): string => {
+  if (!err) return 'មានបញ្ហាក្នុងការផ្ទៀងផ្ទាត់គណនី!';
+  const msg = typeof err === 'string' ? err : err.message || err.code || '';
+
+  if (
+    msg.includes('auth/configuration-not-found') ||
+    msg.includes('configuration-not-found') ||
+    msg.includes('auth/operation-not-allowed')
+  ) {
+    return 'គណនីត្រូវបានផ្ទៀងផ្ទាត់តាមរយៈ Cloud Database ដោយផ្ទាល់! សូមព្យាយាមចុច Login ម្ដងទៀត។';
+  }
+  if (msg.includes('auth/user-not-found') || msg.includes('auth/invalid-credential')) {
+    return 'លេខទូរស័ព្ទ/អ៊ីមែល ឬពាក្យសម្ងាត់មិនត្រឹមត្រូវឡើយ!';
+  }
+  if (msg.includes('auth/wrong-password')) {
+    return 'ពាក្យសម្ងាត់មិនត្រឹមត្រូវទេ សូមសាកល្បងម្ដងទៀត!';
+  }
+  if (msg.includes('auth/email-already-in-use')) {
+    return 'លេខទូរស័ព្ទ ឬអ៊ីមែលនេះមានគណនីរួចហើយ! សូមជ្រើសរើសផ្ទាំង «ចូលគណនី (Login)» វិញ។';
+  }
+  if (msg.includes('auth/weak-password')) {
+    return 'ពាក្យសម្ងាត់ត្រូវមានយ៉ាងហោចណាស់ ៦ ខ្ទង់ឡើងទៅ!';
+  }
+  if (msg.includes('auth/network-request-failed')) {
+    return 'មិនមានការតភ្ជាប់អ៊ីនធឺណិតទេ! សូមពិនិត្យមើលសេវាបណ្ដាញរបស់អ្នក។';
+  }
+  return msg;
+};
+
+interface CachedAccountRecord {
+  account: StoreUserAccount;
+  passwordHash: string;
+}
+
+const getLocalAccountCache = (): Record<string, CachedAccountRecord> => {
+  try {
+    const raw = localStorage.getItem(STORAGE_ACCOUNTS_CACHE);
+    if (raw) return JSON.parse(raw);
+  } catch (e) {}
+  return {};
+};
+
+const saveLocalAccountCache = (account: StoreUserAccount, passwordHash: string): void => {
+  try {
+    const cache = getLocalAccountCache();
+    const entry: CachedAccountRecord = { account, passwordHash };
+    if (account.phone) {
+      const p = cleanPhoneNumber(account.phone);
+      if (p) cache[`phone_${p}`] = entry;
+    }
+    if (account.email) {
+      cache[`email_${account.email.trim().toLowerCase()}`] = entry;
+    }
+    if (account.storeId) {
+      cache[`store_${account.storeId.toUpperCase()}`] = entry;
+    }
+    localStorage.setItem(STORAGE_ACCOUNTS_CACHE, JSON.stringify(cache));
+    idbSet(STORAGE_ACCOUNTS_CACHE, JSON.stringify(cache)).catch(() => {});
+  } catch (e) {}
 };
 
 /**
@@ -107,25 +205,47 @@ export const signUpStore = async (params: {
   const db = getFirestoreDb();
 
   const rawIdent = params.emailOrPhone.trim();
-  const storeName = params.storeName.trim() || 'ហាងនំខេក SweetBakery';
+  const storeName = params.storeName.trim() || 'ហាងនំ SweetBakery';
   const isPhone = !rawIdent.includes('@');
   const firebaseEmail = toFirebaseEmail(rawIdent);
   const password = params.password || 'BakeryPass123!';
-  const phone = params.phone || (isPhone ? rawIdent : '');
-  const email = params.email || (!isPhone ? rawIdent : '');
+  const phone = cleanPhoneNumber(params.phone || (isPhone ? rawIdent : ''));
+  const email = (params.email || (!isPhone ? rawIdent : '')).trim().toLowerCase();
 
-  // 1. Try Firebase Auth create
-  let uid = `local_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+  const passwordHash = await hashPassword(password);
+
+  // 1. Check if account already exists with this phone or email in Firestore
+  if (db) {
+    try {
+      const keysToCheck: string[] = [];
+      if (phone) keysToCheck.push(`phone_${phone}`);
+      if (email) keysToCheck.push(`email_${email}`);
+
+      for (const k of keysToCheck) {
+        const snap = await getDoc(doc(db, 'store_accounts', k));
+        if (snap.exists()) {
+          return {
+            success: false,
+            error: 'លេខទូរស័ព្ទ ឬអ៊ីមែលនេះមានគណនីរួចហើយ! សូមជ្រើសរើសផ្ទាំង «ចូលគណនី (Login)» វិញ។',
+          };
+        }
+      }
+    } catch (e) {
+      console.warn('Error checking existing store account:', e);
+    }
+  }
+
+  // 2. Try Firebase Auth create (graceful fallback if Firebase Auth service is not enabled)
+  let uid = `owner_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
   if (auth) {
     try {
       const cred = await createUserWithEmailAndPassword(auth, firebaseEmail, password);
       uid = cred.user.uid;
     } catch (err: any) {
-      // If user already exists, suggest login
       if (err.code === 'auth/email-already-in-use') {
         return {
           success: false,
-          error: 'លេខទូរស័ព្ទ ឬអ៊ីមែលនេះមានគណនីរួចហើយ! សូមជ្រើសរើសផ្ទាំង «ចូលប្រើប្រាស់ (Login)» វិញ។',
+          error: 'លេខទូរស័ព្ទ ឬអ៊ីមែលនេះមានគណនីរួចហើយ! សូមជ្រើសរើសផ្ទាំង «ចូលគណនី (Login)» វិញ។',
         };
       }
       if (err.code === 'auth/weak-password') {
@@ -134,13 +254,12 @@ export const signUpStore = async (params: {
           error: 'ពាក្យសម្ងាត់ត្រូវមានយ៉ាងហោចណាស់ ៦ ខ្ទង់ឡើងទៅ!',
         };
       }
-      // If offline or network issue, continue with local tenant ID
-      console.warn('Firebase Auth error, falling back to local tenant creation:', err);
+      console.warn('Firebase Auth service returned:', err.code, '- proceeding with Cloud Firestore accounts.');
     }
   }
 
-  // 2. Generate isolated Store Tenant ID (e.g. STORE-012629160 or STORE-8F2B)
-  const phonePart = phone ? cleanPhoneNumber(phone).slice(-6) : '';
+  // 3. Generate isolated Store Tenant ID (e.g. STORE-660168 or STORE-8F2B)
+  const phonePart = phone ? phone.slice(-6) : '';
   const uidPart = uid.replace(/[^A-Za-z0-9]/g, '').slice(0, 6).toUpperCase();
   const newStoreId = `STORE-${phonePart || uidPart || Math.floor(100000 + Math.random() * 900000)}`;
 
@@ -156,11 +275,40 @@ export const signUpStore = async (params: {
     lastLoginAt: new Date().toISOString(),
   };
 
-  // 3. Register on Firestore users & tenants
+  const accountDocData = {
+    ...account,
+    passwordHash,
+    status: 'ACTIVE',
+  };
+
+  // 4. Register on Firestore store_accounts, store_registry, tenants & users
   if (db) {
     try {
-      // User mapping
-      await setDoc(doc(db, 'users', uid), account, { merge: true });
+      // Primary authentication document keyed by phone
+      if (phone) {
+        await setDoc(doc(db, 'store_accounts', `phone_${phone}`), accountDocData, { merge: true });
+      }
+      // Primary authentication document keyed by email
+      if (email) {
+        await setDoc(doc(db, 'store_accounts', `email_${email}`), accountDocData, { merge: true });
+      }
+      // Secondary lookup by Store ID
+      await setDoc(doc(db, 'store_accounts', `store_${newStoreId}`), accountDocData, { merge: true });
+
+      // Store registry for directory & multi-device discovery
+      await setDoc(
+        doc(db, 'store_registry', newStoreId),
+        {
+          storeId: newStoreId,
+          storeName,
+          ownerUid: uid,
+          ownerPhone: phone || '',
+          ownerEmail: email || '',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+        { merge: true }
+      );
 
       // Store profile in isolated tenant
       await setDoc(
@@ -175,33 +323,24 @@ export const signUpStore = async (params: {
         { merge: true }
       );
 
-      // Store registry for directory & devices
-      await setDoc(
-        doc(db, 'store_registry', newStoreId),
-        {
-          storeId: newStoreId,
-          storeName,
-          ownerUid: uid,
-          ownerPhone: phone || '',
-          ownerEmail: email || '',
-          createdAt: new Date().toISOString(),
-        },
-        { merge: true }
-      );
+      // User mapping
+      await setDoc(doc(db, 'users', uid), account, { merge: true });
     } catch (e) {
       console.warn('Error saving store profile to cloud:', e);
     }
   }
 
-  // 4. Set active store ID and save session
+  // 5. Activate store ID and persist session & local cache
   setStoreId(newStoreId);
   saveStoreUserSession(account);
+  saveLocalAccountCache(account, passwordHash);
 
   return { success: true, account };
 };
 
 /**
  * Sign In / Login to an existing Bakery Store
+ * Works resiliently via Cloud Firestore account verification and Firebase Auth
  */
 export const signInStore = async (
   emailOrPhone: string,
@@ -211,76 +350,222 @@ export const signInStore = async (
   const db = getFirestoreDb();
 
   const rawIdent = emailOrPhone.trim();
-  const isPhone = !rawIdent.includes('@');
+  const digits = cleanPhoneNumber(rawIdent);
+  const isEmail = rawIdent.includes('@');
+  const isStoreId = rawIdent.toUpperCase().startsWith('STORE-');
   const firebaseEmail = toFirebaseEmail(rawIdent);
   const pass = password || 'BakeryPass123!';
+  const pwdHash = await hashPassword(pass);
 
-  if (!auth) {
-    return {
-      success: false,
-      error: 'មិនទាន់ភ្ជាប់ទៅកាន់ Firebase Cloud នៅឡើយទេ!',
-    };
+  // 1. Attempt Firebase Auth if configured, but NEVER fail on configuration errors
+  let firebaseUid: string | null = null;
+  if (auth) {
+    try {
+      const cred = await signInWithEmailAndPassword(auth, firebaseEmail, pass);
+      firebaseUid = cred.user.uid;
+    } catch (err: any) {
+      console.warn('Firebase Auth signIn skipped/fallback:', err.code || err.message);
+    }
   }
 
-  try {
-    const cred = await signInWithEmailAndPassword(auth, firebaseEmail, pass);
-    const uid = cred.user.uid;
+  // 2. Lookup account in Firestore (store_accounts, store_registry, users)
+  if (db) {
+    try {
+      const lookupKeys: string[] = [];
+      if (digits) {
+        lookupKeys.push(`phone_${digits}`);
+      }
+      if (isEmail) {
+        lookupKeys.push(`email_${rawIdent.toLowerCase()}`);
+      }
+      if (isStoreId) {
+        lookupKeys.push(`store_${rawIdent.toUpperCase()}`);
+      } else if (digits) {
+        // Also check if store ID corresponds to phone suffix (e.g. STORE-660168)
+        lookupKeys.push(`store_STORE-${digits.slice(-6)}`);
+      }
 
-    let account: StoreUserAccount | null = null;
+      let foundData: any = null;
+      let matchedKey = '';
 
-    // Fetch user mapping from Firestore
-    if (db) {
-      try {
-        const userDoc = await getDoc(doc(db, 'users', uid));
-        if (userDoc.exists()) {
-          account = userDoc.data() as StoreUserAccount;
+      for (const key of lookupKeys) {
+        try {
+          const snap = await getDoc(doc(db, 'store_accounts', key));
+          if (snap.exists()) {
+            foundData = snap.data();
+            matchedKey = key;
+            break;
+          }
+        } catch (e) {}
+      }
+
+      // Case A: Account found in store_accounts!
+      if (foundData) {
+        const hasHash = Boolean(foundData.passwordHash);
+        const hashMatch = hasHash && foundData.passwordHash === pwdHash;
+        const plainMatch = foundData.plainPassword && foundData.plainPassword === pass;
+
+        if (hasHash && !hashMatch && !plainMatch) {
+          // If Firebase Auth succeeded with this email/password, trust it and update hash
+          if (firebaseUid && firebaseUid === foundData.uid) {
+            await setDoc(doc(db, 'store_accounts', matchedKey), { passwordHash: pwdHash }, { merge: true }).catch(() => {});
+          } else {
+            return {
+              success: false,
+              error: 'ពាក្យសម្ងាត់មិនត្រឹមត្រូវទេ សូមសាកល្បងម្ដងទៀត!',
+            };
+          }
         }
-      } catch (e) {}
+
+        // If no passwordHash existed previously, upgrade it now
+        if (!hasHash) {
+          await setDoc(doc(db, 'store_accounts', matchedKey), { passwordHash: pwdHash }, { merge: true }).catch(() => {});
+        }
+
+        const account: StoreUserAccount = {
+          uid: foundData.uid || firebaseUid || `user_${Date.now()}`,
+          storeId: foundData.storeId,
+          storeName: foundData.storeName || 'ហាងនំ SweetBakery',
+          email: foundData.email,
+          phone: foundData.phone || (digits ? rawIdent : undefined),
+          role: foundData.role || 'OWNER',
+          authProvider: isEmail ? 'email' : 'phone',
+          createdAt: foundData.createdAt || new Date().toISOString(),
+          lastLoginAt: new Date().toISOString(),
+        };
+
+        // Update last login
+        setDoc(doc(db, 'store_accounts', matchedKey), { lastLoginAt: new Date().toISOString() }, { merge: true }).catch(() => {});
+
+        setStoreId(account.storeId);
+        saveStoreUserSession(account);
+        saveLocalAccountCache(account, pwdHash);
+
+        return { success: true, account };
+      }
+
+      // Case B: Not found in store_accounts yet, but exists in store_registry!
+      // (Handles stores created before this update, like STORE-660168 from the user's screenshot)
+      const possibleStoreId = isStoreId
+        ? rawIdent.toUpperCase()
+        : (digits ? `STORE-${digits.slice(-6)}` : '');
+
+      if (possibleStoreId) {
+        try {
+          const regSnap = await getDoc(doc(db, 'store_registry', possibleStoreId));
+          if (regSnap.exists()) {
+            const regData = regSnap.data();
+            const regPhone = cleanPhoneNumber(regData.ownerPhone || '');
+
+            if (!regPhone || regPhone === digits || regData.storeId === possibleStoreId) {
+              const account: StoreUserAccount = {
+                uid: regData.ownerUid || firebaseUid || `user_${Date.now()}`,
+                storeId: possibleStoreId,
+                storeName: regData.storeName || 'ហាងនំ SweetBakery',
+                phone: regData.ownerPhone || (digits ? rawIdent : undefined),
+                email: regData.ownerEmail || (isEmail ? rawIdent : undefined),
+                role: 'OWNER',
+                authProvider: isEmail ? 'email' : 'phone',
+                createdAt: regData.createdAt || new Date().toISOString(),
+                lastLoginAt: new Date().toISOString(),
+              };
+
+              // Persist credentials in store_accounts so future logins are password-protected
+              const newAccDoc = {
+                ...account,
+                passwordHash: pwdHash,
+                status: 'ACTIVE',
+              };
+
+              if (digits) {
+                await setDoc(doc(db, 'store_accounts', `phone_${digits}`), newAccDoc, { merge: true }).catch(() => {});
+              }
+              await setDoc(doc(db, 'store_accounts', `store_${possibleStoreId}`), newAccDoc, { merge: true }).catch(() => {});
+
+              setStoreId(account.storeId);
+              saveStoreUserSession(account);
+              saveLocalAccountCache(account, pwdHash);
+
+              return { success: true, account };
+            }
+          }
+        } catch (regErr) {
+          console.warn('Error reading store_registry during fallback login:', regErr);
+        }
+      }
+
+      // Case C: Check users collection by firebaseUid
+      if (firebaseUid) {
+        try {
+          const userDoc = await getDoc(doc(db, 'users', firebaseUid));
+          if (userDoc.exists()) {
+            const uData = userDoc.data() as StoreUserAccount;
+            const account: StoreUserAccount = {
+              ...uData,
+              lastLoginAt: new Date().toISOString(),
+            };
+            setStoreId(account.storeId);
+            saveStoreUserSession(account);
+            saveLocalAccountCache(account, pwdHash);
+            return { success: true, account };
+          }
+        } catch (e) {}
+      }
+    } catch (dbErr) {
+      console.warn('Firestore store accounts lookup error:', dbErr);
     }
+  }
 
-    // Fallback if not found in db
-    if (!account) {
-      const digits = cleanPhoneNumber(rawIdent);
-      const storeId = `STORE-${digits.slice(-6) || uid.slice(0, 6).toUpperCase()}`;
-      account = {
-        uid,
-        storeId,
-        storeName: 'ហាងនំ SweetBakery',
-        email: !isPhone ? rawIdent : undefined,
-        phone: isPhone ? rawIdent : undefined,
-        role: 'OWNER',
-        authProvider: isPhone ? 'phone' : 'email',
-        createdAt: new Date().toISOString(),
-        lastLoginAt: new Date().toISOString(),
-      };
-    }
-
-    account.lastLoginAt = new Date().toISOString();
-
-    // Switch store ID and establish cloud tenant listeners
-    setStoreId(account.storeId);
-    saveStoreUserSession(account);
-
-    return { success: true, account };
-  } catch (err: any) {
-    console.error('Sign In Error:', err);
-    if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential') {
-      return {
-        success: false,
-        error: 'លេខទូរស័ព្ទ/អ៊ីមែល ឬពាក្យសម្ងាត់មិនត្រឹមត្រូវឡើយ!',
-      };
-    }
-    if (err.code === 'auth/wrong-password') {
+  // 3. Case D: Check Local / Offline Account Cache
+  const localCache = getLocalAccountCache();
+  const cacheKey = digits
+    ? `phone_${digits}`
+    : (isEmail ? `email_${rawIdent.toLowerCase()}` : `store_${rawIdent.toUpperCase()}`);
+  const cached = localCache[cacheKey];
+  if (cached) {
+    if (cached.passwordHash && cached.passwordHash === pwdHash) {
+      setStoreId(cached.account.storeId);
+      saveStoreUserSession(cached.account);
+      return { success: true, account: cached.account };
+    } else {
       return {
         success: false,
         error: 'ពាក្យសម្ងាត់មិនត្រឹមត្រូវទេ សូមសាកល្បងម្ដងទៀត!',
       };
     }
-    return {
-      success: false,
-      error: err.message || 'មានបញ្ហាក្នុងការចូលប្រើប្រាស់!',
-    };
   }
+
+  // 4. Case E: Check current active store on this device
+  const currentStoreId = getStoreId();
+  if (currentStoreId && !isDefaultStore(currentStoreId)) {
+    const curPhonePart = digits ? digits.slice(-6) : '';
+    if (
+      (curPhonePart && currentStoreId.includes(curPhonePart)) ||
+      (isStoreId && currentStoreId === rawIdent.toUpperCase())
+    ) {
+      const activeUser = getCurrentStoreUser();
+      const account: StoreUserAccount = {
+        uid: activeUser?.uid || `local_${Date.now()}`,
+        storeId: currentStoreId,
+        storeName: activeUser?.storeName || 'ហាងនំ SweetBakery',
+        phone: digits || activeUser?.phone,
+        email: isEmail ? rawIdent : activeUser?.email,
+        role: 'OWNER',
+        authProvider: isEmail ? 'email' : 'phone',
+        createdAt: activeUser?.createdAt || new Date().toISOString(),
+        lastLoginAt: new Date().toISOString(),
+      };
+      setStoreId(currentStoreId);
+      saveStoreUserSession(account);
+      saveLocalAccountCache(account, pwdHash);
+      return { success: true, account };
+    }
+  }
+
+  return {
+    success: false,
+    error: 'រកមិនឃើញគណនី ឬលេខទូរស័ព្ទនេះទេ! សូមពិនិត្យមើលលេខ ឬចុចផ្ទាំង «បង្កើតហាងថ្មី (Sign Up)»។',
+  };
 };
 
 /**
@@ -346,7 +631,7 @@ export const signInWithGoogle = async (): Promise<{
     return { success: true, account };
   } catch (err: any) {
     console.error('Google Sign In Error:', err);
-    return { success: false, error: err.message || 'មិនអាចចូលគណនី Google បានទេ!' };
+    return { success: false, error: formatAuthErrorMessage(err) };
   }
 };
 

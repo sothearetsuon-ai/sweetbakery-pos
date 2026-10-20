@@ -32,6 +32,7 @@ import {
   getCurrentStoreUser,
   subscribeStoreUser,
   StoreUserAccount,
+  formatAuthErrorMessage,
 } from '../../services/authService';
 import { initialStaffMembers } from '../../data/mockData';
 import { StaffMember } from '../../types';
@@ -193,10 +194,10 @@ export const RealStoreAuthModal: React.FC<RealStoreAuthModalProps> = ({
         }, 800);
       } else {
         soundFx.playPop();
-        setFormError(res.error || 'មានបញ្ហាក្នុងការចូលប្រើប្រាស់');
+        setFormError(formatAuthErrorMessage(res.error || 'មានបញ្ហាក្នុងការចូលប្រើប្រាស់'));
       }
     } catch (err: any) {
-      setFormError(err.message || 'កំហុសបច្ចេកទេស');
+      setFormError(formatAuthErrorMessage(err.message || 'កំហុសបច្ចេកទេស'));
     } finally {
       setIsLoading(false);
     }
@@ -236,10 +237,10 @@ export const RealStoreAuthModal: React.FC<RealStoreAuthModalProps> = ({
         }, 1000);
       } else {
         soundFx.playPop();
-        setFormError(res.error || 'មិនអាចបង្កើតហាងថ្មីបានទេ');
+        setFormError(formatAuthErrorMessage(res.error || 'មិនអាចបង្កើតហាងថ្មីបានទេ'));
       }
     } catch (err: any) {
-      setFormError(err.message || 'កំហុសបច្ចេកទេស');
+      setFormError(formatAuthErrorMessage(err.message || 'កំហុសបច្ចេកទេស'));
     } finally {
       setIsLoading(false);
     }
@@ -259,10 +260,10 @@ export const RealStoreAuthModal: React.FC<RealStoreAuthModalProps> = ({
         }, 800);
       } else {
         soundFx.playPop();
-        setFormError(res.error || 'មិនអាចចូលដោយ Google បានទេ');
+        setFormError(formatAuthErrorMessage(res.error || 'មិនអាចចូលដោយ Google បានទេ'));
       }
     } catch (err: any) {
-      setFormError(err.message || 'កំហុសបច្ចេកទេស');
+      setFormError(formatAuthErrorMessage(err.message || 'កំហុសបច្ចេកទេស'));
     } finally {
       setIsLoading(false);
     }
@@ -288,10 +289,10 @@ export const RealStoreAuthModal: React.FC<RealStoreAuthModalProps> = ({
         }, 800);
       } else {
         soundFx.playPop();
-        setFormError(res.error || 'មិនអាចភ្ជាប់ Store ID បានឡើយ');
+        setFormError(formatAuthErrorMessage(res.error || 'មិនអាចភ្ជាប់ Store ID បានឡើយ'));
       }
     } catch (err: any) {
-      setFormError(err.message || 'កំហុសបច្ចេកទេស');
+      setFormError(formatAuthErrorMessage(err.message || 'កំហុសបច្ចេកទេស'));
     } finally {
       setIsLoading(false);
     }
