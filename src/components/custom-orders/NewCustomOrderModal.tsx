@@ -216,10 +216,44 @@ export const NewCustomOrderModal: React.FC<NewCustomOrderModalProps> = ({ isOpen
   const [isPartyModalOpen, setIsPartyModalOpen] = useState(false);
   const [isAddingNewAddon, setIsAddingNewAddon] = useState(false);
   const [newAddonName, setNewAddonName] = useState('');
+  const [newAddonPriceUsd, setNewAddonPriceUsd] = useState('1.25');
   const [newAddonPriceKhr, setNewAddonPriceKhr] = useState('5000');
   const [editingAddon, setEditingAddon] = useState<PartyAddon | null>(null);
   const [editAddonName, setEditAddonName] = useState('');
+  const [editAddonPriceUsd, setEditAddonPriceUsd] = useState('');
   const [editAddonPriceKhr, setEditAddonPriceKhr] = useState('');
+
+  const handleNewAddonUsdChange = (val: string) => {
+    setNewAddonPriceUsd(val);
+    const num = parseFloat(val);
+    if (!isNaN(num)) {
+      setNewAddonPriceKhr(String(roundKhr(num * exchangeRate)));
+    }
+  };
+
+  const handleNewAddonKhrChange = (val: string) => {
+    setNewAddonPriceKhr(val);
+    const num = parseFloat(val);
+    if (!isNaN(num)) {
+      setNewAddonPriceUsd((num / exchangeRate).toFixed(2));
+    }
+  };
+
+  const handleEditAddonUsdChange = (val: string) => {
+    setEditAddonPriceUsd(val);
+    const num = parseFloat(val);
+    if (!isNaN(num)) {
+      setEditAddonPriceKhr(String(roundKhr(num * exchangeRate)));
+    }
+  };
+
+  const handleEditAddonKhrChange = (val: string) => {
+    setEditAddonPriceKhr(val);
+    const num = parseFloat(val);
+    if (!isNaN(num)) {
+      setEditAddonPriceUsd((num / exchangeRate).toFixed(2));
+    }
+  };
 
   // Add new custom flavor state
   const [isAddingNewFlavor, setIsAddingNewFlavor] = useState(false);
@@ -338,8 +372,9 @@ export const NewCustomOrderModal: React.FC<NewCustomOrderModalProps> = ({ isOpen
     const trimmed = newAddonName.trim();
     if (!trimmed) return;
     soundFx.playSuccess();
-    const priceKhr = parseInt(newAddonPriceKhr, 10) || 0;
-    const created = addPartyAddon(trimmed, priceKhr);
+    const usd = parseFloat(newAddonPriceUsd) || 0;
+    const priceKhr = parseInt(newAddonPriceKhr, 10) || roundKhr(usd * exchangeRate);
+    const created = addPartyAddon(trimmed, priceKhr, usd);
     if (created && created.id) {
       // Auto-select newly created addon for this order
       setSelectedAddonQuantities((prev) => ({
@@ -348,6 +383,7 @@ export const NewCustomOrderModal: React.FC<NewCustomOrderModalProps> = ({ isOpen
       }));
     }
     setNewAddonName('');
+    setNewAddonPriceUsd('1.25');
     setNewAddonPriceKhr('5000');
     setIsAddingNewAddon(false);
   };
@@ -361,8 +397,9 @@ export const NewCustomOrderModal: React.FC<NewCustomOrderModalProps> = ({ isOpen
     const trimmed = editAddonName.trim();
     if (!trimmed) return;
     soundFx.playSuccess();
-    const priceKhr = parseInt(editAddonPriceKhr, 10) || 0;
-    updatePartyAddon(editingAddon.id, trimmed, priceKhr);
+    const usd = parseFloat(editAddonPriceUsd) || 0;
+    const priceKhr = parseInt(editAddonPriceKhr, 10) || roundKhr(usd * exchangeRate);
+    updatePartyAddon(editingAddon.id, trimmed, priceKhr, usd);
     setEditingAddon(null);
   };
 
@@ -1333,7 +1370,7 @@ export const NewCustomOrderModal: React.FC<NewCustomOrderModalProps> = ({ isOpen
                         <X className="w-3.5 h-3.5" />
                       </button>
                     </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                       <input
                         type="text"
                         autoFocus
@@ -1347,16 +1384,16 @@ export const NewCustomOrderModal: React.FC<NewCustomOrderModalProps> = ({ isOpen
                             handleAddNewAddon(e);
                           }
                         }}
-                        className="px-3 py-1.5 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500/20 font-medium"
+                        className="px-3 py-1.5 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500/20 font-medium sm:col-span-1"
                       />
                       <div className="relative">
                         <input
                           type="number"
-                          step="any"
+                          step="0.05"
                           min="0"
-                          placeholder="តម្លៃជាលុយរៀល (៛)"
-                          value={newAddonPriceKhr}
-                          onChange={(e) => setNewAddonPriceKhr(e.target.value)}
+                          placeholder="តម្លៃ ($ USD)"
+                          value={newAddonPriceUsd}
+                          onChange={(e) => handleNewAddonUsdChange(e.target.value)}
                           onKeyDown={(e) => {
                             if (e.key === 'Enter') {
                               e.preventDefault();
@@ -1364,7 +1401,26 @@ export const NewCustomOrderModal: React.FC<NewCustomOrderModalProps> = ({ isOpen
                               handleAddNewAddon(e);
                             }
                           }}
-                          className="w-full px-3 py-1.5 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500/20 font-bold"
+                          className="w-full pl-6 pr-2 py-1.5 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500/20 font-bold text-pink-600"
+                        />
+                        <DollarSign className="w-3.5 h-3.5 absolute left-2 top-1/2 -translate-y-1/2 text-slate-400" />
+                      </div>
+                      <div className="relative">
+                        <input
+                          type="number"
+                          step="100"
+                          min="0"
+                          placeholder="តម្លៃជាលុយរៀល (៛)"
+                          value={newAddonPriceKhr}
+                          onChange={(e) => handleNewAddonKhrChange(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              handleAddNewAddon(e);
+                            }
+                          }}
+                          className="w-full px-3 pr-7 py-1.5 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500/20 font-bold text-slate-800"
                         />
                         <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-[10px]">
                           ៛
@@ -1403,7 +1459,7 @@ export const NewCustomOrderModal: React.FC<NewCustomOrderModalProps> = ({ isOpen
                         <X className="w-3.5 h-3.5" />
                       </button>
                     </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                       <input
                         type="text"
                         placeholder="ឈ្មោះទំនិញ"
@@ -1416,16 +1472,16 @@ export const NewCustomOrderModal: React.FC<NewCustomOrderModalProps> = ({ isOpen
                             handleSaveEditAddon(e);
                           }
                         }}
-                        className="px-3 py-1.5 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500 font-medium"
+                        className="px-3 py-1.5 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500 font-medium sm:col-span-1"
                       />
                       <div className="relative">
                         <input
                           type="number"
-                          step="any"
+                          step="0.05"
                           min="0"
-                          placeholder="តម្លៃ (៛ KHR)"
-                          value={editAddonPriceKhr}
-                          onChange={(e) => setEditAddonPriceKhr(e.target.value)}
+                          placeholder="តម្លៃ ($ USD)"
+                          value={editAddonPriceUsd}
+                          onChange={(e) => handleEditAddonUsdChange(e.target.value)}
                           onKeyDown={(e) => {
                             if (e.key === 'Enter') {
                               e.preventDefault();
@@ -1433,7 +1489,26 @@ export const NewCustomOrderModal: React.FC<NewCustomOrderModalProps> = ({ isOpen
                               handleSaveEditAddon(e);
                             }
                           }}
-                          className="w-full px-3 py-1.5 pr-7 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500 font-bold text-pink-600"
+                          className="w-full pl-6 pr-2 py-1.5 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500 font-bold text-pink-600"
+                        />
+                        <DollarSign className="w-3.5 h-3.5 absolute left-2 top-1/2 -translate-y-1/2 text-slate-400" />
+                      </div>
+                      <div className="relative">
+                        <input
+                          type="number"
+                          step="100"
+                          min="0"
+                          placeholder="តម្លៃ (៛ KHR)"
+                          value={editAddonPriceKhr}
+                          onChange={(e) => handleEditAddonKhrChange(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              handleSaveEditAddon(e);
+                            }
+                          }}
+                          className="w-full px-3 pr-7 py-1.5 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500 font-bold text-slate-800"
                         />
                         <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 font-bold">
                           ៛
@@ -1497,6 +1572,8 @@ export const NewCustomOrderModal: React.FC<NewCustomOrderModalProps> = ({ isOpen
                                 soundFx.playPop();
                                 setEditingAddon(addon);
                                 setEditAddonName(addon.nameKh);
+                                const usdVal = addon.priceUsd ?? Number((addonKhr / exchangeRate).toFixed(2));
+                                setEditAddonPriceUsd(String(usdVal));
                                 setEditAddonPriceKhr(String(addonKhr));
                                 setIsAddingNewAddon(false);
                               }}
@@ -1521,10 +1598,15 @@ export const NewCustomOrderModal: React.FC<NewCustomOrderModalProps> = ({ isOpen
 
                         <div className="flex items-end justify-between gap-1 pt-0.5">
                           <div className={`text-[10px] ${isSelected ? 'text-pink-100 font-medium' : 'text-slate-500'}`}>
-                            <span>+{addonKhr.toLocaleString()} ៛</span>
+                            <div className="flex items-center gap-1 flex-wrap">
+                              <span className="font-bold">+{addonKhr.toLocaleString()} ៛</span>
+                              <span className={isSelected ? 'text-white/80 text-[9px]' : 'text-pink-600 text-[9px] font-bold'}>
+                                (+${(addon.priceUsd ?? (addonKhr / exchangeRate)).toFixed(2)})
+                              </span>
+                            </div>
                             {qty > 1 && (
-                              <div className="font-black text-white text-[10px]">
-                                = {(addonKhr * qty).toLocaleString()} ៛
+                              <div className="font-black text-white text-[10px] mt-0.5">
+                                = {(addonKhr * qty).toLocaleString()} ៛ (+${((addon.priceUsd ?? (addonKhr / exchangeRate)) * qty).toFixed(2)})
                               </div>
                             )}
                           </div>

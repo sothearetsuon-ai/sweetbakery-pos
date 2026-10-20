@@ -222,21 +222,57 @@ export const defaultStoreInfo: StoreInfo = {
 };
 
 export const initialPartyAddons: PartyAddon[] = [
-  { id: 'hat', nameKh: '🎩 មួកខួបកំណើត (Pack 5)', priceUsd: 2.0, priceKhr: 8000, stockQty: 50, minAlertStock: 10 },
-  { id: 'num-candle', nameKh: '🕯️ ទៀនលេខ 0-9 ពណ៌មាស', priceUsd: 0.75, priceKhr: 3000, stockQty: 100, minAlertStock: 20 },
-  { id: 'sparkler', nameKh: '🎆 ទៀនកាំជ្រួចភ្លើង (Fountain)', priceUsd: 1.5, priceKhr: 6000, stockQty: 60, minAlertStock: 15 },
-  { id: 'spray', nameKh: '❄️ ស្ព្រាយបាញ់ព្រិល/ខ្សែពណ៌', priceUsd: 1.5, priceKhr: 6000, stockQty: 40, minAlertStock: 10 },
-  { id: 'topper', nameKh: '✨ ស្លាក Happy Birthday Acrylic', priceUsd: 1.2, priceKhr: 4800, stockQty: 80, minAlertStock: 15 },
+  { id: 'hat', nameKh: '🎩 មួកខួបកំណើត (Pack 5)', priceUsd: 0.63, priceKhr: 2500, stockQty: 50, minAlertStock: 10 },
+  { id: 'num-candle', nameKh: '🕯️ ទៀនលេខ 0-9 ពណ៌មាស', priceUsd: 1.0, priceKhr: 4000, stockQty: 100, minAlertStock: 20 },
+  { id: 'sparkler', nameKh: '🎆 ទៀនកាំជ្រួចភ្លើង (Fountain)', priceUsd: 0.5, priceKhr: 2000, stockQty: 60, minAlertStock: 15 },
+  { id: 'spray', nameKh: '❄️ ស្ព្រាយបាញ់ព្រិល/ខ្សែពណ៌', priceUsd: 0.63, priceKhr: 2500, stockQty: 40, minAlertStock: 10 },
+  { id: 'topper', nameKh: '✨ ស្លាក Happy Birthday Acrylic', priceUsd: 1.2, priceKhr: 5000, stockQty: 80, minAlertStock: 15 },
   { id: 'card', nameKh: '💌 កាតជូនពរប្រណិត', priceUsd: 1.0, priceKhr: 4000, stockQty: 120, minAlertStock: 25 },
+  { id: 'money-box', nameKh: 'មូលដ្ឋានដុល្លារខ្លី១កេស', priceUsd: 1.25, priceKhr: 5000, stockQty: 50, minAlertStock: 10 },
+  { id: 'money-gun', nameKh: 'បាញ់លុយ', priceUsd: 1.25, priceKhr: 5000, stockQty: 50, minAlertStock: 10 },
 ];
 
 export const ensurePartyAddonDefaults = (list: any[]): PartyAddon[] => {
-  if (!Array.isArray(list)) return initialPartyAddons;
-  return list.map((item) => ({
-    ...item,
-    stockQty: typeof item.stockQty === 'number' && !isNaN(item.stockQty) ? item.stockQty : 50,
-    minAlertStock: typeof item.minAlertStock === 'number' && !isNaN(item.minAlertStock) ? item.minAlertStock : 10,
-  }));
+  if (!Array.isArray(list) || list.length === 0) return initialPartyAddons;
+  const existingIds = new Set(list.map((item) => item.id));
+  const merged: PartyAddon[] = list.map((item) => {
+    let priceUsd = item.priceUsd;
+    let priceKhr = item.priceKhr;
+
+    // Migrate any older initial template prices to user's updated standard pricing
+    if (item.id === 'hat' && item.priceUsd === 2.0) {
+      priceUsd = 0.63;
+      priceKhr = 2500;
+    } else if (item.id === 'num-candle' && item.priceUsd === 0.75) {
+      priceUsd = 1.0;
+      priceKhr = 4000;
+    } else if (item.id === 'sparkler' && item.priceUsd === 1.5) {
+      priceUsd = 0.5;
+      priceKhr = 2000;
+    } else if (item.id === 'spray' && item.priceUsd === 1.5) {
+      priceUsd = 0.63;
+      priceKhr = 2500;
+    } else if (item.id === 'topper' && item.priceKhr === 4800) {
+      priceKhr = 5000;
+    }
+
+    return {
+      ...item,
+      priceUsd: typeof priceUsd === 'number' && !isNaN(priceUsd) ? priceUsd : 1.0,
+      priceKhr: typeof priceKhr === 'number' && !isNaN(priceKhr) ? priceKhr : 4000,
+      stockQty: typeof item.stockQty === 'number' && !isNaN(item.stockQty) ? item.stockQty : 50,
+      minAlertStock: typeof item.minAlertStock === 'number' && !isNaN(item.minAlertStock) ? item.minAlertStock : 10,
+    };
+  });
+
+  // Ensure items from initialPartyAddons (like 'money-box' or 'money-gun') are added if missing
+  for (const initial of initialPartyAddons) {
+    if (!existingIds.has(initial.id) && !merged.some((m) => m.nameKh === initial.nameKh)) {
+      merged.push(initial);
+    }
+  }
+
+  return merged;
 };
 
 export const seedDemoDataIfMissing = () => {
@@ -503,6 +539,7 @@ interface BakeryContextType {
   updatePartyAddon: (id: string, nameKh: string, priceKhr: number, priceUsd?: number, stockQty?: number, minAlertStock?: number) => void;
   restockPartyAddon: (id: string, additionalStock: number) => void;
   deletePartyAddon: (id: string) => void;
+  restoreDefaultPartyAddons: () => void;
   deductPartyAddonsStockFromPastSales: (sinceDate?: string) => {
     totalSalesScanned: number;
     soldSummary: Record<string, number>;
@@ -3901,6 +3938,16 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     });
   };
 
+  const restoreDefaultPartyAddons = () => {
+    setPartyAddons(initialPartyAddons);
+    safeSetStorage('bakery_party_addons', JSON.stringify(initialPartyAddons));
+    if (globalIsDemoMode) {
+      try { localStorage.setItem('demo_bakery_party_addons', JSON.stringify(initialPartyAddons)); } catch (e) {}
+    }
+    saveToLanSync({ partyAddons: initialPartyAddons });
+    syncSaveDoc('settings', 'partyAddons', { items: initialPartyAddons, updatedAt: new Date().toISOString() });
+  };
+
   const deductPartyAddonsStockFromPastSales = (sinceDate: string = '2026-10-08') => {
     const pastSales = sales.filter((s) => {
       if (!s.createdAt) return false;
@@ -5802,6 +5849,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         updatePartyAddon,
         restockPartyAddon,
         deletePartyAddon,
+        restoreDefaultPartyAddons,
         deductPartyAddonsStockFromPastSales,
         cart,
         addToCart,

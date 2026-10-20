@@ -1353,6 +1353,7 @@ export const CustomerOrderPortal: React.FC<CustomerOrderPortalProps> = ({ onBack
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {availableAddons.map((addon) => {
                   const isChecked = selectedAddons.includes(addon.id);
+                  const priceKhr = addon.priceKhr || Math.round(addon.priceUsd * exchangeRate);
                   return (
                     <div
                       key={addon.id}
@@ -1362,24 +1363,29 @@ export const CustomerOrderPortal: React.FC<CustomerOrderPortalProps> = ({ onBack
                           isChecked ? prev.filter((id) => id !== addon.id) : [...prev, addon.id]
                         );
                       }}
-                      className={`p-3 rounded-2xl border transition-all cursor-pointer flex items-center justify-between ${
+                      className={`p-3 rounded-2xl border transition-all cursor-pointer flex items-center justify-between gap-2 ${
                         isChecked
                           ? 'bg-pink-50/80 border-pink-400 shadow-2xs'
                           : 'bg-white border-rose-100 hover:border-rose-200'
                       }`}
                     >
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 min-w-0">
                         <input
                           type="checkbox"
                           checked={isChecked}
                           onChange={() => {}}
-                          className="w-4 h-4 text-pink-600 rounded focus:ring-pink-500 cursor-pointer"
+                          className="w-4 h-4 text-pink-600 rounded focus:ring-pink-500 cursor-pointer shrink-0"
                         />
-                        <span className="text-xs font-bold text-slate-800">{addon.nameKh}</span>
+                        <span className="text-xs font-bold text-slate-800 truncate">{addon.nameKh}</span>
                       </div>
-                      <span className="text-xs font-black text-pink-600">
-                        +${addon.priceUsd.toFixed(2)}
-                      </span>
+                      <div className="text-right shrink-0">
+                        <span className="text-xs font-black text-pink-600 block">
+                          +${addon.priceUsd.toFixed(2)}
+                        </span>
+                        <span className="text-[10px] font-bold text-slate-400 block">
+                          +{priceKhr.toLocaleString()} ៛
+                        </span>
+                      </div>
                     </div>
                   );
                 })}

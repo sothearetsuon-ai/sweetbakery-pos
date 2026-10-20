@@ -52,6 +52,7 @@ import { NotificationSettingsTab } from './NotificationSettingsTab';
 import { AppUpdateTab } from './AppUpdateTab';
 import { CameraCaptureModal } from '../common/CameraCaptureModal';
 import { CakeFlavorsModal } from '../pos/CakeFlavorsModal';
+import { PartyAccessoriesModal } from '../pos/PartyAccessoriesModal';
 import { isSuperAdminAuthenticated } from '../../utils/superAdminAuth';
 import { getStoreId, setStoreId } from '../../services/firebase';
 
@@ -162,6 +163,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [isUploadingKhqr, setIsUploadingKhqr] = useState(false);
   const [cameraTarget, setCameraTarget] = useState<'logo' | 'khqr' | null>(null);
   const [isCakeFlavorsModalOpen, setIsCakeFlavorsModalOpen] = useState(false);
+  const [isPartyAccessoriesModalOpen, setIsPartyAccessoriesModalOpen] = useState(false);
 
   const isInitializedRef = useRef(false);
 
@@ -1213,9 +1215,38 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                           soundFx.playPop();
                           setIsCakeFlavorsModalOpen(true);
                         }}
-                        className="px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white rounded-xl text-xs font-black transition-all shadow-md shadow-purple-500/20 active:scale-95 flex items-center gap-1.5 cursor-pointer"
+                        className="px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white rounded-xl text-xs font-black transition-all shadow-md shadow-purple-500/20 active:scale-95 flex items-center gap-1.5 cursor-pointer shrink-0"
                       >
                         <span>បើកតារាងរសជាតិ</span>
+                        <ChevronRight className="w-4 h-4" />
+                      </button>
+                    </div>
+
+                    {/* Party Accessories Management Entry */}
+                    <div className="p-4 rounded-2xl bg-gradient-to-r from-amber-50/80 to-rose-50/80 border border-amber-200/80 flex items-center justify-between gap-3 shadow-2xs">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2.5 bg-gradient-to-tr from-amber-500 to-rose-500 text-white rounded-xl shadow-xs shrink-0">
+                          <Sparkles className="w-5 h-5 text-amber-100" />
+                        </div>
+                        <div>
+                          <h4 className="font-black text-xs sm:text-sm text-slate-800">
+                            🎉 គ្រឿងបន្ថែមសម្រាប់កម្មវិធី (Party Accessories)
+                          </h4>
+                          <p className="text-[11px] text-slate-500">
+                            គ្រប់គ្រង បន្ថែមមុខទំនិញថ្មី កែប្រែតម្លៃ ($ USD / ៛ KHR) និងគ្រប់គ្រងស្តុក
+                          </p>
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          soundFx.playPop();
+                          setIsPartyAccessoriesModalOpen(true);
+                        }}
+                        className="px-4 py-2 bg-gradient-to-r from-amber-500 to-rose-500 hover:from-amber-600 hover:to-rose-600 text-white rounded-xl text-xs font-black transition-all shadow-md shadow-amber-500/20 active:scale-95 flex items-center gap-1.5 cursor-pointer shrink-0"
+                      >
+                        <span>បើកតារាងគ្រឿងបន្ថែម</span>
                         <ChevronRight className="w-4 h-4" />
                       </button>
                     </div>
@@ -1634,6 +1665,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       <CakeFlavorsModal
         isOpen={isCakeFlavorsModalOpen}
         onClose={() => setIsCakeFlavorsModalOpen(false)}
+      />
+
+      {/* Party Accessories Management Modal */}
+      <PartyAccessoriesModal
+        isOpen={isPartyAccessoriesModalOpen}
+        onClose={() => setIsPartyAccessoriesModalOpen(false)}
       />
     </div>
   );

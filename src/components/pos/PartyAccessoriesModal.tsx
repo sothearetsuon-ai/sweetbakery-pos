@@ -39,6 +39,7 @@ export const PartyAccessoriesModal: React.FC<PartyAccessoriesModalProps> = ({
     updatePartyAddon,
     restockPartyAddon,
     deletePartyAddon,
+    restoreDefaultPartyAddons,
     deductPartyAddonsStockFromPastSales,
     sales,
     exchangeRate,
@@ -311,6 +312,22 @@ export const PartyAccessoriesModal: React.FC<PartyAccessoriesModalProps> = ({
                 type="button"
                 onClick={() => {
                   soundFx.playPop();
+                  if (window.confirm('តើបងពិតជាចង់កំណត់ទំនិញគ្រឿងបន្ថែមទាំង ៨ មុខស្តង់ដារលំនាំដើម ($0.63, $1.00, $0.50, $0.63, $1.20, $1.00, $1.25, $1.25) ឡើងវិញមែនទេ?')) {
+                    soundFx.playSuccess();
+                    restoreDefaultPartyAddons();
+                  }
+                }}
+                className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold flex items-center gap-1 transition-all cursor-pointer active:scale-95"
+                title="ស្តារទំនិញគ្រឿងបន្ថែមទាំង ៨ មុខស្តង់ដារលំនាំដើម"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-pink-600" />
+                <span className="hidden sm:inline">ស្តារ ៨ មុខដើម</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  soundFx.playPop();
                   setIsReconcileOpen((prev) => !prev);
                   if (!isReconcileOpen) {
                     setIsAddingNew(false);
@@ -325,7 +342,7 @@ export const PartyAccessoriesModal: React.FC<PartyAccessoriesModalProps> = ({
                 }`}
               >
                 <RotateCcw className="w-3.5 h-3.5" />
-                <span>{isReconcileOpen ? 'លាក់ផ្ទាំងកាត់ស្តុក' : '🔄 កាត់ស្តុកពីការលក់កន្លងមក'}</span>
+                <span>{isReconcileOpen ? 'លាក់ផ្ទាំងកាត់ស្តុក' : '🔄 កាត់ស្តុកពីការលក់'}</span>
               </button>
 
               {!isAddingNew && (
