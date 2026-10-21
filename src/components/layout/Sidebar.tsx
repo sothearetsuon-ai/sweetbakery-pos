@@ -727,7 +727,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               ? 'bg-amber-300 text-slate-900 border-amber-400 font-mono shadow-xs'
               : 'bg-indigo-200/80 text-indigo-700 border-indigo-300 font-mono'
           }`}>
-            {availableUpdate?.hasUpdate ? `v${availableUpdate.latestVersion} NEW` : `v${availableUpdate?.latestVersion || '1.6.6'}`}
+            {availableUpdate?.hasUpdate ? `v${availableUpdate.latestVersion} NEW` : `v${availableUpdate?.latestVersion || '1.6.7'}`}
           </span>
         </button>
 

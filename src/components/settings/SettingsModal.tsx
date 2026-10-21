@@ -117,15 +117,32 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     return initialTab;
   });
 
+  const wasOpenRef = useRef(false);
+  const prevInitialTabRef = useRef(initialTab);
+
   useEffect(() => {
-    if (isOpen && initialTab) {
-      if (!isTabAllowedForCurrentStaff(initialTab)) {
-        setActiveTab('store');
-      } else {
-        setActiveTab(initialTab);
+    if (isOpen) {
+      if (!wasOpenRef.current || prevInitialTabRef.current !== initialTab) {
+        wasOpenRef.current = true;
+        prevInitialTabRef.current = initialTab;
+        if (initialTab && isTabAllowedForCurrentStaff(initialTab)) {
+          setActiveTab(initialTab);
+        } else {
+          setActiveTab('store');
+        }
       }
+    } else {
+      wasOpenRef.current = false;
+      prevInitialTabRef.current = initialTab;
     }
-  }, [isOpen, initialTab, isDemoMode, currentStaff]);
+  }, [isOpen, initialTab]);
+
+  // If role/permissions change while modal is open, ensure activeTab is still allowed
+  useEffect(() => {
+    if (isOpen && !isTabAllowedForCurrentStaff(activeTab)) {
+      setActiveTab('store');
+    }
+  }, [isOpen, isDemoMode, currentStaff, activeTab]);
 
   const [rateInput, setRateInput] = useState(exchangeRate.toString());
   const [storeIdInput, setStoreIdInput] = useState(() => getStoreId());
@@ -462,7 +479,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   });
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-50 bg-slate-900/70 sm:backdrop-blur-sm flex items-center justify-center p-2.5 sm:p-4">
       <div className="bg-white rounded-3xl max-w-4xl w-full shadow-2xl border border-rose-100 overflow-hidden flex flex-col max-h-[92vh]">
         {/* Header */}
         <div className="px-6 py-4 border-b border-rose-100 flex items-center justify-between bg-gradient-to-r from-rose-50/80 via-pink-50/60 to-purple-50/40">
@@ -536,7 +553,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   soundFx.playPop();
                   setActiveTab(tab.id);
                 }}
-                className={`flex items-center gap-2 px-3.5 py-2 sm:px-4 sm:py-2.5 rounded-xl font-bold text-xs sm:text-sm whitespace-nowrap shrink-0 transition-all cursor-pointer select-none ${
+                className={`flex items-center gap-2 px-3.5 py-2 sm:px-4 sm:py-2.5 rounded-xl font-bold text-xs sm:text-sm whitespace-nowrap shrink-0 transition-colors cursor-pointer select-none ${
                   isActive
                     ? 'bg-gradient-to-r from-pink-600 to-rose-500 text-white shadow-md shadow-pink-500/25 ring-2 ring-pink-500/20'
                     : 'bg-white text-slate-600 hover:text-slate-900 border border-slate-200/90 hover:bg-slate-100 shadow-2xs'

@@ -1,16 +1,16 @@
 {
-  "version": "1.6.6",
-  "versionCode": 41,
-  "releaseDate": "2026-10-21",
+  "version": "1.6.7",
+  "versionCode": 42,
+  "releaseDate": "2026-10-22",
   "releaseNotes": [
-    "✨ កំណែទម្រង់បង្កើតហាងថ្មី (Clean Multi-Tenant Store)៖ ហាងទើបបង្កើតថ្មីគឺទទេរស្អាត ១០០% (Zero Data Leak) គ្មានជាប់ទិន្នន័យពីហាងចាស់ឡើយ។",
-    "📥 មុខងារទាញយកកំណែអាប់ដេត (Direct Download Update)៖ ដាក់ប៊ូតុងទាញយកលើ Navbar និងក្នុងប្រព័ន្ធ អាចទាញយក SweetBakery-Android.apk និង SweetBakery-POS-Setup.exe បានភ្លាមៗគ្រប់ពេលវេលា។",
-    "⚡ ប្រព័ន្ធផ្ទៀងផ្ទាត់លេខសម្ងាត់ PIN 0ms លឿនរហ័ស ទាំងលើ Keyboard ខ្មែរ/ឡាតាំង និង Touch Screen។",
-    "📱 QR Code ស្កេនទាញយក APK ចូលទូរសព្ទផ្ទាល់ពីលើកញ្ចក់អេក្រង់កុំព្យូទ័រ។",
-    "🎨 កែសម្រួលឈ្មោះហាងលើ Navbar ឱ្យស្រស់ស្អាតប្រណិត មិនបាក់ជួរបញ្ឈរ។"
+    "⚡ ជួសជុលបញ្ហាលោតភ្លឹបភ្លេតៗ ញាក់ៗពេលចូល Settings និងចុចលើ Telegram Bot ឬ Tab ផ្សេងៗលើទូរសព្ទដៃ (Fix Tab Reset & Mobile Screen Jitter)។",
+    "🚀 បង្កើនល្បឿនប្រតិបត្តិការ Telegram Settings ដោយបំបែកការវាយអក្សរពី Cloud Save មិនរំខាន Bandwidth ឬ CPU ទូរសព្ទ។",
+    "📱 ការពារ Mobile Auto-Zoom Jitter នៅពេលចុចលើប្រអប់ Input វាយ Bot Token និង Chat ID។",
+    "🐟 រក្សាទុកចំនួនត្រីហែល ៧ ក្បាលពេញលេញដូចដើម និងផ្អាកស្វ័យប្រវត្តិតែពេលបើកផ្ទាំង SettingsModal ដើម្បីផ្ដល់ល្បឿនរលូន ១០០%។",
+    "🔊 បង្កើនភាពរហ័សនៃសំឡេងចុច (Tactile Click Sound) លើ iOS & Android ដោយគ្មាន Delay។"
   ],
-  "apkDownloadUrl": "https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.6.6/SweetBakery-Android.apk",
-  "windowsInstallerUrl": "https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.6.6/SweetBakery-POS-Setup.exe",
-  "windowsDownloadUrl": "https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.6.6/SweetBakery-POS-Setup.exe",
+  "apkDownloadUrl": "https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.6.7/SweetBakery-Android.apk",
+  "windowsInstallerUrl": "https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.6.7/SweetBakery-POS-Setup.exe",
+  "windowsDownloadUrl": "https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.6.7/SweetBakery-POS-Setup.exe",
   "mandatory": false
 }

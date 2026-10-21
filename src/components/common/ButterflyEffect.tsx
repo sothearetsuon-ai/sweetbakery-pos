@@ -172,9 +172,9 @@ export const ButterflyEffect: React.FC<ButterflyEffectProps> = ({
     typeof window !== 'undefined' &&
     (window.innerWidth < 768 || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent));
 
-  // Ultra-lightweight counts for silky smooth 60fps performance
-  const butterflyCount = propButterflyCount || (isMobile ? 3 : count);
-  const goldfishCount = propGoldfishCount || (isMobile ? 2 : 3);
+  // Butterfly & Goldfish counts (keeping original fish count as requested)
+  const butterflyCount = propButterflyCount ?? (isMobile ? 6 : count);
+  const goldfishCount = propGoldfishCount ?? 7;
 
   const [, setRenderTrigger] = useState(0);
 

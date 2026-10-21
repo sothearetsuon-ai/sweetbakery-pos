@@ -171,10 +171,21 @@ export const TelegramSettingsTab: React.FC = () => {
     }
   };
 
-  const updateConfig = (updated: TelegramConfig) => {
+  // Local state update without triggering heavy immediate remote cloud/LAN writes
+  const updateConfigLocal = (updated: TelegramConfig) => {
+    if (isDemoMode) return;
+    setConfig(updated);
+  };
+
+  // Explicit save: persists locally + syncs to cloud & LAN
+  const persistConfig = (updated: TelegramConfig) => {
     if (isDemoMode) return;
     setConfig(updated);
     saveStoredTelegramConfig(updated);
+  };
+
+  const updateConfig = (updated: TelegramConfig) => {
+    persistConfig(updated);
   };
 
   const handleSave = (e?: React.FormEvent) => {
@@ -183,7 +194,7 @@ export const TelegramSettingsTab: React.FC = () => {
       alert('មុខងារនេះត្រូវបានបិទក្នុង Demo Mode');
       return;
     }
-    updateConfig(config);
+    persistConfig(config);
     soundFx.playSuccess();
     setSavedSuccess(true);
     try {
@@ -231,7 +242,7 @@ export const TelegramSettingsTab: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-300">
+    <div className="space-y-6 animate-in fade-in duration-150">
       {/* Header Banner */}
       <div className="p-4 sm:p-5 bg-gradient-to-r from-sky-500 via-blue-500 to-indigo-600 rounded-3xl text-white shadow-lg shadow-sky-500/20 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3.5">
@@ -266,8 +277,7 @@ export const TelegramSettingsTab: React.FC = () => {
             checked={config.enabled}
             onChange={(e) => {
               const updated = { ...config, enabled: e.target.checked };
-              setConfig(updated);
-              saveStoredTelegramConfig(updated);
+              persistConfig(updated);
               soundFx.playPop();
             }}
             className="w-4 h-4 rounded text-pink-600 focus:ring-0 cursor-pointer"
@@ -305,13 +315,13 @@ export const TelegramSettingsTab: React.FC = () => {
                 value={config.botToken}
                 onChange={(e) => {
                   const val = e.target.value.trim();
-                  updateConfig({
+                  updateConfigLocal({
                     ...config,
                     botToken: val,
                     enabled: config.chatId ? true : config.enabled,
                   });
                 }}
-                className="w-full pl-3.5 pr-10 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-mono text-slate-800 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all"
+                className="w-full pl-3.5 pr-10 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-base sm:text-xs font-mono text-slate-800 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all"
               />
               <button
                 type="button"
@@ -343,13 +353,13 @@ export const TelegramSettingsTab: React.FC = () => {
               value={config.chatId}
               onChange={(e) => {
                 const val = e.target.value.trim();
-                updateConfig({
+                updateConfigLocal({
                   ...config,
                   chatId: val,
                   enabled: config.botToken ? true : config.enabled,
                 });
               }}
-              className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-mono text-slate-800 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all"
+              className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-base sm:text-xs font-mono text-slate-800 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all"
             />
             
             {/* Quick Presets */}
@@ -654,9 +664,9 @@ export const TelegramSettingsTab: React.FC = () => {
                         <input
                           type="text"
                           value={config.adminChatId ?? '8970210109'}
-                          onChange={(e) => updateConfig({ ...config, adminChatId: e.target.value.trim() })}
+                          onChange={(e) => updateConfigLocal({ ...config, adminChatId: e.target.value.trim() })}
                           placeholder="8970210109"
-                          className="flex-1 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                          className="flex-1 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-base sm:text-xs font-mono font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
                         />
                         <a
                           href="https://t.me/vicheta_order_bot"

@@ -450,7 +450,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               <Download className="w-3.5 h-3.5 text-indigo-600 group-hover:animate-bounce" />
               <span className="hidden xl:inline font-battambang text-[11px]">ទាញយក</span>
               <span className="bg-indigo-100 text-indigo-700 text-[10px] px-1.5 py-0.2 rounded-full font-mono border border-indigo-200">
-                v{availableUpdate?.latestVersion || '1.6.6'}
+                v{availableUpdate?.latestVersion || '1.6.7'}
               </span>
             </button>
           )}
@@ -1119,7 +1119,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                       </div>
                     </div>
                     <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 font-mono">
-                      v{availableUpdate?.latestVersion || '1.6.6'}
+                      v{availableUpdate?.latestVersion || '1.6.7'}
                     </span>
                   </button>
 
