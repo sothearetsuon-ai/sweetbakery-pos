@@ -220,10 +220,10 @@ export const Navbar: React.FC<NavbarProps> = ({
       : 'Good Evening 🧁 Ready for cake pickups';
 
   return (
-    <header className="bg-white/95 backdrop-blur-md border-b border-[#F2DBD3] sticky top-0 z-40 px-2 sm:px-6 py-2 sm:py-2.5 shadow-xs shrink-0">
-      <div className="flex items-center justify-between gap-1.5 sm:gap-2">
-        {/* Left Side: Mobile Hamburger Menu + Brand */}
-        <div className="flex items-center gap-1.5 sm:gap-3.5 min-w-0 flex-1">
+    <header className="bg-white/95 backdrop-blur-md border-b border-[#F2DBD3] sticky top-0 z-40 px-2 sm:px-4 lg:px-6 py-2 sm:py-2.5 shadow-xs shrink-0">
+      <div className="flex items-center justify-between gap-2 sm:gap-4">
+        {/* Left Side: Mobile Hamburger Menu + Brand (Guaranteed Width, Never Squished) */}
+        <div className="flex items-center gap-1.5 sm:gap-3 shrink-0 min-w-0 max-w-[280px] sm:max-w-[340px] md:max-w-[400px] lg:max-w-[480px]">
           {/* Mobile Hamburger Button */}
           <button
             type="button"
@@ -240,54 +240,55 @@ export const Navbar: React.FC<NavbarProps> = ({
               soundFx.playPop();
               onOpenSettingsModal();
             }}
-            className="flex items-center gap-1.5 sm:gap-3.5 cursor-pointer group min-w-0 flex-1"
+            className="flex items-center gap-2 sm:gap-2.5 cursor-pointer group min-w-0 shrink-0 select-none py-0.5"
             title="ចុចដើម្បីកំណត់ឈ្មោះហាង & Logo (Settings)"
           >
             <div className="relative group shrink-0">
-              <div className="w-7 h-7 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-tr from-[#FF6F68] via-[#E6514D] to-[#361B14] p-0.5 shadow-md shadow-[#E6514D]/25 transition-transform duration-300 group-hover:scale-105 overflow-hidden">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-2xl bg-gradient-to-tr from-[#FF6F68] via-[#E6514D] to-[#361B14] p-0.5 shadow-md shadow-[#E6514D]/25 transition-all duration-300 group-hover:scale-105 group-hover:shadow-lg group-hover:shadow-rose-500/30 overflow-hidden ring-1 ring-rose-200">
                 {storeInfo.logoUrl ? (
                   <img
                     src={getProductImageUrl(storeInfo.logoUrl)}
                     alt={storeInfo.nameKh}
-                    className="w-full h-full object-cover rounded-[10px] bg-white"
+                    className="w-full h-full object-cover rounded-[14px] bg-white"
                   />
                 ) : (
-                  <div className="w-full h-full bg-white/15 backdrop-blur-xs rounded-[10px] flex items-center justify-center text-white">
-                    <Cake className="w-3.5 h-3.5 sm:w-5 sm:h-5 animate-float" />
+                  <div className="w-full h-full bg-white/15 backdrop-blur-xs rounded-[14px] flex items-center justify-center text-white">
+                    <Cake className="w-4 h-4 sm:w-5 sm:h-5 animate-float" />
                   </div>
                 )}
               </div>
-              <span className="absolute -top-1 -right-1 bg-amber-400 text-amber-950 p-0.5 rounded-full shadow-xs">
-                <Crown className="w-2 h-2 sm:w-2.5 sm:h-2.5" />
+              <span className="absolute -top-1 -right-1 bg-gradient-to-r from-amber-400 to-amber-500 text-amber-950 p-0.5 rounded-full shadow-xs border border-white">
+                <Crown className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
               </span>
             </div>
 
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-1">
-                <h1 className="text-xs sm:text-sm md:text-[15px] font-bold text-slate-900 flex items-center gap-1 min-w-0">
-                  <span className="truncate font-battambang">
+            <div className="min-w-0 flex flex-col justify-center">
+              <div className="flex items-center gap-1.5 min-w-0">
+                <h1 className="text-xs sm:text-sm md:text-[15px] lg:text-[16px] font-black text-slate-900 group-hover:text-rose-600 transition-colors flex items-center gap-1.5 min-w-0 leading-tight">
+                  <span className="truncate font-battambang whitespace-nowrap drop-shadow-2xs">
                     {lang === 'km' ? storeInfo.nameKh : storeInfo.nameEn}
                   </span>
-                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#E6514D] via-[#FF6F68] to-amber-600 font-black text-xs sm:text-sm shrink-0">
-                    POS
-                  </span>
                 </h1>
-                <span className="hidden sm:inline-block text-[9px] uppercase font-black tracking-wider bg-gradient-to-r from-[#E6514D] to-[#FF6F68] text-white px-2 py-0.5 rounded-full shadow-2xs shrink-0">
+                <span className="text-[10px] sm:text-[11px] font-black px-1.5 py-0.2 rounded-md bg-gradient-to-r from-[#E6514D] via-[#FF6F68] to-amber-600 text-white shadow-2xs shrink-0 tracking-wider font-mono">
+                  POS
+                </span>
+                <span className="hidden sm:inline-flex items-center text-[9px] uppercase font-black tracking-wider bg-rose-50 text-rose-700 border border-rose-200/80 px-1.5 py-0.2 rounded-full shadow-2xs shrink-0 font-mono">
                   PRO ★
                 </span>
               </div>
-              <p className="hidden md:flex text-[11px] text-slate-500 items-center gap-1.5 mt-0.5">
-                <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                <span className="font-semibold text-[#D43D39]">
+              {/* Greeting / Tagline - Strictly Single-Line & Never wraps vertically */}
+              <div className="hidden md:flex items-center gap-1.5 mt-0.5 text-[11px] text-slate-500 whitespace-nowrap overflow-hidden leading-tight">
+                <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+                <span className="font-semibold text-rose-600/90 truncate max-w-[160px] lg:max-w-[220px] xl:max-w-[280px]">
                   {lang === 'km' ? greetingKh : greetingEn}
                 </span>
-              </p>
+              </div>
             </div>
           </div>
         </div>
 
         {/* Right Side: Clean & Consolidated Actions */}
-        <div className="flex items-center gap-1 sm:gap-1.5 shrink-0 justify-end">
+        <div className="flex items-center gap-1 sm:gap-1.5 shrink-0 justify-end min-w-0 flex-1">
           {/* Store Tenant Pill Button */}
           {onOpenStoreAuthModal && (
             <button
@@ -297,15 +298,15 @@ export const Navbar: React.FC<NavbarProps> = ({
                 onOpenStoreAuthModal();
               }}
               title="គណនីហាង & Multi-Store (ចូលគណនី / បង្កើតហាងថ្មី / ភ្ជាប់ Store ID)"
-              className={`hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-2xl border text-xs font-black transition-all shadow-2xs hover:scale-105 active:scale-95 cursor-pointer shrink-0 font-battambang ${
+              className={`hidden md:flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1.5 rounded-2xl border text-xs font-black transition-all shadow-2xs hover:scale-105 active:scale-95 cursor-pointer shrink-0 font-battambang ${
                 !isDefaultStore(currentStoreTenantId)
                   ? 'bg-gradient-to-r from-rose-50 to-pink-50 border-rose-300 text-rose-900 ring-1 ring-rose-200'
                   : 'bg-white hover:bg-slate-50 border-slate-200 text-slate-700'
               }`}
             >
               <span className="text-sm">🏪</span>
-              <span className="hidden xl:inline truncate max-w-[110px]">
-                {storeUser?.storeName || storeInfo.nameKh || 'ហាងវិជ្ជតា'}
+              <span className="hidden 2xl:inline truncate max-w-[90px]">
+                {storeUser?.storeName || storeInfo.nameKh || 'ហាង'}
               </span>
               <span className="text-[10px] font-mono px-1.5 py-0.2 rounded-md bg-slate-100 border border-slate-200 text-slate-700 font-bold">
                 {isDefaultStore(currentStoreTenantId) ? 'Root' : currentStoreTenantId.replace('STORE-', '')}
@@ -366,10 +367,10 @@ export const Navbar: React.FC<NavbarProps> = ({
                 onOpenCakeFlavors();
               }}
               title="គ្រប់គ្រងរសជាតិនំ & ស្តុកមាន/អស់ (Cake Flavors & Stock)"
-              className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-2xl bg-gradient-to-r from-purple-50 to-pink-50 hover:from-purple-100 hover:to-pink-100 border border-purple-200/90 text-purple-900 text-xs font-black transition-all shadow-2xs hover:scale-105 active:scale-95 cursor-pointer shrink-0"
+              className="hidden lg:flex items-center gap-1.5 px-2 sm:px-2.5 py-1.5 rounded-2xl bg-gradient-to-r from-purple-50 to-pink-50 hover:from-purple-100 hover:to-pink-100 border border-purple-200/90 text-purple-900 text-xs font-black transition-all shadow-2xs hover:scale-105 active:scale-95 cursor-pointer shrink-0"
             >
               <span className="text-sm">🧁</span>
-              <span className="hidden sm:inline font-battambang">រសជាតិនំ & ស្តុក</span>
+              <span className="hidden 2xl:inline font-battambang">រសជាតិ & ស្តុក</span>
             </button>
           )}
 
@@ -382,10 +383,10 @@ export const Navbar: React.FC<NavbarProps> = ({
                 onOpenKds();
               }}
               title="អេក្រង់ផ្ទះបាយ KDS (Kitchen Display System) - សម្រាប់ជាងនំ"
-              className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-2xl bg-gradient-to-r from-amber-50 to-orange-50 hover:from-amber-100 hover:to-orange-100 border border-orange-200/90 text-orange-900 text-xs font-black transition-all shadow-2xs hover:scale-105 active:scale-95 cursor-pointer shrink-0"
+              className="hidden md:flex items-center gap-1.5 px-2 sm:px-2.5 py-1.5 rounded-2xl bg-gradient-to-r from-amber-50 to-orange-50 hover:from-amber-100 hover:to-orange-100 border border-orange-200/90 text-orange-900 text-xs font-black transition-all shadow-2xs hover:scale-105 active:scale-95 cursor-pointer shrink-0"
             >
               <span className="text-sm">👨‍🍳</span>
-              <span className="hidden sm:inline font-battambang">ផ្ទះបាយ KDS</span>
+              <span className="hidden xl:inline font-battambang">KDS</span>
               {pendingCakeOrdersCount > 0 && (
                 <span className="px-1.5 py-0.2 rounded-full text-[10px] font-mono font-black bg-rose-600 text-white animate-pulse">
                   {pendingCakeOrdersCount}
@@ -403,10 +404,10 @@ export const Navbar: React.FC<NavbarProps> = ({
                 onOpenVoicePos();
               }}
               title="POS បញ្ជាដោយសំឡេងខ្មែរ (Khmer Voice POS Assistant)"
-              className="hidden md:flex items-center gap-1.5 px-2.5 py-1.5 rounded-2xl bg-gradient-to-r from-pink-50 to-rose-50 hover:from-pink-100 hover:to-rose-100 border border-pink-200/90 text-pink-900 text-xs font-black transition-all shadow-2xs hover:scale-105 active:scale-95 cursor-pointer shrink-0"
+              className="hidden lg:flex items-center gap-1.5 px-2 sm:px-2.5 py-1.5 rounded-2xl bg-gradient-to-r from-pink-50 to-rose-50 hover:from-pink-100 hover:to-rose-100 border border-pink-200/90 text-pink-900 text-xs font-black transition-all shadow-2xs hover:scale-105 active:scale-95 cursor-pointer shrink-0"
             >
               <span className="text-sm">🎙️</span>
-              <span className="hidden md:inline font-battambang">POS សំឡេង</span>
+              <span className="hidden 2xl:inline font-battambang">POS សំឡេង</span>
             </button>
           )}
 
@@ -427,7 +428,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-2xl bg-gradient-to-r from-pink-600 via-rose-600 to-amber-500 hover:from-pink-700 hover:to-rose-700 text-white text-xs font-black shadow-md shadow-pink-500/30 transition-all hover:scale-105 active:scale-95 cursor-pointer shrink-0 animate-pulse font-battambang"
             >
               <Rocket className="w-3.5 h-3.5 animate-bounce text-amber-200" />
-              <span className="font-battambang">អាប់ដេតថ្មី</span>
+              <span className="hidden sm:inline font-battambang">អាប់ដេត</span>
               <span className="bg-white/25 text-white text-[10px] px-1.5 py-0.2 rounded-full font-mono">
                 v{availableUpdate.latestVersion}
               </span>
@@ -444,11 +445,10 @@ export const Navbar: React.FC<NavbarProps> = ({
                 }
               }}
               title="ទាញយកកំណែអាប់ដេតកម្មវិធី (Android APK / Windows Setup)"
-              className="hidden sm:flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-2xl bg-gradient-to-r from-indigo-50 to-purple-50 hover:from-indigo-100 hover:to-purple-100 border border-indigo-200/90 text-indigo-900 text-xs font-black transition-all shadow-2xs hover:scale-105 active:scale-95 cursor-pointer shrink-0 font-battambang group"
+              className="hidden md:flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1.5 rounded-2xl bg-gradient-to-r from-indigo-50 to-purple-50 hover:from-indigo-100 hover:to-purple-100 border border-indigo-200/90 text-indigo-900 text-xs font-black transition-all shadow-2xs hover:scale-105 active:scale-95 cursor-pointer shrink-0 font-battambang group"
             >
               <Download className="w-3.5 h-3.5 text-indigo-600 group-hover:animate-bounce" />
-              <span className="hidden md:inline font-battambang">ទាញយកអាប់ដេត</span>
-              <span className="md:hidden font-battambang">អាប់ដេត</span>
+              <span className="hidden xl:inline font-battambang text-[11px]">ទាញយក</span>
               <span className="bg-indigo-100 text-indigo-700 text-[10px] px-1.5 py-0.2 rounded-full font-mono border border-indigo-200">
                 v{availableUpdate?.latestVersion || '1.6.6'}
               </span>
