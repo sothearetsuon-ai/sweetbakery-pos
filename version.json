@@ -1,14 +1,14 @@
 {
-  "version": "1.6.2",
+  "version": "1.6.3",
   "releaseDate": "2026-10-21",
   "releaseNotes": [
-    "🏪 ការពារទិន្នន័យដាច់ដោយឡែក ១០០% ពេលបង្កើតហាងថ្មី (Isolated Multi-Store Tenants)៖ បង្កើតហាងថ្មីដោយស្អាត មិនជាប់ទិន្នន័យហាងចាស់ ហើយ Store Tenant ID មិនធ្លាក់ទៅ DEFAULT ឡើយ។",
-    "🎂 ត្រឡប់ស្តុកនំវិញពេលលុបការកុម្ម៉ង់ពិសេស (Custom Cake Order Stock Restore)៖ ពេលលុប ឬបោះបង់ការកុម្ម៉ង់នំខេកពិសេស ប្រព័ន្ធនឹងទាញស្តុកនំ ឬគ្រឿងផ្សំត្រឡប់ចូលស្តុកដើមវិញដោយស្វ័យប្រវត្តិ។",
-    "⚡ ស្ថេរភាព LAN Sync & Multi-Device Discovery៖ ញែកឯកសារ LAN DB តាមហាងនីមួយៗ (local_bakery_db_{tenant}.json) ធ្វើឱ្យការ Sync ក្នុងបណ្តាញ Wi-Fi កាន់តែលឿន និងមានសុវត្ថិភាពខ្ពស់។",
-    "📱 កែលម្អការផ្ទៀងផ្ទាត់សិទ្ធិ និង PIN ហាងពិត (Store Auth & Real Store PIN)៖ ដំណើរការរលូនទាំងលើទូរស័ព្ទ Android និងកុំព្យូទ័រ Windows។"
+    "🛒 តម្រៀបនំឆ្លាតវៃនៅបញ្ជរ POS (Quick Cashier Smart Stock Sorting)៖ នំមានស្តុកនៅជួរខាងលើ នំទើបបញ្ចូលថ្មីនៅខាងលើបង្អស់ ឯនំអស់ស្តុកត្រូវរុញទម្លាក់ទៅក្រោមគេដោយស្វ័យប្រវត្តិ។",
+    "🔍 ប៊ូតុងត្រងស្តុក POS រហ័ស (Stock Filter Pills)៖ ងាយស្រួលចុចមើល «ទាំងអស់», «🟢 មានស្តុក» ឬ «🔴 អស់ស្តុក» ដើម្បីពិនិត្យស្តុក និងបន្ថែមស្តុកភ្លាមៗនៅបញ្ជរ។",
+    "⚡ ជម្រើសរបៀបតម្រៀបទំនិញ (POS Sort Mode Selector)៖ គាំទ្រការតម្រៀបឆ្លាតវៃ (ស្តុក & ថ្មីមុន), នំថ្មីមុនគេ, តាមឈ្មោះ (A-Z), និងស្តុកច្រើនទៅតិច។",
+    "🏪 រក្សាស្ថេរភាព Tenant Data Isolation & Custom Cake Stock Restore ពីកំណែ v1.6.2។"
   ],
-  "apkDownloadUrl": "https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.6.2/SweetBakery-Android.apk",
-  "windowsInstallerUrl": "https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.6.2/SweetBakery-POS-Setup.exe",
-  "windowsDownloadUrl": "https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.6.2/SweetBakery-POS-Setup.exe",
+  "apkDownloadUrl": "https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.6.3/SweetBakery-Android.apk",
+  "windowsInstallerUrl": "https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.6.3/SweetBakery-POS-Setup.exe",
+  "windowsDownloadUrl": "https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.6.3/SweetBakery-POS-Setup.exe",
   "mandatory": false
 }

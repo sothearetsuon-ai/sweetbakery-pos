@@ -2,7 +2,7 @@
 ; SweetBakery POS - Windows Official Setup Installer
 
 #define MyAppName "SweetBakery POS"
-#define MyAppVersion "1.6.2"
+#define MyAppVersion "1.6.3"
 #define MyAppPublisher "SweetBakery Team"
 #define MyAppURL "https://sothearetsuon-ai.github.io/sweetbakery-pos/"
 #define MyAppExeName "SweetBakery-POS.exe"
