@@ -372,8 +372,11 @@ export const AppUpdateModal: React.FC<AppUpdateModalProps> = ({
                     </span>
                   </div>
                   <p className="text-[11px] text-slate-500 font-medium leading-relaxed">
-                    ទំហំ ~9.1MB • ដំណើរការលើ Android 7.0+ ជាមួយសំឡេងខ្មែរ KHQR Soundbox ភ្ជាប់ស្រាប់។
+                    ទំហំ ~20.4MB • ដំណើរការលើ Android 7.0+ ជាមួយសំឡេងខ្មែរ KHQR Soundbox ភ្ជាប់ស្រាប់។
                   </p>
+                  <div className="text-[10px] text-amber-800 bg-amber-50/90 p-1.5 rounded-lg border border-amber-200/80 leading-normal">
+                    💡 ប្រសិនបើទូរសព្ទសួរ «Allow from this source» សូមចុច «Settings ➔ បើកសិទ្ធិ (Allow)» រួចចុច Update ជាការស្រេច!
+                  </div>
                 </div>
 
                 <button

@@ -1,5 +1,5 @@
 // Service Worker for SweetBakery POS PWA Offline Support
-const CACHE_NAME = 'sweetbakery-pos-v1-5-1';
+const CACHE_NAME = 'sweetbakery-pos-v1-6-6';
 const APP_SHELL = [
   './',
   './index.html',
