@@ -92,12 +92,31 @@ export const RealStoreAuthModal: React.FC<RealStoreAuthModalProps> = ({
 
   // PIN Keypad State
   const [pinInput, setPinInput] = useState('');
+  const pinInputRef = useRef(pinInput);
+  pinInputRef.current = pinInput;
+
   const [pinError, setPinError] = useState('');
   const [rememberDevice, setRememberDevice] = useState(false);
   const [showPin, setShowPin] = useState(false);
   const [isShaking, setIsShaking] = useState(false);
   const [selectedStaffId, setSelectedStaffId] = useState<string | null>(null);
   const authenticatedStaffRef = useRef<StaffMember | null>(null);
+
+  // Helper to convert Khmer numbers (០-៩) or Latin digits (0-9) to standard ASCII digits
+  const normalizePin = (input: string): string => {
+    if (!input) return '';
+    const khmerDigits = ['០', '១', '២', '៣', '៤', '៥', '៦', '៧', '៨', '៩'];
+    let res = '';
+    for (const ch of input.trim()) {
+      const idx = khmerDigits.indexOf(ch);
+      if (idx !== -1) {
+        res += idx.toString();
+      } else if (ch >= '0' && ch <= '9') {
+        res += ch;
+      }
+    }
+    return res;
+  };
 
   // Real store staff members list
   const realStaffList = useMemo(() => {
@@ -118,6 +137,7 @@ export const RealStoreAuthModal: React.FC<RealStoreAuthModalProps> = ({
   useEffect(() => {
     if (isOpen) {
       setPinInput('');
+      pinInputRef.current = '';
       setPinError('');
       setFormError('');
       setFormSuccess('');
@@ -147,11 +167,6 @@ export const RealStoreAuthModal: React.FC<RealStoreAuthModalProps> = ({
   };
 
   const unlockAndFinish = (staffToPreserve?: StaffMember | null) => {
-    soundFx.playSuccess();
-    try {
-      confetti({ particleCount: 70, spread: 70, origin: { y: 0.6 } });
-    } catch (e) {}
-
     sessionStorage.setItem('bakery_real_store_unlocked', 'true');
     const activeTenantId = getStoreId();
     if (isDefaultStore(activeTenantId)) {
@@ -167,12 +182,25 @@ export const RealStoreAuthModal: React.FC<RealStoreAuthModalProps> = ({
 
     const adminStaff = realStaffList.find((s) => s.role === 'ADMIN') || realStaffList[0];
     const finalStaff = staffToPreserve || authenticatedStaffRef.current || currentStaff || adminStaff;
-    if (onSuccess) {
-      onSuccess(finalStaff);
-    } else if (isDemoMode) {
-      exitDemoMode(finalStaff);
-    }
+
+    // Immediately close modal so UI never freezes or stutters
     onClose();
+
+    // Play pleasant success sound non-blocking
+    soundFx.playSuccess();
+
+    // Defer heavy state rehydration and confetti to next animation frame
+    setTimeout(() => {
+      try {
+        confetti({ particleCount: 50, spread: 60, origin: { y: 0.6 } });
+      } catch (e) {}
+
+      if (onSuccess) {
+        onSuccess(finalStaff);
+      } else if (isDemoMode) {
+        exitDemoMode(finalStaff);
+      }
+    }, 16);
   };
 
   // --- NEW FORM HANDLERS ---
@@ -346,23 +374,14 @@ export const RealStoreAuthModal: React.FC<RealStoreAuthModalProps> = ({
   };
 
   // --- PIN NUMPAD HANDLERS ---
-  const handlePinSubmit = (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    const clean = pinInput.trim();
-    if (!clean) {
-      setPinError('សូមវាយបញ្ចូលលេខកូដ PIN ឬពាក្យសម្ងាត់!');
-      return;
-    }
+  const checkAndUnlock = (candidatePin: string): boolean => {
+    const clean = normalizePin(candidatePin);
+    if (!clean || clean.length < 4) return false;
 
-    if (clean === '1111' || clean === '2222') {
-      soundFx.playPop();
-      setIsShaking(true);
-      setPinError('លេខកូដ 1111 និង 2222 សម្រាប់តែរបៀប Demo ប៉ុណ្ណោះ! សូមប្រើលេខកូដហាងពិត (660168 / 0202)។');
-      setTimeout(() => setIsShaking(false), 500);
-      return;
-    }
+    // Reject demo codes for real store
+    if (clean === '1111' || clean === '2222') return false;
 
-    // Check staff pin
+    // Check staff pin match
     let matchedStaff: StaffMember | undefined;
     if (selectedStaffId) {
       const staff = realStaffList.find((s) => s.id === selectedStaffId);
@@ -377,38 +396,121 @@ export const RealStoreAuthModal: React.FC<RealStoreAuthModalProps> = ({
         setCurrentStaff(matchedStaff);
       }
       unlockAndFinish(matchedStaff);
-    } else {
+      return true;
+    }
+    return false;
+  };
+
+  const handlePinSubmit = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const clean = normalizePin(pinInputRef.current || pinInput);
+    if (!clean) {
+      setPinError('សូមវាយបញ្ចូលលេខកូដ PIN ឬពាក្យសម្ងាត់!');
+      return;
+    }
+
+    if (clean === '1111' || clean === '2222') {
+      soundFx.playPop();
+      setIsShaking(true);
+      setPinError('លេខកូដ 1111 និង 2222 សម្រាប់តែរបៀប Demo ប៉ុណ្ណោះ! សូមប្រើលេខកូដហាងពិត (660168 / 0202)។');
+      setTimeout(() => setIsShaking(false), 500);
+      return;
+    }
+
+    const unlocked = checkAndUnlock(clean);
+    if (!unlocked) {
       soundFx.playPop();
       setIsShaking(true);
       setPinError('លេខសម្ងាត់មិនត្រឹមត្រូវឡើយ! សូមព្យាយាមម្តងទៀត។');
       setTimeout(() => setIsShaking(false), 500);
+      pinInputRef.current = '';
       setPinInput('');
     }
   };
 
   const handleKeyPress = (digit: string) => {
     soundFx.playPop();
-    if (pinInput.length < 8) {
-      const newPin = pinInput + digit;
-      setPinInput(newPin);
+    const current = pinInputRef.current;
+    if (current.length < 8) {
+      const nextPin = normalizePin(current + digit);
+      pinInputRef.current = nextPin;
+      setPinInput(nextPin);
       setPinError('');
-      if (newPin.length >= 4) {
-        const matched = realStaffList.find((s) => s.isActive && s.pinCode === newPin);
-        if (matched || (newPin === '660168' || newPin === '0202')) {
-          setTimeout(() => {
-            if (matched) setCurrentStaff(matched);
-            unlockAndFinish(matched);
-          }, 150);
-        }
-      }
+      checkAndUnlock(nextPin);
     }
   };
 
   const handleBackspace = () => {
     soundFx.playPop();
-    setPinInput((prev) => prev.slice(0, -1));
+    const nextPin = pinInputRef.current.slice(0, -1);
+    pinInputRef.current = nextPin;
+    setPinInput(nextPin);
     setPinError('');
   };
+
+  const handleClearPin = () => {
+    soundFx.playPop();
+    pinInputRef.current = '';
+    setPinInput('');
+    setPinError('');
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const clean = normalizePin(e.target.value).slice(0, 8);
+    pinInputRef.current = clean;
+    setPinInput(clean);
+    setPinError('');
+    checkAndUnlock(clean);
+  };
+
+  // Keyboard shortcut listener for instantaneous PIN entry
+  useEffect(() => {
+    if (!isOpen || authMode !== 'PIN') return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.ctrlKey || e.altKey || e.metaKey) return;
+
+      const target = e.target as HTMLElement | null;
+      const isInput = target?.tagName === 'INPUT' || target?.tagName === 'TEXTAREA';
+
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        handleCancel();
+        return;
+      }
+
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        handlePinSubmit();
+        return;
+      }
+
+      if (e.key === 'Backspace' && !isInput) {
+        e.preventDefault();
+        handleBackspace();
+        return;
+      }
+
+      if (!isInput) {
+        let digit: string | null = null;
+        if (e.key >= '0' && e.key <= '9') {
+          digit = e.key;
+        } else {
+          const khmerDigits = ['០', '១', '២', '៣', '៤', '៥', '៦', '៧', '៨', '៩'];
+          const idx = khmerDigits.indexOf(e.key);
+          if (idx !== -1) digit = idx.toString();
+        }
+
+        if (digit !== null) {
+          e.preventDefault();
+          handleKeyPress(digit);
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, authMode, realStaffList, selectedStaffId]);
 
   const handleCancel = () => {
     if (!isDemoMode) {
@@ -422,9 +524,9 @@ export const RealStoreAuthModal: React.FC<RealStoreAuthModalProps> = ({
   const isCustomStore = !isDefaultStore(currentStoreId);
 
   return createPortal(
-    <div className="fixed inset-0 z-[120] flex items-center justify-center p-2.5 sm:p-4 bg-slate-950/80 backdrop-blur-md animate-fadeIn overflow-y-auto font-battambang">
+    <div className="fixed inset-0 z-[120] flex items-center justify-center p-2.5 sm:p-4 bg-slate-950/80 backdrop-blur-xs animate-fadeIn overflow-y-auto font-battambang">
       <div
-        className={`relative w-full max-w-md sm:max-w-lg bg-white rounded-3xl shadow-2xl border border-rose-100 flex flex-col max-h-[94vh] overflow-hidden transition-transform duration-200 ${
+        className={`relative w-full max-w-md sm:max-w-lg bg-white rounded-3xl shadow-2xl border border-rose-100 flex flex-col max-h-[94vh] overflow-hidden will-change-transform ${
           isShaking ? 'animate-shake' : ''
         }`}
       >
@@ -856,7 +958,10 @@ export const RealStoreAuthModal: React.FC<RealStoreAuthModalProps> = ({
 
         {/* MODE 2: QUICK PIN KEYPAD */}
         {authMode === 'PIN' && (
-          <div className="p-3.5 sm:p-4 space-y-2.5 overflow-y-auto flex-1">
+          <form
+            onSubmit={handlePinSubmit}
+            className="p-3.5 sm:p-4 space-y-2.5 overflow-y-auto flex-1 select-none"
+          >
             {/* Quick Staff Selection Chips */}
             {realStaffList.length > 0 && (
               <div className="space-y-1 pb-1.5 border-b border-slate-100">
@@ -870,9 +975,10 @@ export const RealStoreAuthModal: React.FC<RealStoreAuthModalProps> = ({
                     onClick={() => {
                       setSelectedStaffId(null);
                       setPinInput('');
+                      pinInputRef.current = '';
                       setPinError('');
                     }}
-                    className={`px-2.5 py-1 rounded-xl text-[10px] font-bold border transition-all cursor-pointer shrink-0 ${
+                    className={`px-2.5 py-1 rounded-xl text-[10px] font-bold border transition-all cursor-pointer shrink-0 touch-manipulation ${
                       selectedStaffId === null
                         ? 'bg-rose-600 text-white border-rose-600 shadow-2xs'
                         : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
@@ -889,9 +995,10 @@ export const RealStoreAuthModal: React.FC<RealStoreAuthModalProps> = ({
                         onClick={() => {
                           setSelectedStaffId(staff.id);
                           setPinInput('');
+                          pinInputRef.current = '';
                           setPinError('');
                         }}
-                        className={`flex items-center gap-1 px-2.5 py-1 rounded-xl text-[10px] font-bold border transition-all cursor-pointer shrink-0 ${
+                        className={`flex items-center gap-1 px-2.5 py-1 rounded-xl text-[10px] font-bold border transition-all cursor-pointer shrink-0 touch-manipulation ${
                           isSelected
                             ? 'bg-rose-600 text-white border-rose-600 shadow-2xs scale-102'
                             : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
@@ -914,14 +1021,14 @@ export const RealStoreAuthModal: React.FC<RealStoreAuthModalProps> = ({
             {/* PIN Input Display & Masked Dots */}
             <div className="flex flex-col items-center justify-center space-y-1.5">
               <div className="flex items-center justify-center gap-1.5 py-0.5">
-                {Array.from({ length: Math.max(4, Math.min(8, pinInput.length)) }).map((_, idx) => {
+                {[0, 1, 2, 3, 4, 5].map((idx) => {
                   const isFilled = pinInput.length > idx;
                   return (
                     <div
                       key={idx}
-                      className={`w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center font-black text-sm sm:text-base border-2 select-none ${
+                      className={`w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center font-black text-sm sm:text-base border-2 select-none transition-transform duration-75 ${
                         isFilled
-                          ? 'bg-rose-50 border-rose-500 text-rose-600 shadow-2xs'
+                          ? 'bg-rose-50 border-rose-500 text-rose-600 shadow-2xs scale-105'
                           : 'border-slate-200 bg-slate-50 text-slate-300'
                       }`}
                     >
@@ -939,13 +1046,13 @@ export const RealStoreAuthModal: React.FC<RealStoreAuthModalProps> = ({
                 <input
                   type={showPin ? 'text' : 'password'}
                   value={pinInput}
-                  onChange={(e) => {
-                    setPinInput(e.target.value);
-                    setPinError('');
-                  }}
+                  onChange={handleInputChange}
                   placeholder="បញ្ចូលលេខសម្ងាត់ PIN"
                   className="w-full pl-9 pr-9 py-2 text-center text-base sm:text-lg font-black tracking-widest bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-rose-500 focus:bg-white transition-all placeholder:text-xs placeholder:font-normal placeholder:tracking-normal placeholder:text-slate-400 font-num"
                   autoFocus
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  autoComplete="off"
                 />
                 <button
                   type="button"
@@ -971,39 +1078,35 @@ export const RealStoreAuthModal: React.FC<RealStoreAuthModalProps> = ({
             </div>
 
             {/* Numeric Keypad */}
-            <div className="grid grid-cols-3 gap-1.5 max-w-[260px] mx-auto w-full">
+            <div className="grid grid-cols-3 gap-1.5 max-w-[260px] mx-auto w-full select-none touch-manipulation">
               {['1', '2', '3', '4', '5', '6', '7', '8', '9'].map((digit) => (
                 <button
                   key={digit}
                   type="button"
                   onClick={() => handleKeyPress(digit)}
-                  className="h-8 sm:h-9 rounded-xl bg-slate-50 hover:bg-rose-50 text-slate-800 hover:text-rose-700 font-black text-base border border-slate-200 hover:border-rose-300 shadow-2xs active:scale-95 transition-all cursor-pointer font-num"
+                  className="h-9 sm:h-10 rounded-xl bg-slate-50 hover:bg-rose-50 active:bg-rose-100 text-slate-800 hover:text-rose-700 font-black text-lg border border-slate-200 hover:border-rose-300 shadow-2xs active:scale-95 transition-transform duration-75 cursor-pointer font-num touch-manipulation"
                 >
                   {digit}
                 </button>
               ))}
               <button
                 type="button"
-                onClick={() => {
-                  soundFx.playPop();
-                  setPinInput('');
-                  setPinError('');
-                }}
-                className="h-8 sm:h-9 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-[11px] border border-slate-200 active:scale-95 transition-all cursor-pointer"
+                onClick={handleClearPin}
+                className="h-9 sm:h-10 rounded-xl bg-slate-100 hover:bg-slate-200 active:bg-slate-300 text-slate-600 font-bold text-xs border border-slate-200 active:scale-95 transition-transform duration-75 cursor-pointer touch-manipulation"
               >
                 លុប
               </button>
               <button
                 type="button"
                 onClick={() => handleKeyPress('0')}
-                className="h-8 sm:h-9 rounded-xl bg-slate-50 hover:bg-rose-50 text-slate-800 hover:text-rose-700 font-black text-base border border-slate-200 hover:border-rose-300 shadow-2xs active:scale-95 transition-all cursor-pointer font-num"
+                className="h-9 sm:h-10 rounded-xl bg-slate-50 hover:bg-rose-50 active:bg-rose-100 text-slate-800 hover:text-rose-700 font-black text-lg border border-slate-200 hover:border-rose-300 shadow-2xs active:scale-95 transition-transform duration-75 cursor-pointer font-num touch-manipulation"
               >
                 0
               </button>
               <button
                 type="button"
                 onClick={handleBackspace}
-                className="h-8 sm:h-9 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-[11px] border border-slate-200 active:scale-95 transition-all cursor-pointer flex items-center justify-center"
+                className="h-9 sm:h-10 rounded-xl bg-slate-100 hover:bg-slate-200 active:bg-slate-300 text-slate-600 font-bold text-xs border border-slate-200 active:scale-95 transition-transform duration-75 cursor-pointer flex items-center justify-center touch-manipulation"
                 title="លុបថយក្រោយ"
               >
                 ⌫
@@ -1023,14 +1126,13 @@ export const RealStoreAuthModal: React.FC<RealStoreAuthModalProps> = ({
 
             {/* Submit Button for PIN */}
             <button
-              type="button"
-              onClick={() => handlePinSubmit()}
-              className="w-full py-2.5 px-4 bg-gradient-to-r from-rose-600 via-pink-600 to-rose-700 hover:from-rose-700 hover:to-pink-700 text-white font-black text-xs sm:text-sm rounded-xl shadow-md shadow-rose-500/25 transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-98 border border-rose-500/20"
+              type="submit"
+              className="w-full py-2.5 px-4 bg-gradient-to-r from-rose-600 via-pink-600 to-rose-700 hover:from-rose-700 hover:to-pink-700 text-white font-black text-xs sm:text-sm rounded-xl shadow-md shadow-rose-500/25 transition-transform duration-75 flex items-center justify-center gap-2 cursor-pointer active:scale-98 border border-rose-500/20 touch-manipulation"
             >
               <CheckCircle2 className="w-4 h-4 text-emerald-300" />
               <span>ផ្ទៀងផ្ទាត់ & ចូលហាងពិត (Enter) ➜</span>
             </button>
-          </div>
+          </form>
         )}
 
         {/* Modal Footer - Demo fallback link */}

@@ -19,27 +19,29 @@ class SoundEffects {
   // Soft pleasant click / add to cart pop sound
   playPop() {
     if (!this.enabled) return;
-    try {
-      this.initCtx();
-      if (!this.ctx) return;
-      const osc = this.ctx.createOscillator();
-      const gain = this.ctx.createGain();
+    setTimeout(() => {
+      try {
+        this.initCtx();
+        if (!this.ctx) return;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
 
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(480, this.ctx.currentTime);
-      osc.frequency.exponentialRampToValueAtTime(720, this.ctx.currentTime + 0.08);
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(480, this.ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(720, this.ctx.currentTime + 0.08);
 
-      gain.gain.setValueAtTime(0.12, this.ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.08);
+        gain.gain.setValueAtTime(0.12, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.08);
 
-      osc.connect(gain);
-      gain.connect(this.ctx.destination);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
 
-      osc.start();
-      osc.stop(this.ctx.currentTime + 0.08);
-    } catch (e) {
-      // Audio might be blocked until user interaction
-    }
+        osc.start();
+        osc.stop(this.ctx.currentTime + 0.08);
+      } catch (e) {
+        // Audio might be blocked until user interaction
+      }
+    }, 0);
   }
 
   // Joyful 3-tone celebration chime for payment success & order ready

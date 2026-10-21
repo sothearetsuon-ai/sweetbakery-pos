@@ -1,14 +1,14 @@
 {
-  "version": "1.6.4",
+  "version": "1.6.5",
   "releaseDate": "2026-10-21",
   "releaseNotes": [
-    "💬 កែសម្រួលការជូនដំណឹងសារឆាត (Chat Read Dismissal)៖ បាត់ផ្ទាំងដំណឹង និង Badge សារថ្មីភ្លាមៗពេលចុចអាន ឬចុចបិទ មិនរំខានទៀតឡើយ។",
-    "📲 ស្វ័យប្រវត្តិតភ្ជាប់ Telegram ២៤ ម៉ោង (Telegram Chat Forwarding)៖ សារសួរនាំពីភ្ញៀវតាម Web Link លោតចូល Telegram របស់ហាងភ្លាមៗក្នុងរយៈពេល ១ វិនាទី ទោះបីជាបិទ App POS ក៏ដោយ។",
-    "⚙️ បន្ថែមជម្រើសបិទ/បើកការជូនដំណឹងសារភ្ញៀវក្នុង Settings ➜ Telegram Bot។",
-    "🛒 រក្សាភាពឆ្លាតវៃនៃការតម្រៀបនំមានស្តុក & នំថ្មីនៅបញ្ជរលក់ POS Quick Cashier ពីកំណែ v1.6.3។"
+    "⚡ ដោះស្រាយបញ្ហាវាយលេខសម្ងាត់យឺត និងគាំង (Instant PIN Authentication)៖ វាយលេខកូដ PIN លោតភ្លាមៗ 0ms ទាំងលើក្តារចុច (Keyboard/Numpad) និងប៊ូតុងអេក្រង់ (Keypad)។",
+    "🇰🇭 គាំទ្រទាំងស្រុងលើការវាយលេខខ្មែរ (០-៩) និងលេខឡាតាំង (0-9) លើក្តារចុចដោយស្វ័យប្រវត្តិ។",
+    "🚀 បាត់ផ្ទាំងផ្ទៀងផ្ទាត់ភ្លាមៗ 60fps ដោយរលូន គ្មានការគាំង ឬបង្កកអេក្រង់ទៀតឡើយ។",
+    "💬 រក្សាការកែសម្រួល Chat & Telegram Forwarding ពីកំណែ v1.6.4 និងការតម្រៀបនំ POS ពី v1.6.3។"
   ],
-  "apkDownloadUrl": "https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.6.4/SweetBakery-Android.apk",
-  "windowsInstallerUrl": "https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.6.4/SweetBakery-POS-Setup.exe",
-  "windowsDownloadUrl": "https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.6.4/SweetBakery-POS-Setup.exe",
+  "apkDownloadUrl": "https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.6.5/SweetBakery-Android.apk",
+  "windowsInstallerUrl": "https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.6.5/SweetBakery-POS-Setup.exe",
+  "windowsDownloadUrl": "https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.6.5/SweetBakery-POS-Setup.exe",
   "mandatory": false
 }

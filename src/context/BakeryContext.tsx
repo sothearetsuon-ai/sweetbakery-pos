@@ -6151,7 +6151,22 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         }
       }
 
-      const liveProd = (await idbGet('bakery_products')) || localStorage.getItem('bakery_products');
+      const [
+        liveProd,
+        liveSales,
+        liveOrders,
+        liveExpenses,
+        liveIngredients,
+        liveRecipes,
+      ] = await Promise.all([
+        idbGet('bakery_products').then((res) => res || localStorage.getItem('bakery_products')),
+        idbGet('bakery_sales').then((res) => res || localStorage.getItem('bakery_sales')),
+        idbGet('bakery_custom_orders').then((res) => res || localStorage.getItem('bakery_custom_orders')),
+        idbGet('bakery_expenses').then((res) => res || localStorage.getItem('bakery_expenses')),
+        idbGet('bakery_ingredients').then((res) => res || localStorage.getItem('bakery_ingredients')),
+        idbGet('bakery_recipes').then((res) => res || localStorage.getItem('bakery_recipes')),
+      ]);
+
       let prodList = initialProducts;
       if (liveProd) {
         try {
@@ -6161,20 +6176,21 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       }
       setProducts(sortProductsNewestFirst(prodList));
 
-      const liveSales = (await idbGet('bakery_sales')) || localStorage.getItem('bakery_sales');
-      if (liveSales) setSales(JSON.parse(liveSales));
-
-      const liveOrders = (await idbGet('bakery_custom_orders')) || localStorage.getItem('bakery_custom_orders');
-      if (liveOrders) setCustomOrders(JSON.parse(liveOrders));
-
-      const liveExpenses = (await idbGet('bakery_expenses')) || localStorage.getItem('bakery_expenses');
-      if (liveExpenses) setExpenses(JSON.parse(liveExpenses));
-
-      const liveIngredients = (await idbGet('bakery_ingredients')) || localStorage.getItem('bakery_ingredients');
-      if (liveIngredients) setIngredients(JSON.parse(liveIngredients));
-
-      const liveRecipes = (await idbGet('bakery_recipes')) || localStorage.getItem('bakery_recipes');
-      if (liveRecipes) setRecipes(JSON.parse(liveRecipes));
+      if (liveSales) {
+        try { setSales(JSON.parse(liveSales)); } catch (e) {}
+      }
+      if (liveOrders) {
+        try { setCustomOrders(JSON.parse(liveOrders)); } catch (e) {}
+      }
+      if (liveExpenses) {
+        try { setExpenses(JSON.parse(liveExpenses)); } catch (e) {}
+      }
+      if (liveIngredients) {
+        try { setIngredients(JSON.parse(liveIngredients)); } catch (e) {}
+      }
+      if (liveRecipes) {
+        try { setRecipes(JSON.parse(liveRecipes)); } catch (e) {}
+      }
 
       const liveAddons = localStorage.getItem('bakery_party_addons');
       if (liveAddons) setPartyAddons(JSON.parse(liveAddons));
