@@ -20,6 +20,7 @@ import {
   ShieldCheck,
   UserCheck,
   Users,
+  MessageCircle,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import {
@@ -436,6 +437,25 @@ export const TelegramSettingsTab: React.FC = () => {
                 </div>
                 <p className="text-[11px] text-slate-500 mt-0.5">
                   ផ្ញើឈ្មោះភ្ញៀវ លេខទូរស័ព្ទ ម៉ោងមកយក និងប្រាក់កក់
+                </p>
+              </div>
+            </label>
+
+            {/* Customer In-App Live Chat Messages */}
+            <label className="flex items-start gap-3 p-3 rounded-2xl border border-slate-100 hover:border-sky-200 hover:bg-sky-50/30 transition-colors cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={config.notifyCustomerChat ?? true}
+                onChange={(e) => updateConfig({ ...config, notifyCustomerChat: e.target.checked })}
+                className="mt-0.5 w-4 h-4 rounded text-sky-600 focus:ring-0 cursor-pointer"
+              />
+              <div>
+                <div className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                  <MessageCircle className="w-3.5 h-3.5 text-blue-500" />
+                  <span>សារសួរនាំផ្ទាល់ពីអតិថិជន (Customer In-App Live Chat)</span>
+                </div>
+                <p className="text-[11px] text-slate-500 mt-0.5">
+                  លោតសារចូល Telegram ភ្លាមៗពេលភ្ញៀវឆាតសួរនាំតាមរយៈទំព័រ Customer Portal / Online Link
                 </p>
               </div>
             </label>

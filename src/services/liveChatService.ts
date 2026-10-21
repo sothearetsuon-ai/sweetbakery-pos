@@ -5,7 +5,7 @@ import {
   getFirestoreDb,
   getStoreId,
 } from './firebase';
-import { sendTelegramMessage, escapeHtml, getStoredTelegramConfig } from './telegram';
+import { sendTelegramMessage, escapeHtml, getStoredTelegramConfigAsync } from './telegram';
 import { soundFx } from '../utils/audio';
 
 const STORAGE_CHATS_KEY = 'bakery_live_chat_messages';
@@ -270,8 +270,9 @@ export async function sendChatMessage(
  */
 async function notifyTelegramCustomerChat(msg: ChatMessage, storeInfo?: StoreInfo) {
   try {
-    const tgConfig = getStoredTelegramConfig();
+    const tgConfig = await getStoredTelegramConfigAsync();
     if (!tgConfig.enabled || !tgConfig.botToken || !tgConfig.chatId) return;
+    if (tgConfig.notifyCustomerChat === false) return;
 
     const storeTitle = storeInfo?.nameKh || 'Sweet Bakery';
     const custName = msg.senderName || 'អតិថិជន';
@@ -291,7 +292,7 @@ ${custPhone ? `📞 <b>លេខទូរស័ព្ទ៖</b> <code>${escapeHt
 1️⃣ <b>បើក App POS</b> ➜ ចុចប៊ូតុង <b>«💬 ឆាត»</b> ដើម្បីវាយតបទៅភ្ញៀវផ្ទាល់ (ភ្ញៀវនឹងឃើញសារលើទូរស័ព្ទរបស់គាត់ភ្លាមៗ)
 ${custPhone ? `2️⃣ ឬចុចខលទូរស័ព្ទ / Search Telegram ទៅកាន់លេខ <code>${escapeHtml(custPhone)}</code> ដើម្បីទាក់ទងភ្ញៀវផ្ទាល់` : ''}`;
 
-    await sendTelegramMessage(text);
+    await sendTelegramMessage(text, tgConfig);
   } catch (e) {
     console.warn('Failed to send Telegram chat notification:', e);
   }
@@ -378,7 +379,13 @@ export function subscribeToChatMessages(
           const localMap = new Map<string, ChatMessage>();
           local.forEach((m) => localMap.set(m.id, m));
           cloudMsgs.forEach((m) => {
-            if (m && m.id) localMap.set(m.id, m);
+            if (m && m.id) {
+              const existing = localMap.get(m.id);
+              localMap.set(m.id, {
+                ...m,
+                isRead: Boolean(m.isRead || existing?.isRead),
+              });
+            }
           });
 
           const merged = Array.from(localMap.values());
@@ -486,6 +493,8 @@ export function markChatAsRead(sessionId: string, by: 'STAFF' | 'CUSTOMER'): voi
         if ((by === 'STAFF' && m.senderRole === 'CUSTOMER') || (by === 'CUSTOMER' && m.senderRole === 'STAFF')) {
           m.isRead = true;
           updated = true;
+          // Sync isRead status to Firestore Cloud so remote cloud snapshots do not revert it
+          saveFirestoreDoc('live_chats', m.id, { isRead: true }).catch(() => {});
         }
       }
     });

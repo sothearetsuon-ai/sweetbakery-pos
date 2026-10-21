@@ -45,7 +45,7 @@ import { getFlavorEmoji, getUnifiedCakeFlavors, CakeFlavorItem, PRESET_CAKE_FLAV
 import { analyzeCakeImageWithGemini, AiCakeAnalysisResult } from '../../services/aiCakeVisionService';
 import { verifyBankSlipWithGemini, AiBankSlipResult } from '../../services/aiBankSlipService';
 import { AiCakeAnalysisModal } from '../common/AiCakeAnalysisModal';
-import { getCustomerSessionId, subscribeToChatMessages } from '../../services/liveChatService';
+import { getCustomerSessionId, subscribeToChatMessages, markChatAsRead } from '../../services/liveChatService';
 import { ChatMessage } from '../../types';
 
 const CAKE_SIZES = [
@@ -239,6 +239,8 @@ export const CustomerOrderPortal: React.FC<CustomerOrderPortalProps> = ({ onBack
       if (latestStaff && (!isAiGuideOpen || aiGuideInitialTab !== 'store-chat')) {
         setIncomingStaffToast(latestStaff);
         soundFx.playPop();
+      } else if (unreadStaff.length === 0) {
+        setIncomingStaffToast(null);
       }
     });
 
@@ -247,9 +249,12 @@ export const CustomerOrderPortal: React.FC<CustomerOrderPortalProps> = ({ onBack
 
   const handleOpenLiveStoreChat = () => {
     soundFx.playPop();
+    const sessId = getCustomerSessionId();
+    markChatAsRead(sessId, 'CUSTOMER');
+    setCustomerUnreadCount(0);
+    setIncomingStaffToast(null);
     setAiGuideInitialTab('store-chat');
     setIsAiGuideOpen(true);
-    setIncomingStaffToast(null);
   };
 
   // Apply suggestions from AI directly to form
@@ -656,9 +661,12 @@ export const CustomerOrderPortal: React.FC<CustomerOrderPortalProps> = ({ onBack
           <div
             onClick={() => {
               soundFx.playPop();
+              const sessId = getCustomerSessionId();
+              markChatAsRead(sessId, 'CUSTOMER');
+              setCustomerUnreadCount(0);
+              setIncomingStaffToast(null);
               setAiGuideInitialTab('store-chat');
               setIsAiGuideOpen(true);
-              setIncomingStaffToast(null);
             }}
             className="p-3.5 bg-gradient-to-r from-blue-700 via-indigo-700 to-purple-800 text-white rounded-3xl shadow-2xl border-2 border-white/50 cursor-pointer flex items-center justify-between gap-3 active:scale-95 transition-all hover:shadow-indigo-500/50 ring-4 ring-indigo-400/30"
           >
@@ -685,6 +693,9 @@ export const CustomerOrderPortal: React.FC<CustomerOrderPortalProps> = ({ onBack
               type="button"
               onClick={(e) => {
                 e.stopPropagation();
+                const sessId = getCustomerSessionId();
+                markChatAsRead(sessId, 'CUSTOMER');
+                setCustomerUnreadCount(0);
                 setIncomingStaffToast(null);
               }}
               className="p-1.5 text-white/70 hover:text-white rounded-full shrink-0"
@@ -2224,7 +2235,13 @@ export const CustomerOrderPortal: React.FC<CustomerOrderPortalProps> = ({ onBack
       {/* AI Ordering Assistant Guide Modal & Chatbot */}
       <CustomerAiGuideModal
         isOpen={isAiGuideOpen}
-        onClose={() => setIsAiGuideOpen(false)}
+        onClose={() => {
+          setIsAiGuideOpen(false);
+          const sessId = getCustomerSessionId();
+          markChatAsRead(sessId, 'CUSTOMER');
+          setCustomerUnreadCount(0);
+          setIncomingStaffToast(null);
+        }}
         context={aiContext}
         storeInfo={storeInfo}
         initialTab={aiGuideInitialTab}

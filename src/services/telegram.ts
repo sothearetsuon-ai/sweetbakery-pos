@@ -17,6 +17,7 @@ export interface TelegramConfig {
   includeAiInsight?: boolean;
   adminChatId?: string; // e.g. "8970210109" (Admin private chat id)
   dailyReportRecipient?: 'ADMIN_ONLY' | 'GROUP_ONLY' | 'BOTH'; // default: 'ADMIN_ONLY'
+  notifyCustomerChat?: boolean; // ជូនដំណឹងពេលភ្ញៀវឆាតសួរនាំលើ App / Customer Portal
 }
 
 const STORAGE_KEY = 'bakery_telegram_config';
@@ -35,6 +36,7 @@ export const DEFAULT_TELEGRAM_CONFIG: TelegramConfig = {
   notifyDailyReport: true,
   dailyReportTime: '21:00', // 9:00 យប់ (ម៉ោងបិទហាងលក់សរុបប្រចាំថ្ងៃ)
   includeAiInsight: true,
+  notifyCustomerChat: true,
 };
 
 export const isDemoModeActive = (): boolean => {
@@ -126,7 +128,8 @@ export const areTelegramConfigsEqual = (
     Boolean(a.notifyDailyReport) === Boolean(b.notifyDailyReport) &&
     (a.dailyReportTime || '21:00') === (b.dailyReportTime || '21:00') &&
     (a.dailyReportRecipient || 'ADMIN_ONLY') === (b.dailyReportRecipient || 'ADMIN_ONLY') &&
-    Boolean(a.includeAiInsight) === Boolean(b.includeAiInsight)
+    Boolean(a.includeAiInsight) === Boolean(b.includeAiInsight) &&
+    Boolean(a.notifyCustomerChat ?? true) === Boolean(b.notifyCustomerChat ?? true)
   );
 };
 
@@ -270,7 +273,24 @@ export const getStoredTelegramConfigAsync = async (): Promise<TelegramConfig> =>
     return config;
   }
 
-  // Fallback: If mobile phone doesn't have credentials in localStorage, fetch from server
+  // Fallback 1: Check Firestore Cloud ('settings/telegram') so mobile customer portals inherit store bot credentials
+  try {
+    const cloudDoc = await getFirestoreDoc<TelegramConfig>('settings', 'telegram');
+    if (cloudDoc && cloudDoc.botToken && cloudDoc.chatId) {
+      const merged: TelegramConfig = { ...DEFAULT_TELEGRAM_CONFIG, ...cloudDoc };
+      if (!merged.chatId.includes('-5528089668')) {
+        merged.chatId = `-5528089668, ${merged.chatId}`;
+      }
+      merged.enabled = true;
+      merged.notifySales = true;
+      saveStoredTelegramConfig(merged, false, false);
+      return merged;
+    }
+  } catch (e) {
+    console.warn('[Telegram] Could not fetch Firestore telegram config:', e);
+  }
+
+  // Fallback 2: If mobile phone doesn't have credentials in localStorage, fetch from server
   try {
     const currentTenant = getStoreId();
     const res = await fetch(`/api/lan-sync?tenant=${encodeURIComponent(currentTenant)}`);

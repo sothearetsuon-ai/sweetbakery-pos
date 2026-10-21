@@ -187,6 +187,12 @@ export const CustomerAiGuideModal: React.FC<CustomerAiGuideModalProps> = ({
 
     const unsub = subscribeToChatMessages('CUSTOMER', sessId, (msgs) => {
       setLiveStoreMessages(msgs);
+      if (activeTab === 'store-chat') {
+        const hasUnread = msgs.some((m) => m.senderRole === 'STAFF' && !m.isRead);
+        if (hasUnread) {
+          markChatAsRead(sessId, 'CUSTOMER');
+        }
+      }
     });
     return unsub;
   }, [isOpen, activeTab]);
