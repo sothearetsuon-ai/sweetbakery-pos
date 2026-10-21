@@ -1,16 +1,15 @@
 {
-  "version": "1.5.9",
-  "releaseDate": "2026-10-20",
+  "version": "1.6.0",
+  "releaseDate": "2026-10-21",
   "releaseNotes": [
-    "🔐 ដំណោះស្រាយ Cloud Firestore Store Auth & Login (បំបាត់កំហុស auth/configuration-not-found)៖ ប្រព័ន្ធផ្ទៀងផ្ទាត់គណនីហាងតាមរយៈ Cloud Database ដោយផ្ទាល់ជាមួយ Secure Password Hashing (SHA-256) អាចចុះឈ្មោះហាងថ្មី និងចូល Login ភ្លាមៗដោយគ្មានកំហុស។",
-    "💬 ប្រព័ន្ធឆាតផ្ទាល់លើ App POS & ផ្ទាំងកុម្ម៉ង់ភ្ញៀវ (Live In-App Chat Suite)៖ ប៊ូតុងឆាតអណ្តែតលើគ្រប់ផ្ទាំង (Floating Widget), ប៊ូតុងឆាតលើ Navbar/Sidebar, និងឆាតផ្ទាល់ជាមួយអ្នកលក់លើ QR Order Portal របស់ភ្ញៀវ។",
-    "🎬 ដោះស្រាយបញ្ហាចាក់ចម្រៀង YouTube ដើររលូន ១០០% (Fixed YouTube Music & Video Player)៖ ដំណើរការដោយរលូនទាំងលើទូរស័ព្ទ Web និងកុំព្យូទ័រ Windows Desktop ជាមួយមុខងារ Picture-in-Picture។",
-    "🛠️ Super Admin គ្រប់គ្រង & លុបហាង (Store Management & Deletion)៖ ម្ចាស់ប្រព័ន្ធអាចចាក់សោ ផ្អាកដំណើរការ (Suspend/Lock) ឬលុបហាងដែលឈប់ប្រើប្រាស់ចេញពី Cloud Database បានយ៉ាងមានសុវត្ថិភាព។",
-    "🎂 ផ្ទាំងភ្ញៀវបិទតម្លៃនំកុំបង្ហាញ (Hide Cake Prices on Customer View)៖ បិទការបង្ហាញតម្លៃលើ TV Showcase, Customer Portal និង Chatbot ដោយបើក/បិទបានតាមចិត្តក្នុង Settings។",
-    "⚡ បង្កើនល្បឿន និងស្ថេរភាពប្រព័ន្ធទូទៅ (75% Faster Performance) ជាមួយ Offline Local Cache សម្រាប់ទូរស័ព្ទដៃ និងកុំព្យូទ័រ។"
+    "⚡ សម្អាតប្រព័ន្ធ & ដកមុខងារចាក់ភ្លេង (Clean & Lightweight System)៖ ដកកម្មវិធីចាក់ចម្រៀង និង Background Audio Engine ចេញទាំងស្រុង ជួយកាត់បន្ថយទំហំកម្មវិធី ដំណើរការលឿន ស្រាល មិនរំខាន និងមិនទាក់គាំង។",
+    "🚀 បង្កើនល្បឿន និងស្ថេរភាពប្រព័ន្ធទូទៅ (Ultra Fast Performance)៖ កាត់បន្ថយការប្រើប្រាស់ Memory (RAM) និង CPU លើគ្រប់ឧបករណ៍ ទាំងកុំព្យូទ័រ Windows និងទូរស័ព្ទដៃ Android។",
+    "🔐 Cloud Firestore Store Auth & Login៖ ប្រព័ន្ធផ្ទៀងផ្ទាត់គណនីហាងតាម Cloud Database រលូន គាំទ្រទាំងលេខទូរស័ព្ទ អ៊ីមែល និង Store ID។",
+    "💬 Live In-App Chat Suite៖ ប្រព័ន្ធឆាតផ្ទាល់លើ App POS & ផ្ទាំងកុម្ម៉ង់ភ្ញៀវ QR Code ជាមួយការជូនដំណឹងរហ័ស។",
+    "🛠️ Super Admin គ្រប់គ្រងហាង៖ មុខងារចាក់សោ ផ្អាកដំណើរការ និងគ្រប់គ្រងសុវត្ថិភាពហាងយ៉ាងពេញលេញ។"
   ],
-  "apkDownloadUrl": "https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.5.9/SweetBakery-Android.apk",
-  "windowsInstallerUrl": "https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.5.9/SweetBakery-POS-Setup.exe",
-  "windowsDownloadUrl": "https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.5.9/SweetBakery-POS-Setup.exe",
+  "apkDownloadUrl": "https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.6.0/SweetBakery-Android.apk",
+  "windowsInstallerUrl": "https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.6.0/SweetBakery-POS-Setup.exe",
+  "windowsDownloadUrl": "https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.6.0/SweetBakery-POS-Setup.exe",
   "mandatory": false
 }

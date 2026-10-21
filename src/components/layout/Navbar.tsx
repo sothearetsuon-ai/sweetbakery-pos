@@ -13,7 +13,6 @@ import {
   ChevronDown,
   Smartphone,
   Menu,
-  Music,
   Cloud,
   Bell,
   Wifi,
@@ -32,7 +31,6 @@ import {
 import { getStoreId, isDefaultStore } from '../../services/firebase';
 import { getCurrentStoreUser, subscribeStoreUser, StoreUserAccount } from '../../services/authService';
 import { useBakery } from '../../context/BakeryContext';
-import { useMusic } from '../../context/MusicContext';
 import { t } from '../../utils/translations';
 import { soundFx } from '../../utils/audio';
 import { getProductImageUrl } from '../../utils/imagePath';
@@ -119,11 +117,6 @@ export const Navbar: React.FC<NavbarProps> = ({
     demoDevicesCount,
     customOrders,
   } = useBakery();
-  const {
-    isPlaying: isMusicPlaying,
-    setIsPlayerOpen: setIsMusicPlayerOpen,
-    stop: stopMusic,
-  } = useMusic();
   const text = t[lang];
 
   const pendingCakeOrdersCount = (customOrders || []).filter(
@@ -416,36 +409,6 @@ export const Navbar: React.FC<NavbarProps> = ({
             </button>
           )}
 
-          {/* Active Music Playing Indicator & Quick Stop Button */}
-          {isMusicPlaying && (
-            <div className="hidden sm:flex items-center rounded-2xl bg-gradient-to-r from-pink-500/15 via-rose-500/15 to-amber-500/15 border border-pink-400/40 shadow-xs overflow-hidden shrink-0 animate-pulse">
-              <button
-                type="button"
-                onClick={() => {
-                  soundFx.playPop();
-                  setIsMusicPlayerOpen(true);
-                }}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-black text-pink-700 hover:text-pink-800 transition-colors cursor-pointer"
-                title="ចុចដើម្បីបើកផ្ទាំងចាក់ភ្លេង (Jukebox)"
-              >
-                <span className="text-sm">🎵</span>
-                <span className="hidden sm:inline font-battambang">កំពុងចាក់ភ្លេង</span>
-              </button>
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  soundFx.playPop();
-                  stopMusic();
-                }}
-                className="px-2 py-1.5 bg-rose-600/80 hover:bg-rose-600 text-white text-[11px] font-black flex items-center gap-1 transition-colors cursor-pointer"
-                title="បិទភ្លេងភ្លាមៗ (Stop Music)"
-              >
-                <span>⏹️</span>
-                <span className="hidden md:inline font-battambang">បិទភ្លេង</span>
-              </button>
-            </div>
-          )}
 
           {/* New Version Available Pulsing Pill Button */}
           {availableUpdate && availableUpdate.hasUpdate && (
@@ -994,33 +957,6 @@ export const Navbar: React.FC<NavbarProps> = ({
                     </button>
                   )}
 
-                  {/* 5. Music Player / Bakery Jukebox */}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsQuickToolsOpen(false);
-                      setIsMusicPlayerOpen(true);
-                    }}
-                    className="w-full flex items-center justify-between p-2.5 rounded-2xl hover:bg-pink-50 text-slate-800 transition-colors cursor-pointer group text-left border border-transparent hover:border-pink-100"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-xl bg-pink-600 text-white flex items-center justify-center shadow-xs group-hover:scale-105 transition-transform shrink-0">
-                        <Music className="w-4 h-4" />
-                      </div>
-                      <div>
-                        <div className="text-xs font-black text-slate-800 group-hover:text-pink-600 flex items-center gap-1">
-                          <span>ម៉ាស៊ីនចាក់ភ្លេងហាងនំ</span>
-                          {isMusicPlaying && <span className="animate-spin text-xs">🎵</span>}
-                        </div>
-                        <div className="text-[10px] text-slate-400">
-                          ចាក់ចម្រៀងកំដរហាង, បទខួបកំណើត & URL
-                        </div>
-                      </div>
-                    </div>
-                    <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-pink-100 text-pink-700">
-                      Jukebox
-                    </span>
-                  </button>
 
                   {/* 6. Theme Picker */}
                   {onOpenThemePicker && (
@@ -1438,20 +1374,6 @@ export const Navbar: React.FC<NavbarProps> = ({
           >
             <span>🎙️</span>
             <span className="font-battambang">POS សំឡេង</span>
-          </button>
-        )}
-        {isMusicPlaying && (
-          <button
-            type="button"
-            onClick={() => {
-              soundFx.playPop();
-              setIsMusicPlayerOpen(true);
-            }}
-            className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-pink-500/15 border border-pink-400 text-pink-700 text-[11px] font-bold shrink-0 shadow-2xs active:scale-95 animate-pulse"
-            title="កំពុងចាក់ភ្លេង (ចុចដើម្បីបើក)"
-          >
-            <span>🎵</span>
-            <span className="font-battambang">ចាក់ភ្លេង</span>
           </button>
         )}
         {availableUpdate && availableUpdate.hasUpdate && (

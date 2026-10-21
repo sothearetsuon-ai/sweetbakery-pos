@@ -11,48 +11,12 @@ app.commandLine.appendSwitch('disable-renderer-backgrounding');
 app.userAgentFallback = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';
 
 const TARGET_ONLINE_URL = 'https://sothearetsuon-ai.github.io/sweetbakery-pos/';
-const YT_BRIDGE_PORT = 48921;
 
 let mainWindow;
-let ytBridgeServer = null;
-
-function startYtBridgeServer() {
-  if (ytBridgeServer) return;
-  try {
-    ytBridgeServer = http.createServer((req, res) => {
-      res.setHeader('Access-Control-Allow-Origin', '*');
-      const bridgePath = path.join(__dirname, 'yt_bridge.html');
-      if (fs.existsSync(bridgePath)) {
-        res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-        res.end(fs.readFileSync(bridgePath, 'utf8'));
-      } else {
-        res.writeHead(404);
-        res.end('Not found');
-      }
-    });
-
-    ytBridgeServer.listen(YT_BRIDGE_PORT, '127.0.0.1', () => {
-      console.log(`YouTube Audio/Video Bridge running on http://127.0.0.1:${YT_BRIDGE_PORT}`);
-    });
-
-    ytBridgeServer.on('error', (err) => {
-      if (err.code === 'EADDRINUSE') {
-        console.log(`YouTube Bridge port ${YT_BRIDGE_PORT} already in use, assuming active bridge.`);
-      } else {
-        console.warn('YouTube Bridge server error:', err);
-      }
-    });
-  } catch (err) {
-    console.warn('Could not start YouTube bridge server:', err);
-  }
-}
 
 function createWindow() {
   // Clear any stale Service Workers registered under previous online web sessions
   session.defaultSession.clearStorageData({ storages: ['serviceworkers'] }).catch(() => {});
-
-  // Start YouTube Audio/Video Bridge for seamless playback on Windows Desktop
-  startYtBridgeServer();
 
   mainWindow = new BrowserWindow({
     width: 1366,
@@ -83,30 +47,7 @@ function createWindow() {
     return true;
   });
 
-  // Fix YouTube Error 150/153 & Referer Restrictions in Electron:
-  // Inject valid Chrome User-Agent, HTTPS Referer and Origin headers so YouTube embedded players initialize properly
-  session.defaultSession.webRequest.onBeforeSendHeaders(
-    { urls: ['*://*.youtube.com/*', '*://*.youtube-nocookie.com/*', '*://*.googlevideo.com/*'] },
-    (details, callback) => {
-      const requestHeaders = { ...details.requestHeaders };
-      requestHeaders['Referer'] = 'https://sothearetsuon-ai.github.io/sweetbakery-pos/';
-      requestHeaders['Origin'] = 'https://sothearetsuon-ai.github.io';
-      requestHeaders['User-Agent'] = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';
-      callback({ cancel: false, requestHeaders });
-    }
-  );
 
-  session.defaultSession.webRequest.onHeadersReceived(
-    { urls: ['*://*.youtube.com/*', '*://*.youtube-nocookie.com/*'] },
-    (details, callback) => {
-      const responseHeaders = { ...details.responseHeaders };
-      delete responseHeaders['x-frame-options'];
-      delete responseHeaders['X-Frame-Options'];
-      delete responseHeaders['content-security-policy'];
-      delete responseHeaders['Content-Security-Policy'];
-      callback({ cancel: false, responseHeaders });
-    }
-  );
 
   // Load the bundled local application (100% offline ready)
   loadAppUrl();
@@ -435,144 +376,5 @@ ipcMain.on('start-desktop-silent-update', async (event, downloadUrl) => {
   }
 });
 
-// ==========================================
-// Direct YouTube Search & Playlist Scraper (No API key, 100% Reliable, Zero CORS)
-// ==========================================
-function searchYouTubeDirect(query) {
-  return new Promise((resolve) => {
-    if (!query || !query.trim()) {
-      return resolve([]);
-    }
-    const cleanQ = query.trim();
-    const ytUrl = 'https://www.youtube.com/results?search_query=' + encodeURIComponent(cleanQ);
-    const req = https.get(
-      ytUrl,
-      {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-          'Accept-Language': 'km,en;q=0.9',
-          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
-        },
-        timeout: 12000
-      },
-      (res) => {
-        let raw = '';
-        res.on('data', (c) => (raw += c));
-        res.on('end', () => {
-          let startIdx = raw.indexOf('ytInitialData = ');
-          if (startIdx !== -1) {
-            startIdx += 16;
-          } else {
-            startIdx = raw.indexOf('ytInitialData=');
-            if (startIdx !== -1) startIdx += 14;
-          }
 
-          if (startIdx === -1) {
-            return resolve([]);
-          }
-
-          let endIdx = raw.indexOf(';</script>', startIdx);
-          if (endIdx === -1) endIdx = raw.indexOf('</script>', startIdx);
-          if (endIdx === -1) {
-            return resolve([]);
-          }
-
-          let jsonStr = raw.substring(startIdx, endIdx).trim();
-          if (jsonStr.endsWith(';')) jsonStr = jsonStr.slice(0, -1).trim();
-
-          try {
-            const parsed = JSON.parse(jsonStr);
-            const contents =
-              parsed.contents?.twoColumnSearchResultsRenderer?.primaryContents?.sectionListRenderer?.contents;
-            const items = [];
-            if (contents) {
-              for (const section of contents) {
-                for (const item of section?.itemSectionRenderer?.contents || []) {
-                  const v = item.videoRenderer;
-                  if (v && v.videoId) {
-                    items.push({
-                      id: v.videoId,
-                      title: v.title?.runs?.[0]?.text || '',
-                      author: v.ownerText?.runs?.[0]?.text || 'YouTube',
-                      duration: v.lengthText?.simpleText || '',
-                      thumbnailUrl:
-                        v.thumbnail?.thumbnails?.[0]?.url ||
-                        `https://img.youtube.com/vi/${v.videoId}/hqdefault.jpg`,
-                      url: `https://www.youtube.com/watch?v=${v.videoId}`,
-                    });
-                  }
-                }
-              }
-            }
-            resolve(items.slice(0, 30));
-          } catch (e) {
-            console.error('Error parsing ytInitialData in desktop app:', e);
-            resolve([]);
-          }
-        });
-      }
-    );
-
-    req.on('error', (err) => {
-      console.warn('YouTube search request error:', err);
-      resolve([]);
-    });
-
-    req.on('timeout', () => {
-      req.destroy();
-      resolve([]);
-    });
-  });
-}
-
-function fetchYouTubePlaylistDirect(listId) {
-  return new Promise((resolve) => {
-    if (!listId || !listId.trim()) return resolve([]);
-    const plUrl = 'https://www.youtube.com/playlist?list=' + encodeURIComponent(listId.trim());
-    const req = https.get(
-      plUrl,
-      {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-          'Accept-Language': 'km,en;q=0.9'
-        },
-        timeout: 12000
-      },
-      (res) => {
-        let raw = '';
-        res.on('data', (c) => (raw += c));
-        res.on('end', () => {
-          try {
-            const idMatches = [...raw.matchAll(/"videoId":"([a-zA-Z0-9_-]{11})"/g)].map((m) => m[1]);
-            const uniqueIds = [...new Set(idMatches)].filter((id) => id.length === 11);
-            const items = uniqueIds.map((id) => ({
-              id,
-              title: `YouTube Video (${id})`,
-              author: 'YouTube Playlist',
-              thumbnailUrl: `https://img.youtube.com/vi/${id}/hqdefault.jpg`,
-              url: `https://www.youtube.com/watch?v=${id}`,
-            }));
-            resolve(items.slice(0, 50));
-          } catch (e) {
-            resolve([]);
-          }
-        });
-      }
-    );
-
-    req.on('error', () => resolve([]));
-    req.on('timeout', () => {
-      req.destroy();
-      resolve([]);
-    });
-  });
-}
-
-ipcMain.handle('search-youtube', async (event, query) => {
-  return await searchYouTubeDirect(query);
-});
-
-ipcMain.handle('fetch-youtube-playlist', async (event, listId) => {
-  return await fetchYouTubePlaylistDirect(listId);
-});
 

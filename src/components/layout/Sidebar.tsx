@@ -14,7 +14,6 @@ import {
   Users,
   Lock,
   X,
-  Music,
   Palette,
   LogOut,
   Phone,
@@ -26,7 +25,6 @@ import {
   MessageCircle,
 } from 'lucide-react';
 import { useBakery } from '../../context/BakeryContext';
-import { useMusic } from '../../context/MusicContext';
 import { t } from '../../utils/translations';
 import { soundFx } from '../../utils/audio';
 import { StaffPermissions, ChatChannel } from '../../types';
@@ -88,7 +86,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onOpenChatModal,
 }) => {
   const { lang, customOrders, lowStockCount, expenses, sales, currentStaff, hasPermission, staffMembers, storeInfo, logoutAndLock, isDemoMode, reserveFund } = useBakery();
-  const { isPlaying: isMusicPlaying, setIsPlayerOpen: setIsMusicPlayerOpen } = useMusic();
   const text = t[lang];
 
   // Unread live chat count
@@ -670,25 +667,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </button>
         )}
 
-        {/* Music Player button */}
-        <button
-          onClick={() => {
-            soundFx.playPop();
-            setIsMusicPlayerOpen(true);
-            onCloseMobile?.();
-          }}
-          className="w-full flex items-center justify-between px-3.5 py-2 rounded-2xl font-bold text-xs text-slate-600 hover:bg-white hover:text-pink-600 transition-all border border-transparent hover:border-pink-200/60 shadow-2xs cursor-pointer group"
-        >
-          <div className="flex items-center gap-3">
-            <Music className={`w-4 h-4 transition-transform group-hover:scale-110 ${isMusicPlaying ? 'text-pink-600 animate-bounce' : 'text-slate-400'}`} />
-            <span>តន្ត្រីហាងនំ 🎶</span>
-          </div>
-          {isMusicPlaying && (
-            <span className="px-1.5 py-0.2 bg-pink-100 text-pink-700 text-[9px] font-black rounded-full animate-pulse">
-              កំពុងចាក់
-            </span>
-          )}
-        </button>
 
         {/* Background Theme Switcher button */}
         {onOpenThemePicker && (
@@ -753,33 +731,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </span>
         </button>
 
-        {/* Bakery Jukebox / Music Button */}
-        <button
-          type="button"
-          onClick={() => {
-            soundFx.playPop();
-            setIsMusicPlayerOpen(true);
-            onCloseMobile?.();
-          }}
-          className={`w-full flex items-center justify-between px-3.5 py-2 rounded-2xl font-bold text-xs transition-all shadow-2xs cursor-pointer group ${
-            isMusicPlaying
-              ? 'text-pink-700 bg-pink-50 hover:bg-pink-100 border border-pink-300 shadow-xs animate-pulse'
-              : 'text-slate-600 hover:bg-white hover:text-slate-900 border border-transparent hover:border-slate-200/60'
-          }`}
-          title="ម៉ាស៊ីនចាក់ភ្លេងហាងនំ (Bakery Jukebox)"
-        >
-          <div className="flex items-center gap-3">
-            <Music className={`w-4 h-4 ${isMusicPlaying ? 'text-pink-600' : 'text-slate-400'}`} />
-            <span className="font-battambang">ចាក់ភ្លេងហាងនំ</span>
-          </div>
-          <span className={`text-[10px] font-black px-2 py-0.5 rounded-full border ${
-            isMusicPlaying
-              ? 'bg-pink-200 text-pink-800 border-pink-300'
-              : 'bg-slate-100 text-slate-500 border-slate-200'
-          }`}>
-            {isMusicPlaying ? 'កំពុងចាក់ 🎶' : 'Jukebox'}
-          </span>
-        </button>
 
         {/* Multi-Store & Cloud Tenant Account */}
         {onOpenStoreAuthModal && (

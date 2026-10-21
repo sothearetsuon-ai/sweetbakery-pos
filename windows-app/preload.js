@@ -19,8 +19,5 @@ contextBridge.exposeInMainWorld('SweetBakeryDesktop', {
   },
   onUpdateError: (callback) => {
     ipcRenderer.on('desktop-update-error', (event, error) => callback(error));
-  },
-  searchYouTube: (query) => ipcRenderer.invoke('search-youtube', query),
-  fetchYouTubePlaylist: (listId) => ipcRenderer.invoke('fetch-youtube-playlist', listId),
-  ytBridgeUrl: 'http://127.0.0.1:48921'
+  }
 });

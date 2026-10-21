@@ -2,7 +2,6 @@ import React, { Component, ErrorInfo, ReactNode } from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
 import { BakeryProvider } from './context/BakeryContext';
-import { MusicProvider } from './context/MusicContext';
 import './index.css';
 
 // Service Worker registration: only for Web Production builds, NEVER in Vite dev mode or Electron
@@ -94,9 +93,7 @@ ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
   <React.StrictMode>
     <ErrorBoundary>
       <BakeryProvider>
-        <MusicProvider>
-          <App />
-        </MusicProvider>
+        <App />
       </BakeryProvider>
     </ErrorBoundary>
   </React.StrictMode>

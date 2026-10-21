@@ -4,7 +4,6 @@ import { Navbar } from './components/layout/Navbar';
 import { Sidebar, TabType } from './components/layout/Sidebar';
 import { BottomNav } from './components/layout/BottomNav';
 import { PosTerminal } from './components/pos/PosTerminal';
-import { MiniMusicPlayer } from './components/music/MiniMusicPlayer';
 import { NotificationReminderScheduler } from './components/layout/NotificationReminderScheduler';
 import { getSavedTheme, saveTheme, AppTheme } from './utils/themeManager';
 import { ButterflyEffect } from './components/common/ButterflyEffect';
@@ -34,8 +33,6 @@ const ReportsDashboard = lazy(() => import('./components/reports/ReportsDashboar
 const StaffManagement = lazy(() => import('./components/staff/StaffManagement').then((m) => ({ default: m.StaffManagement })));
 const ShiftModal = lazy(() => import('./components/shifts/ShiftModal').then((m) => ({ default: m.ShiftModal })));
 const SettingsModal = lazy(() => import('./components/settings/SettingsModal').then((m) => ({ default: m.SettingsModal })));
-const MusicPlayerModal = lazy(() => import('./components/music/MusicPlayerModal').then((m) => ({ default: m.MusicPlayerModal })));
-const FloatingMiniVideoPlayer = lazy(() => import('./components/music/FloatingMiniVideoPlayer').then((m) => ({ default: m.FloatingMiniVideoPlayer })));
 const ThemePickerModal = lazy(() => import('./components/common/ThemePickerModal').then((m) => ({ default: m.ThemePickerModal })));
 const LicenseExpiredModal = lazy(() => import('./components/license/LicenseExpiredModal').then((m) => ({ default: m.LicenseExpiredModal })));
 const LicenseRenewalModal = lazy(() => import('./components/license/LicenseRenewalModal').then((m) => ({ default: m.LicenseRenewalModal })));
@@ -596,10 +593,6 @@ export const App: React.FC = () => {
           onOpenSuperAdminPortal={() => setIsSuperAdminModalOpen(true)}
         />
 
-        {/* Bakery Music Player Modal & Floating Mini Player */}
-        <MusicPlayerModal />
-        <MiniMusicPlayer />
-        <FloatingMiniVideoPlayer />
 
         {/* Flying 3D Butterflies & Swimming Lucky Goldfish Effect (Independent toggles, paused during Auth Modal for zero lag) */}
         <ButterflyEffect

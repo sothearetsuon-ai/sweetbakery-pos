@@ -310,26 +310,6 @@ export interface StaffMember {
   permissions: StaffPermissions;
 }
 
-export type MusicLoopMode = 'all' | 'one' | 'none';
-
-export interface AudioTrack {
-  id: string;
-  title: string;
-  artist?: string;
-  url: string;
-  duration?: number;
-  isCustom: boolean;
-  category?: 'cafe' | 'birthday' | 'custom' | 'acoustic' | 'youtube' | 'web' | 'mp4' | 'pastry';
-  dateAdded?: string;
-  storagePath?: string;
-  isCloudSynced?: boolean;
-  youtubeId?: string;
-  thumbnailUrl?: string;
-  isFavorite?: boolean;
-  sourceUrl?: string;
-  isVideo?: boolean;
-  mediaType?: 'audio' | 'video';
-}
 
 export interface NotificationConfig {
   enabled: boolean;
