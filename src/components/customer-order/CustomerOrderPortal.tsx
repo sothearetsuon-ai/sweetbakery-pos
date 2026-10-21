@@ -602,6 +602,8 @@ export const CustomerOrderPortal: React.FC<CustomerOrderPortalProps> = ({ onBack
         paymentMethod: 'KHQR_BAKONG',
         bankSlipImage: bankSlipImage || undefined,
         orderSource: 'CUSTOMER_ONLINE',
+        deductedItems: selectedProduct ? [{ productId: selectedProduct.id, quantity: 1 }] : undefined,
+        deductedAddons: selectedAddons.length > 0 ? selectedAddons.map((id) => ({ addonId: id, quantity: 1 })) : undefined,
       };
 
       // Add to Bakery Context

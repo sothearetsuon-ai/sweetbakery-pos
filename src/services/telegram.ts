@@ -1,7 +1,7 @@
 import { CompletedSale, CustomCakeOrder, Expense, Shift, StoreInfo } from '../types';
 import { formatDateDMY, formatDateTimeDMY } from '../utils/dateUtils';
 import { idbGet, idbSet } from '../utils/idbStorage';
-import { saveFirestoreDoc, getFirestoreDoc } from './firebase';
+import { saveFirestoreDoc, getFirestoreDoc, getStoreId } from './firebase';
 
 export interface TelegramConfig {
   botToken: string;
@@ -169,16 +169,20 @@ export const saveStoredTelegramConfig = (
 
     // Also push to server LAN sync if available so local network devices get it
     if (syncToLan) {
-      fetch('/api/lan-sync')
+      const currentTenant = getStoreId();
+      fetch(`/api/lan-sync?tenant=${encodeURIComponent(currentTenant)}`)
         .then((res) => (res.ok ? res.json() : null))
         .then((data) => {
           if (data) {
             if (data.telegramConfig && areTelegramConfigsEqual(data.telegramConfig, config)) {
               return; // Already up-to-date on LAN server
             }
-            fetch('/api/lan-sync', {
+            fetch(`/api/lan-sync?tenant=${encodeURIComponent(currentTenant)}`, {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
+              headers: {
+                'Content-Type': 'application/json',
+                'X-Tenant-Id': currentTenant,
+              },
               body: JSON.stringify({ ...data, telegramConfig: config }),
             }).catch(() => {});
           }
@@ -268,7 +272,8 @@ export const getStoredTelegramConfigAsync = async (): Promise<TelegramConfig> =>
 
   // Fallback: If mobile phone doesn't have credentials in localStorage, fetch from server
   try {
-    const res = await fetch('/api/lan-sync');
+    const currentTenant = getStoreId();
+    const res = await fetch(`/api/lan-sync?tenant=${encodeURIComponent(currentTenant)}`);
     if (res.ok) {
       const data = await res.json();
       if (data?.telegramConfig?.botToken && data?.telegramConfig?.chatId) {

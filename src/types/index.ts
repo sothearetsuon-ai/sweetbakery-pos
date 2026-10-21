@@ -101,6 +101,10 @@ export interface CustomCakeOrder {
   paymentMethod: 'CASH_USD' | 'CASH_KHR' | 'KHQR_BAKONG';
   bankSlipImage?: string;
   orderSource?: 'CUSTOMER_ONLINE' | 'POS_STAFF';
+  stockDeducted?: boolean;
+  stockRestored?: boolean;
+  deductedItems?: { productId: string; quantity: number }[];
+  deductedAddons?: { addonId: string; quantity: number }[];
   createdAt: string;
 }
 

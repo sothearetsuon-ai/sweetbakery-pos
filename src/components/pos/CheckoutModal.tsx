@@ -295,6 +295,8 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
         depositKhr: numDepositKhr,
         paymentMethod: paymentMethod,
         status: 'PENDING',
+        stockDeducted: true,
+        deductedItems: cart.map((i) => ({ productId: i.product.id, quantity: i.quantity })),
       });
     }
 

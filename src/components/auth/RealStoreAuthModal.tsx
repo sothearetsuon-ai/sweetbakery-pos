@@ -57,6 +57,7 @@ export const RealStoreAuthModal: React.FC<RealStoreAuthModalProps> = ({
     currentStaff,
     setCurrentStaff,
     storeInfo,
+    updateStoreInfo,
   } = useBakery();
 
   // Primary mode: 'NEW_FORM' (Default) or 'PIN'
@@ -152,7 +153,12 @@ export const RealStoreAuthModal: React.FC<RealStoreAuthModalProps> = ({
     } catch (e) {}
 
     sessionStorage.setItem('bakery_real_store_unlocked', 'true');
-    localStorage.setItem('bakery_is_primary_store', 'true');
+    const activeTenantId = getStoreId();
+    if (isDefaultStore(activeTenantId)) {
+      localStorage.setItem('bakery_is_primary_store', 'true');
+    } else {
+      localStorage.setItem('bakery_is_primary_store', 'false');
+    }
     if (rememberDevice) {
       localStorage.setItem('bakery_real_store_authorized_device', 'true');
     } else {
@@ -163,7 +169,7 @@ export const RealStoreAuthModal: React.FC<RealStoreAuthModalProps> = ({
     const finalStaff = staffToPreserve || authenticatedStaffRef.current || currentStaff || adminStaff;
     if (onSuccess) {
       onSuccess(finalStaff);
-    } else {
+    } else if (isDemoMode) {
       exitDemoMode(finalStaff);
     }
     onClose();
@@ -188,6 +194,12 @@ export const RealStoreAuthModal: React.FC<RealStoreAuthModalProps> = ({
     try {
       const res = await signInStore(emailOrPhone.trim(), password);
       if (res.success && res.account) {
+        updateStoreInfo({
+          nameKh: res.account.storeName,
+          nameEn: res.account.storeName,
+          phone: res.account.phone || '',
+          storeId: res.account.storeId,
+        });
         setFormSuccess(`ចូលហាង «${res.account.storeName}» ជោគជ័យ!`);
         setTimeout(() => {
           const adminStaff = realStaffList.find((s) => s.role === 'ADMIN') || realStaffList[0];
@@ -234,6 +246,12 @@ export const RealStoreAuthModal: React.FC<RealStoreAuthModalProps> = ({
       });
 
       if (res.success && res.account) {
+        updateStoreInfo({
+          nameKh: res.account.storeName,
+          nameEn: res.account.storeName,
+          phone: res.account.phone || '',
+          storeId: res.account.storeId,
+        });
         setFormSuccess(`បង្កើតហាង «${res.account.storeName}» (${res.account.storeId}) ជោគជ័យ!`);
         setTimeout(() => {
           const adminStaff = realStaffList.find((s) => s.role === 'ADMIN') || realStaffList[0];
@@ -257,6 +275,12 @@ export const RealStoreAuthModal: React.FC<RealStoreAuthModalProps> = ({
     try {
       const res = await signInWithGoogle();
       if (res.success && res.account) {
+        updateStoreInfo({
+          nameKh: res.account.storeName,
+          nameEn: res.account.storeName,
+          phone: res.account.phone || '',
+          storeId: res.account.storeId,
+        });
         setFormSuccess(`ចូលហាង «${res.account.storeName}» ដោយ Google ជោគជ័យ!`);
         setTimeout(() => {
           const adminStaff = realStaffList.find((s) => s.role === 'ADMIN') || realStaffList[0];
@@ -287,6 +311,12 @@ export const RealStoreAuthModal: React.FC<RealStoreAuthModalProps> = ({
     try {
       const res = await joinStoreById(targetStoreId.trim());
       if (res.success && res.account) {
+        updateStoreInfo({
+          nameKh: res.account.storeName || storeInfo.nameKh,
+          nameEn: res.account.storeName || storeInfo.nameEn,
+          phone: res.account.phone || storeInfo.phone,
+          storeId: res.account.storeId,
+        });
         setFormSuccess(`បានភ្ជាប់ទៅកាន់ហាង ${res.account.storeId} រួចរាល់!`);
         setTimeout(() => {
           unlockAndFinish();

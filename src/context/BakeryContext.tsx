@@ -49,7 +49,10 @@ import {
   deleteFirestoreDoc as rawDeleteFirestoreDoc,
   subscribeToStoreIdChange,
   getStoreId,
+  isDefaultStore,
+  DEFAULT_STORE_ID,
 } from '../services/firebase';
+import { getCurrentStoreUser } from '../services/authService';
 import {
   notifyTelegramSale as rawNotifyTelegramSale,
   notifyTelegramCustomOrder as rawNotifyTelegramCustomOrder,
@@ -586,8 +589,8 @@ interface BakeryContextType {
     paymentMethod?: 'CASH_USD' | 'CASH_KHR' | 'KHQR_BAKONG'
   ) => void;
   updateCustomOrder: (orderId: string, updates: Partial<CustomCakeOrder>) => void;
-  deleteCustomOrder: (orderId: string) => void;
-  clearAllCustomOrders: () => void;
+  deleteCustomOrder: (orderId: string, restoreStock?: boolean) => void;
+  clearAllCustomOrders: (restoreStock?: boolean) => void;
 
   ingredients: Ingredient[];
   addIngredient: (ingredient: Omit<Ingredient, 'id'>) => void;
@@ -2009,6 +2012,12 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   customOrdersRef.current = customOrders;
   const salesRef = useRef<CompletedSale[]>(sales);
   salesRef.current = sales;
+  const productsRef = useRef<Product[]>(products);
+  productsRef.current = products;
+  const expensesRef = useRef<Expense[]>(expenses);
+  expensesRef.current = expenses;
+  const storeInfoRef = useRef<StoreInfo>(storeInfo);
+  storeInfoRef.current = storeInfo;
 
   const saveToLanSync = (payload: any, force: boolean = true) => {
     if (globalIsDemoMode || !isLanEnvironment()) return;
@@ -2016,9 +2025,13 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     try {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 2000);
-      fetch('/api/lan-sync', {
+      const tenant = activeTenantIdRef.current || getStoreId();
+      fetch(`/api/lan-sync?tenant=${encodeURIComponent(tenant)}`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Tenant-Id': tenant,
+        },
         signal: controller.signal,
         body: JSON.stringify({
           ...payload,
@@ -2364,9 +2377,13 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 2500);
       // 1. Push local deletions & current state to LAN server first
-      const postRes = await fetch('/api/lan-sync', {
+      const activeTenant = activeTenantIdRef.current || getStoreId();
+      const postRes = await fetch(`/api/lan-sync?tenant=${encodeURIComponent(activeTenant)}`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Tenant-Id': activeTenant,
+        },
         signal: controller.signal,
         body: JSON.stringify({
           products,
@@ -2396,7 +2413,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       }
 
       // 2. Fetch the authoritative merged state
-      const res = await fetch('/api/lan-sync', { signal: controller.signal });
+      const res = await fetch(`/api/lan-sync?tenant=${encodeURIComponent(activeTenant)}`, { signal: controller.signal });
       clearTimeout(timeoutId);
       if (res.ok) {
         const data = await res.json().catch(() => null);
@@ -2430,8 +2447,9 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     // 1. Initial LAN fetch on mount with timeout
     const fetchController = new AbortController();
     const fetchTimeout = setTimeout(() => fetchController.abort(), 2000);
+    const initialTenant = activeTenantIdRef.current || getStoreId();
 
-    fetch('/api/lan-sync', { signal: fetchController.signal })
+    fetch(`/api/lan-sync?tenant=${encodeURIComponent(initialTenant)}`, { signal: fetchController.signal })
       .then((res) => {
         clearTimeout(fetchTimeout);
         if (!res.ok) throw new Error('LAN sync not available');
@@ -2469,7 +2487,10 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     // 2. High-speed window focus & visibility sync (with version check)
     const handleSyncOnFocus = (targetVersion?: number) => {
       if (globalIsDemoMode || !isLanEnvironment() || !isSubscribed) return;
-      const verParam = lastLanVersion.current ? `?v=${lastLanVersion.current}` : '';
+      const currentTenant = activeTenantIdRef.current || getStoreId();
+      const verParam = lastLanVersion.current
+        ? `?v=${lastLanVersion.current}&tenant=${encodeURIComponent(currentTenant)}`
+        : `?tenant=${encodeURIComponent(currentTenant)}`;
       const ctrl = new AbortController();
       const t = setTimeout(() => ctrl.abort(), 2000);
       fetch(`/api/lan-sync${verParam}`, { signal: ctrl.signal })
@@ -2603,20 +2624,120 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       if (newId === activeTenantIdRef.current) return;
       console.log(`[StoreSwitch] Switching store tenant from ${activeTenantIdRef.current} to ${newId}`);
       isSwitchingTenant.current = true;
+      const oldId = activeTenantIdRef.current;
       activeTenantIdRef.current = newId;
 
       if (lanSyncTimer.current) clearTimeout(lanSyncTimer.current);
 
-      // Clean tenant-scoped state so data from old store is not retained or cross-uploaded
-      setSales([]);
-      setCustomOrders([]);
-      setExpenses([]);
+      // 1. Snapshot previous store's data into tenant storage so switching back restores it perfectly!
+      try {
+        const oldKey = `bakery_tenant_snapshot_${oldId}`;
+        const snapshot = {
+          sales: salesRef.current,
+          customOrders: customOrdersRef.current,
+          expenses: expensesRef.current,
+          products: productsRef.current,
+          storeInfo: storeInfoRef.current,
+        };
+        localStorage.setItem(oldKey, JSON.stringify(snapshot));
+        idbSet(oldKey, JSON.stringify(snapshot)).catch(() => {});
+      } catch (e) {}
+
+      // 2. Load cached data for newId if it was previously saved, or start clean
+      const newKey = `bakery_tenant_snapshot_${newId}`;
+      const savedRaw = localStorage.getItem(newKey);
+      let loadedSnapshot: any = null;
+      if (savedRaw) {
+        try {
+          loadedSnapshot = JSON.parse(savedRaw);
+        } catch (e) {}
+      }
+
+      const storeUser = getCurrentStoreUser();
+
+      if (loadedSnapshot) {
+        // Restore previously cached data for this tenant
+        const restoredSales = Array.isArray(loadedSnapshot.sales) ? loadedSnapshot.sales : [];
+        const restoredOrders = Array.isArray(loadedSnapshot.customOrders) ? loadedSnapshot.customOrders : [];
+        const restoredExpenses = Array.isArray(loadedSnapshot.expenses) ? loadedSnapshot.expenses : [];
+        const restoredProducts = Array.isArray(loadedSnapshot.products) && loadedSnapshot.products.length > 0
+          ? sortProductsNewestFirst(loadedSnapshot.products)
+          : sortProductsNewestFirst(initialProducts);
+
+        setSales(restoredSales);
+        setCustomOrders(restoredOrders);
+        setExpenses(restoredExpenses);
+        setProducts(restoredProducts);
+
+        const effectiveStoreInfo = loadedSnapshot.storeInfo || {
+          ...storeInfoRef.current,
+          nameKh: (storeUser?.storeId === newId ? storeUser.storeName : '') || `ហាងនំ (${newId})`,
+          nameEn: (storeUser?.storeId === newId ? storeUser.storeName : '') || 'SweetBakery',
+          storeId: newId,
+        };
+        effectiveStoreInfo.storeId = newId;
+        setStoreInfo(effectiveStoreInfo);
+
+        // Update active localStorage keys
+        localStorage.setItem('bakery_store_info', JSON.stringify(effectiveStoreInfo));
+        localStorage.setItem('bakery_sales', JSON.stringify(restoredSales));
+        localStorage.setItem('bakery_custom_orders', JSON.stringify(restoredOrders));
+        localStorage.setItem('bakery_expenses', JSON.stringify(restoredExpenses));
+        localStorage.setItem('bakery_products', JSON.stringify(restoredProducts));
+        idbSet('bakery_sales', JSON.stringify(restoredSales)).catch(() => {});
+        idbSet('bakery_custom_orders', JSON.stringify(restoredOrders)).catch(() => {});
+        idbSet('bakery_expenses', JSON.stringify(restoredExpenses)).catch(() => {});
+        idbSet('bakery_products', JSON.stringify(restoredProducts)).catch(() => {});
+      } else {
+        // Brand new isolated store!
+        // 1. Reset transactional data
+        setSales([]);
+        setCustomOrders([]);
+        setExpenses([]);
+        // 2. Set clean template products
+        const cleanProducts = sortProductsNewestFirst(initialProducts);
+        setProducts(cleanProducts);
+        // 3. Set fresh store info with new store ID & name
+        const cleanStoreInfo: StoreInfo = {
+          ...storeInfoRef.current,
+          nameKh: (storeUser?.storeId === newId ? storeUser.storeName : '') || (isDefaultStore(newId) ? 'ហាងនំប៉័ង វិជ្ជតា' : `ហាងនំ (${newId})`),
+          nameEn: (storeUser?.storeId === newId ? storeUser.storeName : '') || (isDefaultStore(newId) ? 'Vicheta Bakery' : 'SweetBakery'),
+          phone: (storeUser?.storeId === newId ? storeUser.phone : '') || '',
+          storeId: newId,
+        };
+        setStoreInfo(cleanStoreInfo);
+
+        // Update active localStorage and IndexedDB so app reload doesn't pull old store's data
+        localStorage.setItem('bakery_store_info', JSON.stringify(cleanStoreInfo));
+        localStorage.setItem('bakery_sales', JSON.stringify([]));
+        localStorage.setItem('bakery_custom_orders', JSON.stringify([]));
+        localStorage.setItem('bakery_expenses', JSON.stringify([]));
+        localStorage.setItem('bakery_products', JSON.stringify(cleanProducts));
+        idbSet('bakery_sales', JSON.stringify([])).catch(() => {});
+        idbSet('bakery_custom_orders', JSON.stringify([])).catch(() => {});
+        idbSet('bakery_expenses', JSON.stringify([])).catch(() => {});
+        idbSet('bakery_products', JSON.stringify(cleanProducts)).catch(() => {});
+      }
 
       deletedSaleIds.current = loadDeletedIds(`sales_${newId}`);
       deletedOrderIds.current = loadDeletedIds(`orders_${newId}`);
       deletedExpenseIds.current = loadDeletedIds(`expenses_${newId}`);
+      deletedProductIds.current = loadDeletedIds(`products_${newId}`);
 
       setCurrentStoreTenantId(newId);
+      lastLanVersion.current = 0;
+
+      // Immediately fetch new tenant's LAN DB if available
+      if (isLanEnvironment()) {
+        fetch(`/api/lan-sync?tenant=${encodeURIComponent(newId)}`)
+          .then((r) => r.json())
+          .then((data) => {
+            if (data && data.exists !== false) {
+              applyLanData(data);
+            }
+          })
+          .catch(() => {});
+      }
 
       setTimeout(() => {
         isSwitchingTenant.current = false;
@@ -5013,19 +5134,133 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       ? Math.round(orderData.depositKhr / 100) * 100
       : Math.round(((orderData.depositUsd || 0) * exchangeRate) / 100) * 100;
 
+    const nowIso = new Date().toISOString();
+    let updatedProducts = products;
+    let updatedPartyAddons = partyAddons;
+
+    // Track what items & accessories were deducted
+    let finalDeductedItems: { productId: string; quantity: number }[] = orderData.deductedItems ? [...orderData.deductedItems] : [];
+    let finalDeductedAddons: { addonId: string; quantity: number }[] = orderData.deductedAddons ? [...orderData.deductedAddons] : [];
+    let finalStockDeducted = Boolean(orderData.stockDeducted);
+
+    // If stock was NOT already deducted by POS (e.g. online order or new custom order modal)
+    if (!orderData.stockDeducted) {
+      const itemsToDeduct: { productId: string; quantity: number }[] = [...finalDeductedItems];
+      const addonsToDeduct: { addonId: string; quantity: number }[] = [...finalDeductedAddons];
+
+      // Auto-match bread items if not already in deductedItems
+      if (itemsToDeduct.length === 0 && orderData.orderType === 'BREAD' && orderData.breadItems && orderData.breadItems.length > 0) {
+        orderData.breadItems.forEach((b) => {
+          const match = products.find(
+            (p) =>
+              p.nameKh.trim().toLowerCase() === b.nameKh.trim().toLowerCase() ||
+              (p.nameEn && p.nameEn.trim().toLowerCase() === (b.nameEn || b.nameKh).trim().toLowerCase())
+          );
+          if (match) {
+            itemsToDeduct.push({ productId: match.id, quantity: b.quantity });
+          }
+        });
+      }
+
+      // Auto-match cake product if not already in deductedItems
+      if (itemsToDeduct.length === 0 && orderData.cakeName) {
+        const match = products.find(
+          (p) =>
+            p.nameKh.trim().toLowerCase() === orderData.cakeName.trim().toLowerCase() ||
+            (p.nameEn && p.nameEn.trim().toLowerCase() === orderData.cakeName.trim().toLowerCase())
+        );
+        if (match) {
+          itemsToDeduct.push({ productId: match.id, quantity: 1 });
+        }
+      }
+
+      // Auto-match party addons from notes if not provided
+      if (addonsToDeduct.length === 0 && orderData.themeNotes) {
+        partyAddons.forEach((a) => {
+          if (orderData.themeNotes && orderData.themeNotes.includes(a.nameKh)) {
+            addonsToDeduct.push({ addonId: a.id, quantity: 1 });
+          }
+        });
+      }
+
+      // Deduct product stock
+      if (itemsToDeduct.length > 0) {
+        const deductProdMap: Record<string, number> = {};
+        itemsToDeduct.forEach((it) => {
+          deductProdMap[it.productId] = (deductProdMap[it.productId] || 0) + it.quantity;
+        });
+
+        updatedProducts = products.map((p) => {
+          const qty = deductProdMap[p.id];
+          if (qty && qty > 0) {
+            const updated = {
+              ...p,
+              stockQty: Math.max(0, (p.stockQty || 0) - qty),
+              updatedAt: nowIso,
+            };
+            syncSaveDoc('products', p.id, updated);
+            return updated;
+          }
+          return p;
+        });
+
+        setProducts(updatedProducts);
+        safeSetStorage('bakery_products', JSON.stringify(updatedProducts));
+        fetch('/api/save-products', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ products: updatedProducts }),
+        }).catch(() => {});
+      }
+
+      // Deduct party addons stock
+      if (addonsToDeduct.length > 0) {
+        const deductAddonMap: Record<string, number> = {};
+        addonsToDeduct.forEach((ad) => {
+          deductAddonMap[ad.addonId] = (deductAddonMap[ad.addonId] || 0) + ad.quantity;
+        });
+
+        updatedPartyAddons = partyAddons.map((a) => {
+          const qty = deductAddonMap[a.id];
+          if (qty && qty > 0) {
+            return {
+              ...a,
+              stockQty: Math.max(0, (a.stockQty || 0) - qty),
+            };
+          }
+          return a;
+        });
+
+        setPartyAddons(updatedPartyAddons);
+        safeSetStorage('bakery_party_addons', JSON.stringify(updatedPartyAddons));
+        saveToLanSync({ partyAddons: updatedPartyAddons });
+        syncSaveDoc('settings', 'partyAddons', { items: updatedPartyAddons, updatedAt: nowIso });
+      }
+
+      if (itemsToDeduct.length > 0 || addonsToDeduct.length > 0) {
+        finalStockDeducted = true;
+        finalDeductedItems = itemsToDeduct;
+        finalDeductedAddons = addonsToDeduct;
+      }
+    }
+
     const newOrder: CustomCakeOrder = {
       ...orderData,
       totalKhr: cleanTotalKhr,
       depositKhr: cleanDepositKhr,
       id: `ord-${Date.now()}`,
       orderNumber,
-      createdAt: new Date().toISOString(),
+      stockDeducted: finalStockDeducted,
+      deductedItems: finalDeductedItems.length > 0 ? finalDeductedItems : undefined,
+      deductedAddons: finalDeductedAddons.length > 0 ? finalDeductedAddons : undefined,
+      createdAt: nowIso,
     };
     setCustomOrders((prev) => {
       const updated = [newOrder, ...prev];
       safeSetStorage('bakery_custom_orders', JSON.stringify(updated));
       saveToLanSync({
-        products,
+        products: updatedProducts,
+        partyAddons: updatedPartyAddons,
         sales,
         customOrders: updated,
         expenses,
@@ -5040,7 +5275,11 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     fetch('/api/save-custom-order', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ order: newOrder }),
+      body: JSON.stringify({
+        order: newOrder,
+        updatedProducts: finalStockDeducted && finalDeductedItems.length > 0 ? updatedProducts : undefined,
+        updatedPartyAddons: finalStockDeducted && finalDeductedAddons.length > 0 ? updatedPartyAddons : undefined,
+      }),
     }).catch(() => {});
 
     syncSaveDoc('customOrders', newOrder.id, newOrder);
@@ -5371,32 +5610,180 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
   }, [customOrders, sales, exchangeRate]);
 
-  const deleteCustomOrder = (orderId: string) => {
+  const deleteCustomOrder = (orderId: string, restoreStock: boolean = true) => {
     isUpdatingFromLan.current = false;
     if (lanSyncTimer.current) clearTimeout(lanSyncTimer.current);
+
+    const currentOrders = customOrdersRef.current || customOrders;
+    const targetOrder = currentOrders.find((o) => o.id === orderId);
+
     recordDeletedId('orders', orderId, deletedOrderIds);
 
     const autoSaleId = `sale-custom-${orderId}`;
-    recordDeletedId('sales', autoSaleId, deletedSaleIds);
+    const currentSales = salesRef.current || sales;
+    const matchingSales = currentSales.filter((s) =>
+      s.id === autoSaleId ||
+      (targetOrder && s.orderNumber && s.orderNumber === targetOrder.orderNumber) ||
+      (targetOrder && targetOrder.themeNotes && s.orderNumber && targetOrder.themeNotes.includes(s.orderNumber))
+    );
 
-    setSales((prevSales) => {
-      const updatedSales = prevSales.filter((s) => s.id !== autoSaleId);
-      safeSetStorage('bakery_sales', JSON.stringify(updatedSales));
-      return updatedSales;
+    const matchingSaleIds = new Set<string>();
+    matchingSaleIds.add(autoSaleId);
+    matchingSales.forEach((s) => matchingSaleIds.add(s.id));
+
+    let updatedProducts = products;
+    let updatedPartyAddons = partyAddons;
+    const nowIso = new Date().toISOString();
+
+    const stockRestoreMap: Record<string, number> = {};
+    const restorePartyAddonsMap: Record<string, number> = {};
+
+    // Restore stock if requested and order has not already had stock restored
+    if (restoreStock && (!targetOrder || !targetOrder.stockRestored)) {
+      // 1. Restore from matching sales items if available
+      matchingSales.forEach((s) => {
+        (s.items || []).forEach((item) => {
+          if (!item.productId || item.quantity <= 0) return;
+          const rawAddonId = item.productId.startsWith('addon-') ? item.productId.slice(6) : item.productId;
+          const matchedAddon = partyAddons.find((a) => a.id === rawAddonId || `addon-${a.id}` === item.productId);
+          if (matchedAddon) {
+            restorePartyAddonsMap[matchedAddon.id] = (restorePartyAddonsMap[matchedAddon.id] || 0) + item.quantity;
+          } else {
+            const prod = products.find((p) => p.id === item.productId);
+            if (prod) {
+              stockRestoreMap[prod.id] = (stockRestoreMap[prod.id] || 0) + item.quantity;
+            }
+          }
+        });
+      });
+
+      // 2. Restore from targetOrder.deductedItems if not already restored from sales
+      if (targetOrder?.deductedItems && targetOrder.deductedItems.length > 0) {
+        targetOrder.deductedItems.forEach((it) => {
+          if (matchingSales.length === 0 || !stockRestoreMap[it.productId]) {
+            stockRestoreMap[it.productId] = (stockRestoreMap[it.productId] || 0) + it.quantity;
+          }
+        });
+      }
+
+      // 3. Restore from targetOrder.deductedAddons
+      if (targetOrder?.deductedAddons && targetOrder.deductedAddons.length > 0) {
+        targetOrder.deductedAddons.forEach((ad) => {
+          if (matchingSales.length === 0 || !restorePartyAddonsMap[ad.addonId]) {
+            restorePartyAddonsMap[ad.addonId] = (restorePartyAddonsMap[ad.addonId] || 0) + ad.quantity;
+          }
+        });
+      }
+
+      // 4. Fallback for orders without explicit deductedItems: match products by name
+      if (Object.keys(stockRestoreMap).length === 0 && targetOrder) {
+        if (targetOrder.orderType === 'BREAD' && targetOrder.breadItems && targetOrder.breadItems.length > 0) {
+          targetOrder.breadItems.forEach((b) => {
+            const match = products.find(
+              (p) =>
+                p.nameKh.trim().toLowerCase() === b.nameKh.trim().toLowerCase() ||
+                (p.nameEn && p.nameEn.trim().toLowerCase() === (b.nameEn || b.nameKh).trim().toLowerCase())
+            );
+            if (match) {
+              stockRestoreMap[match.id] = (stockRestoreMap[match.id] || 0) + b.quantity;
+            }
+          });
+        } else if (targetOrder.cakeName) {
+          const match = products.find(
+            (p) =>
+              p.nameKh.trim().toLowerCase() === targetOrder.cakeName.trim().toLowerCase() ||
+              (p.nameEn && p.nameEn.trim().toLowerCase() === targetOrder.cakeName.trim().toLowerCase()) ||
+              (targetOrder.cakeName.toLowerCase().includes(p.nameKh.toLowerCase()) && p.nameKh.length > 3)
+          );
+          if (match) {
+            stockRestoreMap[match.id] = (stockRestoreMap[match.id] || 0) + 1;
+          }
+        }
+      }
+
+      // 5. Fallback for party addons mentioned in themeNotes
+      if (Object.keys(restorePartyAddonsMap).length === 0 && targetOrder?.themeNotes) {
+        partyAddons.forEach((a) => {
+          if (targetOrder.themeNotes && targetOrder.themeNotes.includes(a.nameKh)) {
+            restorePartyAddonsMap[a.id] = (restorePartyAddonsMap[a.id] || 0) + 1;
+          }
+        });
+      }
+
+      // Apply product stock restoration
+      if (Object.keys(stockRestoreMap).length > 0) {
+        updatedProducts = products.map((p) => {
+          const qty = stockRestoreMap[p.id];
+          if (qty && qty > 0) {
+            const restoredStock = (p.stockQty || 0) + qty;
+            const updatedProd = { ...p, stockQty: restoredStock, updatedAt: nowIso };
+            syncSaveDoc('products', p.id, updatedProd);
+            return updatedProd;
+          }
+          return p;
+        });
+
+        setProducts(updatedProducts);
+        safeSetStorage('bakery_products', JSON.stringify(updatedProducts));
+        fetch('/api/save-products', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ products: updatedProducts }),
+        }).catch(() => {});
+      }
+
+      // Apply party addons restoration
+      if (Object.keys(restorePartyAddonsMap).length > 0) {
+        updatedPartyAddons = partyAddons.map((a) => {
+          const qty = restorePartyAddonsMap[a.id];
+          if (qty && qty > 0) {
+            return { ...a, stockQty: (a.stockQty || 0) + qty };
+          }
+          return a;
+        });
+
+        setPartyAddons(updatedPartyAddons);
+        safeSetStorage('bakery_party_addons', JSON.stringify(updatedPartyAddons));
+        saveToLanSync({ partyAddons: updatedPartyAddons });
+        syncSaveDoc('settings', 'partyAddons', { items: updatedPartyAddons, updatedAt: nowIso });
+      }
+    }
+
+    // Delete matching sales
+    matchingSaleIds.forEach((sId) => {
+      recordDeletedId('sales', sId, deletedSaleIds);
+      syncDeleteDoc('sales', sId);
+      fetch('/api/delete-sale', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: sId }),
+      }).catch(() => {});
     });
-    syncDeleteDoc('sales', autoSaleId);
-    fetch('/api/delete-sale', {
+
+    const updatedSales = sales.filter((s) => !matchingSaleIds.has(s.id));
+    setSales(updatedSales);
+    safeSetStorage('bakery_sales', JSON.stringify(updatedSales));
+
+    // Delete custom order
+    syncDeleteDoc('customOrders', orderId);
+    fetch('/api/delete-custom-order', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id: autoSaleId }),
+      body: JSON.stringify({
+        id: orderId,
+        matchingSaleIds: Array.from(matchingSaleIds),
+        updatedProducts: Object.keys(stockRestoreMap).length > 0 ? updatedProducts : undefined,
+        updatedPartyAddons: Object.keys(restorePartyAddonsMap).length > 0 ? updatedPartyAddons : undefined,
+      }),
     }).catch(() => {});
 
     setCustomOrders((prev) => {
       const updated = prev.filter((o) => o.id !== orderId);
       safeSetStorage('bakery_custom_orders', JSON.stringify(updated));
       saveToLanSync({
-        products,
-        sales: sales.filter((s) => s.id !== autoSaleId),
+        products: updatedProducts,
+        partyAddons: updatedPartyAddons,
+        sales: updatedSales,
         customOrders: updated,
         expenses,
         storeInfo,
@@ -5405,12 +5792,6 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       }, true);
       return updated;
     });
-    syncDeleteDoc('customOrders', orderId);
-    fetch('/api/delete-custom-order', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id: orderId }),
-    }).catch(() => {});
   };
 
   const clearAllCustomOrders = () => {
@@ -5745,6 +6126,31 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
 
     try {
+      const currentTenant = getStoreId();
+      const isCustomTenant = !isDefaultStore(currentTenant);
+      if (isCustomTenant) {
+        const tenantSnapshotKey = `bakery_tenant_snapshot_${currentTenant}`;
+        const savedSnap = localStorage.getItem(tenantSnapshotKey);
+        if (savedSnap) {
+          try {
+            const snap = JSON.parse(savedSnap);
+            if (Array.isArray(snap.products)) setProducts(sortProductsNewestFirst(snap.products));
+            if (Array.isArray(snap.sales)) setSales(snap.sales);
+            if (Array.isArray(snap.customOrders)) setCustomOrders(snap.customOrders);
+            if (Array.isArray(snap.expenses)) setExpenses(snap.expenses);
+            if (snap.storeInfo) setStoreInfo(snap.storeInfo);
+            const liveStaff = localStorage.getItem('bakery_staff_members');
+            if (liveStaff) {
+              try {
+                const parsed = JSON.parse(liveStaff);
+                if (Array.isArray(parsed) && parsed.length > 0) setStaffMembers(parsed);
+              } catch (e) {}
+            }
+            return;
+          } catch (e) {}
+        }
+      }
+
       const liveProd = (await idbGet('bakery_products')) || localStorage.getItem('bakery_products');
       let prodList = initialProducts;
       if (liveProd) {

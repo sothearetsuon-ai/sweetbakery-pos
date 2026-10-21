@@ -1,15 +1,14 @@
 {
-  "version": "1.6.1",
+  "version": "1.6.2",
   "releaseDate": "2026-10-21",
   "releaseNotes": [
-    "⚡ សម្អាតប្រព័ន្ធ & ដកមុខងារចាក់ភ្លេង (Lightweight System)៖ ដកកម្មវិធីចាក់ចម្រៀង និង Background Audio Engine ចេញទាំងស្រុង ជួយឱ្យកម្មវិធីដំណើរការលឿន ស្រាល មិនទាក់គាំង។",
-    "🚀 ដោះស្រាយបញ្ហាចូលហាងថ្មី (Fast Tenant Login)៖ ជួសជុលបញ្ហាគាំងពេល Login ហាងថ្មី និងបន្ថែមប៊ូតុងចុះឈ្មោះរហ័ស 1-Click Quick Register សម្រាប់បង្កើតហាងថ្មីភ្លាមៗ។",
-    "🧹 សម្អាតទិន្នន័យចាស់ដែលបានលុប (Purge Zombie Records)៖ លុបនិងសម្អាតទំនិញចាស់ៗដែលបានលុបចេញពីហាង (ដូចជា បាញ់លុយ / Money Gun) មិនឱ្យលោតមកវិញក្នុងផ្ទាំងភ្ញៀវ ឬកន្ត្រកទំនិញ។",
-    "⚡ ការ Sync ទៅផ្ទាំងភ្ញៀវលឿនបំផុត (Instant Dual-Screen Sync < 5ms)៖ ភ្ជាប់ BroadcastChannel ធ្វើឱ្យការបង្ហាញមុខទំនិញ និងតម្លៃទៅកាន់អេក្រង់ភ្ញៀវលឿនភ្លាមៗគ្មានភាពយឺតយ៉ាវ។",
-    "🔗 តំណភ្ជាប់កុម្ម៉ង់ភ្ញៀវ & QR Code សុវត្ថិភាពខ្ពស់៖ ចែករំលែកតំណកុម្ម៉ង់ផ្ញើទៅ Telegram និងស្កេន QR ត្រូវចំហាងផ្ទាល់ជានិច្ច គ្មានការច្រឡំហាងឡើយ។"
+    "🏪 ការពារទិន្នន័យដាច់ដោយឡែក ១០០% ពេលបង្កើតហាងថ្មី (Isolated Multi-Store Tenants)៖ បង្កើតហាងថ្មីដោយស្អាត មិនជាប់ទិន្នន័យហាងចាស់ ហើយ Store Tenant ID មិនធ្លាក់ទៅ DEFAULT ឡើយ។",
+    "🎂 ត្រឡប់ស្តុកនំវិញពេលលុបការកុម្ម៉ង់ពិសេស (Custom Cake Order Stock Restore)៖ ពេលលុប ឬបោះបង់ការកុម្ម៉ង់នំខេកពិសេស ប្រព័ន្ធនឹងទាញស្តុកនំ ឬគ្រឿងផ្សំត្រឡប់ចូលស្តុកដើមវិញដោយស្វ័យប្រវត្តិ។",
+    "⚡ ស្ថេរភាព LAN Sync & Multi-Device Discovery៖ ញែកឯកសារ LAN DB តាមហាងនីមួយៗ (local_bakery_db_{tenant}.json) ធ្វើឱ្យការ Sync ក្នុងបណ្តាញ Wi-Fi កាន់តែលឿន និងមានសុវត្ថិភាពខ្ពស់។",
+    "📱 កែលម្អការផ្ទៀងផ្ទាត់សិទ្ធិ និង PIN ហាងពិត (Store Auth & Real Store PIN)៖ ដំណើរការរលូនទាំងលើទូរស័ព្ទ Android និងកុំព្យូទ័រ Windows។"
   ],
-  "apkDownloadUrl": "https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.6.1/SweetBakery-Android.apk",
-  "windowsInstallerUrl": "https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.6.1/SweetBakery-POS-Setup.exe",
-  "windowsDownloadUrl": "https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.6.1/SweetBakery-POS-Setup.exe",
+  "apkDownloadUrl": "https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.6.2/SweetBakery-Android.apk",
+  "windowsInstallerUrl": "https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.6.2/SweetBakery-POS-Setup.exe",
+  "windowsDownloadUrl": "https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.6.2/SweetBakery-POS-Setup.exe",
   "mandatory": false
 }

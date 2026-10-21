@@ -54,7 +54,7 @@ import { CameraCaptureModal } from '../common/CameraCaptureModal';
 import { CakeFlavorsModal } from '../pos/CakeFlavorsModal';
 import { PartyAccessoriesModal } from '../pos/PartyAccessoriesModal';
 import { isSuperAdminAuthenticated } from '../../utils/superAdminAuth';
-import { getStoreId, setStoreId } from '../../services/firebase';
+import { getStoreId, setStoreId, isDefaultStore, DEFAULT_STORE_ID } from '../../services/firebase';
 
 export type SettingsTab = 'store' | 'khqr' | 'staff' | 'backup' | 'firebase' | 'currency' | 'telegram' | 'notifications' | 'updates';
 
@@ -181,7 +181,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       setTagline(storeInfo.tagline || '');
       setMapsUrl(storeInfo.mapsUrl || '');
       setRateInput(exchangeRate.toString());
-      setStoreIdInput(storeInfo.storeId || getStoreId());
+      const activeTenant = getStoreId();
+      const resolvedTenant = !isDefaultStore(activeTenant)
+        ? activeTenant
+        : (storeInfo.storeId && !isDefaultStore(storeInfo.storeId) ? storeInfo.storeId : DEFAULT_STORE_ID);
+      setStoreIdInput(resolvedTenant);
       setKhqrQrImage(storeInfo.khqrQrImage || '');
       setKhqrMerchantName(storeInfo.khqrMerchantName || 'SWEET BAKERY & CAFE');
       setKhqrBakongId(storeInfo.khqrBakongId || 'sweet_bakery@aba');

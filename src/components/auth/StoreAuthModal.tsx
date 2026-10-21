@@ -43,7 +43,7 @@ interface StoreAuthModalProps {
 }
 
 export const StoreAuthModal: React.FC<StoreAuthModalProps> = ({ isOpen, onClose }) => {
-  const { storeInfo } = useBakery();
+  const { storeInfo, updateStoreInfo } = useBakery();
 
   const [activeTab, setActiveTab] = useState<'LOGIN' | 'SIGNUP' | 'JOIN'>('LOGIN');
   const [currentUser, setCurrentUser] = useState<StoreUserAccount | null>(() => getCurrentStoreUser());
@@ -112,6 +112,12 @@ export const StoreAuthModal: React.FC<StoreAuthModalProps> = ({ isOpen, onClose 
     try {
       const res = await signInStore(emailOrPhone.trim(), password);
       if (res.success && res.account) {
+        updateStoreInfo({
+          nameKh: res.account.storeName,
+          nameEn: res.account.storeName,
+          phone: res.account.phone || '',
+          storeId: res.account.storeId,
+        });
         soundFx.playSuccess();
         confetti({ particleCount: 40, spread: 60, origin: { y: 0.7 } });
         setSuccessMsg(`ចូលហាង «${res.account.storeName}» បានជោគជ័យ!`);
@@ -159,6 +165,12 @@ export const StoreAuthModal: React.FC<StoreAuthModalProps> = ({ isOpen, onClose 
       });
 
       if (res.success && res.account) {
+        updateStoreInfo({
+          nameKh: res.account.storeName,
+          nameEn: res.account.storeName,
+          phone: res.account.phone || '',
+          storeId: res.account.storeId,
+        });
         soundFx.playSuccess();
         confetti({ particleCount: 70, spread: 80, origin: { y: 0.6 } });
         setSuccessMsg(`បង្កើតហាង «${res.account.storeName}» (${res.account.storeId}) ជោគជ័យ!`);
@@ -183,6 +195,12 @@ export const StoreAuthModal: React.FC<StoreAuthModalProps> = ({ isOpen, onClose 
     try {
       const res = await signInWithGoogle();
       if (res.success && res.account) {
+        updateStoreInfo({
+          nameKh: res.account.storeName,
+          nameEn: res.account.storeName,
+          phone: res.account.phone || '',
+          storeId: res.account.storeId,
+        });
         soundFx.playSuccess();
         confetti({ particleCount: 50, spread: 70, origin: { y: 0.7 } });
         setSuccessMsg(`ចូលហាង «${res.account.storeName}» ដោយ Google ជោគជ័យ!`);
@@ -214,6 +232,12 @@ export const StoreAuthModal: React.FC<StoreAuthModalProps> = ({ isOpen, onClose 
     try {
       const res = await joinStoreById(targetStoreId.trim());
       if (res.success && res.account) {
+        updateStoreInfo({
+          nameKh: res.account.storeName || storeInfo.nameKh,
+          nameEn: res.account.storeName || storeInfo.nameEn,
+          phone: res.account.phone || storeInfo.phone,
+          storeId: res.account.storeId,
+        });
         soundFx.playSuccess();
         setSuccessMsg(`បានភ្ជាប់ទៅកាន់ហាង ${res.account.storeId} រួចរាល់!`);
         setTimeout(() => {

@@ -59,10 +59,20 @@ function lanSyncPlugin(): Plugin {
     }
   };
 
-  const getDbData = () => {
+  const getDbPathForTenant = (tenantId?: string | null): string => {
+    if (!tenantId) return dbPath;
+    const s = tenantId.trim().toUpperCase();
+    if (s === 'DEFAULT' || s === 'ROOT' || s === 'STORE-DEFAULT' || s === '') {
+      return dbPath;
+    }
+    const clean = s.replace(/[^A-Z0-9_-]/g, '');
+    return path.resolve(process.cwd(), `local_bakery_db_${clean}.json`);
+  };
+
+  const getDbData = (targetPath: string = dbPath) => {
     try {
-      if (fs.existsSync(dbPath)) {
-        let raw = fs.readFileSync(dbPath, 'utf-8');
+      if (fs.existsSync(targetPath)) {
+        let raw = fs.readFileSync(targetPath, 'utf-8');
         if (raw.charCodeAt(0) === 0xFEFF) {
           raw = raw.slice(1);
         }
@@ -72,7 +82,7 @@ function lanSyncPlugin(): Plugin {
         }
       }
     } catch (e) {
-      console.warn('Error reading local_bakery_db.json:', e);
+      console.warn('Error reading db:', targetPath, e);
     }
     return null;
   };
@@ -157,9 +167,11 @@ function lanSyncPlugin(): Plugin {
 
         // GET local DB (high-speed delta: checks version param ?v=...)
         if (req.url && req.url.startsWith('/api/lan-sync') && req.method === 'GET') {
+          let reqTenant = 'DEFAULT';
           try {
             const urlObj = new URL(req.url, 'http://localhost');
             const clientVer = urlObj.searchParams.get('v');
+            reqTenant = urlObj.searchParams.get('tenant') || (req.headers['x-tenant-id'] as string) || 'DEFAULT';
             if (clientVer && Number(clientVer) === dbVersion) {
               res.writeHead(200, { 'Content-Type': 'application/json' });
               res.end(JSON.stringify({ upToDate: true, version: dbVersion }));
@@ -167,8 +179,9 @@ function lanSyncPlugin(): Plugin {
             }
           } catch (e) {}
 
+          const targetDbPath = getDbPathForTenant(reqTenant);
           res.writeHead(200, { 'Content-Type': 'application/json' });
-          const dbData = getDbData();
+          const dbData = getDbData(targetDbPath);
           if (dbData) {
             dbData.version = dbVersion;
             dbData.customSongs = getSongsData();
@@ -180,15 +193,26 @@ function lanSyncPlugin(): Plugin {
         }
 
         // POST local DB (Smart Merge by ID to prevent race condition overwrites)
-        if (req.url === '/api/lan-sync' && req.method === 'POST') {
+        if (req.url && req.url.startsWith('/api/lan-sync') && req.method === 'POST') {
           let body = '';
           req.on('data', (chunk) => {
             body += chunk;
           });
           req.on('end', () => {
             try {
+              let reqTenant = 'DEFAULT';
+              try {
+                const urlObj = new URL(req.url, 'http://localhost');
+                reqTenant = urlObj.searchParams.get('tenant') || (req.headers['x-tenant-id'] as string) || '';
+              } catch (e) {}
+
               const incoming = JSON.parse(body);
-              const currentDb = getDbData() || {};
+              if (!reqTenant || reqTenant === 'DEFAULT') {
+                reqTenant = incoming.storeInfo?.storeId || incoming.tenantId || reqTenant || 'DEFAULT';
+              }
+
+              const targetDbPath = getDbPathForTenant(reqTenant);
+              const currentDb = getDbData(targetDbPath) || {};
 
               const deletedSaleIds = new Set([
                 ...(currentDb.deletedSaleIds || []),
@@ -295,7 +319,7 @@ function lanSyncPlugin(): Plugin {
 
               dbVersion = Date.now();
               mergedDb.version = dbVersion;
-              safeWrite(dbPath, JSON.stringify(mergedDb, null, 2));
+              safeWrite(targetDbPath, JSON.stringify(mergedDb, null, 2));
 
               res.writeHead(200, { 'Content-Type': 'application/json' });
               res.end(JSON.stringify({ success: true, version: dbVersion, salesCount: mergedSales.length, expensesCount: mergedExpenses.length }));
@@ -413,18 +437,31 @@ function lanSyncPlugin(): Plugin {
           req.on('data', (chunk) => { body += chunk; });
           req.on('end', () => {
             try {
-              const { id } = JSON.parse(body);
+              const { id, updatedProducts, updatedPartyAddons, matchingSaleIds } = JSON.parse(body);
               const dbData = getDbData() || {};
               if (Array.isArray(dbData.customOrders)) {
                 dbData.customOrders = dbData.customOrders.filter((o: any) => o.id !== id);
               }
+              const saleIdsToRemove = new Set<string>();
+              saleIdsToRemove.add(`sale-custom-${id}`);
+              if (Array.isArray(matchingSaleIds)) {
+                matchingSaleIds.forEach((sId: string) => saleIdsToRemove.add(sId));
+              }
               if (Array.isArray(dbData.sales)) {
-                dbData.sales = dbData.sales.filter((s: any) => s.id !== `sale-custom-${id}`);
+                dbData.sales = dbData.sales.filter((s: any) => !saleIdsToRemove.has(s.id));
+              }
+              if (Array.isArray(updatedProducts)) {
+                dbData.products = updatedProducts;
+              }
+              if (Array.isArray(updatedPartyAddons)) {
+                dbData.partyAddons = updatedPartyAddons;
               }
               if (!Array.isArray(dbData.deletedOrderIds)) dbData.deletedOrderIds = [];
               if (!dbData.deletedOrderIds.includes(id)) dbData.deletedOrderIds.push(id);
               if (!Array.isArray(dbData.deletedSaleIds)) dbData.deletedSaleIds = [];
-              if (!dbData.deletedSaleIds.includes(`sale-custom-${id}`)) dbData.deletedSaleIds.push(`sale-custom-${id}`);
+              saleIdsToRemove.forEach((sId) => {
+                if (!dbData.deletedSaleIds.includes(sId)) dbData.deletedSaleIds.push(sId);
+              });
 
               safeWrite(dbPath, JSON.stringify(dbData, null, 2));
               res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -568,7 +605,7 @@ function lanSyncPlugin(): Plugin {
           req.on('data', (chunk) => { body += chunk; });
           req.on('end', () => {
             try {
-              const { order } = JSON.parse(body);
+              const { order, updatedProducts, updatedPartyAddons } = JSON.parse(body);
               if (!order || !order.id) {
                 res.writeHead(400, { 'Content-Type': 'application/json' });
                 res.end(JSON.stringify({ error: 'Missing custom order object or id' }));
@@ -581,6 +618,12 @@ function lanSyncPlugin(): Plugin {
                 dbData.deletedOrderIds = dbData.deletedOrderIds.filter((id: string) => id !== order.id);
               }
               dbData.customOrders = [order, ...dbData.customOrders.filter((o: any) => o.id !== order.id)];
+              if (Array.isArray(updatedProducts)) {
+                dbData.products = updatedProducts;
+              }
+              if (Array.isArray(updatedPartyAddons)) {
+                dbData.partyAddons = updatedPartyAddons;
+              }
               safeWrite(dbPath, JSON.stringify(dbData, null, 2));
               res.writeHead(200, { 'Content-Type': 'application/json' });
               res.end(JSON.stringify({ success: true, orderId: order.id }));

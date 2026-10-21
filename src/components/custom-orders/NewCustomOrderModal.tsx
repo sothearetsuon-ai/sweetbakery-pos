@@ -77,6 +77,7 @@ const PACKAGING_OPTIONS = [
 export const NewCustomOrderModal: React.FC<NewCustomOrderModalProps> = ({ isOpen, onClose, initialData }) => {
   const {
     lang,
+    products,
     addCustomOrder,
     flavors,
     unavailableFlavors = [],
@@ -552,6 +553,16 @@ export const NewCustomOrderModal: React.FC<NewCustomOrderModalProps> = ({ isOpen
         depositUsd: finalDepositUsd,
         paymentMethod,
         status: 'PENDING',
+        deductedItems: activeItems
+          .map((b) => {
+            const match = products.find(
+              (p) =>
+                p.nameKh.trim().toLowerCase() === b.nameKh.trim().toLowerCase() ||
+                (p.nameEn && p.nameEn.trim().toLowerCase() === b.nameKh.trim().toLowerCase())
+            );
+            return match ? { productId: match.id, quantity: b.quantity } : null;
+          })
+          .filter(Boolean) as { productId: string; quantity: number }[],
       });
     } else {
       // Cake Order
@@ -589,6 +600,17 @@ export const NewCustomOrderModal: React.FC<NewCustomOrderModalProps> = ({ isOpen
         depositKhr: finalDepositKhr,
         paymentMethod,
         status: 'PENDING',
+        deductedItems: (() => {
+          const match = products.find(
+            (p) =>
+              p.nameKh.trim().toLowerCase() === cakeName.trim().toLowerCase() ||
+              (p.nameEn && p.nameEn.trim().toLowerCase() === cakeName.trim().toLowerCase())
+          );
+          return match ? [{ productId: match.id, quantity: 1 }] : undefined;
+        })(),
+        deductedAddons: Object.entries(selectedAddonQuantities)
+          .filter(([_, qty]) => qty > 0)
+          .map(([addonId, quantity]) => ({ addonId, quantity })),
       });
     }
 

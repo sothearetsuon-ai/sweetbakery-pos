@@ -56,6 +56,16 @@ const STORE_ID_EVENT = 'bakery_store_id_changed';
  * Primary store owner devices are authorized to access the root collections ('DEFAULT').
  */
 export const isPrimaryStoreDevice = (): boolean => {
+  if (typeof window === 'undefined') return true;
+  // If active store is a custom tenant, this device is explicitly NOT the primary store owner
+  const currentTenant = localStorage.getItem(STORAGE_STORE_ID);
+  if (currentTenant && !isDefaultStore(currentTenant)) {
+    return false;
+  }
+  // If explicitly marked as non-primary
+  if (localStorage.getItem('bakery_is_primary_store') === 'false') {
+    return false;
+  }
   return true;
 };
 
@@ -80,7 +90,7 @@ export const isDefaultStore = (id?: string | null): boolean => {
  * Any custom ID (e.g. 'STORE-DEV-8B2A') maps to tenants/{storeId}/*.
  */
 export const getStoreId = (): string => {
-  // First, check if storeId is explicitly passed in URL query (for customer orders, tables, tablets)
+  // 1. Explicit in URL query (for customer orders, tables, tablets)
   if (typeof window !== 'undefined') {
     try {
       const params = new URLSearchParams(window.location.search);
@@ -92,21 +102,25 @@ export const getStoreId = (): string => {
     } catch (e) {}
   }
 
-  let id = localStorage.getItem(STORAGE_STORE_ID);
-
-  // If this device is the authorized primary store device (ហាងវិជ្ជតា), it stays on DEFAULT
-  if (isPrimaryStoreDevice()) {
-    if (!id || isDefaultStore(id)) {
-      id = DEFAULT_STORE_ID;
-      localStorage.setItem(STORAGE_STORE_ID, id);
-      idbSet(STORAGE_STORE_ID, id).catch(() => {});
+  // 2. Active Tenant ID in localStorage
+  if (typeof window !== 'undefined') {
+    const id = localStorage.getItem(STORAGE_STORE_ID);
+    if (id && !isDefaultStore(id)) {
+      return id.trim().toUpperCase().replace(/[^A-Z0-9_-]/g, '');
     }
-    return id;
   }
 
-  // Non-owner / client device: if custom tenant ID exists, keep it
-  if (id && !isDefaultStore(id)) {
-    return id;
+  // 3. Current store user session
+  if (typeof window !== 'undefined') {
+    try {
+      const session = localStorage.getItem('bakery_current_store_user');
+      if (session) {
+        const parsed = JSON.parse(session);
+        if (parsed?.storeId && !isDefaultStore(parsed.storeId)) {
+          return parsed.storeId.trim().toUpperCase().replace(/[^A-Z0-9_-]/g, '');
+        }
+      }
+    } catch (e) {}
   }
 
   return DEFAULT_STORE_ID;
@@ -120,6 +134,13 @@ export const setStoreId = (newStoreId: string): void => {
   const finalId = isDefaultStore(cleanId) ? DEFAULT_STORE_ID : cleanId;
   localStorage.setItem(STORAGE_STORE_ID, finalId);
   idbSet(STORAGE_STORE_ID, finalId).catch(() => {});
+
+  if (!isDefaultStore(finalId)) {
+    localStorage.setItem('bakery_is_primary_store', 'false');
+  } else {
+    localStorage.setItem('bakery_is_primary_store', 'true');
+  }
+
   window.dispatchEvent(new CustomEvent(STORE_ID_EVENT, { detail: { storeId: finalId } }));
 };
 

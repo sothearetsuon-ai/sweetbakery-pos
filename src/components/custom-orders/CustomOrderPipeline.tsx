@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Cake, Plus, Search, Clock, Flame, Palette, CheckCircle2, CheckSquare, Sparkles, Trash2, Link as LinkIcon } from 'lucide-react';
+import { Cake, Plus, Search, Clock, Flame, Palette, CheckCircle2, CheckSquare, Sparkles, Trash2, Link as LinkIcon, RotateCcw } from 'lucide-react';
 import { useBakery } from '../../context/BakeryContext';
 import { t } from '../../utils/translations';
 import { OrderCard } from './OrderCard';
@@ -21,6 +21,7 @@ export const CustomOrderPipeline: React.FC = () => {
   const [selectedOrderForDeposit, setSelectedOrderForDeposit] = useState<CustomCakeOrder | null>(null);
   const [receiptSale, setReceiptSale] = useState<CompletedSale | null>(null);
   const [orderToDelete, setOrderToDelete] = useState<CustomCakeOrder | null>(null);
+  const [restoreStockOnDelete, setRestoreStockOnDelete] = useState<boolean>(true);
   const [stageToDelete, setStageToDelete] = useState<{ status: OrderStatus; title: string; count: number } | null>(null);
   const [isConfirmClearAll, setIsConfirmClearAll] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -652,6 +653,24 @@ export const CustomOrderPipeline: React.FC = () => {
               </div>
             </div>
 
+            <label className="flex items-start gap-2.5 p-3 bg-emerald-50/80 border border-emerald-200/80 rounded-2xl cursor-pointer text-xs text-emerald-900 select-none hover:bg-emerald-100/60 transition-colors">
+              <input
+                type="checkbox"
+                checked={restoreStockOnDelete}
+                onChange={(e) => setRestoreStockOnDelete(e.target.checked)}
+                className="mt-0.5 w-4 h-4 text-emerald-600 rounded-sm focus:ring-emerald-500 cursor-pointer accent-emerald-600"
+              />
+              <div className="flex-1">
+                <div className="font-bold text-emerald-800 flex items-center gap-1.5">
+                  <RotateCcw className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>ត្រឡប់ស្តុកនំ & គ្រឿងបន្ថែមវិញ</span>
+                </div>
+                <p className="text-[11px] text-emerald-700/80 font-normal mt-0.5">
+                  បញ្ចូលចំនួននំខេក នំបុ័ង និងសម្ភារៈជប់លៀងចូលទៅក្នុងស្តុក Inventory វិញដោយស្វ័យប្រវត្តិ
+                </p>
+              </div>
+            </label>
+
             <div className="grid grid-cols-2 gap-2 pt-1">
               <button
                 type="button"
@@ -664,7 +683,7 @@ export const CustomOrderPipeline: React.FC = () => {
                 type="button"
                 onClick={() => {
                   soundFx.playSuccess();
-                  deleteCustomOrder(orderToDelete.id);
+                  deleteCustomOrder(orderToDelete.id, restoreStockOnDelete);
                   setOrderToDelete(null);
                 }}
                 className="py-2.5 px-4 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs rounded-xl shadow-lg shadow-rose-600/30 transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-1.5"
