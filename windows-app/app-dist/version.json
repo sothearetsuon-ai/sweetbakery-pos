@@ -1,14 +1,15 @@
 {
-  "version": "1.6.5",
+  "version": "1.6.6",
   "releaseDate": "2026-10-21",
   "releaseNotes": [
-    "⚡ ដោះស្រាយបញ្ហាវាយលេខសម្ងាត់យឺត និងគាំង (Instant PIN Authentication)៖ វាយលេខកូដ PIN លោតភ្លាមៗ 0ms ទាំងលើក្តារចុច (Keyboard/Numpad) និងប៊ូតុងអេក្រង់ (Keypad)។",
-    "🇰🇭 គាំទ្រទាំងស្រុងលើការវាយលេខខ្មែរ (០-៩) និងលេខឡាតាំង (0-9) លើក្តារចុចដោយស្វ័យប្រវត្តិ។",
-    "🚀 បាត់ផ្ទាំងផ្ទៀងផ្ទាត់ភ្លាមៗ 60fps ដោយរលូន គ្មានការគាំង ឬបង្កកអេក្រង់ទៀតឡើយ។",
-    "💬 រក្សាការកែសម្រួល Chat & Telegram Forwarding ពីកំណែ v1.6.4 និងការតម្រៀបនំ POS ពី v1.6.3។"
+    "✨ កំណែទម្រង់បង្កើតហាងថ្មី (Clean Multi-Tenant Store)៖ ហាងទើបបង្កើតថ្មីគឺទទេរស្អាត ១០០% (Zero Data Leak) គ្មានជាប់ទិន្នន័យពីហាងចាស់ឡើយ។",
+    "📥 មុខងារទាញយកកំណែអាប់ដេត (Direct Download Update)៖ ដាក់ប៊ូតុងទាញយកលើ Navbar និងក្នុងប្រព័ន្ធ អាចទាញយក SweetBakery-Android.apk និង SweetBakery-POS-Setup.exe បានភ្លាមៗគ្រប់ពេលវេលា។",
+    "⚡ ប្រព័ន្ធផ្ទៀងផ្ទាត់លេខសម្ងាត់ PIN 0ms លឿនរហ័ស ទាំងលើ Keyboard ខ្មែរ/ឡាតាំង និង Touch Screen។",
+    "📱 QR Code ស្កេនទាញយក APK ចូលទូរសព្ទផ្ទាល់ពីលើកញ្ចក់អេក្រង់កុំព្យូទ័រ។"
   ],
-  "apkDownloadUrl": "https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.6.5/SweetBakery-Android.apk",
-  "windowsInstallerUrl": "https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.6.5/SweetBakery-POS-Setup.exe",
-  "windowsDownloadUrl": "https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.6.5/SweetBakery-POS-Setup.exe",
+  "apkDownloadUrl": "https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.6.6/SweetBakery-Android.apk",
+  "windowsInstallerUrl": "https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.6.6/SweetBakery-POS-Setup.exe",
+  "windowsDownloadUrl": "https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.6.6/SweetBakery-POS-Setup.exe",
   "mandatory": false
 }
+

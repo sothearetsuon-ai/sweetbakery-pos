@@ -15,6 +15,8 @@ import {
   Copy,
   Check,
   Zap,
+  QrCode,
+  FileArchive,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { soundFx } from '../../utils/audio';
@@ -118,11 +120,31 @@ export const AppUpdateModal: React.FC<AppUpdateModalProps> = ({
 
   const apkUrl =
     updateInfo?.apkDownloadUrl ||
-    'https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.6.1/SweetBakery-Android.apk';
+    'https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.6.6/SweetBakery-Android.apk';
   const winUrl =
     updateInfo?.windowsInstallerUrl ||
     updateInfo?.windowsDownloadUrl ||
-    'https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.6.1/SweetBakery-POS-Setup.exe';
+    'https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.6.6/SweetBakery-POS-Setup.exe';
+
+  const handleDownloadApkDirect = () => {
+    soundFx.playSuccess();
+    confetti({ particleCount: 40, spread: 50 });
+    if (isAndroidNative) {
+      triggerInAppAndroidUpdate(apkUrl);
+    } else {
+      openExternalUrl(apkUrl);
+    }
+  };
+
+  const handleDownloadWinDirect = () => {
+    soundFx.playSuccess();
+    confetti({ particleCount: 40, spread: 50 });
+    if (isDesktop) {
+      handleStartUpdate();
+    } else {
+      openExternalUrl(winUrl);
+    }
+  };
 
   const handleStartUpdate = () => {
     soundFx.playSuccess();
@@ -326,6 +348,102 @@ export const AppUpdateModal: React.FC<AppUpdateModalProps> = ({
                   <span className="flex-1 font-medium">{note}</span>
                 </div>
               ))}
+            </div>
+          </div>
+
+          {/* Direct Download Options Cards */}
+          <div className="space-y-3 pt-1">
+            <h4 className="text-xs font-black text-slate-900 uppercase tracking-wider flex items-center gap-1.5 font-battambang">
+              <Download className="w-3.5 h-3.5 text-pink-600" />
+              <span>ជម្រើសទាញយកឯកសារដំឡើងផ្ទាល់ (Direct Downloads)</span>
+            </h4>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {/* Android Card */}
+              <div className="p-3.5 bg-gradient-to-br from-emerald-50/70 via-teal-50/40 to-white rounded-2xl border-2 border-emerald-200/90 shadow-2xs flex flex-col justify-between space-y-2.5">
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="flex items-center gap-1.5 font-black text-xs text-slate-800">
+                      <Smartphone className="w-4 h-4 text-emerald-600 shrink-0" />
+                      <span>Android (.apk)</span>
+                    </span>
+                    <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-md bg-emerald-100 text-emerald-800">
+                      v{latestVersion}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-500 font-medium leading-relaxed">
+                    ទំហំ ~9.1MB • ដំណើរការលើ Android 7.0+ ជាមួយសំឡេងខ្មែរ KHQR Soundbox ភ្ជាប់ស្រាប់។
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleDownloadApkDirect}
+                  disabled={isDownloading}
+                  className="w-full py-2.5 px-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-xl text-xs font-black shadow-md shadow-emerald-600/25 transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95 disabled:opacity-50"
+                >
+                  <Download className="w-3.5 h-3.5 animate-bounce" />
+                  <span>ទាញយក Android APK</span>
+                </button>
+              </div>
+
+              {/* Windows Card */}
+              <div className="p-3.5 bg-gradient-to-br from-blue-50/70 via-indigo-50/40 to-white rounded-2xl border-2 border-blue-200/90 shadow-2xs flex flex-col justify-between space-y-2.5">
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="flex items-center gap-1.5 font-black text-xs text-slate-800">
+                      <Monitor className="w-4 h-4 text-blue-600 shrink-0" />
+                      <span>Windows Setup (.exe)</span>
+                    </span>
+                    <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-md bg-blue-100 text-blue-800">
+                      v{latestVersion}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-500 font-medium leading-relaxed">
+                    កម្មវិធីកុំព្យូទ័រផ្លូវការ ដំឡើងម្តងប្រើបានរហូត មិនបាត់បង់ទិន្នន័យពេល restart ឡើយ។
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleDownloadWinDirect}
+                  disabled={isDownloading}
+                  className="w-full py-2.5 px-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl text-xs font-black shadow-md shadow-blue-600/25 transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95 disabled:opacity-50"
+                >
+                  <Monitor className="w-3.5 h-3.5" />
+                  <span>ទាញយក Windows Setup</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Scan QR to Download APK on phone */}
+            <div className="p-3 bg-white rounded-2xl border border-slate-200/90 flex items-center gap-3 shadow-2xs">
+              <div className="w-16 h-16 p-1 bg-white rounded-xl border border-slate-200 shrink-0 flex items-center justify-center">
+                <img
+                  src={`https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(apkUrl)}`}
+                  alt="Scan QR APK"
+                  className="w-full h-full object-contain rounded"
+                />
+              </div>
+              <div className="flex-1 space-y-1 text-xs">
+                <div className="font-black text-slate-800 flex items-center gap-1">
+                  <QrCode className="w-3.5 h-3.5 text-pink-600" />
+                  <span>ស្កេនទាញយក APK ចូលទូរសព្ទដៃ</span>
+                </div>
+                <p className="text-[11px] text-slate-500 leading-relaxed font-medium">
+                  បើកកាមេរ៉ាទូរសព្ទ រួចស្កេន QR នេះដើម្បីទាញយក SweetBakery-Android.apk មកដំឡើងភ្លាមៗ។
+                </p>
+              </div>
+            </div>
+
+            {/* Apple iOS Note */}
+            <div className="p-2.5 bg-purple-50/70 rounded-xl border border-purple-200/80 flex items-center justify-between gap-2 text-xs">
+              <div className="flex items-center gap-2">
+                <span className="text-sm">🍎</span>
+                <span className="text-[11px] text-purple-900 font-bold">
+                  iPhone / iPad: បើក Safari ➔ ចុច Share ➔ ជ្រើសរើស «Add to Home Screen» ប្រើបានដូច App ពិតៗ!
+                </span>
+              </div>
             </div>
           </div>
 

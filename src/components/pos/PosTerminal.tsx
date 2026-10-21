@@ -800,7 +800,30 @@ export const PosTerminal: React.FC = () => {
         </div>
 
         {/* Product Grid */}
-        {filteredProducts.length === 0 ? (
+        {products.length === 0 ? (
+          <div className="flex-1 flex flex-col items-center justify-center text-slate-400 py-16 px-4">
+            <div className="w-20 h-20 rounded-3xl bg-pink-50 border border-pink-100 flex items-center justify-center mb-4 shadow-sm">
+              <Cake className="w-10 h-10 text-pink-400 animate-bounce" />
+            </div>
+            <h3 className="text-base sm:text-lg font-black text-slate-800 text-center">
+              ហាងថ្មីទទេរស្អាត មិនទាន់មានទំនិញនៅឡើយទេ
+            </h3>
+            <p className="text-xs sm:text-sm text-slate-500 mt-1.5 max-w-md text-center leading-relaxed">
+              អ្នកអាចចាប់ផ្តើមបញ្ចូលមុខទំនិញ នំខេក ឬភេសជ្ជៈដំបូងសម្រាប់ហាងរបស់អ្នកបានយ៉ាងងាយស្រួល
+            </p>
+            <button
+              type="button"
+              onClick={() => {
+                soundFx.playPop();
+                setIsAddProductOpen(true);
+              }}
+              className="mt-5 px-5 py-2.5 bg-gradient-to-r from-[#FF6F68] to-[#E6514D] hover:brightness-105 text-white font-black rounded-2xl text-xs sm:text-sm shadow-md shadow-rose-500/25 flex items-center gap-2 cursor-pointer active:scale-95 transition-all"
+            >
+              <Plus className="w-4 h-4 stroke-[3]" />
+              <span>+ បន្ថែមនំដំបូងឥឡូវនេះ</span>
+            </button>
+          </div>
+        ) : filteredProducts.length === 0 ? (
           <div className="flex-1 flex flex-col items-center justify-center text-slate-400 py-16">
             <div className="w-16 h-16 rounded-3xl bg-pink-50 flex items-center justify-center mb-3">
               <Cake className="w-8 h-8 text-pink-300" />

@@ -191,18 +191,17 @@ export const App: React.FC = () => {
   const [availableUpdate, setAvailableUpdate] = useState<AppUpdateInfo | null>(() => ({
     hasUpdate: false,
     currentVersion: getNativeAppVersion(),
-    latestVersion: '1.6.1',
+    latestVersion: '1.6.6',
     releaseDate: '2026-10-21',
     releaseNotes: [
-      '⚡ សម្អាតប្រព័ន្ធ & ដកមុខងារចាក់ភ្លេង (Lightweight System)',
-      '🚀 ដោះស្រាយបញ្ហាចូលហាងថ្មី (Fast Tenant Login) មិនឱ្យគាំង',
-      '🧹 សម្អាតទិន្នន័យចាស់ដែលបានលុបចេញពីហាង (ដូចជា បាញ់លុយ / Money Gun)',
-      '⚡ ការ Sync ទៅផ្ទាំងភ្ញៀវលឿនបំផុត (Instant Dual-Screen Sync < 5ms)',
-      '🔗 តំណភ្ជាប់កុម្ម៉ង់ភ្ញៀវ & QR Code សុវត្ថិភាពខ្ពស់',
+      '✨ កំណែទម្រង់បង្កើតហាងថ្មី (Clean Store Creation)៖ ហាងទើបបង្កើតថ្មីគឺទទេរស្អាត ១០០% (Zero Data Leak) គ្មានជាប់ទិន្នន័យពីហាងចាស់ឡើយ។',
+      '📥 មុខងារទាញយកកំណែអាប់ដេត (Direct Download Update)៖ ដាក់ប៊ូតុងទាញយកលើ Navbar និងក្នុងប្រព័ន្ធ អាចទាញយក SweetBakery-Android.apk និង SweetBakery-POS-Setup.exe បានភ្លាមៗគ្រប់ពេលវេលា។',
+      '⚡ ប្រព័ន្ធផ្ទៀងផ្ទាត់លេខសម្ងាត់ PIN 0ms លឿនរហ័ស ទាំងលើ Keyboard ខ្មែរ/ឡាតាំង និង Touch Screen។',
+      '📱 QR Code ស្កេនទាញយក APK ចូលទូរសព្ទផ្ទាល់ពីលើកញ្ចក់អេក្រង់កុំព្យូទ័រ។',
     ],
-    apkDownloadUrl: 'https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.6.1/SweetBakery-Android.apk',
-    windowsDownloadUrl: 'https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.6.1/SweetBakery-POS-Setup.exe',
-    windowsInstallerUrl: 'https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.6.1/SweetBakery-POS-Setup.exe',
+    apkDownloadUrl: 'https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.6.6/SweetBakery-Android.apk',
+    windowsDownloadUrl: 'https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.6.6/SweetBakery-POS-Setup.exe',
+    windowsInstallerUrl: 'https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.6.6/SweetBakery-POS-Setup.exe',
   }));
   const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
 

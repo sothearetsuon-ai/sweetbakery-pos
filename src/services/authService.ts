@@ -16,7 +16,8 @@ import {
   isDefaultStore,
 } from './firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { idbGet, idbSet } from '../utils/idbStorage';
+import { idbGet, idbSet, idbDel } from '../utils/idbStorage';
+import { StoreInfo, StaffMember, ReserveFund } from '../types';
 
 export interface StoreUserAccount {
   uid: string;
@@ -195,6 +196,205 @@ export const subscribeStoreUser = (callback: (user: StoreUserAccount | null) => 
 };
 
 /**
+ * Setup a brand new, completely empty isolated store tenant
+ * Wipes previous store cached data so the new store starts completely clean
+ */
+export const setupCleanStoreTenant = async (
+  newStoreId: string,
+  storeName: string,
+  phone?: string,
+  email?: string,
+  ownerUid?: string
+): Promise<{
+  cleanStoreInfo: StoreInfo;
+  ownerStaff: StaffMember;
+  cleanReserveFund: ReserveFund;
+  cleanSnapshot: any;
+}> => {
+  const cleanPhone = phone ? cleanPhoneNumber(phone) : '';
+  const cleanPin = cleanPhone && cleanPhone.length >= 4 ? cleanPhone.slice(-4) : '1234';
+
+  const cleanStoreInfo: StoreInfo = {
+    nameKh: storeName,
+    nameEn: storeName,
+    logoUrl: '',
+    phone: cleanPhone || '',
+    address: '',
+    tagline: '',
+    mapsUrl: '',
+    khqrQrImage: '',
+    khqrMerchantName: storeName,
+    khqrBakongId: '',
+    khqrAccountNumber: '',
+    khqrBankName: '',
+    realStorePin: cleanPin,
+    requireRealStorePin: false,
+    alwaysRequireLoginOnStartup: false,
+    hideCustomerPrices: false,
+    storeId: newStoreId,
+  };
+
+  const ownerStaff: StaffMember = {
+    id: `staff-${Date.now()}`,
+    name: storeName ? `ម្ចាស់ហាង (${storeName})` : 'ម្ចាស់ហាង (Admin)',
+    nameEn: 'Store Owner (Admin)',
+    role: 'ADMIN',
+    avatar: '👑',
+    pinCode: cleanPin,
+    permissions: {
+      canAccessPos: true,
+      canAccessShowcase: true,
+      canAccessCustomOrders: true,
+      canAccessSalesHistory: true,
+      canEditSales: true,
+      canAccessExpenses: true,
+      canAccessInventory: true,
+      canAccessReports: true,
+      canAccessSettings: true,
+    },
+    isActive: true,
+    phone: cleanPhone || '',
+  };
+
+  const cleanReserveFund: ReserveFund = {
+    targetAmountKhr: 0,
+    targetAmountUsd: 0,
+    currentBalanceKhr: 0,
+    currentBalanceUsd: 0,
+    history: [],
+    updatedAt: new Date().toISOString(),
+    isInitialDefault: false,
+  };
+
+  const cleanTelegramConfig = {
+    botToken: '',
+    chatId: '',
+    adminChatId: '',
+    dailyReportRecipient: 'ADMIN_ONLY',
+    enabled: false,
+    notifySales: false,
+    notifyCustomOrders: false,
+    notifyExpenses: false,
+    notifyExpenseDue: false,
+    notifyShiftClose: false,
+    notifyDailyReport: false,
+    dailyReportTime: '21:00',
+    includeAiInsight: false,
+    notifyCustomerChat: false,
+  };
+
+  const cleanSnapshot = {
+    sales: [],
+    customOrders: [],
+    expenses: [],
+    products: [],
+    storeInfo: cleanStoreInfo,
+    ingredients: [],
+    recipes: [],
+    partyAddons: [],
+    flavors: [],
+    staffMembers: [ownerStaff],
+    currentStaff: ownerStaff,
+    reserveFund: cleanReserveFund,
+    currentShift: null,
+    telegramConfig: cleanTelegramConfig,
+  };
+
+  if (typeof window !== 'undefined') {
+    // 1. Snapshot previous store if not already snapshotted
+    const oldStoreId = getStoreId();
+    if (oldStoreId && oldStoreId !== newStoreId) {
+      try {
+        const oldSnapKey = `bakery_tenant_snapshot_${oldStoreId}`;
+        if (!localStorage.getItem(oldSnapKey)) {
+          const oldProductsRaw = localStorage.getItem('bakery_products');
+          const oldSalesRaw = localStorage.getItem('bakery_sales');
+          const oldOrdersRaw = localStorage.getItem('bakery_custom_orders');
+          const oldExpRaw = localStorage.getItem('bakery_expenses');
+          const oldInfoRaw = localStorage.getItem('bakery_store_info');
+          const oldStaffRaw = localStorage.getItem('bakery_staff_members');
+          const oldSnap = {
+            products: oldProductsRaw ? JSON.parse(oldProductsRaw) : [],
+            sales: oldSalesRaw ? JSON.parse(oldSalesRaw) : [],
+            customOrders: oldOrdersRaw ? JSON.parse(oldOrdersRaw) : [],
+            expenses: oldExpRaw ? JSON.parse(oldExpRaw) : [],
+            storeInfo: oldInfoRaw ? JSON.parse(oldInfoRaw) : null,
+            staffMembers: oldStaffRaw ? JSON.parse(oldStaffRaw) : [],
+          };
+          localStorage.setItem(oldSnapKey, JSON.stringify(oldSnap));
+          idbSet(oldSnapKey, JSON.stringify(oldSnap)).catch(() => {});
+        }
+      } catch (e) {}
+    }
+
+    // 2. Save clean tenant snapshot for the new store
+    const snapKey = `bakery_tenant_snapshot_${newStoreId}`;
+    localStorage.setItem(snapKey, JSON.stringify(cleanSnapshot));
+    idbSet(snapKey, JSON.stringify(cleanSnapshot)).catch(() => {});
+
+    // 3. Immediately set active localStorage keys to completely empty / fresh store
+    localStorage.setItem('bakery_store_info', JSON.stringify(cleanStoreInfo));
+    localStorage.setItem('bakery_sales', JSON.stringify([]));
+    localStorage.setItem('bakery_custom_orders', JSON.stringify([]));
+    localStorage.setItem('bakery_expenses', JSON.stringify([]));
+    localStorage.setItem('bakery_products', JSON.stringify([]));
+    localStorage.setItem('bakery_ingredients', JSON.stringify([]));
+    localStorage.setItem('bakery_recipes', JSON.stringify([]));
+    localStorage.setItem('bakery_party_addons', JSON.stringify([]));
+    localStorage.setItem('bakery_flavors', JSON.stringify([]));
+    localStorage.setItem('bakery_staff_members', JSON.stringify([ownerStaff]));
+    localStorage.setItem('bakery_current_staff', JSON.stringify(ownerStaff));
+    localStorage.setItem('bakery_reserve_fund', JSON.stringify(cleanReserveFund));
+    localStorage.removeItem('bakery_shift');
+    localStorage.setItem('bakery_telegram_config', JSON.stringify(cleanTelegramConfig));
+
+    // 4. Purge any deleted records lists so the clean new store doesn't suppress records
+    localStorage.removeItem('bakery_deleted_sales_ids');
+    localStorage.removeItem('bakery_deleted_orders_ids');
+    localStorage.removeItem('bakery_deleted_expenses_ids');
+    localStorage.removeItem('bakery_deleted_products_ids');
+    localStorage.removeItem('bakery_deleted_party_addons_ids');
+    localStorage.removeItem('bakery_deleted_staff_ids');
+
+    // 5. Update IndexedDB to completely empty state
+    idbSet('bakery_store_info', JSON.stringify(cleanStoreInfo)).catch(() => {});
+    idbSet('bakery_sales', JSON.stringify([])).catch(() => {});
+    idbSet('bakery_custom_orders', JSON.stringify([])).catch(() => {});
+    idbSet('bakery_expenses', JSON.stringify([])).catch(() => {});
+    idbSet('bakery_products', JSON.stringify([])).catch(() => {});
+    idbSet('bakery_ingredients', JSON.stringify([])).catch(() => {});
+    idbSet('bakery_recipes', JSON.stringify([])).catch(() => {});
+    idbSet('bakery_party_addons', JSON.stringify([])).catch(() => {});
+    idbSet('bakery_flavors', JSON.stringify([])).catch(() => {});
+    idbSet('bakery_staff_members', JSON.stringify([ownerStaff])).catch(() => {});
+    idbSet('bakery_current_staff', JSON.stringify(ownerStaff)).catch(() => {});
+    idbSet('bakery_reserve_fund', JSON.stringify(cleanReserveFund)).catch(() => {});
+    idbDel('bakery_shift').catch(() => {});
+  }
+
+  // 6. Save initial storeInfo and owner staff to Firestore tenant partition
+  const db = getFirestoreDb();
+  if (db) {
+    try {
+      await setDoc(
+        doc(db, 'tenants', newStoreId, 'settings', 'storeInfo'),
+        cleanStoreInfo,
+        { merge: true }
+      );
+      await setDoc(
+        doc(db, 'tenants', newStoreId, 'staffMembers', ownerStaff.id),
+        ownerStaff,
+        { merge: true }
+      );
+    } catch (e) {
+      console.warn('Error seeding new store info/staff to Firestore:', e);
+    }
+  }
+
+  return { cleanStoreInfo, ownerStaff, cleanReserveFund, cleanSnapshot };
+};
+
+/**
  * Register / Sign up a new independent Bakery Store (100% Isolated Tenant)
  */
 export const signUpStore = async (params: {
@@ -266,6 +466,15 @@ export const signUpStore = async (params: {
   const uidPart = uid.replace(/[^A-Za-z0-9]/g, '').slice(0, 6).toUpperCase();
   const newStoreId = `STORE-${phonePart || uidPart || Math.floor(100000 + Math.random() * 900000)}`;
 
+  // Setup 100% empty, isolated new store data
+  const { cleanStoreInfo, ownerStaff } = await setupCleanStoreTenant(
+    newStoreId,
+    storeName,
+    phone,
+    email,
+    uid
+  );
+
   const account: StoreUserAccount = {
     uid,
     storeId: newStoreId,
@@ -316,13 +525,14 @@ export const signUpStore = async (params: {
       // Store profile in isolated tenant
       await setDoc(
         doc(db, 'tenants', newStoreId, 'settings', 'storeInfo'),
-        {
-          nameKh: storeName,
-          nameEn: storeName,
-          phone: phone || '',
-          storeId: newStoreId,
-          updatedAt: new Date().toISOString(),
-        },
+        cleanStoreInfo,
+        { merge: true }
+      );
+
+      // Owner staff in isolated tenant
+      await setDoc(
+        doc(db, 'tenants', newStoreId, 'staffMembers', ownerStaff.id),
+        ownerStaff,
         { merge: true }
       );
 
@@ -620,13 +830,10 @@ export const signInWithGoogle = async (): Promise<{
         lastLoginAt: new Date().toISOString(),
       };
 
+      await setupCleanStoreTenant(storeId, storeName, undefined, user.email || undefined, user.uid);
+
       if (db) {
         await setDoc(doc(db, 'users', user.uid), account, { merge: true }).catch(() => {});
-        await setDoc(
-          doc(db, 'tenants', storeId, 'settings', 'storeInfo'),
-          { nameKh: storeName, nameEn: storeName, storeId },
-          { merge: true }
-        ).catch(() => {});
       }
     }
 

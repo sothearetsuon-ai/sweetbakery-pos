@@ -720,14 +720,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <Rocket className={`w-4 h-4 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5 ${
               availableUpdate?.hasUpdate ? 'text-amber-300 animate-bounce' : 'text-indigo-600'
             }`} />
-            <span className="font-battambang">អាប់ដែត App 🚀</span>
+            <span className="font-battambang">ទាញយកកំណែអាប់ដេត 🚀</span>
           </div>
           <span className={`text-[10px] font-black px-2 py-0.5 rounded-full border ${
             availableUpdate?.hasUpdate
               ? 'bg-amber-300 text-slate-900 border-amber-400 font-mono shadow-xs'
-              : 'bg-indigo-200/80 text-indigo-700 border-indigo-300'
+              : 'bg-indigo-200/80 text-indigo-700 border-indigo-300 font-mono'
           }`}>
-            {availableUpdate?.hasUpdate ? `v${availableUpdate.latestVersion} NEW` : 'Update'}
+            {availableUpdate?.hasUpdate ? `v${availableUpdate.latestVersion} NEW` : `v${availableUpdate?.latestVersion || '1.6.6'}`}
           </span>
         </button>
 

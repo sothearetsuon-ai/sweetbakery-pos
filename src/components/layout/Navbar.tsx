@@ -25,6 +25,7 @@ import {
   LogOut,
   Phone,
   Rocket,
+  Download,
   Store,
   MessageCircle,
 } from 'lucide-react';
@@ -410,8 +411,8 @@ export const Navbar: React.FC<NavbarProps> = ({
           )}
 
 
-          {/* New Version Available Pulsing Pill Button */}
-          {availableUpdate && availableUpdate.hasUpdate && (
+          {/* New Version Available Pulsing Pill Button OR Direct Download Button */}
+          {availableUpdate?.hasUpdate ? (
             <button
               type="button"
               onClick={() => {
@@ -422,13 +423,34 @@ export const Navbar: React.FC<NavbarProps> = ({
                   onOpenSettingsModal('updates');
                 }
               }}
-              title={`មានកំណែថ្មី v${availableUpdate.latestVersion}! ចុចដើម្បីអាប់ដេត`}
-              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-2xl bg-gradient-to-r from-pink-600 via-rose-600 to-amber-500 hover:from-pink-700 hover:to-rose-700 text-white text-xs font-black shadow-md shadow-pink-500/30 transition-all hover:scale-105 active:scale-95 cursor-pointer shrink-0 animate-pulse font-battambang"
+              title={`មានកំណែថ្មី v${availableUpdate.latestVersion}! ចុចដើម្បីទាញយកអាប់ដេត`}
+              className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-2xl bg-gradient-to-r from-pink-600 via-rose-600 to-amber-500 hover:from-pink-700 hover:to-rose-700 text-white text-xs font-black shadow-md shadow-pink-500/30 transition-all hover:scale-105 active:scale-95 cursor-pointer shrink-0 animate-pulse font-battambang"
             >
               <Rocket className="w-3.5 h-3.5 animate-bounce text-amber-200" />
-              <span>កំណែថ្មី</span>
+              <span className="font-battambang">អាប់ដេតថ្មី</span>
               <span className="bg-white/25 text-white text-[10px] px-1.5 py-0.2 rounded-full font-mono">
                 v{availableUpdate.latestVersion}
+              </span>
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => {
+                soundFx.playPop();
+                if (onOpenUpdateModal) {
+                  onOpenUpdateModal();
+                } else {
+                  onOpenSettingsModal('updates');
+                }
+              }}
+              title="ទាញយកកំណែអាប់ដេតកម្មវិធី (Android APK / Windows Setup)"
+              className="hidden sm:flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-2xl bg-gradient-to-r from-indigo-50 to-purple-50 hover:from-indigo-100 hover:to-purple-100 border border-indigo-200/90 text-indigo-900 text-xs font-black transition-all shadow-2xs hover:scale-105 active:scale-95 cursor-pointer shrink-0 font-battambang group"
+            >
+              <Download className="w-3.5 h-3.5 text-indigo-600 group-hover:animate-bounce" />
+              <span className="hidden md:inline font-battambang">ទាញយកអាប់ដេត</span>
+              <span className="md:hidden font-battambang">អាប់ដេត</span>
+              <span className="bg-indigo-100 text-indigo-700 text-[10px] px-1.5 py-0.2 rounded-full font-mono border border-indigo-200">
+                v{availableUpdate?.latestVersion || '1.6.6'}
               </span>
             </button>
           )}
@@ -1073,8 +1095,13 @@ export const Navbar: React.FC<NavbarProps> = ({
                   <button
                     type="button"
                     onClick={() => {
+                      soundFx.playPop();
                       setIsQuickToolsOpen(false);
-                      onOpenSettingsModal('updates');
+                      if (onOpenUpdateModal) {
+                        onOpenUpdateModal();
+                      } else {
+                        onOpenSettingsModal('updates');
+                      }
                     }}
                     className="w-full flex items-center justify-between p-2.5 rounded-2xl hover:bg-indigo-50 text-slate-800 transition-colors cursor-pointer group text-left border border-transparent hover:border-indigo-100"
                   >
@@ -1083,16 +1110,16 @@ export const Navbar: React.FC<NavbarProps> = ({
                         <Rocket className="w-4 h-4" />
                       </div>
                       <div>
-                        <div className="text-xs font-black text-slate-800 group-hover:text-indigo-600">
-                          អាប់ដែតកម្មវិធី (App Update)
+                        <div className="text-xs font-black text-slate-800 group-hover:text-indigo-600 font-battambang">
+                          ទាញយកកំណែអាប់ដេត (Download Update) 🚀
                         </div>
-                        <div className="text-[10px] text-slate-400">
-                          ពិនិត្យកំណែថ្មី & ទាញយកក្នុង App
+                        <div className="text-[10px] text-slate-400 font-battambang">
+                          ទាញយក SweetBakery-Android.apk & Windows Setup
                         </div>
                       </div>
                     </div>
-                    <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700">
-                      v1.2.0
+                    <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 font-mono">
+                      v{availableUpdate?.latestVersion || '1.6.6'}
                     </span>
                   </button>
 

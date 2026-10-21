@@ -113,7 +113,7 @@ export const getStoreId = (): string => {
   // 3. Current store user session
   if (typeof window !== 'undefined') {
     try {
-      const session = localStorage.getItem('bakery_current_store_user');
+      const session = localStorage.getItem('bakery_current_store_user') || localStorage.getItem('bakery_store_user');
       if (session) {
         const parsed = JSON.parse(session);
         if (parsed?.storeId && !isDefaultStore(parsed.storeId)) {

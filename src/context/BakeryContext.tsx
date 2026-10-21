@@ -242,6 +242,9 @@ export const ensurePartyAddonDefaults = (list: any[], deletedIds?: Set<string>):
   currentDeleted.add('money-gun');
 
   if (!Array.isArray(list) || list.length === 0) {
+    if (!isDefaultStore(getStoreId())) {
+      return [];
+    }
     return initialPartyAddons.filter((item) => !currentDeleted.has(item.id));
   }
 
@@ -285,14 +288,16 @@ export const ensurePartyAddonDefaults = (list: any[], deletedIds?: Set<string>):
     };
   });
 
-  // Only re-add initial items if they have NOT been deleted by the user
-  for (const initial of initialPartyAddons) {
-    if (
-      !existingIds.has(initial.id) &&
-      !currentDeleted.has(initial.id) &&
-      !merged.some((m) => m.nameKh === initial.nameKh)
-    ) {
-      merged.push(initial);
+  // Only re-add initial items if they have NOT been deleted by the user (and only for default store)
+  if (isDefaultStore(getStoreId())) {
+    for (const initial of initialPartyAddons) {
+      if (
+        !existingIds.has(initial.id) &&
+        !currentDeleted.has(initial.id) &&
+        !merged.some((m) => m.nameKh === initial.nameKh)
+      ) {
+        merged.push(initial);
+      }
     }
   }
 
@@ -464,8 +469,11 @@ export const cleanDeduplicateExpenses = (items: Expense[]): Expense[] => {
     });
   }
 
-  // 2. Only inject initialExpenses if the store dataset is COMPLETELY EMPTY (initial first-time setup with zero records)
+  // 2. Only inject initialExpenses if the store dataset is COMPLETELY EMPTY and it is the default store
   if (result.length === 0 && (!items || items.length === 0)) {
+    if (!isDefaultStore(getStoreId())) {
+      return [];
+    }
     const officialInitials = (initialExpenses as any[]).filter((e: any) => e && e.id && !deletedIds.has(e.id) && !seenIds.has(e.id));
     for (const exp of officialInitials) {
       const d = normalizeDateToYMD(exp.date || exp.createdAt || '');
@@ -728,34 +736,34 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           const sanitized = parsed.map((s: StaffMember) => {
             // Ensure isActive defaults to true for old data that may not have this field
             const staff = { ...s, isActive: s.isActive !== false ? true : false };
-            // Only fix display name/avatar migrations — do NOT override pinCode
-            if (staff.name?.includes('ម៉ារី') || staff.name?.includes('Mary') || staff.id === 'staff-1') {
-              return {
-                ...staff,
-                name: staff.name?.includes('ម៉ារី') || staff.name?.includes('Mary') ? 'ម្ចាស់ហាង (Admin)' : staff.name,
-                nameEn: staff.nameEn?.includes('Mary') ? 'Store Owner (Admin)' : staff.nameEn,
-                avatar: staff.avatar === '👩‍🍳' ? '👑' : staff.avatar,
-                // preserve saved pinCode; only use real store PIN default if no pin set at all
-                pinCode: staff.pinCode || '660168',
-              };
-            }
-            if (staff.id === 'staff-2' || staff.id === 'staff-1789379117825' || staff.name?.includes('វិជ្ជតា') || staff.name?.includes('សុធារិទ្ធ') || staff.name?.includes('Sothearith')) {
-              return {
-                ...staff,
-                name: staff.name?.includes('សុធារិទ្ធ') || staff.name?.includes('Sothearith') ? 'វិជ្ជតា (Vicheta)' : staff.name,
-                nameEn: staff.nameEn?.includes('Sothearith') ? 'Vicheta (Cashier)' : staff.nameEn,
-                avatar: staff.avatar === '👨‍💼' ? '👩‍💼' : staff.avatar,
-                // preserve saved pinCode; only default to 0202 if missing
-                pinCode: staff.pinCode || '0202',
-                permissions: {
-                  ...staff.permissions,
-                  canAccessPos: true,
-                  canAccessShowcase: true,
-                  canAccessCustomOrders: true,
-                  canAccessSalesHistory: true,
-                  canEditSales: true,
-                },
-              };
+            // Only fix display name/avatar migrations for default store
+            if (isDefaultStore(getStoreId())) {
+              if (staff.name?.includes('ម៉ារី') || staff.name?.includes('Mary') || staff.id === 'staff-1') {
+                return {
+                  ...staff,
+                  name: staff.name?.includes('ម៉ារី') || staff.name?.includes('Mary') ? 'ម្ចាស់ហាង (Admin)' : staff.name,
+                  nameEn: staff.nameEn?.includes('Mary') ? 'Store Owner (Admin)' : staff.nameEn,
+                  avatar: staff.avatar === '👩‍🍳' ? '👑' : staff.avatar,
+                  pinCode: staff.pinCode || '660168',
+                };
+              }
+              if (staff.id === 'staff-2' || staff.id === 'staff-1789379117825' || staff.name?.includes('វិជ្ជតា') || staff.name?.includes('សុធារិទ្ធ') || staff.name?.includes('Sothearith')) {
+                return {
+                  ...staff,
+                  name: staff.name?.includes('សុធារិទ្ធ') || staff.name?.includes('Sothearith') ? 'វិជ្ជតា (Vicheta)' : staff.name,
+                  nameEn: staff.nameEn?.includes('Sothearith') ? 'Vicheta (Cashier)' : staff.nameEn,
+                  avatar: staff.avatar === '👨‍💼' ? '👩‍💼' : staff.avatar,
+                  pinCode: staff.pinCode || '0202',
+                  permissions: {
+                    ...staff.permissions,
+                    canAccessPos: true,
+                    canAccessShowcase: true,
+                    canAccessCustomOrders: true,
+                    canAccessSalesHistory: true,
+                    canEditSales: true,
+                  },
+                };
+              }
             }
             return staff;
           });
@@ -763,6 +771,31 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           return sanitized;
         }
       } catch (e) {}
+    }
+    if (!isDefaultStore(getStoreId())) {
+      const storeUser = getCurrentStoreUser();
+      const ownerStaff: StaffMember = {
+        id: `staff-${Date.now()}`,
+        name: storeUser?.storeName ? `ម្ចាស់ហាង (${storeUser.storeName})` : 'ម្ចាស់ហាង (Admin)',
+        nameEn: 'Store Owner (Admin)',
+        role: 'ADMIN',
+        avatar: '👑',
+        pinCode: '1234',
+        isActive: true,
+        permissions: {
+          canAccessPos: true,
+          canAccessShowcase: true,
+          canAccessCustomOrders: true,
+          canAccessSalesHistory: true,
+          canEditSales: true,
+          canAccessExpenses: true,
+          canAccessInventory: true,
+          canAccessReports: true,
+          canAccessSettings: true,
+        },
+      };
+      localStorage.setItem('bakery_staff_members', JSON.stringify([ownerStaff]));
+      return [ownerStaff];
     }
     return initialStaffMembers;
   });
@@ -772,40 +805,65 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        if (parsed && (parsed.name?.includes('ម៉ារី') || parsed.name?.includes('Mary') || parsed.id === 'staff-1')) {
-          const sanitized = {
-            ...parsed,
-            name: parsed.name?.includes('ម៉ារី') || parsed.name?.includes('Mary') ? 'ម្ចាស់ហាង (Admin)' : parsed.name,
-            nameEn: parsed.nameEn?.includes('Mary') ? 'Store Owner (Admin)' : parsed.nameEn,
-            avatar: parsed.avatar === '👩‍🍳' ? '👑' : parsed.avatar,
-            // preserve saved pinCode; fallback to 660168
-            pinCode: parsed.pinCode || '660168',
-          };
-          localStorage.setItem('bakery_current_staff', JSON.stringify(sanitized));
-          return sanitized;
+        if (isDefaultStore(getStoreId())) {
+          if (parsed && (parsed.name?.includes('ម៉ារី') || parsed.name?.includes('Mary') || parsed.id === 'staff-1')) {
+            const sanitized = {
+              ...parsed,
+              name: parsed.name?.includes('ម៉ារី') || parsed.name?.includes('Mary') ? 'ម្ចាស់ហាង (Admin)' : parsed.name,
+              nameEn: parsed.nameEn?.includes('Mary') ? 'Store Owner (Admin)' : parsed.nameEn,
+              avatar: parsed.avatar === '👩‍🍳' ? '👑' : parsed.avatar,
+              pinCode: parsed.pinCode || '660168',
+            };
+            localStorage.setItem('bakery_current_staff', JSON.stringify(sanitized));
+            return sanitized;
+          }
+          if (parsed && (parsed.id === 'staff-2' || parsed.id === 'staff-1789379117825' || parsed.name?.includes('វិជ្ជតា') || parsed.name?.includes('សុធារិទ្ធ') || parsed.name?.includes('Sothearith'))) {
+            const sanitized = {
+              ...parsed,
+              name: parsed.name?.includes('សុធារិទ្ធ') || parsed.name?.includes('Sothearith') ? 'វិជ្ជតា (Vicheta)' : parsed.name,
+              nameEn: parsed.nameEn?.includes('Sothearith') ? 'Vicheta (Cashier)' : parsed.nameEn,
+              avatar: parsed.avatar === '👨‍💼' ? '👩‍💼' : parsed.avatar,
+              pinCode: parsed.pinCode || '0202',
+              permissions: {
+                ...parsed.permissions,
+                canAccessPos: true,
+                canAccessShowcase: true,
+                canAccessCustomOrders: true,
+                canAccessSalesHistory: true,
+                canEditSales: true,
+              },
+            };
+            localStorage.setItem('bakery_current_staff', JSON.stringify(sanitized));
+            return sanitized;
+          }
         }
-        if (parsed && (parsed.id === 'staff-2' || parsed.id === 'staff-1789379117825' || parsed.name?.includes('វិជ្ជតា') || parsed.name?.includes('សុធារិទ្ធ') || parsed.name?.includes('Sothearith'))) {
-          const sanitized = {
-            ...parsed,
-            name: parsed.name?.includes('សុធារិទ្ធ') || parsed.name?.includes('Sothearith') ? 'វិជ្ជតា (Vicheta)' : parsed.name,
-            nameEn: parsed.nameEn?.includes('Sothearith') ? 'Vicheta (Cashier)' : parsed.nameEn,
-            avatar: parsed.avatar === '👨‍💼' ? '👩‍💼' : parsed.avatar,
-            // preserve saved pinCode; fallback to 0202
-            pinCode: parsed.pinCode || '0202',
-            permissions: {
-              ...parsed.permissions,
-              canAccessPos: true,
-              canAccessShowcase: true,
-              canAccessCustomOrders: true,
-              canAccessSalesHistory: true,
-              canEditSales: true,
-            },
-          };
-          localStorage.setItem('bakery_current_staff', JSON.stringify(sanitized));
-          return sanitized;
+        if (parsed && typeof parsed === 'object') {
+          return parsed;
         }
-        return parsed;
       } catch (e) {}
+    }
+    if (!isDefaultStore(getStoreId())) {
+      const storeUser = getCurrentStoreUser();
+      return {
+        id: `staff-${Date.now()}`,
+        name: storeUser?.storeName ? `ម្ចាស់ហាង (${storeUser.storeName})` : 'ម្ចាស់ហាង (Admin)',
+        nameEn: 'Store Owner (Admin)',
+        role: 'ADMIN',
+        avatar: '👑',
+        pinCode: '1234',
+        isActive: true,
+        permissions: {
+          canAccessPos: true,
+          canAccessShowcase: true,
+          canAccessCustomOrders: true,
+          canAccessSalesHistory: true,
+          canEditSales: true,
+          canAccessExpenses: true,
+          canAccessInventory: true,
+          canAccessReports: true,
+          canAccessSettings: true,
+        },
+      };
     }
     return initialStaffMembers[0]; // Default: Store Owner (Admin)
   });
@@ -884,6 +942,44 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         } catch (e) {}
       }
       return demoStoreInfo;
+    }
+
+    const currentSid = getStoreId();
+    if (!isDefaultStore(currentSid)) {
+      const storeUser = getCurrentStoreUser();
+      const cleanStoreInfo: StoreInfo = {
+        storeId: currentSid,
+        nameKh: (storeUser?.storeId === currentSid ? storeUser.storeName : '') || `ហាងនំ (${currentSid})`,
+        nameEn: (storeUser?.storeId === currentSid ? storeUser.storeName : '') || 'SweetBakery',
+        logoUrl: '',
+        phone: (storeUser?.storeId === currentSid ? storeUser.phone : '') || '',
+        address: '',
+        tagline: '',
+        khqrQrImage: '',
+        khqrMerchantName: '',
+        khqrBakongId: '',
+        khqrAccountNumber: '',
+        khqrBankName: '',
+        realStorePin: '',
+        requireRealStorePin: false,
+        alwaysRequireLoginOnStartup: false,
+        hideCustomerPrices: false,
+      };
+
+      const saved = localStorage.getItem('bakery_store_info');
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          if (parsed && typeof parsed === 'object') {
+            return {
+              ...cleanStoreInfo,
+              ...parsed,
+              storeId: currentSid,
+            };
+          }
+        } catch (e) {}
+      }
+      return cleanStoreInfo;
     }
 
     const saved = localStorage.getItem('bakery_store_info');
@@ -1066,6 +1162,20 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       return sortProductsNewestFirst(initialProducts);
     }
 
+    if (!isDefaultStore(getStoreId())) {
+      const saved = localStorage.getItem('bakery_products');
+      if (saved) {
+        try {
+          const parsed: Product[] = JSON.parse(saved);
+          if (Array.isArray(parsed)) {
+            const healed = parsed.map((p) => healProductItem(p).product);
+            return sortProductsNewestFirst(healed);
+          }
+        } catch (e) {}
+      }
+      return [];
+    }
+
     const saved = localStorage.getItem('bakery_products');
     if (saved) {
       try {
@@ -1084,9 +1194,10 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     return sortProductsNewestFirst(initialProducts);
   });
 
-  // Emergency Auto-Recovery: Never allow products to become 0 unless store is explicitly reset
+  // Emergency Auto-Recovery: Never allow products to become 0 unless store is explicitly reset (only for default store)
   useEffect(() => {
     if (products.length === 0) {
+      if (!isDefaultStore(getStoreId()) || globalIsDemoMode) return;
       console.warn('⚠️ Products list is 0! Auto-restoring default bakery products catalog...');
       const fallback = sortProductsNewestFirst(initialProducts);
       setProducts(fallback);
@@ -1127,28 +1238,30 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         } catch (e) {}
       }
 
-      // 2. Heal real bakery products
-      const saved = localStorage.getItem('bakery_products');
-      if (saved) {
-        const parsed: Product[] = JSON.parse(saved);
-        let changed = false;
-        const healed = parsed.map((p) => {
-          const res = healProductItem(p);
-          if (res.changed) changed = true;
-          return res.product;
-        });
-        const missingItems = initialProducts.filter(
-          (ip: Product) => !healed.some((existing) => existing.id === ip.id)
-        );
-        if (missingItems.length > 0) changed = true;
+      // 2. Heal real bakery products (only for default store to avoid injecting initial products into custom store)
+      if (isDefaultStore(getStoreId())) {
+        const saved = localStorage.getItem('bakery_products');
+        if (saved) {
+          const parsed: Product[] = JSON.parse(saved);
+          let changed = false;
+          const healed = parsed.map((p) => {
+            const res = healProductItem(p);
+            if (res.changed) changed = true;
+            return res.product;
+          });
+          const missingItems = initialProducts.filter(
+            (ip: Product) => !healed.some((existing) => existing.id === ip.id)
+          );
+          if (missingItems.length > 0) changed = true;
 
-        if (changed) {
-          const sorted = sortProductsNewestFirst([...healed, ...missingItems]);
-          if (!globalIsDemoMode) {
-            setProducts(sorted);
+          if (changed) {
+            const sorted = sortProductsNewestFirst([...healed, ...missingItems]);
+            if (!globalIsDemoMode) {
+              setProducts(sorted);
+            }
+            localStorage.setItem('bakery_products', JSON.stringify(sorted));
+            idbSet('bakery_products', JSON.stringify(sorted));
           }
-          localStorage.setItem('bakery_products', JSON.stringify(sorted));
-          idbSet('bakery_products', JSON.stringify(sorted));
         }
       }
     } catch (e) {}
@@ -1339,6 +1452,9 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       return saved ? JSON.parse(saved) : initialFlavors;
     }
     const saved = localStorage.getItem('bakery_flavors');
+    if (!isDefaultStore(getStoreId())) {
+      return saved ? JSON.parse(saved) : [];
+    }
     return saved ? JSON.parse(saved) : initialFlavors;
   });
 
@@ -1402,6 +1518,15 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       return initialPartyAddons;
     }
     const saved = localStorage.getItem('bakery_party_addons');
+    if (!isDefaultStore(getStoreId())) {
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed)) return ensurePartyAddonDefaults(parsed);
+        } catch (e) {}
+      }
+      return [];
+    }
     if (saved) {
       try {
         return ensurePartyAddonDefaults(JSON.parse(saved));
@@ -1564,7 +1689,12 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     } else {
       saved = localStorage.getItem('bakery_custom_orders');
     }
-    const rawList: CustomCakeOrder[] = saved ? JSON.parse(saved) : initialOrders;
+    const isCustomStore = !globalIsDemoMode && !isDefaultStore(getStoreId());
+    const rawList: CustomCakeOrder[] = saved
+      ? JSON.parse(saved)
+      : isCustomStore
+      ? []
+      : initialOrders;
     return (Array.isArray(rawList) ? rawList : []).map((o) => {
       if (!o) return o;
       const cleanTotal = o.totalKhr !== undefined
@@ -1588,6 +1718,9 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       return saved ? JSON.parse(saved) : initialIngredients;
     }
     const saved = localStorage.getItem('bakery_ingredients');
+    if (!isDefaultStore(getStoreId())) {
+      return saved ? JSON.parse(saved) : [];
+    }
     return saved ? JSON.parse(saved) : initialIngredients;
   });
 
@@ -1598,6 +1731,9 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       return saved ? JSON.parse(saved) : initialRecipes;
     }
     const saved = localStorage.getItem('bakery_recipes');
+    if (!isDefaultStore(getStoreId())) {
+      return saved ? JSON.parse(saved) : [];
+    }
     return saved ? JSON.parse(saved) : initialRecipes;
   });
 
@@ -1618,7 +1754,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           }
         } catch (e) {}
       } else {
-        list = initialExpenses;
+        list = !isDefaultStore(getStoreId()) ? [] : initialExpenses;
       }
     }
     return (Array.isArray(list) ? list : []).map((e) => ({
@@ -1653,6 +1789,32 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       }
     }
     const saved = localStorage.getItem('bakery_reserve_fund');
+    if (!isDefaultStore(getStoreId())) {
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          if (parsed && typeof parsed.targetAmountKhr === 'number') {
+            return {
+              ...parsed,
+              targetAmountKhr: roundKhr(parsed.targetAmountKhr),
+              currentBalanceKhr: roundKhr(parsed.currentBalanceKhr),
+              history: (parsed.history || []).map((h: any) => ({
+                ...h,
+                amountKhr: roundKhr(h.amountKhr),
+              })),
+            };
+          }
+        } catch (e) {}
+      }
+      return {
+        targetAmountKhr: 0,
+        targetAmountUsd: 0,
+        currentBalanceKhr: 0,
+        currentBalanceUsd: 0,
+        history: [],
+        updatedAt: new Date().toISOString(),
+      };
+    }
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
@@ -1754,7 +1916,12 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     } else {
       saved = localStorage.getItem('bakery_sales');
     }
-    const rawList: CompletedSale[] = saved ? JSON.parse(saved) : initialSales;
+    const isCustomStore = !globalIsDemoMode && !isDefaultStore(getStoreId());
+    const rawList: CompletedSale[] = saved
+      ? JSON.parse(saved)
+      : isCustomStore
+      ? []
+      : initialSales;
     return (Array.isArray(rawList) ? rawList : []).map((s) => {
       if (!s) return s;
       const cleanTotal = s.totalKhr !== undefined ? roundKhr(s.totalKhr) : usdToKhr(s.totalUsd, 4000);
@@ -1786,6 +1953,9 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       return saved ? JSON.parse(saved) : initialShift;
     }
     const saved = localStorage.getItem('bakery_shift');
+    if (!isDefaultStore(getStoreId())) {
+      return saved && saved !== 'null' ? JSON.parse(saved) : null;
+    }
     return saved ? JSON.parse(saved) : initialShift;
   });
 
@@ -2018,6 +2188,20 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   expensesRef.current = expenses;
   const storeInfoRef = useRef<StoreInfo>(storeInfo);
   storeInfoRef.current = storeInfo;
+  const staffMembersRef = useRef<StaffMember[]>(staffMembers);
+  staffMembersRef.current = staffMembers;
+  const currentStaffRef = useRef<StaffMember>(currentStaff);
+  currentStaffRef.current = currentStaff;
+  const flavorsRef = useRef<string[]>(flavors);
+  flavorsRef.current = flavors;
+  const partyAddonsRef = useRef<PartyAddon[]>(partyAddons);
+  partyAddonsRef.current = partyAddons;
+  const ingredientsRef = useRef<Ingredient[]>(ingredients);
+  ingredientsRef.current = ingredients;
+  const recipesRef = useRef<Recipe[]>(recipes);
+  recipesRef.current = recipes;
+  const currentShiftRef = useRef<Shift | null>(currentShift);
+  currentShiftRef.current = currentShift;
 
   const saveToLanSync = (payload: any, force: boolean = true) => {
     if (globalIsDemoMode || !isLanEnvironment()) return;
@@ -2638,6 +2822,14 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           expenses: expensesRef.current,
           products: productsRef.current,
           storeInfo: storeInfoRef.current,
+          staffMembers: staffMembersRef.current,
+          currentStaff: currentStaffRef.current,
+          flavors: flavorsRef.current,
+          partyAddons: partyAddonsRef.current,
+          ingredients: ingredientsRef.current,
+          recipes: recipesRef.current,
+          currentShift: currentShiftRef.current,
+          reserveFund: reserveFundRef.current,
         };
         localStorage.setItem(oldKey, JSON.stringify(snapshot));
         idbSet(oldKey, JSON.stringify(snapshot)).catch(() => {});
@@ -2660,21 +2852,83 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         const restoredSales = Array.isArray(loadedSnapshot.sales) ? loadedSnapshot.sales : [];
         const restoredOrders = Array.isArray(loadedSnapshot.customOrders) ? loadedSnapshot.customOrders : [];
         const restoredExpenses = Array.isArray(loadedSnapshot.expenses) ? loadedSnapshot.expenses : [];
-        const restoredProducts = Array.isArray(loadedSnapshot.products) && loadedSnapshot.products.length > 0
+        const restoredProducts = Array.isArray(loadedSnapshot.products)
           ? sortProductsNewestFirst(loadedSnapshot.products)
-          : sortProductsNewestFirst(initialProducts);
+          : (isDefaultStore(newId) ? sortProductsNewestFirst(initialProducts) : []);
+        const restoredFlavors = Array.isArray(loadedSnapshot.flavors) ? loadedSnapshot.flavors : (isDefaultStore(newId) ? initialFlavors : []);
+        const restoredAddons = Array.isArray(loadedSnapshot.partyAddons) ? loadedSnapshot.partyAddons : (isDefaultStore(newId) ? initialPartyAddons : []);
+        const restoredIngredients = Array.isArray(loadedSnapshot.ingredients) ? loadedSnapshot.ingredients : (isDefaultStore(newId) ? initialIngredients : []);
+        const restoredRecipes = Array.isArray(loadedSnapshot.recipes) ? loadedSnapshot.recipes : (isDefaultStore(newId) ? initialRecipes : []);
+        const restoredStaff = Array.isArray(loadedSnapshot.staffMembers) && loadedSnapshot.staffMembers.length > 0
+          ? loadedSnapshot.staffMembers
+          : (isDefaultStore(newId)
+              ? initialStaffMembers
+              : [
+                  {
+                    id: `staff-${Date.now()}`,
+                    name: storeUser?.storeName ? `ម្ចាស់ហាង (${storeUser.storeName})` : 'ម្ចាស់ហាង (Admin)',
+                    nameEn: 'Store Owner (Admin)',
+                    role: 'ADMIN',
+                    avatar: '👑',
+                    pinCode: '1234',
+                    isActive: true,
+                    permissions: {
+                      canAccessPos: true,
+                      canAccessShowcase: true,
+                      canAccessCustomOrders: true,
+                      canAccessSalesHistory: true,
+                      canEditSales: true,
+                      canAccessExpenses: true,
+                      canAccessInventory: true,
+                      canAccessReports: true,
+                      canAccessSettings: true,
+                    },
+                  },
+                ]);
+        const restoredCurrentStaff = loadedSnapshot.currentStaff || restoredStaff[0];
+        const restoredShift = loadedSnapshot.currentShift || null;
+        const restoredReserveFund = loadedSnapshot.reserveFund || {
+          targetAmountKhr: isDefaultStore(newId) ? 4000000 : 0,
+          targetAmountUsd: isDefaultStore(newId) ? 1000 : 0,
+          currentBalanceKhr: isDefaultStore(newId) ? 4000000 : 0,
+          currentBalanceUsd: isDefaultStore(newId) ? 1000 : 0,
+          history: [],
+          updatedAt: new Date().toISOString(),
+        };
 
         setSales(restoredSales);
         setCustomOrders(restoredOrders);
         setExpenses(restoredExpenses);
         setProducts(restoredProducts);
+        setFlavors(restoredFlavors);
+        setPartyAddons(restoredAddons);
+        setIngredients(restoredIngredients);
+        setRecipes(restoredRecipes);
+        setStaffMembers(restoredStaff);
+        setCurrentStaffState(restoredCurrentStaff);
+        setCurrentShift(restoredShift);
+        setReserveFund(restoredReserveFund);
 
-        const effectiveStoreInfo = loadedSnapshot.storeInfo || {
-          ...storeInfoRef.current,
-          nameKh: (storeUser?.storeId === newId ? storeUser.storeName : '') || `ហាងនំ (${newId})`,
-          nameEn: (storeUser?.storeId === newId ? storeUser.storeName : '') || 'SweetBakery',
-          storeId: newId,
-        };
+        const effectiveStoreInfo = loadedSnapshot.storeInfo || (isDefaultStore(newId)
+          ? defaultStoreInfo
+          : {
+              storeId: newId,
+              nameKh: (storeUser?.storeId === newId ? storeUser.storeName : '') || `ហាងនំ (${newId})`,
+              nameEn: (storeUser?.storeId === newId ? storeUser.storeName : '') || 'SweetBakery',
+              logoUrl: '',
+              phone: (storeUser?.storeId === newId ? storeUser.phone : '') || '',
+              address: '',
+              tagline: '',
+              khqrQrImage: '',
+              khqrMerchantName: '',
+              khqrBakongId: '',
+              khqrAccountNumber: '',
+              khqrBankName: '',
+              realStorePin: '',
+              requireRealStorePin: false,
+              alwaysRequireLoginOnStartup: false,
+              hideCustomerPrices: false,
+            });
         effectiveStoreInfo.storeId = newId;
         setStoreInfo(effectiveStoreInfo);
 
@@ -2684,45 +2938,135 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         localStorage.setItem('bakery_custom_orders', JSON.stringify(restoredOrders));
         localStorage.setItem('bakery_expenses', JSON.stringify(restoredExpenses));
         localStorage.setItem('bakery_products', JSON.stringify(restoredProducts));
+        localStorage.setItem('bakery_flavors', JSON.stringify(restoredFlavors));
+        localStorage.setItem('bakery_party_addons', JSON.stringify(restoredAddons));
+        localStorage.setItem('bakery_ingredients', JSON.stringify(restoredIngredients));
+        localStorage.setItem('bakery_recipes', JSON.stringify(restoredRecipes));
+        localStorage.setItem('bakery_staff_members', JSON.stringify(restoredStaff));
+        localStorage.setItem('bakery_current_staff', JSON.stringify(restoredCurrentStaff));
+        localStorage.setItem('bakery_shift', JSON.stringify(restoredShift));
+        localStorage.setItem('bakery_reserve_fund', JSON.stringify(restoredReserveFund));
+
         idbSet('bakery_sales', JSON.stringify(restoredSales)).catch(() => {});
         idbSet('bakery_custom_orders', JSON.stringify(restoredOrders)).catch(() => {});
         idbSet('bakery_expenses', JSON.stringify(restoredExpenses)).catch(() => {});
         idbSet('bakery_products', JSON.stringify(restoredProducts)).catch(() => {});
+        idbSet('bakery_flavors', JSON.stringify(restoredFlavors)).catch(() => {});
+        idbSet('bakery_party_addons', JSON.stringify(restoredAddons)).catch(() => {});
+        idbSet('bakery_ingredients', JSON.stringify(restoredIngredients)).catch(() => {});
+        idbSet('bakery_recipes', JSON.stringify(restoredRecipes)).catch(() => {});
+        idbSet('bakery_staff_members', JSON.stringify(restoredStaff)).catch(() => {});
+        idbSet('bakery_reserve_fund', JSON.stringify(restoredReserveFund)).catch(() => {});
       } else {
-        // Brand new isolated store!
-        // 1. Reset transactional data
-        setSales([]);
-        setCustomOrders([]);
-        setExpenses([]);
-        // 2. Set clean template products
-        const cleanProducts = sortProductsNewestFirst(initialProducts);
-        setProducts(cleanProducts);
-        // 3. Set fresh store info with new store ID & name
-        const cleanStoreInfo: StoreInfo = {
-          ...storeInfoRef.current,
-          nameKh: (storeUser?.storeId === newId ? storeUser.storeName : '') || (isDefaultStore(newId) ? 'ហាងនំប៉័ង វិជ្ជតា' : `ហាងនំ (${newId})`),
-          nameEn: (storeUser?.storeId === newId ? storeUser.storeName : '') || (isDefaultStore(newId) ? 'Vicheta Bakery' : 'SweetBakery'),
-          phone: (storeUser?.storeId === newId ? storeUser.phone : '') || '',
-          storeId: newId,
+        // Brand new isolated store! COMPLETELY EMPTY!
+        const cleanProducts: Product[] = isDefaultStore(newId) ? sortProductsNewestFirst(initialProducts) : [];
+        const cleanSales: CompletedSale[] = isDefaultStore(newId) ? initialSales : [];
+        const cleanOrders: CustomCakeOrder[] = isDefaultStore(newId) ? initialOrders : [];
+        const cleanExpenses: Expense[] = isDefaultStore(newId) ? initialExpenses : [];
+        const cleanFlavors: string[] = isDefaultStore(newId) ? initialFlavors : [];
+        const cleanAddons: PartyAddon[] = isDefaultStore(newId) ? initialPartyAddons : [];
+        const cleanIngredients: Ingredient[] = isDefaultStore(newId) ? initialIngredients : [];
+        const cleanRecipes: Recipe[] = isDefaultStore(newId) ? initialRecipes : [];
+        const cleanStaff: StaffMember[] = isDefaultStore(newId)
+          ? initialStaffMembers
+          : [
+              {
+                id: `staff-${Date.now()}`,
+                name: storeUser?.storeName ? `ម្ចាស់ហាង (${storeUser.storeName})` : 'ម្ចាស់ហាង (Admin)',
+                nameEn: 'Store Owner (Admin)',
+                role: 'ADMIN',
+                avatar: '👑',
+                pinCode: '1234',
+                isActive: true,
+                permissions: {
+                  canAccessPos: true,
+                  canAccessShowcase: true,
+                  canAccessCustomOrders: true,
+                  canAccessSalesHistory: true,
+                  canEditSales: true,
+                  canAccessExpenses: true,
+                  canAccessInventory: true,
+                  canAccessReports: true,
+                  canAccessSettings: true,
+                },
+              },
+            ];
+        const cleanStoreInfo: StoreInfo = isDefaultStore(newId)
+          ? defaultStoreInfo
+          : {
+              storeId: newId,
+              nameKh: (storeUser?.storeId === newId ? storeUser.storeName : '') || `ហាងនំ (${newId})`,
+              nameEn: (storeUser?.storeId === newId ? storeUser.storeName : '') || 'SweetBakery',
+              logoUrl: '',
+              phone: (storeUser?.storeId === newId ? storeUser.phone : '') || '',
+              address: '',
+              tagline: '',
+              khqrQrImage: '',
+              khqrMerchantName: '',
+              khqrBakongId: '',
+              khqrAccountNumber: '',
+              khqrBankName: '',
+              realStorePin: '',
+              requireRealStorePin: false,
+              alwaysRequireLoginOnStartup: false,
+              hideCustomerPrices: false,
+            };
+        const cleanReserveFund: ReserveFund = {
+          targetAmountKhr: isDefaultStore(newId) ? 4000000 : 0,
+          targetAmountUsd: isDefaultStore(newId) ? 1000 : 0,
+          currentBalanceKhr: isDefaultStore(newId) ? 4000000 : 0,
+          currentBalanceUsd: isDefaultStore(newId) ? 1000 : 0,
+          history: [],
+          updatedAt: new Date().toISOString(),
         };
+
+        setSales(cleanSales);
+        setCustomOrders(cleanOrders);
+        setExpenses(cleanExpenses);
+        setProducts(cleanProducts);
+        setFlavors(cleanFlavors);
+        setPartyAddons(cleanAddons);
+        setIngredients(cleanIngredients);
+        setRecipes(cleanRecipes);
+        setStaffMembers(cleanStaff);
+        setCurrentStaffState(cleanStaff[0]);
+        setCurrentShift(null);
+        setReserveFund(cleanReserveFund);
         setStoreInfo(cleanStoreInfo);
 
         // Update active localStorage and IndexedDB so app reload doesn't pull old store's data
         localStorage.setItem('bakery_store_info', JSON.stringify(cleanStoreInfo));
-        localStorage.setItem('bakery_sales', JSON.stringify([]));
-        localStorage.setItem('bakery_custom_orders', JSON.stringify([]));
-        localStorage.setItem('bakery_expenses', JSON.stringify([]));
+        localStorage.setItem('bakery_sales', JSON.stringify(cleanSales));
+        localStorage.setItem('bakery_custom_orders', JSON.stringify(cleanOrders));
+        localStorage.setItem('bakery_expenses', JSON.stringify(cleanExpenses));
         localStorage.setItem('bakery_products', JSON.stringify(cleanProducts));
-        idbSet('bakery_sales', JSON.stringify([])).catch(() => {});
-        idbSet('bakery_custom_orders', JSON.stringify([])).catch(() => {});
-        idbSet('bakery_expenses', JSON.stringify([])).catch(() => {});
+        localStorage.setItem('bakery_flavors', JSON.stringify(cleanFlavors));
+        localStorage.setItem('bakery_party_addons', JSON.stringify(cleanAddons));
+        localStorage.setItem('bakery_ingredients', JSON.stringify(cleanIngredients));
+        localStorage.setItem('bakery_recipes', JSON.stringify(cleanRecipes));
+        localStorage.setItem('bakery_staff_members', JSON.stringify(cleanStaff));
+        localStorage.setItem('bakery_current_staff', JSON.stringify(cleanStaff[0]));
+        localStorage.setItem('bakery_shift', 'null');
+        localStorage.setItem('bakery_reserve_fund', JSON.stringify(cleanReserveFund));
+
+        idbSet('bakery_sales', JSON.stringify(cleanSales)).catch(() => {});
+        idbSet('bakery_custom_orders', JSON.stringify(cleanOrders)).catch(() => {});
+        idbSet('bakery_expenses', JSON.stringify(cleanExpenses)).catch(() => {});
         idbSet('bakery_products', JSON.stringify(cleanProducts)).catch(() => {});
+        idbSet('bakery_flavors', JSON.stringify(cleanFlavors)).catch(() => {});
+        idbSet('bakery_party_addons', JSON.stringify(cleanAddons)).catch(() => {});
+        idbSet('bakery_ingredients', JSON.stringify(cleanIngredients)).catch(() => {});
+        idbSet('bakery_recipes', JSON.stringify(cleanRecipes)).catch(() => {});
+        idbSet('bakery_staff_members', JSON.stringify(cleanStaff)).catch(() => {});
+        idbSet('bakery_reserve_fund', JSON.stringify(cleanReserveFund)).catch(() => {});
       }
 
-      deletedSaleIds.current = loadDeletedIds(`sales_${newId}`);
-      deletedOrderIds.current = loadDeletedIds(`orders_${newId}`);
-      deletedExpenseIds.current = loadDeletedIds(`expenses_${newId}`);
-      deletedProductIds.current = loadDeletedIds(`products_${newId}`);
+      deletedSaleIds.current = new Set();
+      deletedOrderIds.current = new Set();
+      deletedExpenseIds.current = new Set();
+      deletedProductIds.current = new Set();
+      deletedStaffIds.current = new Set();
+      deletedPartyAddonIds.current = new Set();
 
       setCurrentStoreTenantId(newId);
       lastLanVersion.current = 0;
@@ -2864,13 +3208,18 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     // Subscribe to products (High-speed real-time sync)
     const unsubProducts = subscribeToFirestoreCollection<Product>('products', (cloudProducts) => {
       if (globalIsDemoMode) return;
-      if (Array.isArray(cloudProducts) && cloudProducts.length > 0) {
-        const filtered = sortProductsNewestFirst(
-          cloudProducts
-            .filter((p) => p && p.id && !deletedProductIds.current.has(p.id))
-            .map((p) => healProductItem(p).product)
-        );
-        if (filtered.length > 0) {
+      if (Array.isArray(cloudProducts)) {
+        if (cloudProducts.length === 0 && !isDefaultStore(getStoreId())) {
+          setProducts([]);
+          safeSetStorage('bakery_products', JSON.stringify([]));
+          return;
+        }
+        if (cloudProducts.length > 0) {
+          const filtered = sortProductsNewestFirst(
+            cloudProducts
+              .filter((p) => p && p.id && !deletedProductIds.current.has(p.id))
+              .map((p) => healProductItem(p).product)
+          );
           setProducts((prev) => {
             if (isSameProductList(prev, filtered)) {
               return prev;
@@ -6167,11 +6516,11 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         idbGet('bakery_recipes').then((res) => res || localStorage.getItem('bakery_recipes')),
       ]);
 
-      let prodList = initialProducts;
+      let prodList = isDefaultStore(currentTenant) ? initialProducts : [];
       if (liveProd) {
         try {
           const parsed = JSON.parse(liveProd);
-          if (Array.isArray(parsed) && parsed.length > 0) prodList = parsed;
+          if (Array.isArray(parsed)) prodList = parsed;
         } catch (e) {}
       }
       setProducts(sortProductsNewestFirst(prodList));
