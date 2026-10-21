@@ -788,7 +788,9 @@ export const CartPanel: React.FC<CartPanelProps> = ({
 
             {/* Interactive Cards Grid */}
             <div className="grid grid-cols-2 gap-2">
-              {partyAddons.map((addon) => {
+              {partyAddons
+                .filter((a) => a && a.id !== 'money-gun' && (!a.nameKh || (!a.nameKh.includes('បាញ់លុយ') && !a.nameKh.toLowerCase().includes('money-gun'))))
+                .map((addon) => {
                 const addonProductId = `addon-${addon.id}`;
                 const cartIndex = cart.findIndex((item) => item.product.id === addonProductId);
                 const cartItem = cartIndex > -1 ? cart[cartIndex] : null;

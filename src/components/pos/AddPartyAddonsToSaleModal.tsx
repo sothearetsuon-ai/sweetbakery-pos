@@ -291,7 +291,9 @@ export const AddPartyAddonsToSaleModal: React.FC<AddPartyAddonsToSaleModalProps>
             </label>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-              {partyAddons.map((addon) => {
+              {partyAddons
+                .filter((a) => a && a.id !== 'money-gun' && (!a.nameKh || (!a.nameKh.includes('បាញ់លុយ') && !a.nameKh.toLowerCase().includes('money-gun'))))
+                .map((addon) => {
                 const qty = selectedQuantities[addon.id] || 0;
                 const priceKhr = addon.priceKhr ?? Math.round(addon.priceUsd * exchangeRate);
                 const isSelected = qty > 0;

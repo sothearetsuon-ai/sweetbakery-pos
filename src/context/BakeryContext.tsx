@@ -64,6 +64,7 @@ import { setGeminiApiKeyLocally } from '../services/geminiInvoiceService';
 import { offlineSyncService, SyncState } from '../services/offlineSyncService';
 import { soundFx } from '../utils/audio';
 import { formatDateDMY, formatDateTimeDMY, normalizeDateToYMD } from '../utils/dateUtils';
+import { broadcastCustomerSync, subscribeCustomerSync } from '../services/customerSyncService';
 
 // Global demo mode flag to safely block cloud sync, LAN disk writes, and Telegram alerts during Demo mode
 let globalIsDemoMode = false;
@@ -231,13 +232,27 @@ export const initialPartyAddons: PartyAddon[] = [
   { id: 'topper', nameKh: '✨ ស្លាក Happy Birthday Acrylic', priceUsd: 1.2, priceKhr: 5000, stockQty: 80, minAlertStock: 15 },
   { id: 'card', nameKh: '💌 កាតជូនពរប្រណិត', priceUsd: 1.0, priceKhr: 4000, stockQty: 120, minAlertStock: 25 },
   { id: 'money-box', nameKh: 'មូលដ្ឋានដុល្លារខ្លី១កេស', priceUsd: 1.25, priceKhr: 5000, stockQty: 50, minAlertStock: 10 },
-  { id: 'money-gun', nameKh: 'បាញ់លុយ', priceUsd: 1.25, priceKhr: 5000, stockQty: 50, minAlertStock: 10 },
 ];
 
-export const ensurePartyAddonDefaults = (list: any[]): PartyAddon[] => {
-  if (!Array.isArray(list) || list.length === 0) return initialPartyAddons;
-  const existingIds = new Set(list.map((item) => item.id));
-  const merged: PartyAddon[] = list.map((item) => {
+export const ensurePartyAddonDefaults = (list: any[], deletedIds?: Set<string>): PartyAddon[] => {
+  const currentDeleted = deletedIds ? new Set(deletedIds) : loadDeletedIds('party_addons');
+  currentDeleted.add('money-gun');
+
+  if (!Array.isArray(list) || list.length === 0) {
+    return initialPartyAddons.filter((item) => !currentDeleted.has(item.id));
+  }
+
+  // Purge any deleted items and zombie money-gun / បាញ់លុយ
+  const filteredList = list.filter((item) => {
+    if (!item || !item.id) return false;
+    if (currentDeleted.has(item.id)) return false;
+    if (item.id === 'money-gun') return false;
+    if (item.nameKh && (item.nameKh.includes('បាញ់លុយ') || item.nameKh.toLowerCase().includes('money-gun'))) return false;
+    return true;
+  });
+
+  const existingIds = new Set(filteredList.map((item) => item.id));
+  const merged: PartyAddon[] = filteredList.map((item) => {
     let priceUsd = item.priceUsd;
     let priceKhr = item.priceKhr;
 
@@ -267,9 +282,13 @@ export const ensurePartyAddonDefaults = (list: any[]): PartyAddon[] => {
     };
   });
 
-  // Ensure items from initialPartyAddons (like 'money-box' or 'money-gun') are added if missing
+  // Only re-add initial items if they have NOT been deleted by the user
   for (const initial of initialPartyAddons) {
-    if (!existingIds.has(initial.id) && !merged.some((m) => m.nameKh === initial.nameKh)) {
+    if (
+      !existingIds.has(initial.id) &&
+      !currentDeleted.has(initial.id) &&
+      !merged.some((m) => m.nameKh === initial.nameKh)
+    ) {
       merged.push(initial);
     }
   }
@@ -1482,6 +1501,56 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     safeSetStorage('bakery_party_addons', JSON.stringify(partyAddons));
   }, [partyAddons]);
 
+  // Purge zombie 'money-gun' / 'បាញ់លុយ' from memory & storage on startup
+  useEffect(() => {
+    recordDeletedId('party_addons', 'money-gun', deletedPartyAddonIds);
+    setPartyAddons((prev) => {
+      const cleaned = prev.filter(
+        (a) => a.id !== 'money-gun' && (!a.nameKh || (!a.nameKh.includes('បាញ់លុយ') && !a.nameKh.toLowerCase().includes('money-gun')))
+      );
+      if (cleaned.length !== prev.length) {
+        safeSetStorage('bakery_party_addons', JSON.stringify(cleaned));
+        saveToLanSync({ partyAddons: cleaned });
+        syncSaveDoc('settings', 'partyAddons', { items: cleaned, updatedAt: new Date().toISOString() });
+        broadcastCustomerSync({
+          type: 'PARTY_ADDONS_SYNC',
+          partyAddons: cleaned,
+          deletedItem: { type: 'party_addon', id: 'money-gun' },
+        });
+      }
+      return cleaned;
+    });
+  }, []);
+
+  // Ultra-fast cross-window & customer display sync (< 5ms)
+  useEffect(() => {
+    const unsub = subscribeCustomerSync((payload) => {
+      if (payload.type === 'PARTY_ADDONS_SYNC') {
+        if (payload.deletedItem?.id) {
+          deletedPartyAddonIds.current.add(payload.deletedItem.id);
+        }
+        if (Array.isArray(payload.partyAddons)) {
+          setPartyAddons(
+            payload.partyAddons.filter((a) => !deletedPartyAddonIds.current.has(a.id) && a.id !== 'money-gun')
+          );
+        }
+      } else if (payload.type === 'PRODUCTS_SYNC') {
+        if (payload.deletedItem?.id) {
+          deletedProductIds.current.add(payload.deletedItem.id);
+        }
+        if (Array.isArray(payload.products)) {
+          setProducts(payload.products.filter((p) => !deletedProductIds.current.has(p.id)));
+        }
+      } else if (payload.type === 'DELETED_RECORDS_SYNC' && payload.deletedIds) {
+        payload.deletedIds.forEach((id) => {
+          deletedPartyAddonIds.current.add(id);
+          deletedProductIds.current.add(id);
+        });
+      }
+    });
+    return unsub;
+  }, []);
+
   const [cart, setCart] = useState<CartItem[]>([]);
 
   const [customOrders, setCustomOrders] = useState<CustomCakeOrder[]>(() => {
@@ -1931,6 +2000,11 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const deletedProductIds = useRef<Set<string>>(loadDeletedIds('products'));
   const deletedOrderIds = useRef<Set<string>>(loadDeletedIds('orders'));
   const deletedStaffIds = useRef<Set<string>>(loadDeletedIds('staff'));
+  const deletedPartyAddonIds = useRef<Set<string>>((() => {
+    const s = loadDeletedIds('party_addons');
+    s.add('money-gun');
+    return s;
+  })());
   const customOrdersRef = useRef<CustomCakeOrder[]>(customOrders);
   customOrdersRef.current = customOrders;
   const salesRef = useRef<CompletedSale[]>(sales);
@@ -1952,6 +2026,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           deletedOrderIds: Array.from(deletedOrderIds.current),
           deletedExpenseIds: Array.from(deletedExpenseIds.current),
           deletedProductIds: Array.from(deletedProductIds.current),
+          deletedPartyAddonIds: Array.from(deletedPartyAddonIds.current),
         }),
       })
       .then((res) => {
@@ -2002,6 +2077,9 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
     if (Array.isArray(data.deletedProductIds)) {
       data.deletedProductIds.forEach((id: string) => recordDeletedId('products', id, deletedProductIds));
+    }
+    if (Array.isArray(data.deletedPartyAddonIds)) {
+      data.deletedPartyAddonIds.forEach((id: string) => recordDeletedId('party_addons', id, deletedPartyAddonIds));
     }
 
     // 2. Sync Products (Smart diff to avoid redundant re-renders and I/O on mobile)
@@ -2169,16 +2247,17 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
 
     // 9. Sync Party Add-ons
-    if (Array.isArray(data.partyAddons) && data.partyAddons.length > 0) {
+    if (Array.isArray(data.partyAddons)) {
+      const filtered = data.partyAddons.filter((a: any) => a && a.id && !deletedPartyAddonIds.current.has(a.id) && a.id !== 'money-gun');
       setPartyAddons((prev) => {
         if (
-          data.partyAddons.length === prev.length &&
-          data.partyAddons.every((a: any, idx: number) => a.id === prev[idx]?.id && a.priceUsd === prev[idx]?.priceUsd)
+          filtered.length === prev.length &&
+          filtered.every((a: any, idx: number) => a.id === prev[idx]?.id && a.priceUsd === prev[idx]?.priceUsd && a.stockQty === prev[idx]?.stockQty)
         ) {
           return prev;
         }
-        safeSetStorage('bakery_party_addons', JSON.stringify(data.partyAddons));
-        return data.partyAddons;
+        safeSetStorage('bakery_party_addons', JSON.stringify(filtered));
+        return filtered;
       });
     }
 
@@ -2469,10 +2548,14 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     };
   }, []);
 
+  // Tenant switching protection & isolated tenant state
+  const isSwitchingTenant = useRef<boolean>(false);
+  const activeTenantIdRef = useRef<string>(getStoreId());
+
   // Broadcast any state updates to LAN server (debounced background sync only)
   const isInitialMount = useRef<boolean>(true);
   useEffect(() => {
-    if (globalIsDemoMode || !isLanEnvironment()) return;
+    if (globalIsDemoMode || !isLanEnvironment() || isSwitchingTenant.current) return;
     if (isInitialMount.current) {
       isInitialMount.current = false;
       return;
@@ -2517,7 +2600,27 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   useEffect(() => {
     const unsub = subscribeToStoreIdChange((newId) => {
+      if (newId === activeTenantIdRef.current) return;
+      console.log(`[StoreSwitch] Switching store tenant from ${activeTenantIdRef.current} to ${newId}`);
+      isSwitchingTenant.current = true;
+      activeTenantIdRef.current = newId;
+
+      if (lanSyncTimer.current) clearTimeout(lanSyncTimer.current);
+
+      // Clean tenant-scoped state so data from old store is not retained or cross-uploaded
+      setSales([]);
+      setCustomOrders([]);
+      setExpenses([]);
+
+      deletedSaleIds.current = loadDeletedIds(`sales_${newId}`);
+      deletedOrderIds.current = loadDeletedIds(`orders_${newId}`);
+      deletedExpenseIds.current = loadDeletedIds(`expenses_${newId}`);
+
       setCurrentStoreTenantId(newId);
+
+      setTimeout(() => {
+        isSwitchingTenant.current = false;
+      }, 1500);
     });
     return unsub;
   }, []);
@@ -2661,55 +2764,64 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     // Subscribe to sales (Preserves real-time cloud sales)
     const unsubSales = subscribeToFirestoreCollection<CompletedSale>('sales', (cloudSales) => {
       if (globalIsDemoMode) return;
-      if (Array.isArray(cloudSales) && cloudSales.length > 0) {
+      if (Array.isArray(cloudSales)) {
+        if (cloudSales.length === 0) {
+          setSales([]);
+          safeSetStorage('bakery_sales', JSON.stringify([]));
+          return;
+        }
         const filtered = cloudSales
           .filter((s) => s && s.id && !deletedSaleIds.current.has(s.id))
           .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
-        if (filtered.length > 0) {
-          setSales((prev) => {
-            if (isSameSaleList(prev, filtered)) {
-              return prev;
-            }
-            safeSetStorage('bakery_sales', JSON.stringify(filtered));
-            return filtered;
-          });
-        }
+        setSales((prev) => {
+          if (isSameSaleList(prev, filtered)) {
+            return prev;
+          }
+          safeSetStorage('bakery_sales', JSON.stringify(filtered));
+          return filtered;
+        });
       }
     });
 
     // Subscribe to custom orders
     const unsubOrders = subscribeToFirestoreCollection<CustomCakeOrder>('customOrders', (cloudOrders) => {
       if (globalIsDemoMode) return;
-      if (Array.isArray(cloudOrders) && cloudOrders.length > 0) {
-        const filtered = cloudOrders.filter((o) => o && o.id && !deletedOrderIds.current.has(o.id));
-        if (filtered.length > 0) {
-          setCustomOrders((prev) => {
-            if (isSameCustomOrderList(prev, filtered)) {
-              return prev;
-            }
-            safeSetStorage('bakery_custom_orders', JSON.stringify(filtered));
-            return filtered;
-          });
+      if (Array.isArray(cloudOrders)) {
+        if (cloudOrders.length === 0) {
+          setCustomOrders([]);
+          safeSetStorage('bakery_custom_orders', JSON.stringify([]));
+          return;
         }
+        const filtered = cloudOrders.filter((o) => o && o.id && !deletedOrderIds.current.has(o.id));
+        setCustomOrders((prev) => {
+          if (isSameCustomOrderList(prev, filtered)) {
+            return prev;
+          }
+          safeSetStorage('bakery_custom_orders', JSON.stringify(filtered));
+          return filtered;
+        });
       }
     });
 
     // Subscribe to expenses (Instantly syncs edits, payment methods, reserve fund changes across all devices)
     const unsubExpenses = subscribeToFirestoreCollection<Expense>('expenses', (cloudExpenses) => {
       if (globalIsDemoMode) return;
-      if (Array.isArray(cloudExpenses) && cloudExpenses.length > 0) {
+      if (Array.isArray(cloudExpenses)) {
+        if (cloudExpenses.length === 0) {
+          setExpenses([]);
+          safeSetStorage('bakery_expenses', JSON.stringify([]));
+          return;
+        }
         const deduped = cleanDeduplicateExpenses(cloudExpenses);
 
-        if (deduped.length > 0) {
-          setExpenses((prev) => {
-            if (isSameExpenseList(prev, deduped)) {
-              return prev;
-            }
-            safeSetStorage('bakery_expenses', JSON.stringify(deduped));
-            return deduped;
-          });
-        }
+        setExpenses((prev) => {
+          if (isSameExpenseList(prev, deduped)) {
+            return prev;
+          }
+          safeSetStorage('bakery_expenses', JSON.stringify(deduped));
+          return deduped;
+        });
       }
     });
 
@@ -2869,6 +2981,27 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           });
         }
       }
+
+      const cloudDeletedAddons = (cloudDeleted as any).deletedPartyAddonIds || (cloudDeleted as any).deletedPartyAddonsIds || (cloudDeleted as any).deletedParty_addonsIds;
+      if (Array.isArray(cloudDeletedAddons)) {
+        let changed = false;
+        cloudDeletedAddons.forEach((id: string) => {
+          if (!deletedPartyAddonIds.current.has(id)) {
+            deletedPartyAddonIds.current.add(id);
+            changed = true;
+          }
+        });
+        if (changed) {
+          try {
+            localStorage.setItem('bakery_deleted_party_addons_ids', JSON.stringify(Array.from(deletedPartyAddonIds.current).slice(-500)));
+          } catch (e) {}
+          setPartyAddons((prev) => {
+            const updated = prev.filter((a) => !deletedPartyAddonIds.current.has(a.id));
+            safeSetStorage('bakery_party_addons', JSON.stringify(updated));
+            return updated;
+          });
+        }
+      }
     });
 
     // Subscribe to reserve fund (timestamp protected & instant adoption of cloud over initial default)
@@ -2907,12 +3040,12 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     const unsubPartyAddons = subscribeToFirestoreDoc<{ items?: PartyAddon[] }>('settings', 'partyAddons', (cloudData) => {
       if (globalIsDemoMode || !cloudData) return;
       const items = cloudData.items;
-      if (Array.isArray(items) && items.length > 0) {
+      if (Array.isArray(items)) {
         setPartyAddons((prev) => {
           // Keep any locally created items that haven't arrived in cloud yet
           const cloudIds = new Set(items.map((i) => i.id));
-          const localPending = prev.filter((p) => !cloudIds.has(p.id) && p.id.startsWith('addon-'));
-          const merged = ensurePartyAddonDefaults([...items, ...localPending]);
+          const localPending = prev.filter((p) => !cloudIds.has(p.id) && p.id.startsWith('addon-') && !deletedPartyAddonIds.current.has(p.id));
+          const merged = ensurePartyAddonDefaults([...items, ...localPending], deletedPartyAddonIds.current);
 
           if (
             merged.length === prev.length &&
@@ -3879,6 +4012,10 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       safeSetStorage('bakery_party_addons', JSON.stringify(updated));
       saveToLanSync({ partyAddons: updated });
       syncSaveDoc('settings', 'partyAddons', { items: updated });
+      broadcastCustomerSync({
+        type: 'PARTY_ADDONS_SYNC',
+        partyAddons: updated,
+      });
       return updated;
     });
     return newAddon;
@@ -3910,6 +4047,10 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       safeSetStorage('bakery_party_addons', JSON.stringify(updated));
       saveToLanSync({ partyAddons: updated });
       syncSaveDoc('settings', 'partyAddons', { items: updated });
+      broadcastCustomerSync({
+        type: 'PARTY_ADDONS_SYNC',
+        partyAddons: updated,
+      });
       return updated;
     });
   };
@@ -3926,28 +4067,43 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       safeSetStorage('bakery_party_addons', JSON.stringify(updated));
       saveToLanSync({ partyAddons: updated });
       syncSaveDoc('settings', 'partyAddons', { items: updated });
+      broadcastCustomerSync({
+        type: 'PARTY_ADDONS_SYNC',
+        partyAddons: updated,
+      });
       return updated;
     });
   };
 
   const deletePartyAddon = (id: string) => {
+    recordDeletedId('party_addons', id, deletedPartyAddonIds);
     setPartyAddons((prev) => {
       const updated = prev.filter((a) => a.id !== id);
       safeSetStorage('bakery_party_addons', JSON.stringify(updated));
       saveToLanSync({ partyAddons: updated });
-      syncSaveDoc('settings', 'partyAddons', { items: updated });
+      syncSaveDoc('settings', 'partyAddons', { items: updated, updatedAt: new Date().toISOString() });
+      broadcastCustomerSync({
+        type: 'PARTY_ADDONS_SYNC',
+        partyAddons: updated,
+        deletedItem: { type: 'party_addon', id },
+      });
       return updated;
     });
   };
 
   const restoreDefaultPartyAddons = () => {
-    setPartyAddons(initialPartyAddons);
-    safeSetStorage('bakery_party_addons', JSON.stringify(initialPartyAddons));
+    const cleaned = initialPartyAddons.filter((a) => a.id !== 'money-gun');
+    setPartyAddons(cleaned);
+    safeSetStorage('bakery_party_addons', JSON.stringify(cleaned));
     if (globalIsDemoMode) {
-      try { localStorage.setItem('demo_bakery_party_addons', JSON.stringify(initialPartyAddons)); } catch (e) {}
+      try { localStorage.setItem('demo_bakery_party_addons', JSON.stringify(cleaned)); } catch (e) {}
     }
-    saveToLanSync({ partyAddons: initialPartyAddons });
-    syncSaveDoc('settings', 'partyAddons', { items: initialPartyAddons, updatedAt: new Date().toISOString() });
+    saveToLanSync({ partyAddons: cleaned });
+    syncSaveDoc('settings', 'partyAddons', { items: cleaned, updatedAt: new Date().toISOString() });
+    broadcastCustomerSync({
+      type: 'PARTY_ADDONS_SYNC',
+      partyAddons: cleaned,
+    });
   };
 
   const deductPartyAddonsStockFromPastSales = (sinceDate: string = '2026-10-08') => {
@@ -4012,6 +4168,10 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setProducts((prev) => {
       const updated = sortProductsNewestFirst([newProduct, ...prev.filter((p) => p.id !== newProduct.id)]);
       safeSetStorage('bakery_products', JSON.stringify(updated));
+      broadcastCustomerSync({
+        type: 'PRODUCTS_SYNC',
+        products: updated,
+      });
       return updated;
     });
 
@@ -4041,6 +4201,10 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         safeSetStorage('bakery_party_addons', JSON.stringify(updated));
         saveToLanSync({ partyAddons: updated });
         syncSaveDoc('settings', 'partyAddons', { items: updated });
+        broadcastCustomerSync({
+          type: 'PARTY_ADDONS_SYNC',
+          partyAddons: updated,
+        });
         return updated;
       });
     }
@@ -4054,6 +4218,10 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setProducts((prev) => {
       const updated = prev.map((p) => (p.id === updatedProd.id ? updatedProd : p));
       safeSetStorage('bakery_products', JSON.stringify(updated));
+      broadcastCustomerSync({
+        type: 'PRODUCTS_SYNC',
+        products: updated,
+      });
       return updated;
     });
 
@@ -4084,6 +4252,10 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         safeSetStorage('bakery_party_addons', JSON.stringify(updated));
         saveToLanSync({ partyAddons: updated });
         syncSaveDoc('settings', 'partyAddons', { items: updated });
+        broadcastCustomerSync({
+          type: 'PARTY_ADDONS_SYNC',
+          partyAddons: updated,
+        });
         return updated;
       });
     }
@@ -4097,6 +4269,11 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setProducts((prev) => {
       const updated = prev.filter((p) => p.id !== productId);
       safeSetStorage('bakery_products', JSON.stringify(updated));
+      broadcastCustomerSync({
+        type: 'PRODUCTS_SYNC',
+        products: updated,
+        deletedItem: { type: 'product', id: productId },
+      });
       return updated;
     });
 
@@ -4115,6 +4292,11 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       safeSetStorage('bakery_party_addons', JSON.stringify(updated));
       saveToLanSync({ partyAddons: updated });
       syncSaveDoc('settings', 'partyAddons', { items: updated });
+      broadcastCustomerSync({
+        type: 'PARTY_ADDONS_SYNC',
+        partyAddons: updated,
+        deletedItem: { type: 'party_addon', id: rawId },
+      });
       return updated;
     });
   };

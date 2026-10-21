@@ -86,6 +86,7 @@ export const RealStoreAuthModal: React.FC<RealStoreAuthModalProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [formError, setFormError] = useState('');
   const [formSuccess, setFormSuccess] = useState('');
+  const [canQuickRegister, setCanQuickRegister] = useState(false);
   const [copiedStoreId, setCopiedStoreId] = useState(false);
 
   // PIN Keypad State
@@ -194,6 +195,9 @@ export const RealStoreAuthModal: React.FC<RealStoreAuthModalProps> = ({
         }, 800);
       } else {
         soundFx.playPop();
+        if (res.notFound || (res.error && res.error.includes('រកមិនឃើញគណនី'))) {
+          setCanQuickRegister(true);
+        }
         setFormError(formatAuthErrorMessage(res.error || 'មានបញ្ហាក្នុងការចូលប្រើប្រាស់'));
       }
     } catch (err: any) {
@@ -573,9 +577,27 @@ export const RealStoreAuthModal: React.FC<RealStoreAuthModalProps> = ({
             <div className="p-4 sm:p-5 overflow-y-auto space-y-3.5 flex-1">
               {/* Feedback messages */}
               {formError && (
-                <div className="p-3 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold flex items-start gap-2 animate-in fade-in">
-                  <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
-                  <span>{formError}</span>
+                <div className="p-3.5 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold space-y-2.5 animate-in fade-in">
+                  <div className="flex items-start gap-2">
+                    <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                    <span>{formError}</span>
+                  </div>
+                  {canQuickRegister && activeFormTab === 'LOGIN' && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        soundFx.playPop();
+                        setActiveFormTab('SIGNUP');
+                        setFormError('');
+                        setCanQuickRegister(false);
+                        if (!storeName.trim()) setStoreName('ហាងនំ SweetBakery');
+                      }}
+                      className="w-full py-2.5 px-3 bg-gradient-to-r from-pink-600 via-rose-600 to-purple-600 hover:from-pink-700 hover:to-rose-700 text-white rounded-xl text-xs font-black shadow-md flex items-center justify-center gap-1.5 active:scale-95 cursor-pointer transition-all"
+                    >
+                      <Sparkles className="w-4 h-4 text-amber-200" />
+                      <span>✨ បង្កើតហាងថ្មីជាមួយលេខ {emailOrPhone || 'នេះ'} ភ្លាមៗ (Sign Up)</span>
+                    </button>
+                  )}
                 </div>
               )}
 

@@ -309,12 +309,14 @@ export const CustomerOrderPortal: React.FC<CustomerOrderPortalProps> = ({ onBack
   // Available party addons - connected dynamically to POS partyAddons
   const availableAddons = useMemo(() => {
     if (partyAddons && partyAddons.length > 0) {
-      return partyAddons.map((addon) => ({
-        id: addon.id,
-        nameKh: addon.nameKh,
-        priceUsd: addon.priceUsd,
-        priceKhr: addon.priceKhr ?? Math.round(addon.priceUsd * exchangeRate),
-      }));
+      return partyAddons
+        .filter((addon) => addon && addon.id !== 'money-gun' && (!addon.nameKh || (!addon.nameKh.includes('បាញ់លុយ') && !addon.nameKh.toLowerCase().includes('money-gun'))))
+        .map((addon) => ({
+          id: addon.id,
+          nameKh: addon.nameKh,
+          priceUsd: addon.priceUsd,
+          priceKhr: addon.priceKhr ?? Math.round(addon.priceUsd * exchangeRate),
+        }));
     }
     return [
       { id: 'sparkler', nameKh: 'ទៀនភ្លើងពណ៌ (Sparkler Candle)', priceUsd: 1, priceKhr: 4100 },

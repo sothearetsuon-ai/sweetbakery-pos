@@ -98,7 +98,7 @@ export const formatAuthErrorMessage = (err: any): string => {
     msg.includes('configuration-not-found') ||
     msg.includes('auth/operation-not-allowed')
   ) {
-    return 'គណនីត្រូវបានផ្ទៀងផ្ទាត់តាមរយៈ Cloud Database ដោយផ្ទាល់! សូមព្យាយាមចុច Login ម្ដងទៀត។';
+    return 'ប្រព័ន្ធដំណើរការតាមរយៈ Cloud Database ដោយផ្ទាល់! សូមចុច Login ឬបង្កើតហាងថ្មី។';
   }
   if (msg.includes('auth/user-not-found') || msg.includes('auth/invalid-credential')) {
     return 'លេខទូរស័ព្ទ/អ៊ីមែល ឬពាក្យសម្ងាត់មិនត្រឹមត្រូវឡើយ!';
@@ -114,6 +114,9 @@ export const formatAuthErrorMessage = (err: any): string => {
   }
   if (msg.includes('auth/network-request-failed')) {
     return 'មិនមានការតភ្ជាប់អ៊ីនធឺណិតទេ! សូមពិនិត្យមើលសេវាបណ្ដាញរបស់អ្នក។';
+  }
+  if (msg.startsWith('Firebase:') || msg.includes('auth/')) {
+    return 'កំហុសផ្ទៀងផ្ទាត់គណនី! សូមពិនិត្យមើលលេខទូរស័ព្ទ និងពាក្យសម្ងាត់ ឬចុច «បង្កើតហាងថ្មី»។';
   }
   return msg;
 };
@@ -345,7 +348,7 @@ export const signUpStore = async (params: {
 export const signInStore = async (
   emailOrPhone: string,
   password?: string
-): Promise<{ success: boolean; error?: string; account?: StoreUserAccount }> => {
+): Promise<{ success: boolean; error?: string; account?: StoreUserAccount; notFound?: boolean }> => {
   const auth = getFirebaseAuth();
   const db = getFirestoreDb();
 
@@ -374,15 +377,17 @@ export const signInStore = async (
       const lookupKeys: string[] = [];
       if (digits) {
         lookupKeys.push(`phone_${digits}`);
+        const withoutZero = digits.startsWith('0') ? digits.slice(1) : digits;
+        const withZero = digits.startsWith('0') ? digits : `0${digits}`;
+        if (!lookupKeys.includes(`phone_${withoutZero}`)) lookupKeys.push(`phone_${withoutZero}`);
+        if (!lookupKeys.includes(`phone_${withZero}`)) lookupKeys.push(`phone_${withZero}`);
+        lookupKeys.push(`store_STORE-${digits.slice(-6)}`);
       }
       if (isEmail) {
         lookupKeys.push(`email_${rawIdent.toLowerCase()}`);
       }
       if (isStoreId) {
         lookupKeys.push(`store_${rawIdent.toUpperCase()}`);
-      } else if (digits) {
-        // Also check if store ID corresponds to phone suffix (e.g. STORE-660168)
-        lookupKeys.push(`store_STORE-${digits.slice(-6)}`);
       }
 
       let foundData: any = null;
@@ -564,7 +569,8 @@ export const signInStore = async (
 
   return {
     success: false,
-    error: 'រកមិនឃើញគណនី ឬលេខទូរស័ព្ទនេះទេ! សូមពិនិត្យមើលលេខ ឬចុចផ្ទាំង «បង្កើតហាងថ្មី (Sign Up)»។',
+    notFound: true,
+    error: `រកមិនឃើញគណនី ${rawIdent} ក្នុងប្រព័ន្ធឡើយ! សូមពិនិត្យមើលលេខ ឬចុច «បង្កើតហាងថ្មី (Sign Up)»។`,
   };
 };
 

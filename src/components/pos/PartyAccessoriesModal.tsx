@@ -655,7 +655,9 @@ export const PartyAccessoriesModal: React.FC<PartyAccessoriesModalProps> = ({
 
           {/* List of Party Accessories */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {partyAddons.map((addon) => {
+            {partyAddons
+              .filter((a) => a && a.id !== 'money-gun' && (!a.nameKh || (!a.nameKh.includes('បាញ់លុយ') && !a.nameKh.toLowerCase().includes('money-gun'))))
+              .map((addon) => {
               const isEditing = editingId === addon.id;
               const isDeleting = deletingId === addon.id;
               const isRestocking = restockingId === addon.id;

@@ -80,6 +80,18 @@ export const isDefaultStore = (id?: string | null): boolean => {
  * Any custom ID (e.g. 'STORE-DEV-8B2A') maps to tenants/{storeId}/*.
  */
 export const getStoreId = (): string => {
+  // First, check if storeId is explicitly passed in URL query (for customer orders, tables, tablets)
+  if (typeof window !== 'undefined') {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const urlStoreId = params.get('storeId') || params.get('store') || params.get('tenant');
+      if (urlStoreId && urlStoreId.trim()) {
+        const clean = urlStoreId.trim().toUpperCase().replace(/[^A-Z0-9_-]/g, '');
+        if (clean) return clean;
+      }
+    } catch (e) {}
+  }
+
   let id = localStorage.getItem(STORAGE_STORE_ID);
 
   // If this device is the authorized primary store device (ហាងវិជ្ជតា), it stays on DEFAULT

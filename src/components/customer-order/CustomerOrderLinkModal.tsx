@@ -18,6 +18,8 @@ import {
 import { useBakery } from '../../context/BakeryContext';
 import { soundFx } from '../../utils/audio';
 
+import { getStoreId } from '../../services/firebase';
+
 interface CustomerOrderLinkModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -54,6 +56,9 @@ export const CustomerOrderLinkModal: React.FC<CustomerOrderLinkModalProps> = ({
   // window.location.origin is "file://" which cannot be accessed by customer phones.
   // Therefore, fallback to the official live hosted GitHub Pages URL or storeInfo.website.
   const customerOrderUrl = useMemo(() => {
+    const currentStoreId = getStoreId();
+    const storeParam = currentStoreId ? `&storeId=${encodeURIComponent(currentStoreId)}` : '';
+
     // 1. If store has a custom website or custom customer portal URL configured
     const customUrl = storeInfo.customerPortalUrl || storeInfo.website;
     if (
@@ -63,7 +68,8 @@ export const CustomerOrderLinkModal: React.FC<CustomerOrderLinkModalProps> = ({
       !customUrl.includes('appassets')
     ) {
       const base = customUrl.replace(/\/+$/, '');
-      return base.includes('?order=true') ? base : `${base}/?order=true`;
+      const withOrder = base.includes('?order=true') ? base : `${base}/?order=true`;
+      return withOrder.includes('storeId=') ? withOrder : `${withOrder}${storeParam}`;
     }
 
     // 2. Check if current window is running on a live HTTP/HTTPS public server
@@ -84,12 +90,12 @@ export const CustomerOrderLinkModal: React.FC<CustomerOrderLinkModalProps> = ({
 
       if (!isLocalOrContainer && (origin.startsWith('http://') || origin.startsWith('https://'))) {
         const cleanPath = pathname.replace(/\/index\.html$/, '').replace(/\/+$/, '');
-        return `${origin}${cleanPath}/?order=true`;
+        return `${origin}${cleanPath}/?order=true${storeParam}`;
       }
     }
 
     // 3. Default to official production GitHub Pages hosted app
-    return 'https://sothearetsuon-ai.github.io/sweetbakery-pos/?order=true';
+    return `https://sothearetsuon-ai.github.io/sweetbakery-pos/?order=true${storeParam}`;
   }, [storeInfo.customerPortalUrl, storeInfo.website]);
 
   if (!isOpen) return null;

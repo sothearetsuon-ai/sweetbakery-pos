@@ -1546,7 +1546,9 @@ export const NewCustomOrderModal: React.FC<NewCustomOrderModalProps> = ({ isOpen
 
                 {/* Add-ons list grid */}
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-                  {partyAddons.map((addon) => {
+                  {partyAddons
+                    .filter((a) => a && a.id !== 'money-gun' && (!a.nameKh || (!a.nameKh.includes('បាញ់លុយ') && !a.nameKh.toLowerCase().includes('money-gun'))))
+                    .map((addon) => {
                     const qty = selectedAddonQuantities[addon.id] || 0;
                     const isSelected = qty > 0;
                     const addonKhr = roundKhr(addon.priceKhr ?? (addon.priceUsd * exchangeRate));
