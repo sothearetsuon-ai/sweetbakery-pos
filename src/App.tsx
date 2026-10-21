@@ -191,18 +191,18 @@ export const App: React.FC = () => {
   const [availableUpdate, setAvailableUpdate] = useState<AppUpdateInfo | null>(() => ({
     hasUpdate: false,
     currentVersion: getNativeAppVersion(),
-    latestVersion: '1.5.8',
-    releaseDate: '2026-10-20',
+    latestVersion: '1.6.1',
+    releaseDate: '2026-10-21',
     releaseNotes: [
-      '🔒 ទាមទារ Login / វាយ PIN ពេលបើកកម្មវិធី (Require Login on Startup): បង្ហាញផ្ទាំង Login/PIN ជាបន្ទាន់រាល់ពេលបើកកម្មវិធីថ្មីដើម្បីសុវត្ថិភាព ជាមួយជម្រើសចងចាំឧបករណ៍ និងប៊ូតុងចាក់សោរហ័ស',
-      '🎉 គ្រប់គ្រងគ្រឿងបន្ថែមកម្មវិធី (Party Accessories Management): គ្រប់គ្រង បន្ថែមមុខទំនិញថ្មី និងកែប្រែតម្លៃ ($ USD / ៛ KHR) សម្រាប់លក់ និងជូនភ្ញៀវជ្រើសរើស',
-      '🎂 ផ្ទាំងភ្ញៀវបិទតម្លៃនំកុំបង្ហាញ (Hide Cake Prices on Customer View): បិទការបង្ហាញតម្លៃលេខលើផ្ទាំងស្លាយ TV និង QR កុម្ម៉ង់',
-      '🤖 Customer Smart Chatbot & Cake Ordering: ប៊ូតុង Chatbot ឆ្លាតវៃសម្រាប់សួរនាំព័ត៌មាន មើលកាតាឡុក និងកុម្ម៉ងនំ',
-      '💬 Telegram Live Chat: ឆាតទៅកាន់ Telegram របស់ហាងផ្ទាល់ និងផ្ញើដំណឹងកុម្ម៉ងនំស្វ័យប្រវត្តិ',
+      '⚡ សម្អាតប្រព័ន្ធ & ដកមុខងារចាក់ភ្លេង (Lightweight System)',
+      '🚀 ដោះស្រាយបញ្ហាចូលហាងថ្មី (Fast Tenant Login) មិនឱ្យគាំង',
+      '🧹 សម្អាតទិន្នន័យចាស់ដែលបានលុបចេញពីហាង (ដូចជា បាញ់លុយ / Money Gun)',
+      '⚡ ការ Sync ទៅផ្ទាំងភ្ញៀវលឿនបំផុត (Instant Dual-Screen Sync < 5ms)',
+      '🔗 តំណភ្ជាប់កុម្ម៉ង់ភ្ញៀវ & QR Code សុវត្ថិភាពខ្ពស់',
     ],
-    apkDownloadUrl: 'https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.5.8/SweetBakery-Android.apk',
-    windowsDownloadUrl: 'https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.5.8/SweetBakery-POS-Setup.exe',
-    windowsInstallerUrl: 'https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.5.8/SweetBakery-POS-Setup.exe',
+    apkDownloadUrl: 'https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.6.1/SweetBakery-Android.apk',
+    windowsDownloadUrl: 'https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.6.1/SweetBakery-POS-Setup.exe',
+    windowsInstallerUrl: 'https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.6.1/SweetBakery-POS-Setup.exe',
   }));
   const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
 

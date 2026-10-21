@@ -123,7 +123,7 @@ export const AppUpdateTab: React.FC = () => {
       urlToUse ||
       customApkUrl.trim() ||
       updateInfo?.apkDownloadUrl ||
-      'https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.5.7/SweetBakery-Android.apk';
+      'https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.6.1/SweetBakery-Android.apk';
 
     if (isAndroidNative) {
       setIsDownloading(true);
