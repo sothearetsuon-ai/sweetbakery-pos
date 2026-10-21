@@ -1,14 +1,14 @@
 {
-  "version": "1.6.3",
+  "version": "1.6.4",
   "releaseDate": "2026-10-21",
   "releaseNotes": [
-    "🛒 តម្រៀបនំឆ្លាតវៃនៅបញ្ជរ POS (Quick Cashier Smart Stock Sorting)៖ នំមានស្តុកនៅជួរខាងលើ នំទើបបញ្ចូលថ្មីនៅខាងលើបង្អស់ ឯនំអស់ស្តុកត្រូវរុញទម្លាក់ទៅក្រោមគេដោយស្វ័យប្រវត្តិ។",
-    "🔍 ប៊ូតុងត្រងស្តុក POS រហ័ស (Stock Filter Pills)៖ ងាយស្រួលចុចមើល «ទាំងអស់», «🟢 មានស្តុក» ឬ «🔴 អស់ស្តុក» ដើម្បីពិនិត្យស្តុក និងបន្ថែមស្តុកភ្លាមៗនៅបញ្ជរ។",
-    "⚡ ជម្រើសរបៀបតម្រៀបទំនិញ (POS Sort Mode Selector)៖ គាំទ្រការតម្រៀបឆ្លាតវៃ (ស្តុក & ថ្មីមុន), នំថ្មីមុនគេ, តាមឈ្មោះ (A-Z), និងស្តុកច្រើនទៅតិច។",
-    "🏪 រក្សាស្ថេរភាព Tenant Data Isolation & Custom Cake Stock Restore ពីកំណែ v1.6.2។"
+    "💬 កែសម្រួលការជូនដំណឹងសារឆាត (Chat Read Dismissal)៖ បាត់ផ្ទាំងដំណឹង និង Badge សារថ្មីភ្លាមៗពេលចុចអាន ឬចុចបិទ មិនរំខានទៀតឡើយ។",
+    "📲 ស្វ័យប្រវត្តិតភ្ជាប់ Telegram ២៤ ម៉ោង (Telegram Chat Forwarding)៖ សារសួរនាំពីភ្ញៀវតាម Web Link លោតចូល Telegram របស់ហាងភ្លាមៗក្នុងរយៈពេល ១ វិនាទី ទោះបីជាបិទ App POS ក៏ដោយ។",
+    "⚙️ បន្ថែមជម្រើសបិទ/បើកការជូនដំណឹងសារភ្ញៀវក្នុង Settings ➜ Telegram Bot។",
+    "🛒 រក្សាភាពឆ្លាតវៃនៃការតម្រៀបនំមានស្តុក & នំថ្មីនៅបញ្ជរលក់ POS Quick Cashier ពីកំណែ v1.6.3។"
   ],
-  "apkDownloadUrl": "https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.6.3/SweetBakery-Android.apk",
-  "windowsInstallerUrl": "https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.6.3/SweetBakery-POS-Setup.exe",
-  "windowsDownloadUrl": "https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.6.3/SweetBakery-POS-Setup.exe",
+  "apkDownloadUrl": "https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.6.4/SweetBakery-Android.apk",
+  "windowsInstallerUrl": "https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.6.4/SweetBakery-POS-Setup.exe",
+  "windowsDownloadUrl": "https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.6.4/SweetBakery-POS-Setup.exe",
   "mandatory": false
 }
