@@ -18,6 +18,11 @@ import {
   EyeOff,
   QrCode,
   Volume2,
+  ArrowUpDown,
+  PackageCheck,
+  PackageX,
+  Clock,
+  Layers,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { useBakery } from '../../context/BakeryContext';
@@ -31,7 +36,7 @@ import { PartyAccessoriesModal } from './PartyAccessoriesModal';
 import { KhqrStandeeModal } from './KhqrStandeeModal';
 import { Product, CompletedSale } from '../../types';
 import { soundFx } from '../../utils/audio';
-import { sortProductsNewestFirst } from '../../utils/productUtils';
+import { sortProductsForPos, PosSortMode } from '../../utils/productUtils';
 import { paymentListener, PaymentNotification } from '../../services/paymentListener';
 
 export const PosTerminal: React.FC = () => {
@@ -68,6 +73,35 @@ export const PosTerminal: React.FC = () => {
   const [isAddProductOpen, setIsAddProductOpen] = useState(false);
   const [isCartDrawerOpen, setIsCartDrawerOpen] = useState(false);
   const [activeReceiptSale, setActiveReceiptSale] = useState<CompletedSale | null>(null);
+
+  // POS Sorting & Stock Filter State
+  const [posSortMode, setPosSortMode] = useState<PosSortMode>(() => {
+    try {
+      return (localStorage.getItem('sweetbakery_pos_sort_mode') as PosSortMode) || 'smart_stock';
+    } catch (_) {
+      return 'smart_stock';
+    }
+  });
+  const [stockFilter, setStockFilter] = useState<'all' | 'in_stock' | 'out_of_stock'>('all');
+  const [isSortMenuOpen, setIsSortMenuOpen] = useState(false);
+  const sortMenuRef = useRef<HTMLDivElement>(null);
+
+  const handleSortChange = (newMode: PosSortMode) => {
+    setPosSortMode(newMode);
+    try {
+      localStorage.setItem('sweetbakery_pos_sort_mode', newMode);
+    } catch (_) {}
+  };
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (sortMenuRef.current && !sortMenuRef.current.contains(e.target as Node)) {
+        setIsSortMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   // Barcode Scanner State & Buffer
   const [scanNotification, setScanNotification] = useState<{
@@ -237,17 +271,28 @@ export const PosTerminal: React.FC = () => {
     }
   };
 
-  // Filter products (newest first, matches category, name, or barcode)
-  // Exclude decoration materials / party supplies from POS terminal
-  const filteredProducts = useMemo(() => {
-    const list = products.filter((p) => {
-      // Exclude decoration materials / party supplies from POS
+  // Category-filtered products (excluding decoration materials / party supplies from POS)
+  const baseCategoryProducts = useMemo(() => {
+    return products.filter((p) => {
       if (p.categoryId === 'party') return false;
+      return selectedCategory === 'all' || p.categoryId === selectedCategory;
+    });
+  }, [products, selectedCategory]);
 
-      const matchesCategory =
-        selectedCategory === 'all' || p.categoryId === selectedCategory;
+  // Current category stock counts
+  const inStockCount = useMemo(() => {
+    return baseCategoryProducts.filter((p) => Number(p.stockQty ?? 0) > 0).length;
+  }, [baseCategoryProducts]);
 
-      const q = searchQuery.toLowerCase().trim();
+  const outOfStockCount = useMemo(() => {
+    return baseCategoryProducts.filter((p) => Number(p.stockQty ?? 0) <= 0).length;
+  }, [baseCategoryProducts]);
+
+  // Filter products for POS terminal with smart sorting
+  // (In-stock items on top, newest items at very top, out-of-stock items at bottom)
+  const filteredProducts = useMemo(() => {
+    const q = searchQuery.toLowerCase().trim();
+    const list = baseCategoryProducts.filter((p) => {
       const matchesSearch =
         !q ||
         p.nameKh.toLowerCase().includes(q) ||
@@ -255,10 +300,24 @@ export const PosTerminal: React.FC = () => {
         (p.barcode && p.barcode.toLowerCase().includes(q)) ||
         (p.description && p.description.toLowerCase().includes(q));
 
-      return matchesCategory && matchesSearch;
+      if (!matchesSearch) return false;
+
+      const currentStock = Number(p.stockQty ?? 0);
+      if (stockFilter === 'in_stock') return currentStock > 0;
+      if (stockFilter === 'out_of_stock') return currentStock <= 0;
+      return true;
     });
-    return sortProductsNewestFirst(list);
-  }, [products, selectedCategory, searchQuery]);
+
+    return sortProductsForPos(list, posSortMode);
+  }, [baseCategoryProducts, searchQuery, stockFilter, posSortMode]);
+
+  const inStockProducts = useMemo(() => {
+    return filteredProducts.filter((p) => Number(p.stockQty ?? 0) > 0);
+  }, [filteredProducts]);
+
+  const outOfStockProducts = useMemo(() => {
+    return filteredProducts.filter((p) => Number(p.stockQty ?? 0) <= 0);
+  }, [filteredProducts]);
 
   const getCategoryIcon = (iconName: string) => {
     switch (iconName) {
@@ -538,6 +597,206 @@ export const PosTerminal: React.FC = () => {
               );
             })}
           </div>
+
+          {/* Stock Filter & Smart Sort Bar */}
+          <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-rose-100/70 text-xs">
+            {/* Left: Stock Status Filters */}
+            <div className="flex items-center gap-1 sm:gap-1.5 overflow-x-auto scrollbar-none py-0.5">
+              <span className="text-[11px] font-bold text-slate-400 hidden lg:inline mr-0.5">ស្តុក៖</span>
+              <button
+                type="button"
+                onClick={() => {
+                  soundFx.playPop();
+                  setStockFilter('all');
+                }}
+                className={`px-2.5 sm:px-3 py-1 rounded-xl text-[11px] sm:text-xs font-black transition-all flex items-center gap-1 active:scale-95 cursor-pointer ${
+                  stockFilter === 'all'
+                    ? 'bg-slate-900 text-white shadow-xs'
+                    : 'bg-slate-100 hover:bg-slate-200/80 text-slate-600'
+                }`}
+              >
+                <span>ទាំងអស់</span>
+                <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded-md ${
+                  stockFilter === 'all' ? 'bg-white/20 text-white' : 'bg-white text-slate-500'
+                }`}>
+                  {baseCategoryProducts.length}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  soundFx.playPop();
+                  setStockFilter('in_stock');
+                }}
+                className={`px-2.5 sm:px-3 py-1 rounded-xl text-[11px] sm:text-xs font-black transition-all flex items-center gap-1 active:scale-95 cursor-pointer ${
+                  stockFilter === 'in_stock'
+                    ? 'bg-emerald-600 text-white shadow-xs shadow-emerald-600/30 ring-2 ring-emerald-300'
+                    : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200/70'
+                }`}
+                title="បង្ហាញតែនំដែលមានស្តុកក្នុងហាង"
+              >
+                <PackageCheck className="w-3.5 h-3.5" />
+                <span>មានស្តុក</span>
+                <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded-md ${
+                  stockFilter === 'in_stock' ? 'bg-white/25 text-white' : 'bg-emerald-100 text-emerald-800'
+                }`}>
+                  {inStockCount}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  soundFx.playPop();
+                  setStockFilter('out_of_stock');
+                }}
+                className={`px-2.5 sm:px-3 py-1 rounded-xl text-[11px] sm:text-xs font-black transition-all flex items-center gap-1 active:scale-95 cursor-pointer ${
+                  stockFilter === 'out_of_stock'
+                    ? 'bg-rose-600 text-white shadow-xs shadow-rose-600/30 ring-2 ring-rose-300'
+                    : 'bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200/70'
+                }`}
+                title="បង្ហាញតែនំដែលអស់ស្តុក ដើម្បីងាយស្រួលបន្ថែមស្តុក"
+              >
+                <PackageX className="w-3.5 h-3.5" />
+                <span>អស់ស្តុក</span>
+                <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded-md ${
+                  stockFilter === 'out_of_stock' ? 'bg-white/25 text-white' : 'bg-rose-100 text-rose-800'
+                }`}>
+                  {outOfStockCount}
+                </span>
+              </button>
+            </div>
+
+            {/* Right: Smart Sort Mode Dropdown */}
+            <div className="relative" ref={sortMenuRef}>
+              <button
+                type="button"
+                onClick={() => {
+                  soundFx.playPop();
+                  setIsSortMenuOpen((prev) => !prev);
+                }}
+                className={`px-2.5 sm:px-3 py-1 rounded-xl text-[11px] sm:text-xs font-black transition-all flex items-center gap-1.5 border shadow-2xs active:scale-95 cursor-pointer ${
+                  posSortMode === 'smart_stock'
+                    ? 'bg-pink-50 hover:bg-pink-100 text-pink-700 border-pink-200/90'
+                    : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200'
+                }`}
+                title="ជ្រើសរើសរបៀបតម្រៀបទំនិញក្នុង POS"
+              >
+                <ArrowUpDown className="w-3.5 h-3.5 text-pink-600" />
+                <span>
+                  {posSortMode === 'smart_stock' && '⚡ ស្តុក & ថ្មីមុន (ឆ្លាតវៃ)'}
+                  {posSortMode === 'newest_first' && '🕒 នំថ្មីមុនគេ'}
+                  {posSortMode === 'name_asc' && '🔤 តាមឈ្មោះ (A-Z)'}
+                  {posSortMode === 'stock_desc' && '📊 ស្តុកច្រើនមុន'}
+                </span>
+              </button>
+
+              {isSortMenuOpen && (
+                <div className="absolute right-0 top-full mt-1.5 w-60 bg-white rounded-2xl shadow-xl border border-rose-100 p-1.5 z-50 space-y-0.5 animate-in fade-in zoom-in-95 duration-150">
+                  <div className="px-2.5 py-1 text-[10px] font-black uppercase text-slate-400 tracking-wider">
+                    របៀបតម្រៀបទំនិញ POS
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleSortChange('smart_stock');
+                      setIsSortMenuOpen(false);
+                    }}
+                    className={`w-full text-left px-2.5 py-2 rounded-xl text-xs font-bold flex items-center justify-between transition-colors cursor-pointer ${
+                      posSortMode === 'smart_stock'
+                        ? 'bg-pink-50 text-pink-700 font-black'
+                        : 'text-slate-700 hover:bg-slate-50'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <Sparkles className="w-3.5 h-3.5 text-pink-600 shrink-0" />
+                      <div>
+                        <div>⚡ ស្តុក & ថ្មីមុន (លំនាំដើម)</div>
+                        <div className="text-[10px] text-slate-400 font-normal">
+                          មានស្តុកនៅលើ នំថ្មីលើបំផុត អស់ស្តុកទៅក្រោម
+                        </div>
+                      </div>
+                    </div>
+                    {posSortMode === 'smart_stock' && <CheckCircle2 className="w-4 h-4 text-pink-600 shrink-0 ml-1" />}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleSortChange('newest_first');
+                      setIsSortMenuOpen(false);
+                    }}
+                    className={`w-full text-left px-2.5 py-2 rounded-xl text-xs font-bold flex items-center justify-between transition-colors cursor-pointer ${
+                      posSortMode === 'newest_first'
+                        ? 'bg-pink-50 text-pink-700 font-black'
+                        : 'text-slate-700 hover:bg-slate-50'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <Clock className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                      <div>
+                        <div>🕒 នំទើបបញ្ចូលថ្មីមុនគេ</div>
+                        <div className="text-[10px] text-slate-400 font-normal">
+                          តម្រៀបតាមថ្ងៃបញ្ចូលថ្មី ដោយមិនគិតស្តុក
+                        </div>
+                      </div>
+                    </div>
+                    {posSortMode === 'newest_first' && <CheckCircle2 className="w-4 h-4 text-pink-600 shrink-0 ml-1" />}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleSortChange('name_asc');
+                      setIsSortMenuOpen(false);
+                    }}
+                    className={`w-full text-left px-2.5 py-2 rounded-xl text-xs font-bold flex items-center justify-between transition-colors cursor-pointer ${
+                      posSortMode === 'name_asc'
+                        ? 'bg-pink-50 text-pink-700 font-black'
+                        : 'text-slate-700 hover:bg-slate-50'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-mono font-bold text-indigo-500 shrink-0">A-Z</span>
+                      <div>
+                        <div>🔤 តាមឈ្មោះ (A-Z)</div>
+                        <div className="text-[10px] text-slate-400 font-normal">
+                          តម្រៀបតាមលំដាប់តួអក្សរឈ្មោះនំ
+                        </div>
+                      </div>
+                    </div>
+                    {posSortMode === 'name_asc' && <CheckCircle2 className="w-4 h-4 text-pink-600 shrink-0 ml-1" />}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleSortChange('stock_desc');
+                      setIsSortMenuOpen(false);
+                    }}
+                    className={`w-full text-left px-2.5 py-2 rounded-xl text-xs font-bold flex items-center justify-between transition-colors cursor-pointer ${
+                      posSortMode === 'stock_desc'
+                        ? 'bg-pink-50 text-pink-700 font-black'
+                        : 'text-slate-700 hover:bg-slate-50'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <PackageCheck className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                      <div>
+                        <div>📊 ស្តុកច្រើនទៅតិច</div>
+                        <div className="text-[10px] text-slate-400 font-normal">
+                          នំដែលមានចំនួនស្តុកច្រើនជាងគេនៅខាងលើ
+                        </div>
+                      </div>
+                    </div>
+                    {posSortMode === 'stock_desc' && <CheckCircle2 className="w-4 h-4 text-pink-600 shrink-0 ml-1" />}
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
 
         {/* Product Grid */}
@@ -546,18 +805,83 @@ export const PosTerminal: React.FC = () => {
             <div className="w-16 h-16 rounded-3xl bg-pink-50 flex items-center justify-center mb-3">
               <Cake className="w-8 h-8 text-pink-300" />
             </div>
-            <p className="font-bold text-slate-700">រកមិនឃើញមុខនំ ឬទំនិញដែលស្វែងរកទេ</p>
-            <p className="text-xs text-slate-400 mt-1">សូមសាកល្បងស្វែងរកឈ្មោះផ្សេង ឬចុច Upload នំថ្មី</p>
+            <p className="font-bold text-slate-700">
+              {stockFilter === 'out_of_stock'
+                ? 'អបអរសាទរ! មិនមានមុខនំណាអស់ស្តុកពីហាងឡើយ 🎉'
+                : 'រកមិនឃើញមុខនំ ឬទំនិញដែលស្វែងរកទេ'}
+            </p>
+            <p className="text-xs text-slate-400 mt-1">
+              {stockFilter === 'out_of_stock'
+                ? 'គ្រប់មុខនំទាំងអស់សុទ្ធតែមានស្តុកសម្រាប់លក់'
+                : 'សូមសាកល្បងស្វែងរកឈ្មោះផ្សេង ឬចុច + នំថ្មី'}
+            </p>
+            {stockFilter !== 'all' && (
+              <button
+                type="button"
+                onClick={() => setStockFilter('all')}
+                className="mt-3 px-3 py-1.5 bg-rose-50 text-rose-600 rounded-xl text-xs font-bold hover:bg-rose-100 transition-colors cursor-pointer"
+              >
+                បង្ហាញមុខទំនិញទាំងអស់វិញ
+              </button>
+            )}
           </div>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-2.5 sm:gap-4 pt-1 sm:pt-2">
-            {filteredProducts.map((product) => (
-              <ProductCard
-                key={product.id}
-                product={product}
-                onAddToCart={(p: Product) => addToCart(p)}
-              />
-            ))}
+            {/* If in smart_stock mode and showing all, render in-stock first, then banner, then out-of-stock */}
+            {posSortMode === 'smart_stock' && stockFilter === 'all' && outOfStockProducts.length > 0 ? (
+              <>
+                {/* 1. In-stock products at the top (newest first) */}
+                {inStockProducts.map((product) => (
+                  <ProductCard
+                    key={product.id}
+                    product={product}
+                    onAddToCart={(p: Product) => addToCart(p)}
+                  />
+                ))}
+
+                {/* 2. Visual Divider Banner separating In-stock and Out-of-stock */}
+                <div className="col-span-full my-1 sm:my-2 p-2.5 sm:p-3 bg-gradient-to-r from-rose-50/90 via-slate-50 to-amber-50/90 border border-rose-200/70 rounded-2xl flex flex-wrap items-center justify-between gap-2 shadow-2xs">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-pulse shrink-0" />
+                    <span className="text-xs font-black text-rose-800">
+                      មុខនំអស់ស្តុកពីហាង ({outOfStockProducts.length} មុខ)
+                    </span>
+                    <span className="text-[11px] text-slate-500 hidden md:inline">
+                      — បានតម្រៀបទៅក្រោមគេ ដើម្បីកុំឱ្យរំខានដល់ការគិតប្រាក់
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 text-xs">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        soundFx.playPop();
+                        setStockFilter('in_stock');
+                      }}
+                      className="px-2.5 py-1 bg-white hover:bg-rose-100 text-rose-700 font-bold rounded-lg border border-rose-200 text-[11px] transition-colors cursor-pointer"
+                    >
+                      លាក់នំអស់ស្តុក
+                    </button>
+                  </div>
+                </div>
+
+                {/* 3. Out-of-stock products at the bottom */}
+                {outOfStockProducts.map((product) => (
+                  <ProductCard
+                    key={product.id}
+                    product={product}
+                    onAddToCart={(p: Product) => addToCart(p)}
+                  />
+                ))}
+              </>
+            ) : (
+              filteredProducts.map((product) => (
+                <ProductCard
+                  key={product.id}
+                  product={product}
+                  onAddToCart={(p: Product) => addToCart(p)}
+                />
+              ))
+            )}
           </div>
         )}
       </div>
