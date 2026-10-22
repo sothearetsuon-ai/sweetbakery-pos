@@ -18,6 +18,8 @@ export interface TelegramConfig {
   adminChatId?: string; // e.g. "8970210109" (Admin private chat id)
   dailyReportRecipient?: 'ADMIN_ONLY' | 'GROUP_ONLY' | 'BOTH'; // default: 'ADMIN_ONLY'
   notifyCustomerChat?: boolean; // ជូនដំណឹងពេលភ្ញៀវឆាតសួរនាំលើ App / Customer Portal
+  listenBankAlerts?: boolean; // ស្ដាប់ដំណឹងផ្ទេរប្រាក់ស្វ័យប្រវត្តិពី Telegram Group ធនាគារ (ACLEDA / ABA Bank Alert)
+  bankAlertChatId?: string; // Chat ID នៃ Group Alert ធនាគារ (បើទទេរ គឺស្ដាប់គ្រប់ Group ដែល Bot នៅ)
 }
 
 const STORAGE_KEY = 'bakery_telegram_config';
@@ -37,6 +39,8 @@ export const DEFAULT_TELEGRAM_CONFIG: TelegramConfig = {
   dailyReportTime: '21:00', // 9:00 យប់ (ម៉ោងបិទហាងលក់សរុបប្រចាំថ្ងៃ)
   includeAiInsight: true,
   notifyCustomerChat: true,
+  listenBankAlerts: true,
+  bankAlertChatId: '',
 };
 
 export const isDemoModeActive = (): boolean => {
@@ -129,7 +133,9 @@ export const areTelegramConfigsEqual = (
     (a.dailyReportTime || '21:00') === (b.dailyReportTime || '21:00') &&
     (a.dailyReportRecipient || 'ADMIN_ONLY') === (b.dailyReportRecipient || 'ADMIN_ONLY') &&
     Boolean(a.includeAiInsight) === Boolean(b.includeAiInsight) &&
-    Boolean(a.notifyCustomerChat ?? true) === Boolean(b.notifyCustomerChat ?? true)
+    Boolean(a.notifyCustomerChat ?? true) === Boolean(b.notifyCustomerChat ?? true) &&
+    Boolean(a.listenBankAlerts ?? true) === Boolean(b.listenBankAlerts ?? true) &&
+    (a.bankAlertChatId || '').trim() === (b.bankAlertChatId || '').trim()
   );
 };
 

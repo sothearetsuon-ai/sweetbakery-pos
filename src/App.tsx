@@ -18,6 +18,7 @@ import confetti from 'canvas-confetti';
 import { initTelegramMiniApp, isTelegramWebApp, getTelegramStartParam } from './services/telegramWebApp';
 import { checkForAppUpdates, AppUpdateInfo, getNativeAppVersion } from './services/appUpdateService';
 import { getStaffUnreadChatCount, subscribeToCustomerSessions } from './services/liveChatService';
+import { bankAlertListener } from './services/bankAlertListener';
 import { RealStoreAuthModal } from './components/auth/RealStoreAuthModal';
 import type { SettingsTab } from './components/settings/SettingsModal';
 import type { ChatChannel } from './types';
@@ -191,14 +192,16 @@ export const App: React.FC = () => {
   const [availableUpdate, setAvailableUpdate] = useState<AppUpdateInfo | null>(() => ({
     hasUpdate: false,
     currentVersion: getNativeAppVersion(),
-    latestVersion: '1.6.7',
+    latestVersion: '1.6.9',
     releaseDate: '2026-10-22',
     releaseNotes: [
-      '⚡ ជួសជុលបញ្ហាលោតភ្លឹបភ្លេតៗ ញាក់ៗពេលចូល Settings និងចុចលើ Telegram Bot ឬ Tab ផ្សេងៗលើទូរសព្ទដៃ (Fix Tab Reset & Mobile Screen Jitter)។',
-      '🚀 បង្កើនល្បឿនប្រតិបត្តិការ Telegram Settings ដោយបំបែកការវាយអក្សរពី Cloud Save មិនរំខាន Bandwidth ឬ CPU ទូរសព្ទ។',
-      '📱 ការពារ Mobile Auto-Zoom Jitter នៅពេលចុចលើប្រអប់ Input វាយ Bot Token និង Chat ID។',
-      '🐟 រក្សាទុកចំនួនត្រីហែល ៧ ក្បាលពេញលេញដូចដើម និងផ្អាកស្វ័យប្រវត្តិតែពេលបើកផ្ទាំង SettingsModal ដើម្បីផ្ដល់ល្បឿនរលូន ១០០%។',
-      '🔊 បង្កើនភាពរហ័សនៃសំឡេងចុច (Tactile Click Sound) លើ iOS & Android ដោយគ្មាន Delay។',
+      '🏦 មុខងារថ្មី៖ ភ្ជាប់ Telegram Group Alert ធនាគារ អេស៊ីលីដា (ACLEDA Bank) & ABA ស្ដាប់ដំណឹងផ្ទេរប្រាក់ KHQR ដោយស្វ័យប្រវត្តិ។',
+      '📢 ប្រព័ន្ធបំពងសំឡេងខ្មែរ (Khmer Voice Soundbox)៖ បន្លឺសំឡេងភ្លាមៗ «🔔 ទទួលបានការទូទាត់ប្រាក់ ... រៀល តាមរយៈ ACLEDA KHQR»។',
+      '⚡ ផ្ទៀងផ្ទាត់ & បញ្ចប់ការលក់ស្វ័យប្រវត្តិ (Auto-Pay Checkout) ពេលភ្ញៀវស្កេន KHQR ត្រូវចំនួនទឹកប្រាក់ មិនបាច់ចុចដៃ។',
+      '🔄 Sync ដំណឹងប្រាក់ចូលតាមរយៈ Firebase Cloud ទៅកាន់គ្រប់កុំព្យូទ័រ និង Tablet ក្នុងហាងដំណាលគ្នា។',
+      '🧪 ប៊ូតុងតេស្តសារគំរូ ACLEDA ក្នុងផ្ទាំង Settings ជួយឱ្យបុគ្គលិក និងម្ចាស់ហាងអាចសាកល្បងសំឡេង Soundbox បានភ្លាមៗ។',
+      '✨ បង្ហាញការណែនាំលម្អិតអំពីរបៀបបិទ Privacy Mode ក្នុង @BotFather (/setprivacy -> Disable)។',
+      '✨ រក្សាព័ត៌មានសម្គាល់ «បង្កើតដោយ សុធារិទ្ធ» នៅលើប្រព័ន្ធ POS, Sidebar, វិក្កយបត្រ, និងផ្ទាំងទំនាក់ទំនង។',
     ],
     apkDownloadUrl: 'https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/latest/download/SweetBakery-Android.apk',
     windowsDownloadUrl: 'https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/latest/download/SweetBakery-POS-Setup.exe',
@@ -255,6 +258,22 @@ export const App: React.FC = () => {
   // Initialize Telegram Mini App Native SDK
   React.useEffect(() => {
     initTelegramMiniApp();
+  }, []);
+
+  // Continuous Real-Time Bank Deposit Listener (ACLEDA & ABA Telegram Alerts)
+  React.useEffect(() => {
+    bankAlertListener.start();
+
+    const handleConfigChange = () => {
+      bankAlertListener.stop();
+      bankAlertListener.start();
+    };
+
+    window.addEventListener('bakery_telegram_config_changed', handleConfigChange);
+    return () => {
+      bankAlertListener.stop();
+      window.removeEventListener('bakery_telegram_config_changed', handleConfigChange);
+    };
   }, []);
 
   React.useEffect(() => {

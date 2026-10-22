@@ -21,6 +21,10 @@ import {
   UserCheck,
   Users,
   MessageCircle,
+  Volume2,
+  Landmark,
+  Radio,
+  Zap,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import {
@@ -33,6 +37,7 @@ import {
   resetTelegramMenuButton,
   sendTelegramDailyReport,
 } from '../../services/telegram';
+import { bankAlertListener } from '../../services/bankAlertListener';
 import { useBakery } from '../../context/BakeryContext';
 import { soundFx } from '../../utils/audio';
 
@@ -48,6 +53,27 @@ export const TelegramSettingsTab: React.FC = () => {
   const [isSendingReportTest, setIsSendingReportTest] = useState(false);
   const [reportSendResult, setReportSendResult] = useState<{ success: boolean; message: string } | null>(null);
   const [savedSuccess, setSavedSuccess] = useState(false);
+  const [isSimulatingAlert, setIsSimulatingAlert] = useState(false);
+  const [simAlertSuccess, setSimAlertSuccess] = useState<string | null>(null);
+
+  const handleSimulateBankAlert = (amount: number, currency: 'KHR' | 'USD') => {
+    setIsSimulatingAlert(true);
+    soundFx.playPop();
+    try {
+      const parsed = bankAlertListener.simulateAcledaAlert(amount, currency);
+      setSimAlertSuccess(
+        `✅ បានធ្វើតេស្តជោគជ័យ! បន្លឺសំឡេង Soundbox៖ +${amount.toLocaleString()} ${currency} (${parsed.bankName})`
+      );
+      try {
+        confetti({ particleCount: 50, spread: 60, origin: { y: 0.6 } });
+      } catch (e) {}
+    } catch (err: any) {
+      setSimAlertSuccess(`❌ បរាជ័យ៖ ${err?.message || 'Error'}`);
+    } finally {
+      setIsSimulatingAlert(false);
+      setTimeout(() => setSimAlertSuccess(null), 6000);
+    }
+  };
 
   useEffect(() => {
     setConfig(getStoredTelegramConfig());
@@ -766,6 +792,170 @@ export const TelegramSettingsTab: React.FC = () => {
                 </div>
               )}
             </div>
+          </div>
+        </div>
+
+        {/* ACLEDA & Bank Telegram Alert Integration Section */}
+        <div className="bg-gradient-to-br from-white via-emerald-50/20 to-teal-50/30 rounded-3xl border-2 border-emerald-200/90 p-5 sm:p-6 shadow-sm space-y-4">
+          {/* Header */}
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-emerald-100 pb-4">
+            <div className="flex items-center gap-3">
+              <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-emerald-600 via-teal-600 to-cyan-600 text-white flex items-center justify-center shadow-md shadow-emerald-600/25">
+                <Landmark className="w-6 h-6" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h4 className="font-black text-slate-900 text-sm sm:text-base">
+                    🏦 ភ្ជាប់ Group Telegram Alert ធនាគារ (ACLEDA Bank Alert)
+                  </h4>
+                  <span className="text-[10px] px-2.5 py-0.5 rounded-full font-black bg-emerald-100 text-emerald-800 uppercase tracking-wider">
+                    Soundbox Auto-Pay
+                  </span>
+                </div>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  ស្ដាប់សារផ្ទេរប្រាក់ស្វ័យប្រវត្តពី Telegram Group អេស៊ីលីដា និងបន្លឺសំឡេងខ្មែរទាន់ចិត្ត
+                </p>
+              </div>
+            </div>
+
+            {/* Live Status Badge */}
+            <div className="flex items-center gap-2">
+              <div
+                className={`px-3 py-1.5 rounded-2xl text-xs font-black flex items-center gap-1.5 border shadow-2xs ${
+                  (config.listenBankAlerts ?? true) && config.botToken
+                    ? 'bg-emerald-50 text-emerald-700 border-emerald-300'
+                    : 'bg-slate-100 text-slate-600 border-slate-200'
+                }`}
+              >
+                <Radio
+                  className={`w-3.5 h-3.5 ${
+                    (config.listenBankAlerts ?? true) && config.botToken
+                      ? 'text-emerald-500 animate-pulse'
+                      : 'text-slate-400'
+                  }`}
+                />
+                <span>
+                  {(config.listenBankAlerts ?? true) && config.botToken
+                    ? '🟢 កំពុងស្ដាប់ដំណឹងប្រាក់ចូល'
+                    : '⚪ មិនទាន់ដំណើរការ'}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Toggle Switch */}
+          <label className="flex items-start gap-3.5 p-3.5 rounded-2xl border border-emerald-100 bg-white/80 hover:bg-white transition-all cursor-pointer select-none shadow-2xs">
+            <input
+              type="checkbox"
+              checked={config.listenBankAlerts ?? true}
+              onChange={(e) => updateConfig({ ...config, listenBankAlerts: e.target.checked })}
+              className="mt-1 w-5 h-5 rounded text-emerald-600 focus:ring-0 cursor-pointer"
+            />
+            <div className="flex-1">
+              <div className="text-xs font-black text-slate-800 flex items-center gap-2">
+                <Volume2 className="w-4 h-4 text-emerald-600" />
+                <span>បើកដំណើរការស្ដាប់ដំណឹងប្រាក់ចូលស្វ័យប្រវត្តិ (Auto-Detect Bank Deposits & Voice Soundbox)</span>
+              </div>
+              <p className="text-[11px] text-slate-600 mt-1 leading-relaxed">
+                នៅពេលធនាគារ <b>អេស៊ីលីដា (ACLEDA Bank)</b> ឬ <b>ABA / Bakong</b> ផ្ញើសារប្រាក់ចូលក្នុង Group Telegram ប្រព័ន្ធនឹងស្រង់យកចំនួនទឹកប្រាក់ ឈ្មោះអ្នកផ្ញើ និងលេខយោងស្វ័យប្រវត្តិ រួចបន្លឺសំឡេងខ្មែរថា <i>«🔔 ទទួលបានការទូទាត់ប្រាក់ ... រៀល តាមរយៈ ACLEDA KHQR»</i> ព្រមទាំងបញ្ចប់ការលក់ក្នុង POS ភ្លាមៗដោយមិនបាច់ចុចដៃ!
+              </p>
+            </div>
+          </label>
+
+          {/* Target Group ID (Optional Filter) */}
+          <div className="space-y-1.5 p-3.5 bg-white/90 rounded-2xl border border-slate-100 shadow-2xs">
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                <span>🎯 លេខសម្គាល់ Telegram Group Alert ធនាគារ (Bank Alert Chat ID - ជម្រើសបន្ថែម)៖</span>
+              </label>
+              {config.bankAlertChatId && (
+                <button
+                  type="button"
+                  onClick={() => updateConfig({ ...config, bankAlertChatId: '' })}
+                  className="text-[10px] text-rose-600 hover:underline font-bold"
+                >
+                  សម្អាត (Clear)
+                </button>
+              )}
+            </div>
+            <input
+              type="text"
+              placeholder="ទុកនៅទទេរ ដើម្បីឱ្យ Bot ស្ដាប់គ្រប់ Telegram Group ដែល Bot ជាសមាជិក (ណែនាំ ⭐)"
+              value={config.bankAlertChatId || ''}
+              onChange={(e) => updateConfigLocal({ ...config, bankAlertChatId: e.target.value.trim() })}
+              className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-base sm:text-xs font-mono text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+            />
+            <p className="text-[10.5px] text-slate-500 leading-relaxed">
+              💡 <b>ចំណាំ៖</b> បើលោកអ្នក<b>ទុកប្រអប់នេះនៅទទេរ</b> Bot នឹងស្ដាប់ដំណឹងប្រាក់ចូលពីគ្រប់ Group ទាំងអស់ដែល Bot ត្រូវបាន Add ចូល (រួមទាំង Group ហាង និង Group Alert របស់ធនាគារ)។ ប្រសិនបើលោកអ្នកចង់កំណត់ឱ្យ Bot ស្ដាប់តែ Group មួយជាក់លាក់ សូមបញ្ចូល Chat ID របស់ Group នោះនៅទីនេះ។
+            </p>
+          </div>
+
+          {/* Simulation & Instant Test Soundbox */}
+          <div className="p-3.5 bg-emerald-50/70 border border-emerald-200/80 rounded-2xl space-y-2.5">
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <div className="flex items-center gap-2">
+                <Zap className="w-4 h-4 text-emerald-600" />
+                <span className="text-xs font-black text-slate-800">
+                  សាកល្បងតេស្តសំឡេង Soundbox & សារគំរូ ACLEDA (Instant Test Soundbox)៖
+                </span>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => handleSimulateBankAlert(25000, 'KHR')}
+                disabled={isSimulatingAlert}
+                className="px-3.5 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-xl text-xs font-black transition-all active:scale-95 disabled:opacity-50 cursor-pointer shadow-xs flex items-center gap-1.5"
+              >
+                <Volume2 className="w-3.5 h-3.5" />
+                <span>🧪 តេស្តសារគំរូ ACLEDA (25,000 ៛)</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleSimulateBankAlert(10, 'USD')}
+                disabled={isSimulatingAlert}
+                className="px-3.5 py-2 bg-white hover:bg-emerald-50 text-emerald-800 border border-emerald-300 rounded-xl text-xs font-black transition-all active:scale-95 disabled:opacity-50 cursor-pointer shadow-2xs flex items-center gap-1.5"
+              >
+                <Volume2 className="w-3.5 h-3.5 text-emerald-600" />
+                <span>🧪 តេស្តសារគំរូ ACLEDA ($10.00)</span>
+              </button>
+            </div>
+
+            {simAlertSuccess && (
+              <div className="text-xs font-bold text-emerald-900 bg-white/90 p-2.5 rounded-xl border border-emerald-200 animate-in fade-in duration-200">
+                {simAlertSuccess}
+              </div>
+            )}
+          </div>
+
+          {/* Step-by-Step Setup Guide with @BotFather */}
+          <div className="p-4 bg-white/95 rounded-2xl border border-emerald-200 space-y-2.5 shadow-2xs text-xs">
+            <h5 className="font-black text-slate-800 flex items-center gap-1.5 text-emerald-900">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+              <span>របៀបភ្ជាប់ Telegram Bot ជាមួយ Telegram Group Alert របស់ធនាគារ អេស៊ីលីដា (៣ ជំហានងាយៗ)៖</span>
+            </h5>
+            <ol className="text-[11px] text-slate-600 space-y-2 list-decimal list-inside leading-relaxed pl-1">
+              <li>
+                <b>បន្ថែម Bot ចូលក្នុង Group ធនាគារ៖</b> បើក Group Telegram Alert របស់ធនាគារ អេស៊ីលីដា (ឬ ABA) រួច Add គណនី Telegram Bot របស់ហាងអ្នកចូលជាសមាជិក (Member) ក្នុង Group នោះ។
+              </li>
+              <li className="text-indigo-950 font-bold bg-indigo-50/80 p-2.5 rounded-xl border border-indigo-200">
+                ⭐ <b>ជំហានសំខាន់បំផុត (បិទ Privacy Mode ក្នុង Telegram)៖</b><br />
+                <span className="font-normal text-slate-700 block mt-1">
+                  តាមលំនាំដើម Telegram Bot មិនអាចអានសាររបស់ Bot ធនាគារក្នុង Group បានទេ ប្រសិនបើមិនទាន់បានបិទ Privacy Mode។ ដើម្បីបិទ៖
+                  <br />
+                  ១. បើក Telegram ស្វែងរក <b>@BotFather</b> រួចផ្ញើសារ <code>/setprivacy</code>
+                  <br />
+                  ២. ចុចជ្រើសរើសឈ្មោះ <b>Bot របស់លោកអ្នក</b>
+                  <br />
+                  ៣. ចុចជ្រើសរើស <b>Disable</b> (ដើម្បីឱ្យ Bot មានសិទ្ធិអានសារប្រាក់ចូលដែលធនាគារផ្ញើមក)។
+                </span>
+              </li>
+              <li>
+                <b>រួចរាល់ ១០០%៖</b> ពេលអតិថិជនស្កេនទូទាត់ KHQR ហើយធនាគារលោតសារ Alert ចូល Group នោះ កម្មវិធី SweetBakery POS នឹងបន្លឺសំឡេង Soundbox និង Verify ការបង់ប្រាក់ស្វ័យប្រវត្តភ្លាមៗ!
+              </li>
+            </ol>
           </div>
         </div>
 
