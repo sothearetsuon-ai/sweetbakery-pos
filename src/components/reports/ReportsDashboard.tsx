@@ -19,6 +19,7 @@ import {
   ShieldCheck,
   Zap,
   Send,
+  X,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { useBakery } from '../../context/BakeryContext';
@@ -349,14 +350,14 @@ export const ReportsDashboard: React.FC = () => {
       } else {
         soundFx.playWarning();
       }
-      setTimeout(() => setTelegramStatus(null), 6000);
+      setTimeout(() => setTelegramStatus(null), res.success ? 8000 : 15000);
     } catch (err: any) {
       setIsSendingTelegram(false);
       setTelegramStatus({
         success: false,
         message: err?.message || 'បរាជ័យក្នុងការផ្ញើរបាយការណ៍!',
       });
-      setTimeout(() => setTelegramStatus(null), 6000);
+      setTimeout(() => setTelegramStatus(null), 15000);
     }
   };
 
@@ -405,7 +406,7 @@ export const ReportsDashboard: React.FC = () => {
         <div className="flex items-center gap-2 flex-wrap self-start sm:self-auto">
           {telegramStatus && (
             <div
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold animate-in fade-in flex items-center gap-1.5 shadow-2xs ${
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold animate-in fade-in flex items-center gap-2 shadow-2xs ${
                 telegramStatus.success
                   ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                   : 'bg-rose-50 text-rose-700 border border-rose-200'
@@ -413,6 +414,14 @@ export const ReportsDashboard: React.FC = () => {
             >
               <span>{telegramStatus.success ? '✅' : '⚠️'}</span>
               <span>{telegramStatus.message}</span>
+              <button
+                type="button"
+                onClick={() => setTelegramStatus(null)}
+                className="ml-1 text-slate-400 hover:text-slate-600 p-0.5 rounded cursor-pointer"
+                title="បិទ"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
             </div>
           )}
 

@@ -1,6 +1,12 @@
 import { NotificationConfig, CustomCakeOrder, Expense, Ingredient, StoreInfo, CompletedSale } from '../types';
 import { soundFx } from '../utils/audio';
-import { notifyTelegramExpenseDueAlert, sendTelegramDailyReport, getStoredTelegramConfig, isDemoModeActive } from './telegram';
+import {
+  notifyTelegramExpenseDueAlert,
+  sendTelegramDailyReport,
+  getStoredTelegramConfig,
+  getStoredTelegramConfigAsync,
+  isDemoModeActive,
+} from './telegram';
 
 const STORAGE_KEY = 'bakery_notification_config';
 
@@ -194,7 +200,6 @@ export const runPeriodicNotificationChecks = (params: {
 }) => {
   if (isDemoModeActive()) return;
   const config = getStoredNotificationConfig();
-  if (!config.enabled) return;
 
   const now = new Date();
   const todayStr = now.toISOString().slice(0, 10);
@@ -202,74 +207,77 @@ export const runPeriodicNotificationChecks = (params: {
   const currentMins = String(now.getMinutes()).padStart(2, '0');
   const currentTimeStr = `${currentHours}:${currentMins}`;
 
-  // 1. Expense & Shift Reminders at scheduled times (Max 1 time per slot per day)
-  if (config.remindExpenses) {
-    const times = [
-      config.expenseReminderTime1,
-      config.expenseReminderTime2,
-      config.expenseReminderTime3,
-    ].filter(Boolean);
+  // 1-3. Device Desktop & Sound Reminders (Only if local device notifications are enabled)
+  if (config.enabled) {
+    // 1. Expense & Shift Reminders at scheduled times (Max 1 time per slot per day)
+    if (config.remindExpenses) {
+      const times = [
+        config.expenseReminderTime1,
+        config.expenseReminderTime2,
+        config.expenseReminderTime3,
+      ].filter(Boolean);
 
-    for (const targetTime of times) {
-      if (currentTimeStr === targetTime) {
-        const tag = `expense-reminder-${todayStr}-${targetTime}`;
-        if (!hasFiredToday(tag, todayStr)) {
-          markFiredToday(tag, todayStr);
+      for (const targetTime of times) {
+        if (currentTimeStr === targetTime) {
+          const tag = `expense-reminder-${todayStr}-${targetTime}`;
+          if (!hasFiredToday(tag, todayStr)) {
+            markFiredToday(tag, todayStr);
 
-          const expensesToday = params.expenses.filter((e) => e.date === todayStr);
-          sendDeviceNotification('💸 រំលឹកកត់ត្រាចំណាយ (SweetBakery POS)', {
-            body: `⏰ ម៉ោង ${targetTime}៖ សូមកុំភ្លេចថតរូបវិក្កយបត្រ និងបញ្ចូលការចំណាយដែលបានទិញថ្ងៃនេះ (ថ្ងៃនេះបានកត់ត្រា ${expensesToday.length} លើក)។`,
-            tag,
-            requireInteraction: true,
-          });
-        }
-      }
-    }
-  }
-
-  // 2. Cake Pickup Reminders (Max 1 time per order pickup)
-  if (config.remindCakePickup && Array.isArray(params.customOrders)) {
-    const advanceMs = (config.cakePickupAdvanceMins || 60) * 60 * 1000;
-    
-    params.customOrders.forEach((order) => {
-      if (order.status === 'DELIVERED' || order.status === 'CANCELLED') return;
-      if (order.pickupDate !== todayStr) return;
-
-      if (order.pickupTime) {
-        const [pHours, pMins] = order.pickupTime.split(':').map(Number);
-        if (!isNaN(pHours) && !isNaN(pMins)) {
-          const pickupDateObj = new Date(now.getFullYear(), now.getMonth(), now.getDate(), pHours, pMins);
-          const diffMs = pickupDateObj.getTime() - now.getTime();
-
-          // If pickup time is within the window (between 0 and advanceMs)
-          if (diffMs > 0 && diffMs <= advanceMs) {
-            const minsLeft = Math.round(diffMs / 60000);
-            const tag = `pickup-alert-${order.id}-${todayStr}`;
-            if (!hasFiredToday(tag, todayStr)) {
-              markFiredToday(tag, todayStr);
-              sendDeviceNotification(`🎂 រំលឹកមកយកនំ: ${order.customerName} (${order.pickupTime})`, {
-                body: `នំខេក "${order.cakeName || order.flavor}" នឹងត្រូវមកយកក្នុងរយៈពេល ${minsLeft} នាទីទៀត! សូមរៀបចំនំឱ្យរួចរាល់។`,
-                tag,
-                requireInteraction: true,
-              });
-            }
+            const expensesToday = params.expenses.filter((e) => e.date === todayStr);
+            sendDeviceNotification('💸 រំលឹកកត់ត្រាចំណាយ (SweetBakery POS)', {
+              body: `⏰ ម៉ោង ${targetTime}៖ សូមកុំភ្លេចថតរូបវិក្កយបត្រ និងបញ្ចូលការចំណាយដែលបានទិញថ្ងៃនេះ (ថ្ងៃនេះបានកត់ត្រា ${expensesToday.length} លើក)។`,
+              tag,
+              requireInteraction: true,
+            });
           }
         }
       }
-    });
-  }
+    }
 
-  // 3. Low stock warning (Max 1 time per day)
-  if (config.remindLowStock && Array.isArray(params.ingredients)) {
-    const lowStockItems = params.ingredients.filter((i) => i.currentStock <= i.minAlertStock);
-    if (lowStockItems.length > 0 && currentTimeStr === '09:00') {
-      const tag = `low-stock-${todayStr}`;
-      if (!hasFiredToday(tag, todayStr)) {
-        markFiredToday(tag, todayStr);
-        sendDeviceNotification('⚠️ ការដាស់តឿន៖ គ្រឿងផ្សំជិតអស់ស្តុក!', {
-          body: `មានគ្រឿងផ្សំចំនួន ${lowStockItems.length} មុខជិតអស់ពីស្តុក (${lowStockItems.map((i) => i.nameKh).slice(0, 3).join(', ')}...)។ សូមពិនិត្យទិញបន្ថែម។`,
-          tag,
-        });
+    // 2. Cake Pickup Reminders (Max 1 time per order pickup)
+    if (config.remindCakePickup && Array.isArray(params.customOrders)) {
+      const advanceMs = (config.cakePickupAdvanceMins || 60) * 60 * 1000;
+      
+      params.customOrders.forEach((order) => {
+        if (order.status === 'DELIVERED' || order.status === 'CANCELLED') return;
+        if (order.pickupDate !== todayStr) return;
+
+        if (order.pickupTime) {
+          const [pHours, pMins] = order.pickupTime.split(':').map(Number);
+          if (!isNaN(pHours) && !isNaN(pMins)) {
+            const pickupDateObj = new Date(now.getFullYear(), now.getMonth(), now.getDate(), pHours, pMins);
+            const diffMs = pickupDateObj.getTime() - now.getTime();
+
+            // If pickup time is within the window (between 0 and advanceMs)
+            if (diffMs > 0 && diffMs <= advanceMs) {
+              const minsLeft = Math.round(diffMs / 60000);
+              const tag = `pickup-alert-${order.id}-${todayStr}`;
+              if (!hasFiredToday(tag, todayStr)) {
+                markFiredToday(tag, todayStr);
+                sendDeviceNotification(`🎂 រំលឹកមកយកនំ: ${order.customerName} (${order.pickupTime})`, {
+                  body: `នំខេក "${order.cakeName || order.flavor}" នឹងត្រូវមកយកក្នុងរយៈពេល ${minsLeft} នាទីទៀត! សូមរៀបចំនំឱ្យរួចរាល់។`,
+                  tag,
+                  requireInteraction: true,
+                });
+              }
+            }
+          }
+        }
+      });
+    }
+
+    // 3. Low stock warning (Max 1 time per day)
+    if (config.remindLowStock && Array.isArray(params.ingredients)) {
+      const lowStockItems = params.ingredients.filter((i) => i.currentStock <= i.minAlertStock);
+      if (lowStockItems.length > 0 && currentTimeStr === '09:00') {
+        const tag = `low-stock-${todayStr}`;
+        if (!hasFiredToday(tag, todayStr)) {
+          markFiredToday(tag, todayStr);
+          sendDeviceNotification('⚠️ ការដាស់តឿន៖ គ្រឿងផ្សំជិតអស់ស្តុក!', {
+            body: `មានគ្រឿងផ្សំចំនួន ${lowStockItems.length} មុខជិតអស់ពីស្តុក (${lowStockItems.map((i) => i.nameKh).slice(0, 3).join(', ')}...)។ សូមពិនិត្យទិញបន្ថែម។`,
+            tag,
+          });
+        }
       }
     }
   }
@@ -323,14 +331,12 @@ export const runPeriodicNotificationChecks = (params: {
           }
         } catch (e) {}
 
-        let dueStatusText = '';
-        if (diffDays < 0) {
-          dueStatusText = `🚨 ហួសកំណត់បង់ប្រាក់ ${Math.abs(diffDays)} ថ្ងៃហើយ!`;
-        } else if (diffDays === 0) {
-          dueStatusText = `⏰ ដល់ថ្ងៃត្រូវបង់ប្រាក់ថ្ងៃនេះ!`;
-        } else {
-          dueStatusText = `⏳ សល់ ${diffDays} ថ្ងៃទៀតដល់ថ្ងៃកំណត់បង់!`;
-        }
+        const dueStatusText =
+          diffDays < 0
+            ? `🚨 ហួសកំណត់បង់ប្រាក់ ${Math.abs(diffDays)} ថ្ងៃហើយ!`
+            : diffDays === 0
+            ? `⏰ ដល់ថ្ងៃត្រូវបង់ប្រាក់ថ្ងៃនេះ!`
+            : `⏳ សល់ ${diffDays} ថ្ងៃទៀតដល់ថ្ងៃកំណត់បង់!`;
 
         const exRate = params.exchangeRate || 4100;
         const amountKhr = expense.amountKhr ?? Math.round(expense.amountUsd * exRate);
@@ -348,31 +354,40 @@ export const runPeriodicNotificationChecks = (params: {
   }
 
   // 5. Daily & Monthly Summary Report to Telegram (Default at 21:00 or 09:00 as configured)
-  const tgConfig = getStoredTelegramConfig();
-  if (tgConfig.enabled && tgConfig.notifyDailyReport !== false && tgConfig.botToken && tgConfig.chatId) {
-    const reportTime = tgConfig.dailyReportTime || '21:00';
-    if (currentTimeStr === reportTime) {
-      const tag = `tg-daily-report-${todayStr}`;
-      if (!hasFiredToday(tag, todayStr)) {
-        markFiredToday(tag, todayStr);
-        sendTelegramDailyReport({
-          sales: params.sales || [],
-          expenses: params.expenses || [],
-          customOrders: params.customOrders || [],
-          storeInfo: params.storeInfo,
-          exchangeRate: params.exchangeRate,
-          targetDate: todayStr,
-        }).then((res) => {
-          if (res.success) {
-            sendDeviceNotification('📊 បានផ្ញើរបាយការណ៍បូកសរុបទៅ Telegram', {
-              body: `របាយការណ៍បូកសរុបការលក់ និងចំណាយប្រចាំថ្ងៃ-ខែ ត្រូវបានផ្ញើចូល Telegram ជោគជ័យ!`,
-              tag,
-            });
-          }
-        }).catch((err) => {
-          console.error('[Auto Daily Report] Failed to send report to Telegram:', err);
-        });
+  getStoredTelegramConfigAsync()
+    .then((tgConfig) => {
+      if (!tgConfig.enabled || tgConfig.notifyDailyReport === false || !tgConfig.botToken) {
+        return;
       }
-    }
-  }
+      const reportTime = tgConfig.dailyReportTime || '21:00';
+      // Trigger whenever current time is at or past the scheduled report time today (e.g. >= 21:00)
+      if (currentTimeStr >= reportTime) {
+        const tag = `tg-daily-report-${todayStr}`;
+        if (!hasFiredToday(tag, todayStr)) {
+          sendTelegramDailyReport({
+            sales: params.sales || [],
+            expenses: params.expenses || [],
+            customOrders: params.customOrders || [],
+            storeInfo: params.storeInfo,
+            exchangeRate: params.exchangeRate,
+            targetDate: todayStr,
+          })
+            .then((res) => {
+              if (res.success) {
+                markFiredToday(tag, todayStr);
+                sendDeviceNotification('📊 បានផ្ញើរបាយការណ៍បូកសរុបទៅ Telegram', {
+                  body: `របាយការណ៍បូកសរុបការលក់ និងចំណាយប្រចាំថ្ងៃ-ខែ ត្រូវបានផ្ញើចូល Telegram ជោគជ័យ!`,
+                  tag,
+                });
+              } else {
+                console.warn('[Auto Daily Report] Telegram send failed:', res.message);
+              }
+            })
+            .catch((err) => {
+              console.error('[Auto Daily Report] Failed to send report to Telegram:', err);
+            });
+        }
+      }
+    })
+    .catch(() => {});
 };

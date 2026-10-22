@@ -26,7 +26,7 @@ export const DEFAULT_TELEGRAM_CONFIG: TelegramConfig = {
   botToken: '',
   chatId: '-5528089668',
   adminChatId: '8970210109',
-  dailyReportRecipient: 'ADMIN_ONLY',
+  dailyReportRecipient: 'BOTH',
   enabled: true,
   notifySales: true,
   notifyCustomOrders: true,
@@ -84,7 +84,7 @@ export const getStoredTelegramConfig = (): TelegramConfig => {
         merged.adminChatId = DEFAULT_TELEGRAM_CONFIG.adminChatId || '8970210109';
       }
       if (!merged.dailyReportRecipient) {
-        merged.dailyReportRecipient = 'ADMIN_ONLY';
+        merged.dailyReportRecipient = 'BOTH';
       }
 
       // Auto-heal 4: If bot credentials exist, ensure alerts are enabled
@@ -1413,7 +1413,29 @@ export const sendTelegramDailyReport = async (
   });
 
   try {
-    const res = await sendTelegramMessage(reportText, config, targetChatIds);
+    let res = await sendTelegramMessage(reportText, config, targetChatIds);
+
+    // Smart Fallback: If sending strictly to ADMIN_ONLY failed because Admin hasn't clicked /start on the bot,
+    // automatically fallback to delivering to store group so the report is never lost!
+    let targetDesc = '';
+    if (
+      !res.success &&
+      recipientMode === 'ADMIN_ONLY' &&
+      (res.message?.includes('Forbidden') ||
+        res.message?.includes('/start') ||
+        res.message?.includes('initiate conversation'))
+    ) {
+      const fallbackGroupIds = parseTelegramChatIds(groupChatId, config.botToken);
+      if (fallbackGroupIds.length > 0) {
+        console.warn('[Daily Report] Admin private chat blocked. Retrying to fallback store group:', fallbackGroupIds);
+        const retryRes = await sendTelegramMessage(reportText, config, fallbackGroupIds);
+        if (retryRes.success) {
+          res = retryRes;
+          targetDesc = 'Telegram Group ហាង (ជំនួស Admin ផ្ទាល់ខ្លួន ដោយសារគណនី Admin មិនទាន់ចុច /start ក្នុង Bot)';
+        }
+      }
+    }
+
     if (res.success) {
       markTelegramEventFired(eventKey);
       // Persist to Cloud so other POS devices (e.g. Phone/Tablet) will immediately recognize it as already sent
@@ -1423,13 +1445,14 @@ export const sendTelegramDailyReport = async (
         recipients: targetChatIds,
       }).catch(() => {});
 
-      let targetDesc = '';
-      if (recipientMode === 'ADMIN_ONLY') {
-        targetDesc = `Admin ផ្ទាល់ខ្លួន (${adminId}) [សម្ងាត់ មិនផ្ញើចូល Group ឡើយ]`;
-      } else if (recipientMode === 'GROUP_ONLY') {
-        targetDesc = 'Telegram Group ហាង';
-      } else {
-        targetDesc = `Admin (${adminId}) និង Group ហាង`;
+      if (!targetDesc) {
+        if (recipientMode === 'ADMIN_ONLY') {
+          targetDesc = `Admin ផ្ទាល់ខ្លួន (${adminId}) [សម្ងាត់ មិនផ្ញើចូល Group ឡើយ]`;
+        } else if (recipientMode === 'GROUP_ONLY') {
+          targetDesc = 'Telegram Group ហាង';
+        } else {
+          targetDesc = `Admin (${adminId}) និង Group ហាង`;
+        }
       }
       return {
         success: true,
