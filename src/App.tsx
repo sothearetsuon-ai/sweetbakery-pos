@@ -200,9 +200,9 @@ export const App: React.FC = () => {
       '🐟 រក្សាទុកចំនួនត្រីហែល ៧ ក្បាលពេញលេញដូចដើម និងផ្អាកស្វ័យប្រវត្តិតែពេលបើកផ្ទាំង SettingsModal ដើម្បីផ្ដល់ល្បឿនរលូន ១០០%។',
       '🔊 បង្កើនភាពរហ័សនៃសំឡេងចុច (Tactile Click Sound) លើ iOS & Android ដោយគ្មាន Delay។',
     ],
-    apkDownloadUrl: 'https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.6.7/SweetBakery-Android.apk',
-    windowsDownloadUrl: 'https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.6.7/SweetBakery-POS-Setup.exe',
-    windowsInstallerUrl: 'https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.6.7/SweetBakery-POS-Setup.exe',
+    apkDownloadUrl: 'https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/latest/download/SweetBakery-Android.apk',
+    windowsDownloadUrl: 'https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/latest/download/SweetBakery-POS-Setup.exe',
+    windowsInstallerUrl: 'https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/latest/download/SweetBakery-POS-Setup.exe',
   }));
   const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
 

@@ -9,8 +9,8 @@
     "📱 QR Code ស្កេនទាញយក APK ចូលទូរសព្ទផ្ទាល់ពីលើកញ្ចក់អេក្រង់កុំព្យូទ័រ។",
     "🎨 កែសម្រួលឈ្មោះហាងលើ Navbar ឱ្យស្រស់ស្អាតប្រណិត មិនបាក់ជួរបញ្ឈរ។"
   ],
-  "apkDownloadUrl": "https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.6.6/SweetBakery-Android.apk",
-  "windowsInstallerUrl": "https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.6.6/SweetBakery-POS-Setup.exe",
-  "windowsDownloadUrl": "https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/download/v1.6.6/SweetBakery-POS-Setup.exe",
+  "apkDownloadUrl": "https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/latest/download/SweetBakery-Android.apk",
+  "windowsInstallerUrl": "https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/latest/download/SweetBakery-POS-Setup.exe",
+  "windowsDownloadUrl": "https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/latest/download/SweetBakery-POS-Setup.exe",
   "mandatory": false
 }
