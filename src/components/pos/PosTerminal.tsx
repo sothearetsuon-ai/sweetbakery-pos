@@ -442,9 +442,10 @@ export const PosTerminal: React.FC = () => {
       <div className="flex-1 flex flex-col min-w-0 p-3 sm:p-6 overflow-y-auto pb-28 lg:pb-6">
         {/* Search & Category Tabs (Sticky at top when scrolling products) */}
         <div className="sticky -top-3 sm:-top-6 z-20 bg-white/95 backdrop-blur-md pt-2 sm:pt-6 pb-2 sm:pb-2.5 mb-2.5 sm:mb-5 space-y-2 sm:space-y-4 border-b border-rose-100/80 shadow-2xs -mx-3 sm:-mx-6 px-3 sm:px-6">
-          <div className="flex flex-wrap items-center justify-between gap-2 sm:gap-3">
+          {/* Row 1: Search Input & Add Product Button & Demo Mode toggle */}
+          <div className="flex items-center justify-between gap-2 sm:gap-3">
             {/* Search Input with shortcut chip & instant clear button */}
-            <div className="relative flex-1 min-w-[170px] max-w-md">
+            <div className="relative flex-1 max-w-xl">
               <Search className="w-4 h-4 absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 text-slate-400" />
               <input
                 ref={searchInputRef}
@@ -453,7 +454,7 @@ export const PosTerminal: React.FC = () => {
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onKeyDown={handleSearchKeyDown}
                 placeholder="ស្វែងរកនំ ឬស្កេនបាកូដ..."
-                className="w-full pl-9 sm:pl-11 pr-14 sm:pr-20 py-2 sm:py-3 bg-white/95 border border-rose-200/80 rounded-2xl text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-rose-500/25 focus:border-rose-400 shadow-xs transition-all font-semibold"
+                className="w-full pl-9 sm:pl-11 pr-14 sm:pr-20 py-2 sm:py-2.5 bg-white/95 border border-rose-200/80 rounded-2xl text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-rose-500/25 focus:border-rose-400 shadow-xs transition-all font-semibold"
               />
               <div className="absolute right-2.5 top-1/2 -translate-y-1/2 flex items-center gap-1">
                 {searchQuery && (
@@ -475,150 +476,8 @@ export const PosTerminal: React.FC = () => {
               </div>
             </div>
 
-            {/* Actions: Add New Product & Mobile Cart Trigger */}
-            <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-              {/* Quick KHQR Standee Trigger Button */}
-              <button
-                type="button"
-                onClick={() => {
-                  soundFx.playPop();
-                  setIsKhqrStandeeOpen(true);
-                }}
-                className="px-2.5 sm:px-3.5 py-1.5 sm:py-2.5 rounded-2xl text-[11px] sm:text-xs font-black bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200/90 shadow-2xs flex items-center gap-1 cursor-pointer active:scale-95 transition-all"
-                title="បង្ហាញផ្ទាំងស្កេន KHQR លើតុគិតប្រាក់ (Counter Standee)"
-              >
-                <QrCode className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-red-600" />
-                <span className="hidden sm:inline">KHQR ហាង</span>
-                <span className="sm:hidden">KHQR</span>
-              </button>
-
-              {/* AI Pastry Tray Scanner Trigger */}
-              <button
-                type="button"
-                onClick={() => {
-                  soundFx.playPop();
-                  setIsAiTrayScannerOpen(true);
-                }}
-                className="px-2.5 sm:px-3.5 py-1.5 sm:py-2.5 rounded-2xl text-[11px] sm:text-xs font-black bg-gradient-to-r from-amber-500/15 via-pink-500/15 to-rose-500/15 hover:from-amber-500/25 hover:to-rose-500/25 text-pink-700 border border-pink-300/80 shadow-2xs flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all group"
-                title="ស្កេននំលើថាសស្វ័យប្រវត្តិតាមកាមេរ៉ា (AI BakeryScan)"
-              >
-                <div className="relative">
-                  <Camera className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-pink-600 group-hover:scale-110 transition-transform" />
-                  <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-amber-500 animate-ping" />
-                </div>
-                <span className="hidden sm:inline">ស្កេនថាសនំ AI</span>
-                <span className="sm:hidden">ថាស AI</span>
-              </button>
-
-              {/* 3D Interactive Custom Cake Studio */}
-              <button
-                type="button"
-                onClick={() => {
-                  soundFx.playPop();
-                  setIsThreeCakeStudioOpen(true);
-                }}
-                className="px-2.5 sm:px-3.5 py-1.5 sm:py-2.5 rounded-2xl text-[11px] sm:text-xs font-black bg-gradient-to-r from-purple-500/15 via-pink-500/15 to-amber-500/15 hover:from-purple-500/25 hover:to-amber-500/25 text-purple-700 border border-purple-300/80 shadow-2xs flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all group"
-                title="ស្ទូឌីយោរចនានំ 3D អន្តរកម្ម & មើល 360 ដឺក្រេ (3D Cake Studio) ឬចុច F4"
-              >
-                <div className="relative">
-                  <Cake className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-purple-600 group-hover:rotate-12 transition-transform" />
-                  <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-pink-500 animate-pulse" />
-                </div>
-                <span className="hidden sm:inline">រចនានំ 3D</span>
-                <span className="sm:hidden">នំ 3D</span>
-              </button>
-
-              {/* AI Bakery Chef R&D & Cost Optimizer */}
-              <button
-                type="button"
-                onClick={() => {
-                  soundFx.playPop();
-                  setIsAiChefOpen(true);
-                }}
-                className="px-2.5 sm:px-3.5 py-1.5 sm:py-2.5 rounded-2xl text-[11px] sm:text-xs font-black bg-gradient-to-r from-emerald-500/15 via-teal-500/15 to-cyan-500/15 hover:from-emerald-500/25 hover:to-cyan-500/25 text-emerald-800 border border-emerald-300/80 shadow-2xs flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all group"
-                title="មេចុងភៅឆ្លាតវៃ AI៖ បង្កើតរូបមន្តថ្មី គណនា % មេចុងភៅ និងថ្លៃដើមចំណេញ (AI Bakery Chef)"
-              >
-                <ChefHat className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-600 group-hover:scale-110 transition-transform" />
-                <span className="hidden sm:inline">AI Chef រូបមន្ត</span>
-                <span className="sm:hidden">AI Chef</span>
-              </button>
-
-              {/* Khmer Conversational Voice POS Co-Pilot */}
-              <button
-                type="button"
-                onClick={() => {
-                  soundFx.playPop();
-                  setIsVoicePosOpen(true);
-                }}
-                className="px-2.5 sm:px-3.5 py-1.5 sm:py-2.5 rounded-2xl text-[11px] sm:text-xs font-black bg-gradient-to-r from-red-500/15 via-rose-500/15 to-pink-500/15 hover:from-red-500/25 hover:to-pink-500/25 text-rose-700 border border-rose-300/80 shadow-2xs flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all group"
-                title="បញ្ជាគិតលុយ និងបញ្ចូលកន្ត្រកដោយសំឡេងខ្មែរ (Khmer Voice POS) ឬចុច F3"
-              >
-                <div className="relative">
-                  <Mic className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-rose-600 group-hover:scale-110 transition-transform" />
-                  <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-red-500 animate-ping" />
-                </div>
-                <span className="hidden sm:inline">បញ្ជាសំឡេង</span>
-                <span className="sm:hidden">សំឡេង</span>
-              </button>
-
-              {/* Customer Dual Screen Popout Trigger */}
-              <button
-                type="button"
-                onClick={() => {
-                  soundFx.playPop();
-                  setIsCustomerDisplayOpen(true);
-                }}
-                className="px-2.5 sm:px-3 py-1.5 sm:py-2.5 rounded-2xl text-[11px] sm:text-xs font-black bg-sky-50 hover:bg-sky-100 text-sky-700 border border-sky-200/90 shadow-2xs flex items-center gap-1 cursor-pointer active:scale-95 transition-all"
-                title="បើកអេក្រង់ទី ២ សម្រាប់អតិថិជនមើលទំនិញ & ស្កេន KHQR (Dual Screen Customer Display)"
-              >
-                <Monitor className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-sky-600" />
-                <span className="hidden md:inline">អេក្រង់ភ្ញៀវ</span>
-              </button>
-
-              {/* Barcode Scanner Ready Badge */}
-              <div
-                title="ម៉ាស៊ីនស្កេនបាកូដដំណើរការ៖ អាចស្កេនបាកូដទំនិញគ្រប់ពេលដើម្បីបញ្ចូលកន្ត្រកភ្លាមៗ"
-                className="hidden xl:flex items-center gap-1.5 text-xs font-black text-pink-700 bg-pink-50 border border-pink-200/80 px-3 py-2 rounded-2xl shadow-2xs"
-              >
-                <Barcode className="w-4 h-4 text-pink-600 animate-pulse" />
-                <span>ស្កេនបាកូដ (Auto)</span>
-              </div>
-              {/* Cart Drawer Trigger Button (Desktop & Mobile) */}
-              <button
-                type="button"
-                onClick={() => {
-                  soundFx.playPop();
-                  setIsCartDrawerOpen((prev) => !prev);
-                }}
-                className={`px-2.5 sm:px-4 py-1.5 sm:py-2.5 rounded-2xl text-[11px] sm:text-xs font-black transition-all shadow-md flex items-center gap-1.5 sm:gap-2 cursor-pointer active:scale-95 ${
-                  totalCartItems > 0
-                    ? 'bg-gradient-to-r from-pink-600 via-rose-600 to-amber-500 hover:from-pink-500 hover:to-amber-500 text-white shadow-pink-500/25 ring-2 ring-pink-300'
-                    : 'bg-white hover:bg-slate-50 text-slate-700 border border-slate-200'
-                }`}
-                title="បើកមើលកន្ត្រកទំនិញ (Cart) ឬចុច F2"
-              >
-                <div className="relative">
-                  <ShoppingBag className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                  {totalCartItems > 0 && (
-                    <span className="absolute -top-1.5 -right-2 bg-white text-pink-600 font-black text-[9px] w-4 h-4 rounded-full flex items-center justify-center shadow-xs">
-                      {totalCartItems}
-                    </span>
-                  )}
-                </div>
-                <span>កន្ត្រក</span>
-                {totalCartItems > 0 && (
-                  <span className="hidden sm:inline font-mono text-[11px] bg-white/20 px-1.5 py-0.5 rounded-md text-white font-bold">
-                    {cartTotalKhr.toLocaleString()} ៛
-                  </span>
-                )}
-              </button>
-
-              <div className="hidden sm:flex items-center gap-2 text-xs font-black text-slate-600 bg-white px-3 py-2 rounded-2xl border border-slate-200">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
-                <span>{filteredProducts.length} មុខទំនិញ</span>
-              </div>
-
-              {/* Demo Mode Hide/Show Price Toggle */}
+            {/* Quick Action in Row 1: Add New Product & Demo toggle */}
+            <div className="flex items-center gap-2 shrink-0">
               {isDemoMode && (
                 <button
                   type="button"
@@ -626,7 +485,7 @@ export const PosTerminal: React.FC = () => {
                     soundFx.playPop();
                     toggleHideDemoPrices();
                   }}
-                  className={`px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-2xl text-[11px] sm:text-xs font-black transition-all flex items-center gap-1 border shadow-2xs cursor-pointer active:scale-95 ${
+                  className={`px-3 py-1.5 sm:py-2 rounded-2xl text-xs font-black transition-all flex items-center gap-1 border shadow-2xs cursor-pointer active:scale-95 ${
                     hideDemoPrices
                       ? 'bg-amber-500/15 hover:bg-amber-500/25 text-amber-800 border-amber-300 ring-2 ring-amber-300/30'
                       : 'bg-white hover:bg-rose-50 text-slate-700 border-slate-200'
@@ -636,45 +495,177 @@ export const PosTerminal: React.FC = () => {
                   {hideDemoPrices ? (
                     <>
                       <EyeOff className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-                      <span className="hidden md:inline">បិទតម្លៃនំ (Demo) 🙈</span>
-                      <span className="md:hidden">បិទតម្លៃ 🙈</span>
+                      <span className="hidden sm:inline">បិទតម្លៃ 🙈</span>
                     </>
                   ) : (
                     <>
                       <Eye className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                      <span className="hidden md:inline">បង្ហាញតម្លៃ 👁️</span>
-                      <span className="md:hidden">បង្ហាញ 👁️</span>
+                      <span className="hidden sm:inline">បង្ហាញតម្លៃ 👁️</span>
                     </>
                   )}
                 </button>
               )}
-
-              {/* Party Accessories Trigger */}
-              <button
-                type="button"
-                onClick={() => {
-                  soundFx.playPop();
-                  setIsPartyAccessoriesOpen(true);
-                }}
-                className="px-2.5 sm:px-3.5 py-1.5 sm:py-2.5 bg-gradient-to-r from-amber-500/10 via-rose-500/10 to-pink-500/10 hover:from-amber-500/20 hover:to-pink-500/20 text-pink-700 border border-pink-200/80 rounded-2xl text-[11px] sm:text-xs font-black transition-all shadow-2xs flex items-center gap-1 active:scale-95 cursor-pointer"
-                title="គ្រប់គ្រង & ទិញគ្រឿងបន្ថែមសម្រាប់កម្មវិធី (Party Accessories)"
-              >
-                <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-                <span className="hidden sm:inline">🎉 Party Add-ons</span>
-                <span className="sm:hidden">Party</span>
-              </button>
 
               <button
                 onClick={() => {
                   soundFx.playPop();
                   setIsAddProductOpen(true);
                 }}
-                className="px-3 sm:px-4 py-1.5 sm:py-2.5 bg-gradient-to-r from-[#FF6F68] to-[#E6514D] hover:brightness-105 text-white font-black rounded-2xl text-[11px] sm:text-xs transition-all shadow-md shadow-[#E6514D]/25 flex items-center gap-1 active:scale-95 cursor-pointer"
+                className="px-3.5 sm:px-4 py-2 sm:py-2.5 bg-gradient-to-r from-[#FF6F68] to-[#E6514D] hover:brightness-105 text-white font-black rounded-2xl text-xs sm:text-sm transition-all shadow-md shadow-[#E6514D]/25 flex items-center gap-1.5 active:scale-95 cursor-pointer shrink-0"
               >
-                <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4 stroke-[3]" />
+                <Plus className="w-4 h-4 stroke-[3]" />
                 <span className="hidden sm:inline">+ បញ្ចូលទំនិញ / នំថ្មី</span>
                 <span className="sm:hidden">+ នំថ្មី</span>
               </button>
+            </div>
+          </div>
+
+          {/* Row 2: Swipeable Horizontal Action Bar - របារអូសបាន (Swipeable Pill Bar) */}
+          <div className="w-full overflow-x-auto no-scrollbar scroll-smooth flex items-center gap-2 py-1 px-0.5 touch-pan-x select-none">
+            {/* 1. KHQR ហាង */}
+            <button
+              type="button"
+              onClick={() => {
+                soundFx.playPop();
+                setIsKhqrStandeeOpen(true);
+              }}
+              className="px-3.5 py-1.5 rounded-full text-xs font-black bg-rose-50/90 hover:bg-rose-100 text-rose-700 border border-rose-200/90 shadow-2xs flex items-center gap-1.5 shrink-0 whitespace-nowrap cursor-pointer active:scale-95 transition-all"
+              title="បង្ហាញផ្ទាំងស្កេន KHQR លើតុគិតប្រាក់ (Counter Standee)"
+            >
+              <QrCode className="w-4 h-4 text-red-600 shrink-0" />
+              <span>KHQR ហាង</span>
+            </button>
+
+            {/* 2. ស្កេនថាសនំ AI */}
+            <button
+              type="button"
+              onClick={() => {
+                soundFx.playPop();
+                setIsAiTrayScannerOpen(true);
+              }}
+              className="px-3.5 py-1.5 rounded-full text-xs font-black bg-pink-50/90 hover:bg-pink-100 text-pink-700 border border-pink-200/90 shadow-2xs flex items-center gap-1.5 shrink-0 whitespace-nowrap cursor-pointer active:scale-95 transition-all group"
+              title="ស្កេននំលើថាសស្វ័យប្រវត្តិតាមកាមេរ៉ា (AI BakeryScan)"
+            >
+              <Camera className="w-4 h-4 text-pink-600 shrink-0 group-hover:scale-110 transition-transform" />
+              <span>ស្កេនថាសនំ AI</span>
+            </button>
+
+            {/* 3. រចនានំ 3D */}
+            <button
+              type="button"
+              onClick={() => {
+                soundFx.playPop();
+                setIsThreeCakeStudioOpen(true);
+              }}
+              className="px-3.5 py-1.5 rounded-full text-xs font-black bg-purple-50/90 hover:bg-purple-100 text-purple-700 border border-purple-200/90 shadow-2xs flex items-center gap-1.5 shrink-0 whitespace-nowrap cursor-pointer active:scale-95 transition-all group"
+              title="ស្ទូឌីយោរចនានំ 3D អន្តរកម្ម & មើល 360 ដឺក្រេ (3D Cake Studio) ឬចុច F4"
+            >
+              <div className="relative shrink-0">
+                <Cake className="w-4 h-4 text-purple-600 group-hover:rotate-12 transition-transform" />
+                <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-pink-500 animate-pulse" />
+              </div>
+              <span>រចនានំ 3D</span>
+            </button>
+
+            {/* 4. AI Chef រូបមន្ត */}
+            <button
+              type="button"
+              onClick={() => {
+                soundFx.playPop();
+                setIsAiChefOpen(true);
+              }}
+              className="px-3.5 py-1.5 rounded-full text-xs font-black bg-emerald-50/90 hover:bg-emerald-100 text-emerald-800 border border-emerald-200/90 shadow-2xs flex items-center gap-1.5 shrink-0 whitespace-nowrap cursor-pointer active:scale-95 transition-all group"
+              title="មេចុងភៅឆ្លាតវៃ AI៖ បង្កើតរូបមន្តថ្មី គណនា % មេចុងភៅ និងថ្លៃដើមចំណេញ (AI Bakery Chef)"
+            >
+              <ChefHat className="w-4 h-4 text-emerald-600 shrink-0 group-hover:scale-110 transition-transform" />
+              <span>AI Chef រូបមន្ត</span>
+            </button>
+
+            {/* 5. បញ្ជាសំឡេង */}
+            <button
+              type="button"
+              onClick={() => {
+                soundFx.playPop();
+                setIsVoicePosOpen(true);
+              }}
+              className="px-3.5 py-1.5 rounded-full text-xs font-black bg-red-50/90 hover:bg-red-100 text-rose-700 border border-rose-200/90 shadow-2xs flex items-center gap-1.5 shrink-0 whitespace-nowrap cursor-pointer active:scale-95 transition-all group"
+              title="បញ្ជាគិតលុយ និងបញ្ចូលកន្ត្រកដោយសំឡេងខ្មែរ (Khmer Voice POS) ឬចុច F3"
+            >
+              <Mic className="w-4 h-4 text-rose-600 shrink-0 group-hover:scale-110 transition-transform" />
+              <span>បញ្ជាសំឡេង</span>
+            </button>
+
+            {/* 6. អេក្រង់ភ្ញៀវ */}
+            <button
+              type="button"
+              onClick={() => {
+                soundFx.playPop();
+                setIsCustomerDisplayOpen(true);
+              }}
+              className="px-3.5 py-1.5 rounded-full text-xs font-black bg-sky-50/90 hover:bg-sky-100 text-sky-700 border border-sky-200/90 shadow-2xs flex items-center gap-1.5 shrink-0 whitespace-nowrap cursor-pointer active:scale-95 transition-all"
+              title="បើកអេក្រង់ទី ២ សម្រាប់អតិថិជនមើលទំនិញ & ស្កេន KHQR (Dual Screen Customer Display)"
+            >
+              <Monitor className="w-4 h-4 text-sky-600 shrink-0" />
+              <span>អេក្រង់ភ្ញៀវ</span>
+            </button>
+
+            {/* 7. កន្ត្រកទំនិញ */}
+            <button
+              type="button"
+              onClick={() => {
+                soundFx.playPop();
+                setIsCartDrawerOpen((prev) => !prev);
+              }}
+              className={`px-3.5 py-1.5 rounded-full text-xs font-black transition-all shadow-2xs flex items-center gap-1.5 shrink-0 whitespace-nowrap cursor-pointer active:scale-95 ${
+                totalCartItems > 0
+                  ? 'bg-gradient-to-r from-pink-600 via-rose-600 to-amber-500 hover:from-pink-500 hover:to-amber-500 text-white shadow-pink-500/25 ring-2 ring-pink-300'
+                  : 'bg-white hover:bg-slate-50 text-slate-700 border border-slate-200'
+              }`}
+              title="បើកមើលកន្ត្រកទំនិញ (Cart) ឬចុច F2"
+            >
+              <div className="relative shrink-0">
+                <ShoppingBag className="w-4 h-4" />
+                {totalCartItems > 0 && (
+                  <span className="absolute -top-1.5 -right-2 bg-white text-pink-600 font-black text-[9px] w-4 h-4 rounded-full flex items-center justify-center shadow-xs">
+                    {totalCartItems}
+                  </span>
+                )}
+              </div>
+              <span>កន្ត្រក</span>
+              {totalCartItems > 0 && (
+                <span className="font-mono text-[11px] bg-white/20 px-1.5 py-0.5 rounded-md text-white font-bold">
+                  {cartTotalKhr.toLocaleString()} ៛
+                </span>
+              )}
+            </button>
+
+            {/* 8. ចំនួនមុខទំនិញ */}
+            <div className="px-3.5 py-1.5 rounded-full text-xs font-black text-slate-600 bg-white border border-slate-200 shadow-2xs flex items-center gap-1.5 shrink-0 whitespace-nowrap">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
+              <span>{filteredProducts.length} មុខទំនិញ</span>
+            </div>
+
+            {/* 9. Party Add-ons */}
+            <button
+              type="button"
+              onClick={() => {
+                soundFx.playPop();
+                setIsPartyAccessoriesOpen(true);
+              }}
+              className="px-3 py-1.5 rounded-full text-xs font-black bg-gradient-to-r from-amber-500/10 via-rose-500/10 to-pink-500/10 hover:from-amber-500/20 hover:to-pink-500/20 text-pink-700 border border-pink-200/80 shadow-2xs flex items-center gap-1 shrink-0 whitespace-nowrap active:scale-95 cursor-pointer"
+              title="គ្រប់គ្រង & ទិញគ្រឿងបន្ថែមសម្រាប់កម្មវិធី (Party Accessories)"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+              <span>🎉</span>
+            </button>
+
+            {/* 10. Barcode Scanner Ready Indicator */}
+            <div
+              title="ម៉ាស៊ីនស្កេនបាកូដដំណើរការ៖ អាចស្កេនបាកូដទំនិញគ្រប់ពេលដើម្បីបញ្ចូលកន្ត្រកភ្លាមៗ"
+              className="hidden xl:flex items-center gap-1.5 text-xs font-black text-pink-700 bg-pink-50 border border-pink-200/80 px-3 py-1.5 rounded-full shadow-2xs shrink-0 whitespace-nowrap"
+            >
+              <Barcode className="w-4 h-4 text-pink-600 animate-pulse shrink-0" />
+              <span>ស្កេនបាកូដ (Auto)</span>
             </div>
           </div>
 

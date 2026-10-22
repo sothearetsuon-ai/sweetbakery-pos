@@ -194,8 +194,8 @@ export const App: React.FC = () => {
   const [availableUpdate, setAvailableUpdate] = useState<AppUpdateInfo | null>(() => ({
     hasUpdate: false,
     currentVersion: getNativeAppVersion(),
-    latestVersion: '1.7.0',
-    releaseDate: '2026-10-22',
+    latestVersion: '1.8.0',
+    releaseDate: '2026-10-23',
     releaseNotes: [
       '🥐 មុខងារថ្មីចុងក្រោយ៖ AI Pastry Tray Camera Scanner (BakeryScan Vision) ស្កេននំលើថាសតាមកាមេរ៉ាជាមួយ Google Gemini Multimodal Vision រាប់ចំនួន និងបញ្ចូលកន្ត្រកស្វ័យប្រវត្តិតាម ១ វិនាទី។',
       '🖥️ មុខងារថ្មីចុងក្រោយ៖ Customer-Facing Dual Screen Display (អេក្រង់ទី ២ សម្រាប់អតិថិជន) បង្ហាញទំនិញ និង Bakong KHQR ធំច្បាស់ពេញអេក្រង់លើ Monitor ឬ Tablet ទី ២ តាមរយៈ ?display=true ដោយ Sync Real-time គ្មាន Delay។',

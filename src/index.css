@@ -312,4 +312,13 @@
   }
 }
 
+/* Custom utility for clean horizontal swipeable bars without visible scrollbars */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
 
