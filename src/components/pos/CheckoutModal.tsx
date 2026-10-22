@@ -30,6 +30,7 @@ import { formatDateDMY } from '../../utils/dateUtils';
 import { roundKhr } from '../../utils/currencyUtils';
 import { paymentListener, PaymentNotification } from '../../services/paymentListener';
 import { khmerVoiceSoundbox } from '../../utils/khmerVoice';
+import { customerDisplaySync } from '../../services/customerDisplaySync';
 
 interface CheckoutModalProps {
   isOpen: boolean;
@@ -218,6 +219,27 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
     setReceivedUsd(Number((dep / exchangeRate).toFixed(2)).toString());
   };
 
+  // Synchronize active checkout and KHQR code with customer secondary screen
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const qrUrl =
+      storeInfo.khqrQrImage ||
+      `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=bakong://pay?merchant=${encodeURIComponent(
+        storeInfo.khqrMerchantName || 'SWEET_BAKERY'
+      )}&account=${encodeURIComponent(
+        storeInfo.khqrBakongId || 'sweet_bakery@aba'
+      )}&amount=${dueNowKhr}&currency=KHR`;
+
+    customerDisplaySync.startCheckout({
+      totalKhr: dueNowKhr,
+      totalUsd: dueNowUsd,
+      khqrDataUrl: paymentMethod === 'KHQR_BAKONG' ? qrUrl : undefined,
+      isDeposit,
+      depositKhr: numDepositKhr,
+    });
+  }, [isOpen, dueNowKhr, dueNowUsd, paymentMethod, isDeposit, numDepositKhr, storeInfo]);
+
   const handleConfirm = () => {
     if (isSubmitting) return;
     setIsSubmitting(true);
@@ -299,6 +321,13 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
         deductedItems: cart.map((i) => ({ productId: i.product.id, quantity: i.quantity })),
       });
     }
+
+    const paymentBankName = paymentMethod === 'KHQR_BAKONG'
+      ? (storeInfo.khqrMerchantName ? `${storeInfo.khqrMerchantName} KHQR` : 'Bakong KHQR')
+      : 'សាច់ប្រាក់ (Cash)';
+
+    customerDisplaySync.paymentSuccess(dueNowKhr, 'KHR', paymentBankName);
+    khmerVoiceSoundbox.announcePayment(dueNowKhr, 'KHR', paymentBankName);
 
     onSuccess(newSale);
     onClose();

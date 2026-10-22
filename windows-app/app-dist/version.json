@@ -1,13 +1,13 @@
 {
-  "version": "1.6.7",
-  "versionCode": 42,
+  "version": "1.7.0",
+  "versionCode": 45,
   "releaseDate": "2026-10-22",
   "releaseNotes": [
-    "⚡ ជួសជុលបញ្ហាលោតភ្លឹបភ្លេតៗ ញាក់ៗពេលចូល Settings និងចុចលើ Telegram Bot ឬ Tab ផ្សេងៗលើទូរសព្ទដៃ (Fix Tab Reset & Mobile Screen Jitter)។",
-    "🚀 បង្កើនល្បឿនប្រតិបត្តិការ Telegram Settings ដោយបំបែកការវាយអក្សរពី Cloud Save មិនរំខាន Bandwidth ឬ CPU ទូរសព្ទ។",
-    "📱 ការពារ Mobile Auto-Zoom Jitter នៅពេលចុចលើប្រអប់ Input វាយ Bot Token និង Chat ID។",
-    "🐟 រក្សាទុកចំនួនត្រីហែល ៧ ក្បាលពេញលេញដូចដើម និងផ្អាកស្វ័យប្រវត្តិតែពេលបើកផ្ទាំង SettingsModal ដើម្បីផ្ដល់ល្បឿនរលូន ១០០%។",
-    "🔊 បង្កើនភាពរហ័សនៃសំឡេងចុច (Tactile Click Sound) លើ iOS & Android ដោយគ្មាន Delay។"
+    "🥐 មុខងារថ្មីចុងក្រោយ៖ AI Pastry Tray Camera Scanner (BakeryScan Vision) ស្កេននំលើថាសតាមកាមេរ៉ាជាមួយ Google Gemini Multimodal Vision រាប់ចំនួន និងបញ្ចូលកន្ត្រកស្វ័យប្រវត្តិតាម ១ វិនាទី។",
+    "🖥️ មុខងារថ្មីចុងក្រោយ៖ Customer-Facing Dual Screen Display (អេក្រង់ទី ២ សម្រាប់អតិថិជន) បង្ហាញទំនិញ និង Bakong KHQR ធំច្បាស់ពេញអេក្រង់លើ Monitor ឬ Tablet ទី ២ តាមរយៈ ?display=true ដោយ Sync Real-time គ្មាន Delay។",
+    "📢 ប្រព័ន្ធសំឡេងខ្មែរ (Khmer Voice Soundbox) បន្លឺសំឡេងភ្លាមៗពេលទូទាត់ប្រាក់ជោគជ័យ៖ «ទទួលបានប្រាក់ ... រៀល តាមរយៈ Bakong KHQR ដោយជោគជ័យ!»។",
+    "⚡ បង្កើនល្បឿនប្រតិបត្តិការ POS ជាមួយ PWA Offline-First Service Worker ដំណើរការលក់បាន ១០០% ទោះបីដាច់ Internet។",
+    "✨ ជួសជុលបញ្ហា និងបង្កើនស្ថេរភាពប្រព័ន្ធទាំងលើ Windows Desktop App និង Android APK។"
   ],
   "apkDownloadUrl": "https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/latest/download/SweetBakery-Android.apk",
   "windowsInstallerUrl": "https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/latest/download/SweetBakery-POS-Setup.exe",

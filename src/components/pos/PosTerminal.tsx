@@ -23,6 +23,8 @@ import {
   PackageX,
   Clock,
   Layers,
+  Camera,
+  Monitor,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { useBakery } from '../../context/BakeryContext';
@@ -34,10 +36,12 @@ import { ReceiptModal } from './ReceiptModal';
 import { AddProductModal } from './AddProductModal';
 import { PartyAccessoriesModal } from './PartyAccessoriesModal';
 import { KhqrStandeeModal } from './KhqrStandeeModal';
+import { AiPastryScannerModal } from './AiPastryScannerModal';
 import { Product, CompletedSale } from '../../types';
 import { soundFx } from '../../utils/audio';
 import { sortProductsForPos, PosSortMode } from '../../utils/productUtils';
 import { paymentListener, PaymentNotification } from '../../services/paymentListener';
+import { customerDisplaySync } from '../../services/customerDisplaySync';
 
 export const PosTerminal: React.FC = () => {
   const {
@@ -48,10 +52,12 @@ export const PosTerminal: React.FC = () => {
     cart,
     cartTotalKhr,
     cartTotalUsd,
+    exchangeRate,
     partyAddons,
     isDemoMode,
     hideDemoPrices,
     toggleHideDemoPrices,
+    currentStaff,
   } = useBakery();
   const text = t[lang];
 
@@ -60,6 +66,7 @@ export const PosTerminal: React.FC = () => {
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [isPartyAccessoriesOpen, setIsPartyAccessoriesOpen] = useState(false);
   const [isKhqrStandeeOpen, setIsKhqrStandeeOpen] = useState(false);
+  const [isAiTrayScannerOpen, setIsAiTrayScannerOpen] = useState(false);
   const [checkoutOptions, setCheckoutOptions] = useState<{
     isDeposit?: boolean;
     depositKhr?: number;
@@ -73,6 +80,11 @@ export const PosTerminal: React.FC = () => {
   const [isAddProductOpen, setIsAddProductOpen] = useState(false);
   const [isCartDrawerOpen, setIsCartDrawerOpen] = useState(false);
   const [activeReceiptSale, setActiveReceiptSale] = useState<CompletedSale | null>(null);
+
+  // Sync cart to Customer-Facing Secondary Display in real time
+  useEffect(() => {
+    customerDisplaySync.updateCart(cart, exchangeRate, currentStaff?.name);
+  }, [cart, exchangeRate, currentStaff]);
 
   // POS Sorting & Stock Filter State
   const [posSortMode, setPosSortMode] = useState<PosSortMode>(() => {
@@ -457,6 +469,41 @@ export const PosTerminal: React.FC = () => {
                 <QrCode className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-red-600" />
                 <span className="hidden sm:inline">KHQR ហាង</span>
                 <span className="sm:hidden">KHQR</span>
+              </button>
+
+              {/* AI Pastry Tray Scanner Trigger */}
+              <button
+                type="button"
+                onClick={() => {
+                  soundFx.playPop();
+                  setIsAiTrayScannerOpen(true);
+                }}
+                className="px-2.5 sm:px-3.5 py-1.5 sm:py-2.5 rounded-2xl text-[11px] sm:text-xs font-black bg-gradient-to-r from-amber-500/15 via-pink-500/15 to-rose-500/15 hover:from-amber-500/25 hover:to-rose-500/25 text-pink-700 border border-pink-300/80 shadow-2xs flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all group"
+                title="ស្កេននំលើថាសស្វ័យប្រវត្តិតាមកាមេរ៉ា (AI BakeryScan)"
+              >
+                <div className="relative">
+                  <Camera className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-pink-600 group-hover:scale-110 transition-transform" />
+                  <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-amber-500 animate-ping" />
+                </div>
+                <span className="hidden sm:inline">ស្កេនថាសនំ AI</span>
+                <span className="sm:hidden">ថាស AI</span>
+              </button>
+
+              {/* Customer Dual Screen Popout Trigger */}
+              <button
+                type="button"
+                onClick={() => {
+                  soundFx.playPop();
+                  const origin = window.location.origin;
+                  const pathname = window.location.pathname || '/';
+                  const url = `${origin}${pathname}?display=true`;
+                  window.open(url, 'SweetBakeryCustomerDisplay', 'width=1100,height=750,menubar=no,toolbar=no');
+                }}
+                className="px-2.5 sm:px-3 py-1.5 sm:py-2.5 rounded-2xl text-[11px] sm:text-xs font-black bg-sky-50 hover:bg-sky-100 text-sky-700 border border-sky-200/90 shadow-2xs flex items-center gap-1 cursor-pointer active:scale-95 transition-all"
+                title="បើកអេក្រង់ទី ២ សម្រាប់អតិថិជនមើលទំនិញ & ស្កេន KHQR (Dual Screen Customer Display)"
+              >
+                <Monitor className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-sky-600" />
+                <span className="hidden md:inline">អេក្រង់ភ្ញៀវ</span>
               </button>
 
               {/* Barcode Scanner Ready Badge */}
@@ -1065,6 +1112,21 @@ export const PosTerminal: React.FC = () => {
       <KhqrStandeeModal
         isOpen={isKhqrStandeeOpen}
         onClose={() => setIsKhqrStandeeOpen(false)}
+      />
+
+      {/* AI Pastry Tray Scanner Modal (BakeryScan) */}
+      <AiPastryScannerModal
+        isOpen={isAiTrayScannerOpen}
+        onClose={() => setIsAiTrayScannerOpen(false)}
+        products={products}
+        exchangeRate={exchangeRate}
+        onAddItemsToCart={(items) => {
+          items.forEach((item) => {
+            for (let i = 0; i < item.quantity; i++) {
+              addToCart(item.product);
+            }
+          });
+        }}
       />
     </div>
   );
