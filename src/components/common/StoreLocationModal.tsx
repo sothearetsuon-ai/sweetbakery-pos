@@ -19,8 +19,6 @@ export const StoreLocationModal: React.FC<StoreLocationModalProps> = ({
   phone = '0978707000',
   mapsUrl,
 }) => {
-  if (!isOpen) return null;
-
   // Real store coordinates for Oyadav Bakery: 13.6708499, 107.346106
   const lat = 13.6708499;
   const lng = 107.346106;
@@ -37,6 +35,8 @@ export const StoreLocationModal: React.FC<StoreLocationModalProps> = ({
     }
     return defaultDirectionsUrl;
   }, [mapsUrl]);
+
+  if (!isOpen) return null;
 
   const handleClose = () => {
     soundFx.playPop();

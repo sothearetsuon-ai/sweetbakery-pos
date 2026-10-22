@@ -174,8 +174,6 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
     };
   }, [isOpen, isDeposit, depositAmountKhr, defaultDeposit50Pct, cartTotalKhr, exchangeRate]);
 
-  if (!isOpen) return null;
-
   // Deposit & Due calculations
   const numDepositKhr = isDeposit
     ? roundKhr(Math.min(cartTotalKhr, Math.max(0, parseInt(depositAmountKhr, 10) || 0)))
@@ -239,6 +237,8 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
       depositKhr: numDepositKhr,
     });
   }, [isOpen, dueNowKhr, dueNowUsd, paymentMethod, isDeposit, numDepositKhr, storeInfo]);
+
+  if (!isOpen) return null;
 
   const handleConfirm = () => {
     if (isSubmitting) return;
