@@ -120,12 +120,18 @@ export const AppUpdateModal: React.FC<AppUpdateModalProps> = ({
       ];
 
   const apkUrl =
-    updateInfo?.apkDownloadUrl ||
-    'https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/latest/download/SweetBakery-Android.apk';
+    updateInfo?.apkDownloadUrl &&
+    updateInfo.apkDownloadUrl.startsWith('http') &&
+    !updateInfo.apkDownloadUrl.includes('appassets.androidplatform.net')
+      ? updateInfo.apkDownloadUrl
+      : 'https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/latest/download/SweetBakery-Android.apk';
+  const winCandidate = updateInfo?.windowsInstallerUrl || updateInfo?.windowsDownloadUrl;
   const winUrl =
-    updateInfo?.windowsInstallerUrl ||
-    updateInfo?.windowsDownloadUrl ||
-    'https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/latest/download/SweetBakery-POS-Setup.exe';
+    winCandidate &&
+    winCandidate.startsWith('http') &&
+    !winCandidate.includes('appassets.androidplatform.net')
+      ? winCandidate
+      : 'https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/latest/download/SweetBakery-POS-Setup.exe';
 
   const handleDownloadApkDirect = () => {
     soundFx.playSuccess();

@@ -222,13 +222,16 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
+                if (request == null || request.getUrl() == null) return false;
                 String url = request.getUrl().toString();
-                if (url.startsWith("https://appassets.androidplatform.net") || url.startsWith("file://")) {
+                // Never pass internal virtual asset domain, file://, or about:blank to external browser
+                if (url.contains("appassets.androidplatform.net") || url.startsWith("file://") || url.equals("about:blank")) {
                     return false;
                 }
                 // Open external links in device browser
                 try {
                     Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
+                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                     startActivity(intent);
                     return true;
                 } catch (ActivityNotFoundException e) {
@@ -245,9 +248,16 @@ public class MainActivity extends AppCompatActivity {
                     @Override
                     public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
                         try {
-                            Intent intent = new Intent(Intent.ACTION_VIEW, request.getUrl());
-                            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                            startActivity(intent);
+                            if (request != null && request.getUrl() != null) {
+                                String url = request.getUrl().toString();
+                                // NEVER pass internal virtual appassets, file://, or about:blank to external browser
+                                if (url.contains("appassets.androidplatform.net") || url.startsWith("file://") || url.equals("about:blank")) {
+                                    return false;
+                                }
+                                Intent intent = new Intent(Intent.ACTION_VIEW, request.getUrl());
+                                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                                startActivity(intent);
+                            }
                         } catch (Exception e) {
                             e.printStackTrace();
                         }
@@ -408,9 +418,14 @@ public class MainActivity extends AppCompatActivity {
         @JavascriptInterface
         public void openBrowser(String url) {
             if (url == null || url.trim().isEmpty()) return;
+            final String cleanUrl = url.trim();
+            // Never launch external browser intent for internal virtual asset domain
+            if (cleanUrl.contains("appassets.androidplatform.net") || cleanUrl.startsWith("file://") || cleanUrl.equals("about:blank")) {
+                return;
+            }
             runOnUiThread(() -> {
                 try {
-                    Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
+                    Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(cleanUrl));
                     intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                     startActivity(intent);
                 } catch (Exception e) {
@@ -551,7 +566,12 @@ public class MainActivity extends AppCompatActivity {
                 return;
             }
 
-            final String cleanUrl = downloadUrl.trim();
+            String target = downloadUrl.trim();
+            // Sanitize against relative or internal appassets URLs
+            if (target.contains("appassets.androidplatform.net") || target.startsWith("/") || !target.startsWith("http")) {
+                target = "https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/latest/download/SweetBakery-Android.apk";
+            }
+            final String cleanUrl = target;
 
             runOnUiThread(() -> {
                 Toast.makeText(MainActivity.this, "កំពុងទាញយកកំណែអាប់ដេតតាមរយៈប្រព័ន្ធ Android...", Toast.LENGTH_SHORT).show();

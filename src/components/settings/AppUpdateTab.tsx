@@ -119,21 +119,25 @@ export const AppUpdateTab: React.FC = () => {
 
   const handleStartUpdate = (urlToUse?: string) => {
     soundFx.playPop();
-    const apkUrl =
+    const rawApk =
       urlToUse ||
       customApkUrl.trim() ||
       updateInfo?.apkDownloadUrl ||
-      'https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/latest/download/SweetBakery-Android.apk';
+      '';
+    const apkUrl =
+      rawApk && rawApk.startsWith('http') && !rawApk.includes('appassets.androidplatform.net')
+        ? rawApk
+        : 'https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/latest/download/SweetBakery-Android.apk';
 
     if (isAndroidNative) {
       setIsDownloading(true);
       setDownloadProgress(0);
       const started = triggerInAppAndroidUpdate(apkUrl);
       if (!started) {
-        window.location.href = apkUrl;
+        openExternalUrl(apkUrl);
       }
     } else if (isAndroid) {
-      window.location.href = apkUrl;
+      openExternalUrl(apkUrl);
     } else if (isDesktop) {
       handleOneClickDesktopUpdate();
     } else {

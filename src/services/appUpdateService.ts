@@ -196,9 +196,22 @@ export const checkForAppUpdates = async (): Promise<AppUpdateInfo> => {
           if (Array.isArray(data.releaseNotes) && data.releaseNotes.length > 0) {
             foundReleaseNotes = data.releaseNotes;
           }
-          if (data.apkDownloadUrl) foundApkUrl = data.apkDownloadUrl;
-          if (data.windowsInstallerUrl || data.windowsDownloadUrl) {
-            foundWinExeUrl = data.windowsInstallerUrl || data.windowsDownloadUrl;
+          if (
+            data.apkDownloadUrl &&
+            typeof data.apkDownloadUrl === 'string' &&
+            data.apkDownloadUrl.startsWith('http') &&
+            !data.apkDownloadUrl.includes('appassets.androidplatform.net')
+          ) {
+            foundApkUrl = data.apkDownloadUrl;
+          }
+          const winCandidate = data.windowsInstallerUrl || data.windowsDownloadUrl;
+          if (
+            winCandidate &&
+            typeof winCandidate === 'string' &&
+            winCandidate.startsWith('http') &&
+            !winCandidate.includes('appassets.androidplatform.net')
+          ) {
+            foundWinExeUrl = winCandidate;
           }
         } else if (!foundReleaseNotes.length && Array.isArray(data.releaseNotes)) {
           foundReleaseNotes = data.releaseNotes;
@@ -261,19 +274,58 @@ export const triggerInAppDesktopUpdate = (
 };
 
 /**
- * Safely open download or external links across Desktop Electron and standard browsers
+ * Safely open download or external links across Desktop Electron, Native Android, and standard browsers
  */
 export const openExternalUrl = (url: string) => {
-  if (typeof window === 'undefined') return;
-  const desktop = (window as any).SweetBakeryDesktop;
-  if (desktop && typeof desktop.openExternal === 'function') {
-    desktop.openExternal(url);
+  if (typeof window === 'undefined' || !url) return;
+
+  const cleanUrl = url.trim();
+
+  // Security & Stability: Never allow internal Android virtual asset domain to be opened externally
+  if (
+    cleanUrl.includes('appassets.androidplatform.net') ||
+    cleanUrl.startsWith('file://') ||
+    cleanUrl.startsWith('/') ||
+    cleanUrl === 'about:blank'
+  ) {
+    console.warn('Blocked attempt to open internal appassets URL externally:', cleanUrl);
+    // If it looks like an APK update request, redirect to official GitHub release
+    if (cleanUrl.endsWith('.apk') || cleanUrl.includes('update')) {
+      const fallbackUrl = 'https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/latest/download/SweetBakery-Android.apk';
+      const nativeApp = (window as any).SweetBakeryNative;
+      if (nativeApp && typeof nativeApp.openBrowser === 'function') {
+        nativeApp.openBrowser(fallbackUrl);
+        return;
+      }
+    }
     return;
   }
-  // Standard Web / Mobile Browser
+
+  // 1. Native Android Bridge (Direct Intent in Android Chrome/Default Browser)
+  const nativeApp = (window as any).SweetBakeryNative;
+  if (nativeApp && typeof nativeApp.openBrowser === 'function') {
+    nativeApp.openBrowser(cleanUrl);
+    return;
+  }
+
+  // 2. Desktop Electron App
+  const desktop = (window as any).SweetBakeryDesktop;
+  if (desktop && typeof desktop.openExternal === 'function') {
+    desktop.openExternal(cleanUrl);
+    return;
+  }
+
+  // 3. Telegram WebApp if applicable
+  const tgWebApp = (window as any).Telegram?.WebApp;
+  if (tgWebApp && typeof tgWebApp.openLink === 'function') {
+    tgWebApp.openLink(cleanUrl);
+    return;
+  }
+
+  // 4. Standard Web / Mobile Browser
   try {
     const a = document.createElement('a');
-    a.href = url;
+    a.href = cleanUrl;
     a.target = '_blank';
     a.rel = 'noopener noreferrer';
     document.body.appendChild(a);
@@ -282,7 +334,7 @@ export const openExternalUrl = (url: string) => {
       try { document.body.removeChild(a); } catch (e) {}
     }, 100);
   } catch {
-    window.open(url, '_blank', 'noopener,noreferrer');
+    window.open(cleanUrl, '_blank', 'noopener,noreferrer');
   }
 };
 

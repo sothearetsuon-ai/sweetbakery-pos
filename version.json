@@ -1,15 +1,13 @@
 {
-  "version": "1.6.9",
-  "versionCode": 44,
+  "version": "1.7.0",
+  "versionCode": 45,
   "releaseDate": "2026-10-22",
   "releaseNotes": [
-    "🏦 មុខងារថ្មី៖ ភ្ជាប់ Telegram Group Alert ធនាគារ អេស៊ីលីដា (ACLEDA Bank) & ABA ស្ដាប់ដំណឹងផ្ទេរប្រាក់ KHQR ដោយស្វ័យប្រវត្តិ។",
-    "📢 ប្រព័ន្ធបំពងសំឡេងខ្មែរ (Khmer Voice Soundbox)៖ បន្លឺសំឡេងភ្លាមៗ «🔔 ទទួលបានការទូទាត់ប្រាក់ ... រៀល តាមរយៈ ACLEDA KHQR»។",
-    "⚡ ផ្ទៀងផ្ទាត់ & បញ្ចប់ការលក់ស្វ័យប្រវត្តិ (Auto-Pay Checkout) ពេលភ្ញៀវស្កេន KHQR ត្រូវចំនួនទឹកប្រាក់ មិនបាច់ចុចដៃ។",
-    "🔄 Sync ដំណឹងប្រាក់ចូលតាមរយៈ Firebase Cloud ទៅកាន់គ្រប់កុំព្យូទ័រ និង Tablet ក្នុងហាងដំណាលគ្នា។",
-    "🧪 ប៊ូតុងតេស្តសារគំរូ ACLEDA ក្នុងផ្ទាំង Settings ជួយឱ្យបុគ្គលិក និងម្ចាស់ហាងអាចសាកល្បងសំឡេង Soundbox បានភ្លាមៗ។",
-    "✨ បង្ហាញការណែនាំលម្អិតអំពីរបៀបបិទ Privacy Mode ក្នុង @BotFather (/setprivacy -> Disable)។",
-    "✨ រក្សាព័ត៌មានសម្គាល់ «បង្កើតដោយ សុធារិទ្ធ» នៅលើប្រព័ន្ធ POS, Sidebar, វិក្កយបត្រ, និងផ្ទាំងទំនាក់ទំនង។"
+    "🥐 មុខងារថ្មីចុងក្រោយ៖ AI Pastry Tray Camera Scanner (BakeryScan Vision) ស្កេននំលើថាសតាមកាមេរ៉ាជាមួយ Google Gemini Multimodal Vision រាប់ចំនួន និងបញ្ចូលកន្ត្រកស្វ័យប្រវត្តិតាម ១ វិនាទី។",
+    "🖥️ មុខងារថ្មីចុងក្រោយ៖ Customer-Facing Dual Screen Display (អេក្រង់ទី ២ សម្រាប់អតិថិជន) បង្ហាញទំនិញ និង Bakong KHQR ធំច្បាស់ពេញអេក្រង់លើ Monitor ឬ Tablet ទី ២ តាមរយៈ ?display=true ដោយ Sync Real-time គ្មាន Delay។",
+    "📢 ប្រព័ន្ធសំឡេងខ្មែរ (Khmer Voice Soundbox) បន្លឺសំឡេងភ្លាមៗពេលទូទាត់ប្រាក់ជោគជ័យ៖ «ទទួលបានប្រាក់ ... រៀល តាមរយៈ Bakong KHQR ដោយជោគជ័យ!»។",
+    "⚡ បង្កើនល្បឿនប្រតិបត្តិការ POS ជាមួយ PWA Offline-First Service Worker ដំណើរការលក់បាន ១០០% ទោះបីដាច់ Internet។",
+    "✨ ជួសជុលបញ្ហា និងបង្កើនស្ថេរភាពប្រព័ន្ធទាំងលើ Windows Desktop App និង Android APK។"
   ],
   "author": "សុធារិទ្ធ",
   "apkDownloadUrl": "https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/latest/download/SweetBakery-Android.apk",

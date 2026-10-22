@@ -37,6 +37,7 @@ import { AddProductModal } from './AddProductModal';
 import { PartyAccessoriesModal } from './PartyAccessoriesModal';
 import { KhqrStandeeModal } from './KhqrStandeeModal';
 import { AiPastryScannerModal } from './AiPastryScannerModal';
+import { CustomerDisplayModal } from './CustomerDisplayModal';
 import { Product, CompletedSale } from '../../types';
 import { soundFx } from '../../utils/audio';
 import { sortProductsForPos, PosSortMode } from '../../utils/productUtils';
@@ -67,6 +68,7 @@ export const PosTerminal: React.FC = () => {
   const [isPartyAccessoriesOpen, setIsPartyAccessoriesOpen] = useState(false);
   const [isKhqrStandeeOpen, setIsKhqrStandeeOpen] = useState(false);
   const [isAiTrayScannerOpen, setIsAiTrayScannerOpen] = useState(false);
+  const [isCustomerDisplayOpen, setIsCustomerDisplayOpen] = useState(false);
   const [checkoutOptions, setCheckoutOptions] = useState<{
     isDeposit?: boolean;
     depositKhr?: number;
@@ -494,10 +496,7 @@ export const PosTerminal: React.FC = () => {
                 type="button"
                 onClick={() => {
                   soundFx.playPop();
-                  const origin = window.location.origin;
-                  const pathname = window.location.pathname || '/';
-                  const url = `${origin}${pathname}?display=true`;
-                  window.open(url, 'SweetBakeryCustomerDisplay', 'width=1100,height=750,menubar=no,toolbar=no');
+                  setIsCustomerDisplayOpen(true);
                 }}
                 className="px-2.5 sm:px-3 py-1.5 sm:py-2.5 rounded-2xl text-[11px] sm:text-xs font-black bg-sky-50 hover:bg-sky-100 text-sky-700 border border-sky-200/90 shadow-2xs flex items-center gap-1 cursor-pointer active:scale-95 transition-all"
                 title="បើកអេក្រង់ទី ២ សម្រាប់អតិថិជនមើលទំនិញ & ស្កេន KHQR (Dual Screen Customer Display)"
@@ -1127,6 +1126,12 @@ export const PosTerminal: React.FC = () => {
             }
           });
         }}
+      />
+
+      {/* Customer-Facing Dual Screen Display Modal */}
+      <CustomerDisplayModal
+        isOpen={isCustomerDisplayOpen}
+        onClose={() => setIsCustomerDisplayOpen(false)}
       />
     </div>
   );
