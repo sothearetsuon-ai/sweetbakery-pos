@@ -25,6 +25,8 @@ import {
   Layers,
   Camera,
   Monitor,
+  Mic,
+  ChefHat,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { useBakery } from '../../context/BakeryContext';
@@ -38,6 +40,9 @@ import { PartyAccessoriesModal } from './PartyAccessoriesModal';
 import { KhqrStandeeModal } from './KhqrStandeeModal';
 import { AiPastryScannerModal } from './AiPastryScannerModal';
 import { CustomerDisplayModal } from './CustomerDisplayModal';
+import { ThreeCakeStudioModal } from './ThreeCakeStudioModal';
+import { AiBakeryChefModal } from './AiBakeryChefModal';
+import { KhmerVoicePosModal } from './KhmerVoicePosModal';
 import { Product, CompletedSale } from '../../types';
 import { soundFx } from '../../utils/audio';
 import { sortProductsForPos, PosSortMode } from '../../utils/productUtils';
@@ -59,6 +64,7 @@ export const PosTerminal: React.FC = () => {
     hideDemoPrices,
     toggleHideDemoPrices,
     currentStaff,
+    clearCart,
   } = useBakery();
   const text = t[lang];
 
@@ -69,6 +75,9 @@ export const PosTerminal: React.FC = () => {
   const [isKhqrStandeeOpen, setIsKhqrStandeeOpen] = useState(false);
   const [isAiTrayScannerOpen, setIsAiTrayScannerOpen] = useState(false);
   const [isCustomerDisplayOpen, setIsCustomerDisplayOpen] = useState(false);
+  const [isThreeCakeStudioOpen, setIsThreeCakeStudioOpen] = useState(false);
+  const [isAiChefOpen, setIsAiChefOpen] = useState(false);
+  const [isVoicePosOpen, setIsVoicePosOpen] = useState(false);
   const [checkoutOptions, setCheckoutOptions] = useState<{
     isDeposit?: boolean;
     depositKhr?: number;
@@ -217,6 +226,16 @@ export const PosTerminal: React.FC = () => {
       } else if (e.key === 'F2') {
         e.preventDefault();
         setIsCartDrawerOpen((prev) => !prev);
+        return;
+      } else if (e.key === 'F3') {
+        e.preventDefault();
+        soundFx.playPop();
+        setIsVoicePosOpen((prev) => !prev);
+        return;
+      } else if (e.key === 'F4') {
+        e.preventDefault();
+        soundFx.playPop();
+        setIsThreeCakeStudioOpen((prev) => !prev);
         return;
       }
 
@@ -489,6 +508,57 @@ export const PosTerminal: React.FC = () => {
                 </div>
                 <span className="hidden sm:inline">ស្កេនថាសនំ AI</span>
                 <span className="sm:hidden">ថាស AI</span>
+              </button>
+
+              {/* 3D Interactive Custom Cake Studio */}
+              <button
+                type="button"
+                onClick={() => {
+                  soundFx.playPop();
+                  setIsThreeCakeStudioOpen(true);
+                }}
+                className="px-2.5 sm:px-3.5 py-1.5 sm:py-2.5 rounded-2xl text-[11px] sm:text-xs font-black bg-gradient-to-r from-purple-500/15 via-pink-500/15 to-amber-500/15 hover:from-purple-500/25 hover:to-amber-500/25 text-purple-700 border border-purple-300/80 shadow-2xs flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all group"
+                title="ស្ទូឌីយោរចនានំ 3D អន្តរកម្ម & មើល 360 ដឺក្រេ (3D Cake Studio) ឬចុច F4"
+              >
+                <div className="relative">
+                  <Cake className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-purple-600 group-hover:rotate-12 transition-transform" />
+                  <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-pink-500 animate-pulse" />
+                </div>
+                <span className="hidden sm:inline">រចនានំ 3D</span>
+                <span className="sm:hidden">នំ 3D</span>
+              </button>
+
+              {/* AI Bakery Chef R&D & Cost Optimizer */}
+              <button
+                type="button"
+                onClick={() => {
+                  soundFx.playPop();
+                  setIsAiChefOpen(true);
+                }}
+                className="px-2.5 sm:px-3.5 py-1.5 sm:py-2.5 rounded-2xl text-[11px] sm:text-xs font-black bg-gradient-to-r from-emerald-500/15 via-teal-500/15 to-cyan-500/15 hover:from-emerald-500/25 hover:to-cyan-500/25 text-emerald-800 border border-emerald-300/80 shadow-2xs flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all group"
+                title="មេចុងភៅឆ្លាតវៃ AI៖ បង្កើតរូបមន្តថ្មី គណនា % មេចុងភៅ និងថ្លៃដើមចំណេញ (AI Bakery Chef)"
+              >
+                <ChefHat className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-600 group-hover:scale-110 transition-transform" />
+                <span className="hidden sm:inline">AI Chef រូបមន្ត</span>
+                <span className="sm:hidden">AI Chef</span>
+              </button>
+
+              {/* Khmer Conversational Voice POS Co-Pilot */}
+              <button
+                type="button"
+                onClick={() => {
+                  soundFx.playPop();
+                  setIsVoicePosOpen(true);
+                }}
+                className="px-2.5 sm:px-3.5 py-1.5 sm:py-2.5 rounded-2xl text-[11px] sm:text-xs font-black bg-gradient-to-r from-red-500/15 via-rose-500/15 to-pink-500/15 hover:from-red-500/25 hover:to-pink-500/25 text-rose-700 border border-rose-300/80 shadow-2xs flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all group"
+                title="បញ្ជាគិតលុយ និងបញ្ចូលកន្ត្រកដោយសំឡេងខ្មែរ (Khmer Voice POS) ឬចុច F3"
+              >
+                <div className="relative">
+                  <Mic className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-rose-600 group-hover:scale-110 transition-transform" />
+                  <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-red-500 animate-ping" />
+                </div>
+                <span className="hidden sm:inline">បញ្ជាសំឡេង</span>
+                <span className="sm:hidden">សំឡេង</span>
               </button>
 
               {/* Customer Dual Screen Popout Trigger */}
@@ -1132,6 +1202,34 @@ export const PosTerminal: React.FC = () => {
       <CustomerDisplayModal
         isOpen={isCustomerDisplayOpen}
         onClose={() => setIsCustomerDisplayOpen(false)}
+      />
+
+      {/* 3D Interactive Custom Cake Studio Modal */}
+      <ThreeCakeStudioModal
+        isOpen={isThreeCakeStudioOpen}
+        onClose={() => setIsThreeCakeStudioOpen(false)}
+        onAddToCart={(item) => addToCart(item as Product)}
+      />
+
+      {/* AI Bakery Chef R&D & Cost Optimizer Modal */}
+      <AiBakeryChefModal
+        isOpen={isAiChefOpen}
+        onClose={() => setIsAiChefOpen(false)}
+      />
+
+      {/* Khmer Conversational Voice POS Co-Pilot Modal */}
+      <KhmerVoicePosModal
+        isOpen={isVoicePosOpen}
+        onClose={() => setIsVoicePosOpen(false)}
+        products={products}
+        onAddProduct={(p, qty) => {
+          for (let i = 0; i < qty; i++) {
+            addToCart(p);
+          }
+        }}
+        onCheckout={() => setIsCheckoutOpen(true)}
+        onClearCart={clearCart}
+        exchangeRate={exchangeRate}
       />
     </div>
   );
