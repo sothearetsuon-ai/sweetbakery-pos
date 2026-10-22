@@ -877,11 +877,23 @@ public class MainActivity extends AppCompatActivity {
                 }
 
                 if (responseCode != HttpURLConnection.HTTP_OK) {
+                    final String fallbackLatest = "https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/latest/download/SweetBakery-Android.apk";
+                    if (!fallbackLatest.equalsIgnoreCase(downloadUrl)) {
+                        // Automatically retry once with latest release asset before failing
+                        downloadViaDirectStream(fallbackLatest);
+                        return;
+                    }
+
                     final int finalResponseCode = responseCode;
                     final String errMsg = "Download failed: Server returned HTTP " + finalResponseCode;
                     runOnUiThread(() -> {
-                        Toast.makeText(MainActivity.this, "ការទាញយកបានបរាជ័យ (HTTP " + finalResponseCode + ")", Toast.LENGTH_LONG).show();
+                        Toast.makeText(MainActivity.this, "ការទាញយកបានបរាជ័យ (HTTP " + finalResponseCode + ") កំពុងបើកកម្មវិធីរុករក (Browser)...", Toast.LENGTH_LONG).show();
                         webView.evaluateJavascript("window.onUpdateDownloadError && window.onUpdateDownloadError('" + errMsg + "')", null);
+                        try {
+                            Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse(fallbackLatest));
+                            browserIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                            startActivity(browserIntent);
+                        } catch (Exception ignored) {}
                     });
                     return;
                 }
@@ -921,9 +933,15 @@ public class MainActivity extends AppCompatActivity {
 
             } catch (Exception e) {
                 final String err = e.getMessage() != null ? e.getMessage() : "Unknown error";
+                final String fallbackLatest = "https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/latest/download/SweetBakery-Android.apk";
                 runOnUiThread(() -> {
                     Toast.makeText(MainActivity.this, "កំហុសពេលទាញយក: " + err, Toast.LENGTH_LONG).show();
                     webView.evaluateJavascript("window.onUpdateDownloadError && window.onUpdateDownloadError('" + err.replace("'", "\\'") + "')", null);
+                    try {
+                        Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse(fallbackLatest));
+                        browserIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                        startActivity(browserIntent);
+                    } catch (Exception ignored) {}
                 });
             }
         });

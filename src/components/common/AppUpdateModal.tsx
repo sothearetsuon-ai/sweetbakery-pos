@@ -84,8 +84,9 @@ export const AppUpdateModal: React.FC<AppUpdateModalProps> = ({
     (window as any).onUpdateDownloadError = (msg: string) => {
       setIsDownloading(false);
       setDownloadProgress(null);
-      setStatusMessage(`កំហុស៖ ${msg}`);
+      setStatusMessage(`កំហុស៖ ${msg} (កំពុងបើកកម្មវិធី Browser ជំនួស...)`);
       soundFx.playChime();
+      openExternalUrl(apkUrl);
     };
 
     return () => {
