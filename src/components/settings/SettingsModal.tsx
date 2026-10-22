@@ -491,7 +491,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               <h3 className="font-black text-slate-800 text-base">
                 ការកំណត់ប្រព័ន្ធ (Store & System Settings)
               </h3>
-              <p className="text-xs text-slate-500">កំណត់ឈ្មោះហាង, Logo, ប្រព័ន្ធ KHQR, សិទ្ធិបុគ្គលិក និងអត្រាប្តូរប្រាក់</p>
+              <p className="text-xs text-slate-500">កំណត់ឈ្មោះហាង, Logo, KHQR, បុគ្គលិក • បង្កើតដោយ សុធារិទ្ធ</p>
             </div>
           </div>
 

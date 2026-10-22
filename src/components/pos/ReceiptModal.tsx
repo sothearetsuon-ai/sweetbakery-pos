@@ -232,6 +232,9 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({ sale, isOpen, onClos
                   ? 'ទូទាត់តាម KHQR Bakong ជោគជ័យ'
                   : 'ស្កេន KHQR ដើម្បីទូទាត់ ឬវាយតម្លៃសេវាកម្ម'}
               </p>
+              <p className="text-[7.5px] text-slate-400 pt-1 border-t border-slate-100 font-battambang">
+                SweetBakery POS • បង្កើតដោយ សុធារិទ្ធ
+              </p>
             </div>
           </div>
         </div>

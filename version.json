@@ -7,8 +7,10 @@
     "📲 កំណត់កន្លែងទទួលរបាយការណ៍ស្វ័យប្រវត្តិជា «ផ្ញើទាំងពីរ (BOTH)» ចូលទាំង Telegram Group ហាង និង Admin ផ្ទាល់ខ្លួន។",
     "🛡️ ប្រព័ន្ធ Smart Auto-Fallback៖ ប្រសិនបើសារទៅ Admin ផ្ទាល់ខ្លួនជាប់គាំង វានឹងបង្វែរមកផ្ញើចូល Group ហាងដោយស្វ័យប្រវត្តិ កុំឱ្យបាត់របាយការណ៍។",
     "✈️ ប៊ូតុងផ្ញើរបាយការណ៍ភ្លាមៗ (Instant Send) ក្នុងផ្ទាំង Reports ដំណើរការលឿនរហ័ស ជាមួយផ្ទាំង Status បង្ហាញព័ត៌មានលម្អិត និងប៊ូតុងបិទ (X)។",
-    "⚡ ដំណើរការឯករាជ្យពី Device Push Notification ដោយធានាការផ្ញើចូល Telegram បានជោគជ័យជានិច្ច។"
+    "⚡ ដំណើរការឯករាជ្យពី Device Push Notification ដោយធានាការផ្ញើចូល Telegram បានជោគជ័យជានិច្ច។",
+    "✨ បន្ថែមព័ត៌មានសម្គាល់ «បង្កើតដោយ សុធារិទ្ធ» នៅលើប្រព័ន្ធ POS, Sidebar, Receipt, និងផ្ទាំងទំនាក់ទំនង។"
   ],
+  "author": "សុធារិទ្ធ",
   "apkDownloadUrl": "https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/latest/download/SweetBakery-Android.apk",
   "windowsInstallerUrl": "https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/latest/download/SweetBakery-POS-Setup.exe",
   "windowsDownloadUrl": "https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/latest/download/SweetBakery-POS-Setup.exe",

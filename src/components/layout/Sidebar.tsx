@@ -30,6 +30,7 @@ import { soundFx } from '../../utils/audio';
 import { StaffPermissions, ChatChannel } from '../../types';
 import { AppTheme } from '../../utils/themeManager';
 import { getStaffUnreadChatCount, subscribeToCustomerSessions } from '../../services/liveChatService';
+import { CURRENT_APP_VERSION } from '../../services/appUpdateService';
 
 export type TabType =
   | 'pos'
@@ -727,7 +728,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               ? 'bg-amber-300 text-slate-900 border-amber-400 font-mono shadow-xs'
               : 'bg-indigo-200/80 text-indigo-700 border-indigo-300 font-mono'
           }`}>
-            {availableUpdate?.hasUpdate ? `v${availableUpdate.latestVersion} NEW` : `v${availableUpdate?.latestVersion || '1.6.7'}`}
+            {availableUpdate?.hasUpdate ? `v${availableUpdate.latestVersion} NEW` : `v${availableUpdate?.latestVersion || CURRENT_APP_VERSION}`}
           </span>
         </button>
 
@@ -788,8 +789,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </span>
         </button>
 
-        <div className="text-center text-[10px] text-slate-400 font-medium">
-          SweetBakery POS v1.0 • Made with ❤️
+        <div className="text-center text-[10px] text-slate-400 font-medium flex flex-col items-center gap-0.5 pt-1.5 border-t border-[#F2DBD3]/60">
+          <span className="font-mono">SweetBakery POS v{CURRENT_APP_VERSION}</span>
+          <span className="text-slate-600 font-bold font-battambang flex items-center gap-1">
+            <span>បង្កើតដោយ សុធារិទ្ធ</span>
+            <span className="text-rose-500">❤️</span>
+          </span>
         </div>
       </div>
     </div>

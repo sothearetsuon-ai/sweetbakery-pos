@@ -778,6 +778,13 @@ export const AppUpdateTab: React.FC = () => {
           </div>
         </div>
       </div>
+
+      <div className="text-center pt-2 pb-1">
+        <span className="text-xs text-slate-400 font-bold font-battambang flex items-center justify-center gap-1">
+          <span>SweetBakery POS • បង្កើតដោយ សុធារិទ្ធ</span>
+          <span className="text-rose-500">❤️</span>
+        </span>
+      </div>
     </div>
   );
 };

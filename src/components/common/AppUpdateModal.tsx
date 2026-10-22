@@ -264,7 +264,7 @@ export const AppUpdateModal: React.FC<AppUpdateModalProps> = ({
                 </div>
                 <p className="text-xs text-pink-100/90 font-medium mt-0.5 flex items-center gap-1.5">
                   <Sparkles className="w-3.5 h-3.5 text-amber-300 shrink-0" />
-                  <span>SweetBakery POS • កំណែស្តង់ដារចុងក្រោយ</span>
+                  <span>SweetBakery POS • បង្កើតដោយ សុធារិទ្ធ</span>
                 </p>
               </div>
             </div>
@@ -499,17 +499,20 @@ export const AppUpdateModal: React.FC<AppUpdateModalProps> = ({
 
         {/* Footer Actions */}
         <div className="p-4 bg-slate-50/90 border-t border-slate-100 flex items-center justify-between gap-3 shrink-0">
-          <button
-            type="button"
-            disabled={isDownloading}
-            onClick={() => {
-              soundFx.playPop();
-              onClose();
-            }}
-            className="px-4 py-2.5 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-200 transition-colors cursor-pointer"
-          >
-            បិទ (ទុកពេលក្រោយ)
-          </button>
+          <div className="flex flex-col">
+            <button
+              type="button"
+              disabled={isDownloading}
+              onClick={() => {
+                soundFx.playPop();
+                onClose();
+              }}
+              className="text-left py-1 text-xs font-bold text-slate-600 hover:text-slate-900 transition-colors cursor-pointer"
+            >
+              បិទ (ទុកពេលក្រោយ)
+            </button>
+            <span className="text-[10px] text-slate-400 font-medium font-battambang">បង្កើតដោយ សុធារិទ្ធ</span>
+          </div>
 
           <div className="flex items-center gap-2">
             {onCheckAgain && (

@@ -2172,6 +2172,11 @@ export const CustomerOrderPortal: React.FC<CustomerOrderPortalProps> = ({ onBack
             </div>
           </div>
         )}
+
+        {/* Portal Footer */}
+        <footer className="text-center py-6 text-xs text-slate-400 font-battambang">
+          SweetBakery POS • បង្កើតដោយ សុធារិទ្ធ ❤️
+        </footer>
       </main>
 
       {/* In-App Store Location Modal */}

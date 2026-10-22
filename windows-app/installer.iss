@@ -3,7 +3,7 @@
 
 #define MyAppName "SweetBakery POS"
 #define MyAppVersion "1.6.8"
-#define MyAppPublisher "SweetBakery Team"
+#define MyAppPublisher "SweetBakery Team (បង្កើតដោយ សុធារិទ្ធ)"
 #define MyAppURL "https://sothearetsuon-ai.github.io/sweetbakery-pos/"
 #define MyAppExeName "SweetBakery-POS.exe"
 
@@ -39,7 +39,7 @@ PrivilegesRequiredOverridesAllowed=dialog
 
 ; Windows Add/Remove Programs Metadata
 UninstallDisplayIcon={app}\{#MyAppExeName}
-UninstallDisplayName={#MyAppName} - ប្រព័ន្ធគ្រប់គ្រងហាងនំខេកស្តង់ដារ
+UninstallDisplayName={#MyAppName} - ប្រព័ន្ធគ្រប់គ្រងហាងនំខេកស្តង់ដារ (បង្កើតដោយ សុធារិទ្ធ)
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"

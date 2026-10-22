@@ -53,7 +53,7 @@ export const ContactModal: React.FC<ContactModalProps> = ({ isOpen, onClose }) =
               <h3 className="font-black text-slate-800 text-base font-battambang">
                 ទំនាក់ទំនងប្រព័ន្ធ (Contact)
               </h3>
-              <p className="text-xs text-rose-600 font-bold">SweetBakery POS System</p>
+              <p className="text-xs text-rose-600 font-bold">SweetBakery POS • បង្កើតដោយ សុធារិទ្ធ</p>
             </div>
           </div>
 
@@ -164,9 +164,13 @@ export const ContactModal: React.FC<ContactModalProps> = ({ isOpen, onClose }) =
             </div>
           </div>
 
-          <div className="pt-2 border-t border-slate-100 text-center">
-            <span className="text-[11px] text-slate-400 font-medium">
-              SweetBakery POS • រួសរាន់ឡើងដើម្បីទទួលបានការដំឡើង និងការប្រឹក្សាដោយឥតគិតថ្លៃ!
+          <div className="pt-2.5 border-t border-slate-100 text-center space-y-1">
+            <div className="text-xs font-black text-rose-700 font-battambang flex items-center justify-center gap-1">
+              <span>SweetBakery POS • បង្កើតដោយ សុធារិទ្ធ</span>
+              <span className="text-rose-500">❤️</span>
+            </div>
+            <span className="text-[11px] text-slate-400 font-medium block">
+              ទំនាក់ទំនងរហ័ស៖ 012 629 160 • ប្រឹក្សា និងដំឡើងជូនដោយឥតគិតថ្លៃ
             </span>
           </div>
         </div>
