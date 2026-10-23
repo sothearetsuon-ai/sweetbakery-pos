@@ -16,6 +16,7 @@ export const CustomOrderPipeline: React.FC = () => {
   const text = t[lang];
 
   const [isNewOrderModalOpen, setIsNewOrderModalOpen] = useState(false);
+  const [selectedOrderForEdit, setSelectedOrderForEdit] = useState<CustomCakeOrder | null>(null);
   const [isCustomerLinkModalOpen, setIsCustomerLinkModalOpen] = useState(false);
   const [isFlavorsModalOpen, setIsFlavorsModalOpen] = useState(false);
   const [selectedOrderForDeposit, setSelectedOrderForDeposit] = useState<CustomCakeOrder | null>(null);
@@ -600,6 +601,7 @@ export const CustomOrderPipeline: React.FC = () => {
                       onDelete={(ord) => setOrderToDelete(ord)}
                       onViewReceipt={handleOpenReceipt}
                       onAddPartyAddon={handleOpenReceipt}
+                      onEdit={(ord) => setSelectedOrderForEdit(ord)}
                     />
                   ))
                 )}
@@ -609,10 +611,14 @@ export const CustomOrderPipeline: React.FC = () => {
         })}
       </div>
 
-      {/* Modal to add custom cake */}
+      {/* Modal to add or edit custom order */}
       <NewCustomOrderModal
-        isOpen={isNewOrderModalOpen}
-        onClose={() => setIsNewOrderModalOpen(false)}
+        isOpen={isNewOrderModalOpen || !!selectedOrderForEdit}
+        onClose={() => {
+          setIsNewOrderModalOpen(false);
+          setSelectedOrderForEdit(null);
+        }}
+        orderToEdit={selectedOrderForEdit}
       />
 
       {/* Modal to add or update deposit */}

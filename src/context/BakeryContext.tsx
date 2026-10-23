@@ -5842,12 +5842,59 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     if (cleanUpdates.status) {
       updateOrderStatus(orderId, cleanUpdates.status);
     }
+    let updatedFullOrder: CustomCakeOrder | undefined;
     setCustomOrders((prev) => {
-      const updated = prev.map((o) => (o.id === orderId ? { ...o, ...cleanUpdates } : o));
+      const updated = prev.map((o) => {
+        if (o.id === orderId) {
+          updatedFullOrder = { ...o, ...cleanUpdates };
+          return updatedFullOrder;
+        }
+        return o;
+      });
       safeSetStorage('bakery_custom_orders', JSON.stringify(updated));
       return updated;
     });
     syncSaveDoc('customOrders', orderId, cleanUpdates);
+
+    if (updatedFullOrder) {
+      fetch('/api/save-custom-order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ order: updatedFullOrder }),
+      }).catch(() => {});
+
+      // Sync linked sale if it exists
+      const currentSales = salesRef.current;
+      const targetSale = currentSales.find(
+        (s) =>
+          s.id === `sale-custom-${orderId}` ||
+          s.orderNumber === updatedFullOrder!.orderNumber
+      );
+      if (targetSale) {
+        const orderTotalKhr = updatedFullOrder.totalKhr ?? Math.round(updatedFullOrder.totalUsd * exchangeRate);
+        const isFullyPaid = (updatedFullOrder.depositKhr ?? 0) >= orderTotalKhr || updatedFullOrder.status === 'DELIVERED';
+        const remainingKhr = isFullyPaid ? 0 : Math.max(0, orderTotalKhr - (updatedFullOrder.depositKhr ?? 0));
+        const remainingUsd = isFullyPaid ? 0 : Number((remainingKhr / exchangeRate).toFixed(2));
+
+        const updatedSale: CompletedSale = {
+          ...targetSale,
+          customerName: updatedFullOrder.customerName,
+          customerPhone: updatedFullOrder.phone,
+          pickupDate: updatedFullOrder.pickupDate,
+          pickupTime: updatedFullOrder.pickupTime,
+          totalUsd: updatedFullOrder.totalUsd,
+          totalKhr: orderTotalKhr,
+          paidUsd: isFullyPaid ? updatedFullOrder.totalUsd : updatedFullOrder.depositUsd,
+          paidKhr: isFullyPaid ? orderTotalKhr : (updatedFullOrder.depositKhr ?? 0),
+          depositUsd: updatedFullOrder.depositUsd,
+          depositKhr: updatedFullOrder.depositKhr,
+          remainingUsd,
+          remainingKhr,
+          isDeposit: !isFullyPaid,
+        };
+        updateSale(updatedSale);
+      }
+    }
   };
 
   const addCustomOrderDeposit = (

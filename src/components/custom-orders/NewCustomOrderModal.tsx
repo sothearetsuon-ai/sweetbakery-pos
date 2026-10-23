@@ -27,7 +27,7 @@ import confetti from 'canvas-confetti';
 import { useBakery } from '../../context/BakeryContext';
 import { t } from '../../utils/translations';
 import { soundFx } from '../../utils/audio';
-import { PartyAddon } from '../../types';
+import { PartyAddon, CustomCakeOrder, OrderStatus } from '../../types';
 import { CameraCaptureModal } from '../common/CameraCaptureModal';
 import { PartyAccessoriesModal } from '../pos/PartyAccessoriesModal';
 import { CakeFlavorsModal } from '../pos/CakeFlavorsModal';
@@ -40,6 +40,7 @@ import { AiCakeAnalysisModal } from '../common/AiCakeAnalysisModal';
 interface NewCustomOrderModalProps {
   isOpen: boolean;
   onClose: () => void;
+  orderToEdit?: CustomCakeOrder | null;
   initialData?: {
     orderType?: 'CAKE' | 'BREAD';
     cakeName?: string;
@@ -74,11 +75,12 @@ const PACKAGING_OPTIONS = [
   'វេចខ្ចប់ប្រអប់ធំសម្រាប់កម្មវិធី (Bulk Catering Box)',
 ];
 
-export const NewCustomOrderModal: React.FC<NewCustomOrderModalProps> = ({ isOpen, onClose, initialData }) => {
+export const NewCustomOrderModal: React.FC<NewCustomOrderModalProps> = ({ isOpen, onClose, orderToEdit, initialData }) => {
   const {
     lang,
     products,
     addCustomOrder,
+    updateCustomOrder,
     flavors,
     unavailableFlavors = [],
     deletedFlavorIds = [],
@@ -99,6 +101,8 @@ export const NewCustomOrderModal: React.FC<NewCustomOrderModalProps> = ({ isOpen
 
   // Order Type: Cake vs Bread
   const [orderType, setOrderType] = useState<'CAKE' | 'BREAD'>('CAKE');
+  // Order Status (for edit mode)
+  const [orderStatus, setOrderStatus] = useState<OrderStatus>('PENDING');
 
   // Customer info
   const [customerName, setCustomerName] = useState('');
@@ -197,9 +201,69 @@ export const NewCustomOrderModal: React.FC<NewCustomOrderModalProps> = ({ isOpen
   });
   const [pickupTime, setPickupTime] = useState('08:00');
 
-  // Sync initialData if provided when opening modal
+  // Sync orderToEdit or initialData when opening modal
   React.useEffect(() => {
-    if (isOpen && initialData) {
+    if (!isOpen) return;
+
+    if (orderToEdit) {
+      setOrderType(orderToEdit.orderType || 'CAKE');
+      setOrderStatus(orderToEdit.status || 'PENDING');
+      setCustomerName(orderToEdit.customerName || '');
+      setPhone(orderToEdit.phone || '');
+      setPickupDate(orderToEdit.pickupDate || '');
+      setPickupTime(orderToEdit.pickupTime || '08:00');
+      setReferenceImage(orderToEdit.referenceImage || '');
+      setPaymentMethod(orderToEdit.paymentMethod || 'CASH_KHR');
+
+      if (orderToEdit.orderType === 'BREAD') {
+        if (orderToEdit.breadItems && orderToEdit.breadItems.length > 0) {
+          setBreadItems(
+            orderToEdit.breadItems.map((b, idx) => ({
+              id: `bread-item-${idx}`,
+              nameKh: b.nameKh,
+              quantity: b.quantity,
+              unit: b.unit,
+              pricePerUnitKhr: b.pricePerUnitKhr ?? roundKhr(b.pricePerUnitUsd * exchangeRate),
+            }))
+          );
+        }
+        setPackagingOption(orderToEdit.packagingOption || 'ទាំងមូល (Whole Loaf / មិនកាត់)');
+        setBreadBakingNotes(orderToEdit.themeNotes || '');
+        setBreadDepositKhr(
+          orderToEdit.depositKhr !== undefined
+            ? String(orderToEdit.depositKhr)
+            : String(roundKhr(orderToEdit.depositUsd * exchangeRate))
+        );
+      } else {
+        setCakeName(orderToEdit.cakeName || 'Birthday Special Cake');
+        setSize(orderToEdit.size || '1.5 kg');
+        if (orderToEdit.flavor) setFlavor(orderToEdit.flavor);
+        setFilling(orderToEdit.filling || 'Fresh Cream');
+        setInscription(orderToEdit.inscription || '');
+        setThemeNotes(orderToEdit.themeNotes || '');
+
+        const totKhr = orderToEdit.totalKhr ?? roundKhr(orderToEdit.totalUsd * exchangeRate);
+        const depKhr = orderToEdit.depositKhr ?? roundKhr(orderToEdit.depositUsd * exchangeRate);
+
+        // Prepopulate party addons if available
+        let existingAddonsKhr = 0;
+        const addonMap: Record<string, number> = {};
+        if (orderToEdit.deductedAddons && orderToEdit.deductedAddons.length > 0) {
+          orderToEdit.deductedAddons.forEach((da) => {
+            addonMap[da.addonId] = da.quantity;
+            const addon = partyAddons.find((a) => a.id === da.addonId);
+            if (addon) {
+              existingAddonsKhr += roundKhr(addon.priceKhr ?? (addon.priceUsd * exchangeRate)) * da.quantity;
+            }
+          });
+        }
+        setSelectedAddonQuantities(addonMap);
+        const basePrice = Math.max(0, totKhr - existingAddonsKhr);
+        setBaseCakePriceKhr(String(basePrice));
+        setDepositKhr(String(depKhr));
+      }
+    } else if (initialData) {
+      setOrderStatus('PENDING');
       if (initialData.orderType) setOrderType(initialData.orderType);
       if (initialData.cakeName) setCakeName(initialData.cakeName);
       if (initialData.size) setSize(initialData.size);
@@ -210,8 +274,28 @@ export const NewCustomOrderModal: React.FC<NewCustomOrderModalProps> = ({ isOpen
       if (initialData.referenceImage) setReferenceImage(initialData.referenceImage);
       if (initialData.totalKhr) setBaseCakePriceKhr(initialData.totalKhr.toString());
       if (initialData.depositKhr) setDepositKhr(initialData.depositKhr.toString());
+    } else {
+      // Fresh new order defaults
+      setOrderStatus('PENDING');
+      setCustomerName('');
+      setPhone('');
+      setCakeName('Birthday Special Cake');
+      setSize('1.5 kg');
+      setFilling('Fresh Cream');
+      setInscription('');
+      setThemeNotes('');
+      setBreadBakingNotes('');
+      setReferenceImage('');
+      setSelectedAddonQuantities({});
+      setBaseCakePriceKhr('100000');
+      setDepositKhr('60000');
+      setBreadDepositKhr('');
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      setPickupDate(tomorrow.toISOString().slice(0, 10));
+      setPickupTime('08:00');
     }
-  }, [isOpen, initialData]);
+  }, [isOpen, orderToEdit, initialData, exchangeRate]);
 
   // Party Add-on custom addition / edit state
   const [isPartyModalOpen, setIsPartyModalOpen] = useState(false);
@@ -519,6 +603,88 @@ export const NewCustomOrderModal: React.FC<NewCustomOrderModalProps> = ({ isOpen
       });
     } catch (err) {}
 
+    if (orderToEdit) {
+      if (orderType === 'BREAD') {
+        const activeItems = breadItems.filter((b) => b.quantity > 0);
+        const itemsSummary = activeItems.map((b) => `${b.nameKh} (${b.quantity} ${b.unit})`).join(' + ');
+        const totalQty = activeItems.reduce((sum, b) => sum + b.quantity, 0);
+
+        updateCustomOrder(orderToEdit.id, {
+          orderType: 'BREAD',
+          customerName: customerName.trim(),
+          phone: phone.trim(),
+          pickupDate,
+          pickupTime,
+          cakeName: itemsSummary || 'កុម្ម៉ង់នំបុ័ង & នំដុតចម្រុះ',
+          size: `${totalQty} ${activeItems[0]?.unit || 'ដុំ'}`,
+          flavor: 'នំបុ័ង & នំដុតស្រស់',
+          filling: packagingOption,
+          inscription: packagingOption,
+          themeNotes: breadBakingNotes.trim() || undefined,
+          referenceImage: referenceImage || undefined,
+          breadItems: activeItems.map((b) => ({
+            nameKh: b.nameKh,
+            quantity: b.quantity,
+            unit: b.unit,
+            pricePerUnitKhr: b.pricePerUnitKhr,
+            pricePerUnitUsd: Number((b.pricePerUnitKhr / exchangeRate).toFixed(2)),
+            totalKhr: b.quantity * b.pricePerUnitKhr,
+            totalUsd: Number(((b.quantity * b.pricePerUnitKhr) / exchangeRate).toFixed(2)),
+          })),
+          packagingOption,
+          totalKhr: finalTotalKhr,
+          totalUsd: finalTotalUsd,
+          depositKhr: finalDepositKhr,
+          depositUsd: finalDepositUsd,
+          paymentMethod,
+          status: orderStatus,
+        });
+      } else {
+        // Cake Order
+        const addonsSummary = Object.entries(selectedAddonQuantities)
+          .filter(([_, qty]) => qty > 0)
+          .map(([id, qty]) => {
+            const addon = partyAddons.find((a) => a.id === id);
+            return addon ? `${addon.nameKh}${qty > 1 ? ` (x${qty})` : ''}` : null;
+          })
+          .filter(Boolean)
+          .join(', ');
+
+        const combinedNotes = themeNotes
+          ? `${themeNotes} ${addonsSummary ? `[ឥវ៉ាន់បន្ថែម: ${addonsSummary}]` : ''}`
+          : addonsSummary
+          ? `[ឥវ៉ាន់បន្ថែម: ${addonsSummary}]`
+          : '';
+
+        updateCustomOrder(orderToEdit.id, {
+          orderType: 'CAKE',
+          customerName: customerName.trim(),
+          phone: phone.trim(),
+          cakeName: cakeName.trim(),
+          size,
+          flavor,
+          filling,
+          inscription: inscription.trim(),
+          themeNotes: combinedNotes,
+          referenceImage: referenceImage || undefined,
+          pickupDate,
+          pickupTime,
+          totalUsd: finalTotalUsd,
+          totalKhr: finalTotalKhr,
+          depositUsd: finalDepositUsd,
+          depositKhr: finalDepositKhr,
+          paymentMethod,
+          status: orderStatus,
+          deductedAddons: Object.entries(selectedAddonQuantities)
+            .filter(([_, qty]) => qty > 0)
+            .map(([addonId, quantity]) => ({ addonId, quantity })),
+        });
+      }
+
+      onClose();
+      return;
+    }
+
     if (orderType === 'BREAD') {
       const activeItems = breadItems.filter((b) => b.quantity > 0);
       const itemsSummary = activeItems.map((b) => `${b.nameKh} (${b.quantity} ${b.unit})`).join(' + ');
@@ -642,14 +808,20 @@ export const NewCustomOrderModal: React.FC<NewCustomOrderModalProps> = ({ isOpen
             </div>
             <div>
               <h3 className="font-black text-slate-800 text-base">
-                {orderType === 'CAKE'
-                  ? 'កត់ត្រាកុម្ម៉ង់នំខួបកំណើត / Cake ពិសេស'
-                  : 'កត់ត្រាកុម្ម៉ង់នំបុ័ង & នំដុតទុកជាមុន (Bread Pre-Order)'}
+                {orderToEdit
+                  ? (orderType === 'CAKE'
+                      ? `កែប្រែកុម្ម៉ង់នំខួបកំណើត #${orderToEdit.orderNumber}`
+                      : `កែប្រែកុម្ម៉ង់នំបុ័ង #${orderToEdit.orderNumber}`)
+                  : (orderType === 'CAKE'
+                      ? 'កត់ត្រាកុម្ម៉ង់នំខួបកំណើត / Cake ពិសេស'
+                      : 'កត់ត្រាកុម្ម៉ង់នំបុ័ង & នំដុតទុកជាមុន (Bread Pre-Order)')}
               </h3>
               <p className="text-xs text-slate-500">
-                {orderType === 'CAKE'
-                  ? 'ជ្រើសរើសទំហំ, រសជាតិ, អក្សរលើនំ & ឥវ៉ាន់ពិធី'
-                  : 'កុម្ម៉ង់នំបុ័ងបាហ្គេត, ក្រូសង់, សាំងវិច, នំដុតជាដុំ ឬចំនួនច្រើន'}
+                {orderToEdit
+                  ? 'កែសម្រួលព័ត៌មានដែលបានបញ្ចូលច្រឡំ ឬផ្លាស់ប្តូរ'
+                  : (orderType === 'CAKE'
+                      ? 'ជ្រើសរើសទំហំ, រសជាតិ, អក្សរលើនំ & ឥវ៉ាន់ពិធី'
+                      : 'កុម្ម៉ង់នំបុ័ងបាហ្គេត, ក្រូសង់, សាំងវិច, នំដុតជាដុំ ឬចំនួនច្រើន')}
               </p>
             </div>
           </div>
@@ -702,6 +874,42 @@ export const NewCustomOrderModal: React.FC<NewCustomOrderModalProps> = ({ isOpen
 
         {/* Form Content */}
         <form onSubmit={handleSubmit} className="p-5 sm:p-6 overflow-y-auto space-y-4 sm:space-y-5 flex-1">
+          {/* Edit Notice & Stage Switcher (ពេលបញ្ចូលច្រឡំ) */}
+          {orderToEdit && (
+            <div className="p-3 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200/80 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 shadow-2xs">
+              <div className="flex items-center gap-2">
+                <span className="w-8 h-8 rounded-xl bg-amber-500 text-white flex items-center justify-center font-black text-sm shrink-0 shadow-xs">
+                  ✏️
+                </span>
+                <div>
+                  <div className="text-xs font-black text-amber-900 flex items-center gap-1.5">
+                    <span>កំពុងកែប្រែទិន្នន័យកុម្ម៉ង់ (#{orderToEdit.orderNumber})</span>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-200/80 text-amber-900">
+                      កែពេលបញ្ចូលច្រឡំ
+                    </span>
+                  </div>
+                  <div className="text-[11px] text-amber-700 font-medium">
+                    អ្នកអាចកែប្រែឈ្មោះ លេខទូរស័ព្ទ រសជាតិ ទំហំ អក្សរលើនំ តម្លៃ ឬប្តូរដំណាក់កាល
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-1.5 shrink-0 bg-white/80 p-1 rounded-xl border border-amber-200">
+                <span className="text-[11px] font-black text-amber-800 pl-1">ដំណាក់កាល៖</span>
+                <select
+                  value={orderStatus}
+                  onChange={(e) => setOrderStatus(e.target.value as OrderStatus)}
+                  className="text-xs font-bold px-2 py-1 bg-white rounded-lg text-slate-800 focus:outline-none focus:ring-2 focus:ring-pink-500 cursor-pointer"
+                >
+                  <option value="PENDING">⏳ រង់ចាំទទួល (Pending)</option>
+                  <option value="BAKING">🔥 កំពុងដុតនំ (Baking)</option>
+                  <option value="DECORATING">🎨 កំពុងតែងនំ (Decorating)</option>
+                  <option value="READY">🎉 រួចរាល់ មកយកបាន (Ready)</option>
+                  <option value="DELIVERED">✔ បានប្រគល់ជូន (Delivered)</option>
+                </select>
+              </div>
+            </div>
+          )}
           {/* Customer Info */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <div>
@@ -1859,12 +2067,21 @@ export const NewCustomOrderModal: React.FC<NewCustomOrderModalProps> = ({ isOpen
                   : 'bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 hover:from-amber-600 hover:to-orange-600 shadow-amber-500/25'
               }`}
             >
-              {orderType === 'CAKE' ? <Cake className="w-4 h-4" /> : <ShoppingBag className="w-4 h-4" />}
-              <span>
-                {orderType === 'CAKE'
-                  ? `កត់ត្រាកុម្ម៉ង់នំខួបកំណើត (${finalTotalKhr.toLocaleString()} ៛)`
-                  : `កត់ត្រាកុម្ម៉ង់នំបុ័ង (${finalTotalKhr.toLocaleString()} ៛)`}
-              </span>
+              {orderToEdit ? (
+                <>
+                  <Check className="w-4 h-4" />
+                  <span>រក្សាទុកការកែប្រែ ({finalTotalKhr.toLocaleString()} ៛)</span>
+                </>
+              ) : (
+                <>
+                  {orderType === 'CAKE' ? <Cake className="w-4 h-4" /> : <ShoppingBag className="w-4 h-4" />}
+                  <span>
+                    {orderType === 'CAKE'
+                      ? `កត់ត្រាកុម្ម៉ង់នំខួបកំណើត (${finalTotalKhr.toLocaleString()} ៛)`
+                      : `កត់ត្រាកុម្ម៉ង់នំបុ័ង (${finalTotalKhr.toLocaleString()} ៛)`}
+                  </span>
+                </>
+              )}
             </button>
           </div>
         </form>

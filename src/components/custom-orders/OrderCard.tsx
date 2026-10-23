@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Clock, Phone, ChevronRight, CheckCircle2, Flame, Palette, Sparkles, CheckSquare, Wallet, Trash2, Printer, X, Globe, Eye } from 'lucide-react';
+import { Clock, Phone, ChevronRight, CheckCircle2, Flame, Palette, Sparkles, CheckSquare, Wallet, Trash2, Printer, X, Globe, Eye, Pencil } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { CustomCakeOrder, OrderStatus } from '../../types';
 import { useBakery } from '../../context/BakeryContext';
@@ -14,9 +14,10 @@ interface OrderCardProps {
   onDelete?: (order: CustomCakeOrder) => void;
   onViewReceipt?: (order: CustomCakeOrder) => void;
   onAddPartyAddon?: (order: CustomCakeOrder) => void;
+  onEdit?: (order: CustomCakeOrder) => void;
 }
 
-export const OrderCard: React.FC<OrderCardProps> = ({ order, onAdvanceStatus, onAddDeposit, onDelete, onViewReceipt, onAddPartyAddon }) => {
+export const OrderCard: React.FC<OrderCardProps> = ({ order, onAdvanceStatus, onAddDeposit, onDelete, onViewReceipt, onAddPartyAddon, onEdit }) => {
   const { exchangeRate } = useBakery();
   const [previewImage, setPreviewImage] = useState<{ url: string; title: string } | null>(null);
 
@@ -136,6 +137,22 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, onAdvanceStatus, on
             <Phone className="w-3 h-3 text-pink-500" />
             <span>{order.phone}</span>
           </a>
+
+          {onEdit && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                soundFx.playPop();
+                onEdit(order);
+              }}
+              className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-600 hover:text-amber-800 flex items-center justify-center transition-all active:scale-90 cursor-pointer border border-amber-200/80 shrink-0 shadow-2xs"
+              title="កែប្រែទិន្នន័យនំកុម្ម៉ង់នេះ (ពេលបញ្ចូលច្រឡំ)"
+            >
+              <Pencil className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-600" />
+            </button>
+          )}
 
           {onDelete && (
             <button
@@ -413,26 +430,44 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, onAdvanceStatus, on
         </div>
       )}
 
-      {/* Individual Order Card Delete Footer */}
-      {onDelete && (
-        <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400">
-          <span className="font-mono text-[10px] text-slate-400">#{order.orderNumber}</span>
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              e.preventDefault();
-              soundFx.playPop();
-              onDelete(order);
-            }}
-            className="flex items-center gap-1 text-rose-500 hover:text-rose-700 hover:bg-rose-50 px-2.5 py-1 rounded-xl transition-all font-bold cursor-pointer active:scale-95 border border-rose-100/70 shadow-2xs"
-            title="លុបការកុម្ម៉ង់នេះ"
-          >
-            <Trash2 className="w-3 h-3 text-rose-500" />
-            <span>លុបការកុម្ម៉ង់</span>
-          </button>
+      {/* Individual Order Card Action Footer */}
+      <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400">
+        <span className="font-mono text-[10px] text-slate-400">#{order.orderNumber}</span>
+        <div className="flex items-center gap-1.5">
+          {onEdit && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                soundFx.playPop();
+                onEdit(order);
+              }}
+              className="flex items-center gap-1 text-amber-700 hover:text-amber-800 bg-amber-50 hover:bg-amber-100 px-2.5 py-1 rounded-xl transition-all font-bold cursor-pointer active:scale-95 border border-amber-200/80 shadow-2xs"
+              title="កែប្រែទិន្នន័យ (ពេលបញ្ចូលច្រឡំ)"
+            >
+              <Pencil className="w-3 h-3 text-amber-600" />
+              <span>កែប្រែ</span>
+            </button>
+          )}
+          {onDelete && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                soundFx.playPop();
+                onDelete(order);
+              }}
+              className="flex items-center gap-1 text-rose-500 hover:text-rose-700 hover:bg-rose-50 px-2.5 py-1 rounded-xl transition-all font-bold cursor-pointer active:scale-95 border border-rose-100/70 shadow-2xs"
+              title="លុបការកុម្ម៉ង់នេះ"
+            >
+              <Trash2 className="w-3 h-3 text-rose-500" />
+              <span>លុប</span>
+            </button>
+          )}
         </div>
-      )}
+      </div>
 
       {/* Image Preview Modal (Mobile Optimized) */}
       {previewImage && (
