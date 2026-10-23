@@ -219,7 +219,7 @@ ipcMain.on('open-external-url', (event, url) => {
 // ==========================================
 ipcMain.on('start-desktop-silent-update', async (event, downloadUrl) => {
   const targetUrl = downloadUrl || 'https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/latest/download/SweetBakery-POS-Setup.exe';
-  const tempPath = path.join(app.getPath('temp'), 'SweetBakery-POS-Setup-Update.exe');
+  const tempPath = path.join(app.getPath('temp'), `SweetBakery-POS-Setup-${Date.now()}.exe`);
 
   console.log('🚀 Starting 1-Click Silent Desktop Update from:', targetUrl);
 
@@ -230,12 +230,9 @@ ipcMain.on('start-desktop-silent-update', async (event, downloadUrl) => {
 
       const curl = spawn('curl.exe', [
         '-L',
-        '-C', '-',
         '--tcp-nodelay',
         '--keepalive-time', '10',
         '--connect-timeout', '20',
-        '--speed-limit', '1024',
-        '--speed-time', '15',
         '--max-time', '600',
         '--retry', '5',
         '--retry-delay', '2',
@@ -352,15 +349,16 @@ ipcMain.on('start-desktop-silent-update', async (event, downloadUrl) => {
       mainWindow.webContents.send('desktop-update-complete');
     }
 
-    // Launch Inno Setup directly in silent mode (/VERYSILENT /SUPPRESSMSGBOXES /FORCECLOSEAPPLICATIONS)
-    spawn(tempPath, ['/VERYSILENT', '/SUPPRESSMSGBOXES', '/FORCECLOSEAPPLICATIONS'], {
+    // Launch Inno Setup cleanly after 1 second delay so current Electron app can quit without locking EXE
+    spawn('cmd.exe', ['/c', 'timeout /t 1 /nobreak >nul & start "" "' + tempPath + '" /VERYSILENT /FORCECLOSEAPPLICATIONS'], {
       detached: true,
+      shell: true,
       stdio: 'ignore'
     }).unref();
 
     setTimeout(() => {
-      app.quit();
-    }, 800);
+      app.exit(0);
+    }, 400);
 
   } catch (err) {
     console.error('All desktop update download attempts failed:', err);
