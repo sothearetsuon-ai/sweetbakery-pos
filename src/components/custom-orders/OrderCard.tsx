@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Clock, Phone, ChevronRight, CheckCircle2, Flame, Palette, Sparkles, CheckSquare, Wallet, Trash2, Printer, X, Globe, Eye, Pencil } from 'lucide-react';
+import { Clock, Phone, ChevronRight, CheckCircle2, Flame, Palette, Sparkles, CheckSquare, Wallet, Trash2, Printer, X, Globe, Eye, Pencil, User } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { CustomCakeOrder, OrderStatus } from '../../types';
 import { useBakery } from '../../context/BakeryContext';
@@ -109,35 +109,24 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, onAdvanceStatus, on
 
   return (
     <div className={`bg-white rounded-3xl border ${isBreadOrder ? 'border-amber-200/90 hover:border-amber-300 hover:shadow-amber-500/10' : 'border-rose-100/90 hover:border-pink-300 hover:shadow-pink-500/10'} p-4 shadow-sm hover:shadow-xl transition-all duration-300 space-y-3 group`}>
-      {/* Top Header */}
-      <div className="flex items-start justify-between gap-2 border-b border-rose-50 pb-2.5">
-        <div>
-          <div className="flex items-center gap-1.5 flex-wrap">
-            <span className={`text-[10px] font-black tracking-wider ${isBreadOrder ? 'text-amber-700 bg-amber-50 border border-amber-200' : 'text-pink-600 bg-pink-50'} px-2.5 py-0.5 rounded-full`}>
-              {order.orderNumber}
+      {/* Top Header: Order Number, Category & Actions */}
+      <div className="flex items-center justify-between gap-2 border-b border-rose-50/80 pb-2">
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <span className={`text-[10px] sm:text-[11px] font-black tracking-wider ${isBreadOrder ? 'text-amber-800 bg-amber-100/80 border border-amber-200' : 'text-pink-700 bg-pink-100/70 border border-pink-200/70'} px-2.5 py-0.5 rounded-full font-mono`}>
+            {order.orderNumber}
+          </span>
+          <span className={`text-[10px] font-black px-2 py-0.5 rounded-md ${isBreadOrder ? 'bg-amber-500 text-white' : 'bg-pink-500 text-white'}`}>
+            {isBreadOrder ? '🥖 នំបុ័ង & នំដុត' : '🎂 នំខួបកំណើត'}
+          </span>
+          {order.orderSource === 'CUSTOMER_ONLINE' && (
+            <span className="text-[10px] font-black px-2 py-0.5 rounded-md bg-gradient-to-r from-blue-600 to-indigo-600 text-white flex items-center gap-1 shadow-2xs">
+              <Globe className="w-2.5 h-2.5" />
+              <span>កុម្ម៉ង់តាម Link</span>
             </span>
-            <span className={`text-[10px] font-black px-2 py-0.5 rounded-md ${isBreadOrder ? 'bg-amber-500 text-white' : 'bg-pink-100 text-pink-700'}`}>
-              {isBreadOrder ? '🥖 នំបុ័ង & នំដុត' : '🎂 នំខួបកំណើត'}
-            </span>
-            {order.orderSource === 'CUSTOMER_ONLINE' && (
-              <span className="text-[10px] font-black px-2 py-0.5 rounded-md bg-gradient-to-r from-blue-600 to-indigo-600 text-white flex items-center gap-1 shadow-2xs">
-                <Globe className="w-2.5 h-2.5" />
-                <span>កុម្ម៉ង់តាម Link</span>
-              </span>
-            )}
-          </div>
-          <h4 className="font-bold text-slate-800 text-sm mt-1">{order.customerName}</h4>
+          )}
         </div>
 
-        <div className="flex items-center gap-1.5">
-          <a
-            href={`tel:${order.phone}`}
-            className="flex items-center gap-1 text-[11px] font-bold text-slate-600 hover:text-pink-600 bg-slate-50 hover:bg-pink-50 px-2.5 py-1 rounded-xl border border-slate-100 transition-colors"
-          >
-            <Phone className="w-3 h-3 text-pink-500" />
-            <span>{order.phone}</span>
-          </a>
-
+        <div className="flex items-center gap-1">
           {onEdit && (
             <button
               type="button"
@@ -147,7 +136,7 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, onAdvanceStatus, on
                 soundFx.playPop();
                 onEdit(order);
               }}
-              className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-600 hover:text-amber-800 flex items-center justify-center transition-all active:scale-90 cursor-pointer border border-amber-200/80 shrink-0 shadow-2xs"
+              className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-700 flex items-center justify-center transition-all active:scale-90 cursor-pointer border border-amber-200/80 shrink-0 shadow-2xs"
               title="កែប្រែទិន្នន័យនំកុម្ម៉ង់នេះ (ពេលបញ្ចូលច្រឡំ)"
             >
               <Pencil className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-600" />
@@ -168,6 +157,51 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, onAdvanceStatus, on
             >
               <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </button>
+          )}
+        </div>
+      </div>
+
+      {/* Prominent Customer Name & Phone Banner */}
+      <div className={`p-2.5 sm:p-3 rounded-2xl border transition-all ${
+        isBreadOrder
+          ? 'bg-gradient-to-r from-amber-50/90 via-orange-50/40 to-amber-50/20 border-amber-200/90 shadow-2xs'
+          : 'bg-gradient-to-r from-pink-50/90 via-rose-50/40 to-pink-50/20 border-pink-200/90 shadow-2xs'
+      }`}>
+        <div className="flex items-center justify-between gap-2 flex-wrap sm:flex-nowrap">
+          <div className="flex items-center gap-2.5 min-w-0 flex-1">
+            <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center shrink-0 shadow-xs border ${
+              isBreadOrder
+                ? 'bg-gradient-to-br from-amber-500 to-orange-500 text-white border-amber-300'
+                : 'bg-gradient-to-br from-pink-500 to-rose-600 text-white border-pink-300'
+            }`}>
+              <User className="w-5 h-5 stroke-[2.5]" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block leading-tight">
+                ឈ្មោះភ្ញៀវកុម្ម៉ង់ទុក
+              </span>
+              <h4
+                className="font-black text-slate-900 text-base sm:text-lg tracking-tight leading-snug truncate mt-0.5"
+                title={order.customerName}
+              >
+                {order.customerName}
+              </h4>
+            </div>
+          </div>
+
+          {order.phone && (
+            <a
+              href={`tel:${order.phone}`}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-black shrink-0 transition-all active:scale-95 shadow-2xs cursor-pointer ${
+                isBreadOrder
+                  ? 'bg-white hover:bg-amber-100/70 text-amber-900 border-amber-200/90 hover:border-amber-300'
+                  : 'bg-white hover:bg-pink-100/70 text-pink-700 border-pink-200/90 hover:border-pink-300'
+              }`}
+              title="ចុចដើម្បីខលទៅភ្ញៀវផ្ទាល់"
+            >
+              <Phone className={`w-3.5 h-3.5 ${isBreadOrder ? 'text-amber-600' : 'text-pink-600'}`} />
+              <span>{order.phone}</span>
+            </a>
           )}
         </div>
       </div>

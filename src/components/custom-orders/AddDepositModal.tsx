@@ -140,9 +140,14 @@ export const AddDepositModal: React.FC<AddDepositModalProps> = ({
                   <Cake className="w-4 h-4" />
                 </div>
                 <div>
-                  <div className="font-black text-slate-800">{order.customerName}</div>
-                  <div className="text-[11px] text-slate-500 font-medium flex items-center gap-1">
-                    <Phone className="w-3 h-3 text-slate-400" />
+                  <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block leading-tight">
+                    ឈ្មោះភ្ញៀវកុម្ម៉ង់ទុក
+                  </span>
+                  <div className="font-black text-slate-900 text-sm sm:text-base leading-snug mt-0.5">
+                    {order.customerName}
+                  </div>
+                  <div className="text-[11px] text-slate-500 font-semibold flex items-center gap-1 mt-0.5">
+                    <Phone className="w-3 h-3 text-pink-500" />
                     <span>{order.phone}</span>
                   </div>
                 </div>

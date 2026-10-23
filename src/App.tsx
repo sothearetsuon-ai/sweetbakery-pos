@@ -194,10 +194,11 @@ export const App: React.FC = () => {
   const [availableUpdate, setAvailableUpdate] = useState<AppUpdateInfo | null>(() => ({
     hasUpdate: false,
     currentVersion: getNativeAppVersion(),
-    latestVersion: '1.8.1',
+    latestVersion: '1.8.2',
     releaseDate: '2026-10-23',
     releaseNotes: [
-      '✏️ មុខងារថ្មីចុងក្រោយ៖ ប៊ូតុងកែប្រែទិន្នន័យនំកុម្ម៉ង់ (Edit Custom & Pre-order Cake) អាចកែសម្រួលព័ត៌មានអតិថិជន ឈ្មោះ លេខទូរស័ព្ទ ទំហំនំ រសជាតិ ក្រែម ពាក្យជូនពរ និងតម្លៃពេលបញ្ចូលច្រឡំ។',
+      '✨ មុខងារថ្មី៖ កែសម្រួលឈ្មោះភ្ញៀវកុម្ម៉ង់ទុកឱ្យធំដិតច្បាស់ (Prominent Customer Name) បង្ហាញក្នុងប្រអប់ដាច់ដោយឡែកជាមួយ Icon រូបមនុស្ស មិនបាំងជើងអក្សរ និងមានប៊ូតុងខលលើ OrderCard & KDS។',
+      '✏️ ប៊ូតុងកែប្រែទិន្នន័យនំកុម្ម៉ង់ (Edit Custom & Pre-order Cake) អាចកែសម្រួលព័ត៌មានអតិថិជន ឈ្មោះ លេខទូរស័ព្ទ ទំហំនំ រសជាតិ ក្រែម ពាក្យជូនពរ និងតម្លៃពេលបញ្ចូលច្រឡំ។',
       '🎂 ស្ទូឌីយោរចនានំ 3D អន្តរកម្ម (3D Interactive Custom Cake Studio) WebGL Three.js រចនានំខួបកំណើត 360 ដឺក្រេ គណនាតម្លៃ Real-time។',
       '👨‍🍳 មេចុងភៅឆ្លាតវៃ AI (AI Bakery Chef R&D & Cost Optimizer) បង្កើតរូបមន្តនំកម្រិតផ្កាយ ៥ និងគណនាថ្លៃដើមផលិតកម្ម។',
       '🎙️ បញ្ជាគិតលុយដោយសំឡេងខ្មែរពេញលេញ (Khmer Conversational Voice POS Co-Pilot)។',
@@ -215,6 +216,14 @@ export const App: React.FC = () => {
       const info = await checkForAppUpdates();
       if (info) {
         setAvailableUpdate(info);
+        if (info.hasUpdate) {
+          const dismissedVer = sessionStorage.getItem('sweetbakery_dismissed_update');
+          if (dismissedVer !== info.latestVersion) {
+            setIsUpdateModalOpen(true);
+          }
+        } else if (notifyIfNoUpdate) {
+          setIsUpdateModalOpen(true);
+        }
       }
       return info;
     } catch {

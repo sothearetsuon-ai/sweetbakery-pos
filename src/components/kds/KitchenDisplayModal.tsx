@@ -387,12 +387,16 @@ const KdsOrderCard: React.FC<KdsOrderCardProps> = ({
       )}
 
       {/* Customer Info & Pickup */}
-      <div className="pt-1 flex items-center justify-between text-[10px] text-slate-400 border-t border-slate-700/60">
-        <div>
-          <span className="text-white font-bold">{order.customerName}</span> ({order.phone})
+      <div className="pt-2 flex items-center justify-between gap-2 text-xs border-t border-slate-700/60">
+        <div className="min-w-0 flex-1">
+          <span className="text-[10px] text-slate-400 block">👤 ឈ្មោះភ្ញៀវ៖</span>
+          <div className="text-white font-black text-sm truncate">
+            {order.customerName} <span className="text-slate-400 text-xs font-normal">({order.phone})</span>
+          </div>
         </div>
-        <div>
-          ម៉ោង <span className="text-amber-400 font-black">{order.pickupTime}</span>
+        <div className="text-right shrink-0">
+          <span className="text-[10px] text-slate-400 block">ម៉ោងមកយក</span>
+          <span className="text-amber-400 font-black text-xs">ម៉ោង {order.pickupTime}</span>
         </div>
       </div>
 
