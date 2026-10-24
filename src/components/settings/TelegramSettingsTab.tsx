@@ -761,6 +761,24 @@ export const TelegramSettingsTab: React.FC = () => {
                     </div>
                   </label>
 
+                  {/* 24/7 Cloud Automated Schedule Notice */}
+                  <div className="p-3 bg-gradient-to-r from-sky-50 to-indigo-50/80 border border-sky-200/90 rounded-2xl flex items-start gap-2.5 shadow-2xs">
+                    <span className="text-base shrink-0 mt-0.5">☁️</span>
+                    <div className="space-y-0.5">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-black text-slate-800 text-xs">
+                          ប្រព័ន្ធស្វ័យប្រវត្តិ 24/7 Cloud Scheduled Report
+                        </span>
+                        <span className="px-1.5 py-0.5 bg-sky-200/80 text-sky-900 rounded-md text-[9px] font-black uppercase">
+                          Cloud 24/7 Active
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-600 leading-relaxed">
+                        ទោះបីជាបិទកុំព្យូទ័រ បិទទូរស័ព្ទ ឬមិនបានបើក App ក៏ដោយ ប្រព័ន្ធ <b>Cloud Automation</b> នឹងទាញទិន្នន័យពី Cloud Database រួចផ្ញើរបាយការណ៍បូកសរុបលក់ និងចំណាយប្រចាំថ្ងៃចូល Telegram ជូនលោកអ្នកនៅម៉ោង {config.dailyReportTime || '21:00'} យប់ជារៀងរាល់ថ្ងៃដោយស្វ័យប្រវត្តិ ១០០%។
+                      </p>
+                    </div>
+                  </div>
+
                   {/* AI Insight Checkbox */}
                   <label className="flex items-center gap-2 text-slate-700 cursor-pointer">
                     <input

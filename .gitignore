@@ -7,8 +7,8 @@ local_bakery_songs.json
 .env
 .DS_Store
 recovered_*.json
-
-scripts/
+/scripts/
+!.github/scripts/
 windows-app/SweetBakery-POS-win32-x64/
 windows-app-pkg/
 android-app/app/build/

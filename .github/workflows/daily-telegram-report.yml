@@ -1,0 +1,48 @@
+name: 24/7 Cloud Automated Daily Telegram Report
+
+on:
+  schedule:
+    # Runs automatically every evening at 20:00, 21:00, and 22:00 Cambodia Time (ICT, UTC+7)
+    # 13:00, 14:00, 15:00 UTC
+    - cron: '0 13,14,15 * * *'
+  workflow_dispatch:
+    inputs:
+      target_date:
+        description: 'Target Date (YYYY-MM-DD, e.g. 2026-10-24, or leave empty for today)'
+        required: false
+        default: ''
+      force_send:
+        description: 'Force send report (bypass schedule and deduplication checks)'
+        type: boolean
+        required: false
+        default: true
+
+concurrency:
+  group: 'daily-telegram-report'
+  cancel-in-progress: false
+
+jobs:
+  send-report:
+    name: Run Cloud Daily Report Bot
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Execute Cloud Report Bot
+        run: |
+          EXTRA_FLAGS=""
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            if [ "${{ inputs.force_send }}" = "true" ]; then
+              EXTRA_FLAGS="$EXTRA_FLAGS --force"
+            fi
+            if [ -n "${{ inputs.target_date }}" ]; then
+              EXTRA_FLAGS="$EXTRA_FLAGS --date=${{ inputs.target_date }}"
+            fi
+          fi
+          node .github/scripts/cloud_daily_report.cjs $EXTRA_FLAGS

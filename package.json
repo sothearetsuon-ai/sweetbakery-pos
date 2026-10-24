@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "vite --host",
     "build": "tsc && vite build",
-    "preview": "vite preview --host"
+    "preview": "vite preview --host",
+    "report:daily": "node .github/scripts/cloud_daily_report.cjs",
+    "report:daily:dry-run": "node .github/scripts/cloud_daily_report.cjs --dry-run"
   },
   "dependencies": {
     "@types/three": "^0.186.0",
