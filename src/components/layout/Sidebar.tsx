@@ -789,6 +789,29 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </span>
         </button>
 
+        {/* Desktop App Exit Button (closes window & auto-sends Telegram summary report) */}
+        {typeof window !== 'undefined' && (window as any).SweetBakeryDesktop?.exitApp && (
+          <button
+            type="button"
+            onClick={() => {
+              if (window.confirm('តើអ្នកពិតជាចង់បិទកម្មវិធី SweetBakery POS និងផ្ញើរបាយការណ៍បូកសរុបការលក់ចូល Telegram មែនទេ?')) {
+                onCloseMobile?.();
+                (window as any).SweetBakeryDesktop.exitApp();
+              }
+            }}
+            className="w-full flex items-center justify-between px-3.5 py-2 rounded-2xl font-bold text-xs text-slate-700 hover:bg-slate-100 transition-all border border-slate-200/80 shadow-2xs cursor-pointer group"
+            title="បិទកម្មវិធី និងផ្ញើរបាយការណ៍សរុបចូល Telegram"
+          >
+            <div className="flex items-center gap-3">
+              <span className="text-sm">❌</span>
+              <span>បិទកម្មវិធី (Exit App)</span>
+            </div>
+            <span className="text-[10px] text-sky-700 font-bold bg-sky-100 px-2 py-0.5 rounded-full border border-sky-200">
+              Close
+            </span>
+          </button>
+        )}
+
         <div className="text-center text-[10px] text-slate-400 font-medium flex flex-col items-center gap-0.5 pt-1.5 border-t border-[#F2DBD3]/60">
           <span className="font-mono">SweetBakery POS v{CURRENT_APP_VERSION}</span>
           <span className="text-slate-600 font-bold font-battambang flex items-center gap-1">

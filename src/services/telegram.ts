@@ -14,6 +14,7 @@ export interface TelegramConfig {
   notifyShiftClose: boolean;
   notifyDailyReport?: boolean;
   dailyReportTime?: string; // e.g. "21:00" (9:00 PM) or "09:00" (9:00 AM)
+  notifyReportOnAppClose?: boolean; // ផ្ញើរបាយការណ៍សរុបដោយស្វ័យប្រវត្តិពេលបិទ App (Default: true)
   includeAiInsight?: boolean;
   adminChatId?: string; // e.g. "8970210109" (Admin private chat id)
   dailyReportRecipient?: 'ADMIN_ONLY' | 'GROUP_ONLY' | 'BOTH'; // default: 'ADMIN_ONLY'
@@ -36,6 +37,7 @@ export const DEFAULT_TELEGRAM_CONFIG: TelegramConfig = {
   notifyExpenseDue: true,
   notifyShiftClose: true,
   notifyDailyReport: true,
+  notifyReportOnAppClose: true, // ផ្ញើរបាយការណ៍បូកសរុបដោយស្វ័យប្រវត្តិពេលបិទ App
   dailyReportTime: '21:00', // 9:00 យប់ (ម៉ោងបិទហាងលក់សរុបប្រចាំថ្ងៃ)
   includeAiInsight: true,
   notifyCustomerChat: true,
@@ -130,6 +132,7 @@ export const areTelegramConfigsEqual = (
     Boolean(a.notifyExpenseDue) === Boolean(b.notifyExpenseDue) &&
     Boolean(a.notifyShiftClose) === Boolean(b.notifyShiftClose) &&
     Boolean(a.notifyDailyReport) === Boolean(b.notifyDailyReport) &&
+    Boolean(a.notifyReportOnAppClose ?? true) === Boolean(b.notifyReportOnAppClose ?? true) &&
     (a.dailyReportTime || '21:00') === (b.dailyReportTime || '21:00') &&
     (a.dailyReportRecipient || 'ADMIN_ONLY') === (b.dailyReportRecipient || 'ADMIN_ONLY') &&
     Boolean(a.includeAiInsight) === Boolean(b.includeAiInsight) &&
@@ -359,6 +362,7 @@ export const sendTelegramMessage = async (
     try {
       const response = await fetch(`https://api.telegram.org/bot${cleanToken}/sendMessage`, {
         method: 'POST',
+        keepalive: true,
         headers: {
           'Content-Type': 'application/json',
         },
@@ -379,6 +383,7 @@ export const sendTelegramMessage = async (
             const plainText = text.replace(/<[^>]*>/g, '');
             const retryRes = await fetch(`https://api.telegram.org/bot${cleanToken}/sendMessage`, {
               method: 'POST',
+              keepalive: true,
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
                 chat_id: cid,
@@ -1149,6 +1154,7 @@ export interface DailyReportParams {
   targetDate?: string; // YYYY-MM-DD
   dateStr?: string; // alias for targetDate
   reportTimeLabel?: string;
+  reportTrigger?: 'SCHEDULED' | 'APP_CLOSE' | 'SHIFT_CLOSE' | 'MANUAL';
 }
 
 /**
@@ -1164,6 +1170,7 @@ export const generateDailyMonthlySummaryReportText = (params: DailyReportParams)
     targetDate,
     dateStr,
     reportTimeLabel,
+    reportTrigger,
   } = params;
 
   const now = new Date();
@@ -1295,9 +1302,18 @@ export const generateDailyMonthlySummaryReportText = (params: DailyReportParams)
     ? topItems.map(([name, qty], idx) => `   ${idx + 1}. <b>${escapeHtml(name)}</b> × ${qty}`).join('\n')
     : '   <i>(មិនទាន់មានទំនិញលក់ចេញ)</i>';
 
+  const isAppClose = reportTrigger === 'APP_CLOSE';
+  const headerTitle = isAppClose
+    ? `📊 <b>[${storeTitle}] — របាយការណ៍បូកសរុបការលក់ពេលបិទ App</b>\n`
+    : `📊 <b>[${storeTitle}] — របាយការណ៍បូកសរុបការលក់ & ចំណាយ</b>\n`;
+  const statusNote = isAppClose
+    ? `🚪 <b>ស្ថានភាព៖</b> បិទបញ្ចប់ការងារ និងចាកចេញពីកម្មវិធី App (App Closed)\n`
+    : '';
+
   return (
-    `📊 <b>[${storeTitle}] — របាយការណ៍បូកសរុបការលក់ & ចំណាយ</b>\n` +
+    `${headerTitle}` +
     `━━━━━━━━━━━━━━━━━━\n` +
+    (statusNote ? `${statusNote}` : '') +
     `📅 <b>កាលបរិច្ឆេទ៖</b> ថ្ងៃ${dayOfWeekKh} ទី ${dateFormatted}\n` +
     `⏰ <b>ម៉ោងចេញរបាយការណ៍៖</b> ${timeDisplay}\n\n` +
     `💵 <b>១. សង្ខេបការលក់ថ្ងៃនេះ (Daily Sales)៖</b>\n` +
@@ -1324,7 +1340,7 @@ export const generateDailyMonthlySummaryReportText = (params: DailyReportParams)
     `💡 <b>៦. ការវិភាគដោយជំនួយការ AI៖</b>\n` +
     `<i>${aiInsightText}</i>\n` +
     `━━━━━━━━━━━━━━━━━━\n` +
-    `✨ <i>របាយការណ៍ស្វ័យប្រវត្តិចេញដោយ SweetBakery POS</i>`
+    `✨ <i>${isAppClose ? 'របាយការណ៍ស្វ័យប្រវត្តិចេញដោយ SweetBakery POS ពេលបិទ App' : 'របាយការណ៍ស្វ័យប្រវត្តិចេញដោយ SweetBakery POS'}</i>`
   );
 };
 
@@ -1470,5 +1486,60 @@ export const sendTelegramDailyReport = async (
     inFlightDailyReportEvents.delete(eventKey);
   }
 };
+
+/**
+ * Automatically triggers daily summary report when closing the App (Windows App, Browser close, or exit)
+ */
+export const triggerAppCloseDailyReport = async (
+  params: DailyReportParams
+): Promise<{ success: boolean; message: string; skipped?: boolean }> => {
+  if (isDemoModeActive()) {
+    return { success: false, message: 'Telegram ត្រូវបានបិទក្នុង Demo Mode', skipped: true };
+  }
+
+  const config = await getStoredTelegramConfigAsync();
+  if (!config.enabled || config.notifyReportOnAppClose === false || !config.botToken) {
+    return { success: false, message: 'មុខងារផ្ញើរបាយការណ៍ពេលបិទ App ត្រូវបានបិទ ឬគ្មាន Bot Token', skipped: true };
+  }
+
+  const now = new Date();
+  const todayStr = params.targetDate || params.dateStr || now.toISOString().slice(0, 10);
+  const todaySales = (params.sales || []).filter((s) => (s.createdAt || '').slice(0, 10) === todayStr);
+  const todayExpenses = (params.expenses || []).filter((e) => (e.date || e.createdAt || '').slice(0, 10) === todayStr);
+  const todayOrders = (params.customOrders || []).filter((o) => (o.createdAt || o.pickupDate || '').slice(0, 10) === todayStr);
+
+  // Build a snapshot string of today's totals so we never send identical duplicate reports within the same session
+  const totalSalesUsd = todaySales.reduce((acc, s) => acc + (s.totalUsd || 0), 0);
+  const totalExpUsd = todayExpenses.reduce((acc, e) => acc + (e.amountUsd || 0), 0);
+  const snapshotKey = `${todayStr}_s${todaySales.length}_$${totalSalesUsd.toFixed(2)}_e${todayExpenses.length}_$${totalExpUsd.toFixed(2)}_o${todayOrders.length}`;
+
+  const lastSentSnapshot = localStorage.getItem('bakery_last_app_close_report_snapshot');
+  if (lastSentSnapshot === snapshotKey) {
+    console.log('[Telegram Close Report] Identical report already sent recently for current snapshot, skipping.');
+    return { success: true, message: 'របាយការណ៍ដូចគ្នានេះត្រូវបានផ្ញើរួចហើយ', skipped: true };
+  }
+
+  try {
+    const res = await sendTelegramDailyReport(
+      {
+        ...params,
+        targetDate: todayStr,
+        reportTrigger: 'APP_CLOSE',
+        reportTimeLabel: `${now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })} (ពេលបិទ App)`,
+      },
+      true, // isManual = true to bypass time schedule lock
+      config
+    );
+
+    if (res.success) {
+      localStorage.setItem('bakery_last_app_close_report_snapshot', snapshotKey);
+    }
+    return res;
+  } catch (err: any) {
+    console.error('[Telegram Close Report] Error sending report on app close:', err);
+    return { success: false, message: err?.message || 'Error sending report' };
+  }
+};
+
 
 

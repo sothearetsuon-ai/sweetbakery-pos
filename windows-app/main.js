@@ -82,6 +82,49 @@ function createWindow() {
   // Create clean application menu in Khmer
   setupAppMenu();
 
+  let isAppQuitting = false;
+  let closeSafetyTimer = null;
+
+  mainWindow.on('close', (e) => {
+    if (isAppQuitting) return; // Allow normal close
+
+    e.preventDefault(); // Pause closing to allow Telegram daily report to finish
+
+    try {
+      if (mainWindow && !mainWindow.isDestroyed() && mainWindow.webContents) {
+        mainWindow.webContents.send('app-before-close');
+      }
+    } catch (err) {
+      console.warn('Failed to send app-before-close to renderer:', err);
+    }
+
+    // Safety timeout: If renderer doesn't reply within 3.5s, force close so app never hangs
+    closeSafetyTimer = setTimeout(() => {
+      isAppQuitting = true;
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.destroy();
+      }
+      app.quit();
+    }, 3500);
+  });
+
+  ipcMain.on('app-close-ready', () => {
+    if (closeSafetyTimer) clearTimeout(closeSafetyTimer);
+    isAppQuitting = true;
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.destroy();
+    }
+    app.quit();
+  });
+
+  ipcMain.on('app-exit-request', () => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.close();
+    } else {
+      app.quit();
+    }
+  });
+
   mainWindow.on('closed', () => {
     mainWindow = null;
   });
@@ -118,7 +161,13 @@ function setupAppMenu() {
         {
           label: 'ចាកចេញ (Exit)',
           accelerator: 'CmdOrCtrl+Q',
-          click: () => app.quit()
+          click: () => {
+            if (mainWindow && !mainWindow.isDestroyed()) {
+              mainWindow.close();
+            } else {
+              app.quit();
+            }
+          }
         }
       ]
     },
