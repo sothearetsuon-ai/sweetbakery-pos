@@ -31,6 +31,7 @@ import { StaffPermissions, ChatChannel } from '../../types';
 import { AppTheme } from '../../utils/themeManager';
 import { getStaffUnreadChatCount, subscribeToCustomerSessions } from '../../services/liveChatService';
 import { CURRENT_APP_VERSION } from '../../services/appUpdateService';
+import { triggerAppCloseDailyReport } from '../../services/telegram';
 
 export type TabType =
   | 'pos'
@@ -86,7 +87,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onOpenStoreAuthModal,
   onOpenChatModal,
 }) => {
-  const { lang, customOrders, lowStockCount, expenses, sales, currentStaff, hasPermission, staffMembers, storeInfo, logoutAndLock, isDemoMode, reserveFund } = useBakery();
+  const { lang, customOrders, lowStockCount, expenses, sales, currentStaff, hasPermission, staffMembers, storeInfo, logoutAndLock, isDemoMode, reserveFund, exchangeRate } = useBakery();
   const text = t[lang];
 
   // Unread live chat count
@@ -793,9 +794,20 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {typeof window !== 'undefined' && (window as any).SweetBakeryDesktop?.exitApp && (
           <button
             type="button"
-            onClick={() => {
+            onClick={async () => {
               if (window.confirm('តើអ្នកពិតជាចង់បិទកម្មវិធី SweetBakery POS និងផ្ញើរបាយការណ៍បូកសរុបការលក់ចូល Telegram មែនទេ?')) {
                 onCloseMobile?.();
+                try {
+                  await triggerAppCloseDailyReport({
+                    sales: sales || [],
+                    expenses: expenses || [],
+                    customOrders: customOrders || [],
+                    storeInfo,
+                    exchangeRate,
+                  });
+                } catch (e) {
+                  console.error('[Sidebar Exit] Error sending report:', e);
+                }
                 (window as any).SweetBakeryDesktop.exitApp();
               }
             }}

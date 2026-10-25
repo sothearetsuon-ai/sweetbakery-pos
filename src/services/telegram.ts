@@ -1366,8 +1366,8 @@ export const sendTelegramDailyReport = async (
   }
 
   // Determine recipient for the Daily/Monthly Summary Report
-  // Default: 'ADMIN_ONLY' -> Send strictly and confidentially to Admin's private bot chat (8970210109)
-  const recipientMode = config.dailyReportRecipient || 'ADMIN_ONLY';
+  // Default: 'BOTH' -> Send to both Admin's private bot chat and Store Telegram group
+  const recipientMode = config.dailyReportRecipient || DEFAULT_TELEGRAM_CONFIG.dailyReportRecipient || 'BOTH';
   const adminId = (config.adminChatId || '8970210109').trim();
   const groupChatId = config.chatId || DEFAULT_TELEGRAM_CONFIG.chatId;
 
@@ -1497,27 +1497,30 @@ export const triggerAppCloseDailyReport = async (
     return { success: false, message: 'Telegram ត្រូវបានបិទក្នុង Demo Mode', skipped: true };
   }
 
-  const config = await getStoredTelegramConfigAsync();
+  // Retrieve synchronous config first for zero-latency network dispatch during app close
+  let config = getStoredTelegramConfig();
+  if (!config.botToken || !config.enabled) {
+    config = await getStoredTelegramConfigAsync();
+  }
+
   if (!config.enabled || config.notifyReportOnAppClose === false || !config.botToken) {
     return { success: false, message: 'មុខងារផ្ញើរបាយការណ៍ពេលបិទ App ត្រូវបានបិទ ឬគ្មាន Bot Token', skipped: true };
   }
 
   const now = new Date();
   const todayStr = params.targetDate || params.dateStr || now.toISOString().slice(0, 10);
-  const todaySales = (params.sales || []).filter((s) => (s.createdAt || '').slice(0, 10) === todayStr);
-  const todayExpenses = (params.expenses || []).filter((e) => (e.date || e.createdAt || '').slice(0, 10) === todayStr);
-  const todayOrders = (params.customOrders || []).filter((o) => (o.createdAt || o.pickupDate || '').slice(0, 10) === todayStr);
 
-  // Build a snapshot string of today's totals so we never send identical duplicate reports within the same session
-  const totalSalesUsd = todaySales.reduce((acc, s) => acc + (s.totalUsd || 0), 0);
-  const totalExpUsd = todayExpenses.reduce((acc, e) => acc + (e.amountUsd || 0), 0);
-  const snapshotKey = `${todayStr}_s${todaySales.length}_$${totalSalesUsd.toFixed(2)}_e${todayExpenses.length}_$${totalExpUsd.toFixed(2)}_o${todayOrders.length}`;
-
-  const lastSentSnapshot = localStorage.getItem('bakery_last_app_close_report_snapshot');
-  if (lastSentSnapshot === snapshotKey) {
-    console.log('[Telegram Close Report] Identical report already sent recently for current snapshot, skipping.');
-    return { success: true, message: 'របាយការណ៍ដូចគ្នានេះត្រូវបានផ្ញើរួចហើយ', skipped: true };
+  // Debounce guard: Prevent duplicate calls within 60 seconds (prevents double sends from accidental double-clicks or repeated unload events)
+  const lastSentTime = Number(localStorage.getItem('bakery_last_app_close_report_time') || '0');
+  if (Date.now() - lastSentTime < 60000) {
+    console.log('[Telegram Close Report] Sent within the last 60 seconds, debouncing.');
+    return { success: true, message: 'របាយការណ៍ត្រូវបានផ្ញើរួចហើយថ្មីៗនេះ (រង់ចាំ 1 នាទី)', skipped: true };
   }
+
+  // Clear legacy snapshot key if present so it never blocks reporting
+  try {
+    localStorage.removeItem('bakery_last_app_close_report_snapshot');
+  } catch (e) {}
 
   try {
     const res = await sendTelegramDailyReport(
@@ -1532,7 +1535,7 @@ export const triggerAppCloseDailyReport = async (
     );
 
     if (res.success) {
-      localStorage.setItem('bakery_last_app_close_report_snapshot', snapshotKey);
+      localStorage.setItem('bakery_last_app_close_report_time', String(Date.now()));
     }
     return res;
   } catch (err: any) {

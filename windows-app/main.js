@@ -98,14 +98,14 @@ function createWindow() {
       console.warn('Failed to send app-before-close to renderer:', err);
     }
 
-    // Safety timeout: If renderer doesn't reply within 3.5s, force close so app never hangs
+    // Safety timeout: If renderer doesn't reply within 6.5s, force close so app never hangs
     closeSafetyTimer = setTimeout(() => {
       isAppQuitting = true;
       if (mainWindow && !mainWindow.isDestroyed()) {
         mainWindow.destroy();
       }
       app.quit();
-    }, 3500);
+    }, 6500);
   });
 
   ipcMain.on('app-close-ready', () => {

@@ -587,12 +587,12 @@ export const TelegramSettingsTab: React.FC = () => {
                       <span>កន្លែងទទួលរបាយការណ៍បូកសរុប (Report Destination)៖</span>
                     </span>
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                      {/* Option 1: ADMIN_ONLY (Default & Recommended) */}
+                      {/* Option 1: ADMIN_ONLY */}
                       <button
                         type="button"
                         onClick={() => updateConfig({ ...config, dailyReportRecipient: 'ADMIN_ONLY' })}
                         className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between gap-1 ${
-                          (config.dailyReportRecipient || 'ADMIN_ONLY') === 'ADMIN_ONLY'
+                          config.dailyReportRecipient === 'ADMIN_ONLY'
                             ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
                             : 'bg-white text-slate-700 border-slate-200 hover:border-indigo-300'
                         }`}
@@ -602,16 +602,9 @@ export const TelegramSettingsTab: React.FC = () => {
                             <UserCheck className="w-3.5 h-3.5" />
                             <span>Admin ផ្ទាល់ខ្លួន</span>
                           </span>
-                          <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold uppercase ${
-                            (config.dailyReportRecipient || 'ADMIN_ONLY') === 'ADMIN_ONLY'
-                              ? 'bg-white/20 text-white'
-                              : 'bg-amber-100 text-amber-800'
-                          }`}>
-                            ណែនាំ ⭐
-                          </span>
                         </div>
                         <p className={`text-[10px] leading-tight ${
-                          (config.dailyReportRecipient || 'ADMIN_ONLY') === 'ADMIN_ONLY'
+                          config.dailyReportRecipient === 'ADMIN_ONLY'
                             ? 'text-indigo-100'
                             : 'text-slate-500'
                         }`}>
@@ -644,12 +637,12 @@ export const TelegramSettingsTab: React.FC = () => {
                         </p>
                       </button>
 
-                      {/* Option 3: BOTH */}
+                      {/* Option 3: BOTH (Default & Recommended) */}
                       <button
                         type="button"
                         onClick={() => updateConfig({ ...config, dailyReportRecipient: 'BOTH' })}
                         className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between gap-1 ${
-                          config.dailyReportRecipient === 'BOTH'
+                          (config.dailyReportRecipient || 'BOTH') === 'BOTH'
                             ? 'bg-purple-600 text-white border-purple-600 shadow-sm'
                             : 'bg-white text-slate-700 border-slate-200 hover:border-purple-300'
                         }`}
@@ -659,9 +652,16 @@ export const TelegramSettingsTab: React.FC = () => {
                             <Sparkles className="w-3.5 h-3.5" />
                             <span>ផ្ញើទាំងពីរ (Both)</span>
                           </span>
+                          <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold uppercase ${
+                            (config.dailyReportRecipient || 'BOTH') === 'BOTH'
+                              ? 'bg-white/20 text-white'
+                              : 'bg-purple-100 text-purple-800'
+                          }`}>
+                            ណែនាំ ⭐
+                          </span>
                         </div>
                         <p className={`text-[10px] leading-tight ${
-                          config.dailyReportRecipient === 'BOTH'
+                          (config.dailyReportRecipient || 'BOTH') === 'BOTH'
                             ? 'text-purple-100'
                             : 'text-slate-500'
                         }`}>
@@ -672,7 +672,7 @@ export const TelegramSettingsTab: React.FC = () => {
                   </div>
 
                   {/* Admin Chat ID Input (shown if ADMIN_ONLY or BOTH) */}
-                  {(config.dailyReportRecipient || 'ADMIN_ONLY') !== 'GROUP_ONLY' && (
+                  {(config.dailyReportRecipient || 'BOTH') !== 'GROUP_ONLY' && (
                     <div className="p-3 bg-white/90 border border-indigo-100 rounded-2xl space-y-2">
                       <div className="flex items-center justify-between gap-2">
                         <label className="text-[11px] font-bold text-slate-800 flex items-center gap-1.5">
@@ -805,7 +805,7 @@ export const TelegramSettingsTab: React.FC = () => {
                       <span>
                         {isSendingReportTest
                           ? 'កំពុងផ្ញើរបាយការណ៍...'
-                          : (config.dailyReportRecipient || 'ADMIN_ONLY') === 'ADMIN_ONLY'
+                          : config.dailyReportRecipient === 'ADMIN_ONLY'
                           ? `📊 សាកល្បងផ្ញើទៅ Admin (${config.adminChatId || '8970210109'}) ឥឡូវនេះ`
                           : config.dailyReportRecipient === 'GROUP_ONLY'
                           ? '📊 សាកល្បងផ្ញើទៅ Group ហាង ឥឡូវនេះ'
