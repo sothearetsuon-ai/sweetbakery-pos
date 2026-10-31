@@ -47,6 +47,8 @@ import {
   subscribeToFirestoreDoc,
   saveFirestoreDoc as rawSaveFirestoreDoc,
   deleteFirestoreDoc as rawDeleteFirestoreDoc,
+  batchSaveFirestoreDocs,
+  batchDeleteFirestoreDocs,
   subscribeToStoreIdChange,
   getStoreId,
   isDefaultStore,
@@ -378,17 +380,33 @@ export const seedDemoDataIfMissing = () => {
   }
 };
 
-// Unified wrapper to guarantee every write & delete is queued for offline-to-cloud automatic sync
-const syncSaveDoc = (collectionName: string, docId: string, data: any) => {
+// Unified wrapper to guarantee every write & delete is saved directly to cloud with instant local caching and offline fallback
+const syncSaveDoc = async (collectionName: string, docId: string, data: any) => {
   if (globalIsDemoMode) return; // Completely isolated from cloud in Demo mode
-  saveFirestoreDoc(collectionName, docId, data);
-  offlineSyncService.queueMutation(collectionName, docId, 'set', data);
+  if (typeof navigator !== 'undefined' && !navigator.onLine) {
+    offlineSyncService.queueMutation(collectionName, docId, 'set', data);
+    return;
+  }
+  const ok = await saveFirestoreDoc(collectionName, docId, data);
+  if (ok) {
+    offlineSyncService.removeMutation(collectionName, docId);
+  } else {
+    offlineSyncService.queueMutation(collectionName, docId, 'set', data);
+  }
 };
 
-const syncDeleteDoc = (collectionName: string, docId: string) => {
+const syncDeleteDoc = async (collectionName: string, docId: string) => {
   if (globalIsDemoMode) return; // Completely isolated from cloud in Demo mode
-  deleteFirestoreDoc(collectionName, docId);
-  offlineSyncService.queueMutation(collectionName, docId, 'delete');
+  if (typeof navigator !== 'undefined' && !navigator.onLine) {
+    offlineSyncService.queueMutation(collectionName, docId, 'delete');
+    return;
+  }
+  const ok = await deleteFirestoreDoc(collectionName, docId);
+  if (ok) {
+    offlineSyncService.removeMutation(collectionName, docId);
+  } else {
+    offlineSyncService.queueMutation(collectionName, docId, 'delete');
+  }
 };
 
 // Helper to determine if an expense is drawn from petty cash / reserve fund
@@ -5065,6 +5083,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
     const nowIso = new Date().toISOString();
 
+    const changedProducts: { id: string; data: any }[] = [];
     const updatedProducts = products.map((p) => {
       const soldQty = soldQuantities[p.id];
       if (soldQty && soldQty > 0) {
@@ -5073,11 +5092,21 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           stockQty: Math.max(0, p.stockQty - soldQty),
           updatedAt: nowIso,
         };
-        syncSaveDoc('products', p.id, updated);
+        changedProducts.push({ id: p.id, data: updated });
         return updated;
       }
       return p;
     });
+
+    if (changedProducts.length > 0) {
+      if (changedProducts.length === 1) {
+        syncSaveDoc('products', changedProducts[0].id, changedProducts[0].data);
+      } else {
+        batchSaveFirestoreDocs('products', changedProducts).catch(() => {
+          changedProducts.forEach((cp) => syncSaveDoc('products', cp.id, cp.data));
+        });
+      }
+    }
 
     // Deduct stock for party accessories/addons sold
     const soldPartyAddonsMap: Record<string, number> = {};
@@ -5359,16 +5388,26 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
       const nowIso = new Date().toISOString();
       if (Object.keys(stockRestoreMap).length > 0) {
+        const changedProducts: { id: string; data: any }[] = [];
         updatedProducts = products.map((p) => {
           if (stockRestoreMap[p.id]) {
             const restored = { ...p, stockQty: (p.stockQty || 0) + stockRestoreMap[p.id], updatedAt: nowIso };
-            syncSaveDoc('products', p.id, restored);
+            changedProducts.push({ id: p.id, data: restored });
             return restored;
           }
           return p;
         });
         setProducts(updatedProducts);
         safeSetStorage('bakery_products', JSON.stringify(updatedProducts));
+        if (changedProducts.length > 0) {
+          if (changedProducts.length === 1) {
+            syncSaveDoc('products', changedProducts[0].id, changedProducts[0].data);
+          } else {
+            batchSaveFirestoreDocs('products', changedProducts).catch(() => {
+              changedProducts.forEach((cp) => syncSaveDoc('products', cp.id, cp.data));
+            });
+          }
+        }
         fetch('/api/save-products', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -6108,12 +6147,13 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
       // Apply product stock restoration
       if (Object.keys(stockRestoreMap).length > 0) {
+        const changedProducts: { id: string; data: any }[] = [];
         updatedProducts = products.map((p) => {
           const qty = stockRestoreMap[p.id];
           if (qty && qty > 0) {
             const restoredStock = (p.stockQty || 0) + qty;
             const updatedProd = { ...p, stockQty: restoredStock, updatedAt: nowIso };
-            syncSaveDoc('products', p.id, updatedProd);
+            changedProducts.push({ id: p.id, data: updatedProd });
             return updatedProd;
           }
           return p;
@@ -6121,6 +6161,15 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
         setProducts(updatedProducts);
         safeSetStorage('bakery_products', JSON.stringify(updatedProducts));
+        if (changedProducts.length > 0) {
+          if (changedProducts.length === 1) {
+            syncSaveDoc('products', changedProducts[0].id, changedProducts[0].data);
+          } else {
+            batchSaveFirestoreDocs('products', changedProducts).catch(() => {
+              changedProducts.forEach((cp) => syncSaveDoc('products', cp.id, cp.data));
+            });
+          }
+        }
         fetch('/api/save-products', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },

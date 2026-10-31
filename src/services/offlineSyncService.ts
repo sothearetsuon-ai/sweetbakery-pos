@@ -110,12 +110,12 @@ class OfflineSyncEngine {
       this.notifyListeners();
     });
 
-    // Check every 25 seconds if online and has pending queue items
+    // Check every 10 seconds if online and has pending queue items to guarantee zero data loss
     this.checkInterval = setInterval(() => {
       if (navigator.onLine && this.queue.length > 0 && !this.isProcessing) {
         this.processQueue();
       }
-    }, 25000);
+    }, 10000);
   }
 
   public subscribe(listener: SyncListener): () => void {
@@ -172,6 +172,19 @@ class OfflineSyncEngine {
   }
 
   /**
+   * Remove any mutation from queue when it has already been directly synced to Cloud
+   */
+  public removeMutation(collectionName: string, docId: string): void {
+    const initialLen = this.queue.length;
+    this.queue = this.queue.filter(
+      (m) => !(m.collectionName === collectionName && m.docId === docId)
+    );
+    if (this.queue.length !== initialLen) {
+      this.saveQueue();
+    }
+  }
+
+  /**
    * Enqueue a change to be synced to Firebase Cloud.
    * If online, tries to sync immediately. If offline or fails, keeps in queue!
    */
@@ -179,7 +192,8 @@ class OfflineSyncEngine {
     collectionName: string,
     docId: string,
     action: 'set' | 'delete',
-    data?: any
+    data?: any,
+    autoProcess: boolean = true
   ): Promise<void> {
     const mutationId = `${collectionName}_${docId}_${action}_${Date.now()}`;
     const mutation: OfflineMutation = {
@@ -199,8 +213,8 @@ class OfflineSyncEngine {
     this.queue.push(mutation);
     this.saveQueue();
 
-    // If online, attempt immediate sync
-    if (navigator.onLine && !this.isProcessing) {
+    // If online and requested, attempt immediate sync
+    if (autoProcess && navigator.onLine && !this.isProcessing) {
       this.processQueue();
     }
   }

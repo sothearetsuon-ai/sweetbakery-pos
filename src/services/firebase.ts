@@ -12,6 +12,9 @@ import {
 } from 'firebase/auth';
 import {
   getFirestore,
+  initializeFirestore,
+  persistentLocalCache,
+  persistentMultipleTabManager,
   Firestore,
   collection,
   doc,
@@ -310,7 +313,7 @@ export const getFirebaseApp = (customConfig?: FirebaseConfig): FirebaseApp | nul
 };
 
 /**
- * Get or initialize Cloud Firestore with offline persistence
+ * Get or initialize Cloud Firestore with modern multi-tab IndexedDB offline persistence
  */
 export const getFirestoreDb = (customConfig?: FirebaseConfig): Firestore | null => {
   if (currentDb) return currentDb;
@@ -319,18 +322,19 @@ export const getFirestoreDb = (customConfig?: FirebaseConfig): Firestore | null 
   if (!app) return null;
 
   try {
-    const db = getFirestore(app);
-    // Attempt offline persistence if available
+    let db: Firestore;
     try {
-      enableIndexedDbPersistence(db).catch((err) => {
-        if (err.code === 'failed-precondition') {
-          // Multiple tabs open, persistence can only be enabled in one tab at a time.
-        } else if (err.code === 'unimplemented') {
-          // Browser does not support persistence
-        }
+      db = initializeFirestore(app, {
+        localCache: persistentLocalCache({
+          tabManager: persistentMultipleTabManager(),
+        }),
       });
-    } catch (e) {
-      // Ignore
+    } catch (initErr) {
+      // Fallback if already initialized (e.g. HMR or existing instance)
+      db = getFirestore(app);
+      try {
+        enableIndexedDbPersistence(db).catch(() => {});
+      } catch (e) {}
     }
 
     currentDb = db;
@@ -457,15 +461,17 @@ export const saveFirestoreDoc = async (
   collectionName: string,
   docId: string,
   data: any
-): Promise<void> => {
+): Promise<boolean> => {
   const db = getFirestoreDb();
-  if (!db) return;
+  if (!db) return false;
   try {
     const cleanData = sanitizeForFirestore(data);
     const docRef = getScopedDocRef(db, collectionName, docId);
     await setDoc(docRef, cleanData, { merge: true });
+    return true;
   } catch (e) {
     console.error(`Error saving document to ${collectionName}/${docId}:`, e);
+    return false;
   }
 };
 
@@ -496,19 +502,22 @@ export const getFirestoreDoc = async <T = any>(
 export const deleteFirestoreDoc = async (
   collectionName: string,
   docId: string
-): Promise<void> => {
+): Promise<boolean> => {
   const db = getFirestoreDb();
-  if (!db) return;
+  if (!db) return false;
   try {
     const docRef = getScopedDocRef(db, collectionName, docId);
     await deleteDoc(docRef);
+    return true;
   } catch (e) {
     console.error(`Error deleting document from ${collectionName}/${docId}:`, e);
+    return false;
   }
 };
 
 /**
  * Subscribe to real-time changes in a collection
+ * Uses smart debouncing to prevent multiple re-renders during high-volume batch updates
  */
 export const subscribeToFirestoreCollection = <T>(
   collectionName: string,
@@ -521,14 +530,26 @@ export const subscribeToFirestoreCollection = <T>(
   }
 
   const colRef = getScopedCollectionRef(db, collectionName);
+  let debounceTimer: any = null;
+  let latestSnapshot: any = null;
+
+  const processSnapshot = () => {
+    if (!latestSnapshot) return;
+    const items: T[] = [];
+    latestSnapshot.forEach((d: any) => {
+      items.push({ id: d.id, ...d.data() } as T);
+    });
+    onUpdate(items);
+  };
+
   const unsubscribe = onSnapshot(
     colRef,
     (snapshot) => {
-      const items: T[] = [];
-      snapshot.forEach((d) => {
-        items.push({ id: d.id, ...d.data() } as T);
-      });
-      onUpdate(items);
+      latestSnapshot = snapshot;
+      if (debounceTimer) clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        processSnapshot();
+      }, 35);
     },
     (err) => {
       console.warn(`Firestore listener error on ${collectionName}:`, err);
@@ -536,7 +557,10 @@ export const subscribeToFirestoreCollection = <T>(
     }
   );
 
-  return unsubscribe;
+  return () => {
+    if (debounceTimer) clearTimeout(debounceTimer);
+    unsubscribe();
+  };
 };
 
 /**
