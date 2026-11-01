@@ -37,7 +37,7 @@ export const DEFAULT_TELEGRAM_CONFIG: TelegramConfig = {
   notifyExpenseDue: true,
   notifyShiftClose: true,
   notifyDailyReport: true,
-  notifyReportOnAppClose: true, // ផ្ញើរបាយការណ៍បូកសរុបដោយស្វ័យប្រវត្តិពេលបិទ App
+  notifyReportOnAppClose: false, // ផ្ញើរបាយការណ៍បូកសរុបដោយស្វ័យប្រវត្តិពេលបិទ App
   dailyReportTime: '21:00', // 9:00 យប់ (ម៉ោងបិទហាងលក់សរុបប្រចាំថ្ងៃ)
   includeAiInsight: true,
   notifyCustomerChat: true,
@@ -1491,58 +1491,11 @@ export const sendTelegramDailyReport = async (
  * Automatically triggers daily summary report when closing the App (Windows App, Browser close, or exit)
  */
 export const triggerAppCloseDailyReport = async (
-  params: DailyReportParams
+  _params?: DailyReportParams
 ): Promise<{ success: boolean; message: string; skipped?: boolean }> => {
-  if (isDemoModeActive()) {
-    return { success: false, message: 'Telegram ត្រូវបានបិទក្នុង Demo Mode', skipped: true };
-  }
-
-  // Retrieve synchronous config first for zero-latency network dispatch during app close
-  let config = getStoredTelegramConfig();
-  if (!config.botToken || !config.enabled) {
-    config = await getStoredTelegramConfigAsync();
-  }
-
-  if (!config.enabled || config.notifyReportOnAppClose === false || !config.botToken) {
-    return { success: false, message: 'មុខងារផ្ញើរបាយការណ៍ពេលបិទ App ត្រូវបានបិទ ឬគ្មាន Bot Token', skipped: true };
-  }
-
-  const now = new Date();
-  const todayStr = params.targetDate || params.dateStr || now.toISOString().slice(0, 10);
-
-  // Debounce guard: Prevent duplicate calls within 60 seconds (prevents double sends from accidental double-clicks or repeated unload events)
-  const lastSentTime = Number(localStorage.getItem('bakery_last_app_close_report_time') || '0');
-  if (Date.now() - lastSentTime < 60000) {
-    console.log('[Telegram Close Report] Sent within the last 60 seconds, debouncing.');
-    return { success: true, message: 'របាយការណ៍ត្រូវបានផ្ញើរួចហើយថ្មីៗនេះ (រង់ចាំ 1 នាទី)', skipped: true };
-  }
-
-  // Clear legacy snapshot key if present so it never blocks reporting
-  try {
-    localStorage.removeItem('bakery_last_app_close_report_snapshot');
-  } catch (e) {}
-
-  try {
-    const res = await sendTelegramDailyReport(
-      {
-        ...params,
-        targetDate: todayStr,
-        reportTrigger: 'APP_CLOSE',
-        reportTimeLabel: `${now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })} (ពេលបិទ App)`,
-      },
-      true, // isManual = true to bypass time schedule lock
-      config
-    );
-
-    if (res.success) {
-      localStorage.setItem('bakery_last_app_close_report_time', String(Date.now()));
-    }
-    return res;
-  } catch (err: any) {
-    console.error('[Telegram Close Report] Error sending report on app close:', err);
-    return { success: false, message: err?.message || 'Error sending report' };
-  }
+  return {
+    success: false,
+    message: 'មុខងារផ្ញើរបាយការណ៍ពេលបិទ App ត្រូវបានដកចេញ',
+    skipped: true
+  };
 };
-
-
-

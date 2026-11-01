@@ -10,7 +10,6 @@ import {
   getStoredNotificationConfig,
   saveStoredNotificationConfig,
 } from '../../services/notifications';
-import { triggerAppCloseDailyReport } from '../../services/telegram';
 import { soundFx } from '../../utils/audio';
 
 export const NotificationReminderScheduler: React.FC = () => {
@@ -22,7 +21,6 @@ export const NotificationReminderScheduler: React.FC = () => {
     return localStorage.getItem('bakery_notification_banner_dismissed') === 'true';
   });
   const [isEnabling, setIsEnabling] = useState(false);
-  const [isClosingApp, setIsClosingApp] = useState(false);
 
   // Ref to hold latest params without restarting interval on every state update
   const paramsRef = React.useRef({ customOrders, expenses, ingredients, storeInfo, exchangeRate, sales });
@@ -58,55 +56,6 @@ export const NotificationReminderScheduler: React.FC = () => {
     return () => window.removeEventListener('focus', handleFocus);
   }, []);
 
-  // 3. Auto send Telegram summary report on App Close (Desktop Electron & Web Browser)
-  useEffect(() => {
-    if (isDemoMode) return;
-
-    // A) Desktop Electron Interceptor
-    const desktop = (window as any).SweetBakeryDesktop;
-    if (desktop && typeof desktop.onBeforeClose === 'function') {
-      desktop.onBeforeClose(async () => {
-        setIsClosingApp(true);
-        try {
-          await triggerAppCloseDailyReport({
-            sales: paramsRef.current.sales || [],
-            expenses: paramsRef.current.expenses || [],
-            customOrders: paramsRef.current.customOrders || [],
-            storeInfo: paramsRef.current.storeInfo,
-            exchangeRate: paramsRef.current.exchangeRate,
-          });
-        } catch (e) {
-          console.error('[App Close Report] Error:', e);
-        } finally {
-          setTimeout(() => {
-            if (typeof desktop.sendCloseReady === 'function') {
-              desktop.sendCloseReady();
-            }
-          }, 600);
-        }
-      });
-    }
-
-    // B) Web Browser / PWA unload & pagehide handler
-    const handleBrowserUnload = () => {
-      triggerAppCloseDailyReport({
-        sales: paramsRef.current.sales || [],
-        expenses: paramsRef.current.expenses || [],
-        customOrders: paramsRef.current.customOrders || [],
-        storeInfo: paramsRef.current.storeInfo,
-        exchangeRate: paramsRef.current.exchangeRate,
-      }).catch(() => {});
-    };
-
-    window.addEventListener('beforeunload', handleBrowserUnload);
-    window.addEventListener('pagehide', handleBrowserUnload);
-
-    return () => {
-      window.removeEventListener('beforeunload', handleBrowserUnload);
-      window.removeEventListener('pagehide', handleBrowserUnload);
-    };
-  }, [isDemoMode]);
-
   const handleEnableNotifications = async () => {
     setIsEnabling(true);
     soundFx.playPop();
@@ -135,21 +84,6 @@ export const NotificationReminderScheduler: React.FC = () => {
 
   return (
     <>
-      {/* Visual Overlay when Gracefully Closing App & Sending Report */}
-      {isClosingApp && (
-        <div className="fixed inset-0 z-[9999999] bg-slate-900/85 backdrop-blur-md flex flex-col items-center justify-center text-white px-4 text-center animate-in fade-in duration-200">
-          <div className="w-16 h-16 rounded-3xl bg-gradient-to-tr from-sky-500 via-indigo-600 to-pink-500 flex items-center justify-center shadow-2xl shadow-sky-500/40 mb-4 animate-bounce">
-            <Send className="w-8 h-8 text-white" />
-          </div>
-          <h3 className="text-base sm:text-lg font-black font-battambang mb-1">
-            កំពុងផ្ញើរបាយការណ៍សរុបចូល Telegram Bot... 📊
-          </h3>
-          <p className="text-xs text-sky-200 font-battambang max-w-sm leading-relaxed">
-            ប្រព័ន្ធកំពុងបូកសរុបការលក់ និងចំណាយប្រចាំថ្ងៃជូនលោកអ្នកដោយស្វ័យប្រវត្ត មុនពេលបិទកម្មវិធី SweetBakery POS។
-          </p>
-        </div>
-      )}
-
       {/* Staff Push Reminders Banner */}
       {showBanner && (
         <div className="bg-gradient-to-r from-pink-600 via-rose-600 to-amber-600 text-white px-3 sm:px-4 py-2 text-xs flex items-center justify-between gap-2 shadow-md relative z-40 animate-in slide-in-from-top duration-300">

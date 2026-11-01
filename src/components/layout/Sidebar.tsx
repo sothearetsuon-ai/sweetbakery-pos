@@ -31,7 +31,6 @@ import { StaffPermissions, ChatChannel } from '../../types';
 import { AppTheme } from '../../utils/themeManager';
 import { getStaffUnreadChatCount, subscribeToCustomerSessions } from '../../services/liveChatService';
 import { CURRENT_APP_VERSION } from '../../services/appUpdateService';
-import { triggerAppCloseDailyReport } from '../../services/telegram';
 
 export type TabType =
   | 'pos'
@@ -790,35 +789,24 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </span>
         </button>
 
-        {/* Desktop App Exit Button (closes window & auto-sends Telegram summary report) */}
+        {/* Desktop App Exit Button */}
         {typeof window !== 'undefined' && (window as any).SweetBakeryDesktop?.exitApp && (
           <button
             type="button"
-            onClick={async () => {
-              if (window.confirm('តើអ្នកពិតជាចង់បិទកម្មវិធី SweetBakery POS និងផ្ញើរបាយការណ៍បូកសរុបការលក់ចូល Telegram មែនទេ?')) {
+            onClick={() => {
+              if (window.confirm('តើអ្នកពិតជាចង់បិទកម្មវិធី SweetBakery POS មែនទេ?')) {
                 onCloseMobile?.();
-                try {
-                  await triggerAppCloseDailyReport({
-                    sales: sales || [],
-                    expenses: expenses || [],
-                    customOrders: customOrders || [],
-                    storeInfo,
-                    exchangeRate,
-                  });
-                } catch (e) {
-                  console.error('[Sidebar Exit] Error sending report:', e);
-                }
                 (window as any).SweetBakeryDesktop.exitApp();
               }
             }}
             className="w-full flex items-center justify-between px-3.5 py-2 rounded-2xl font-bold text-xs text-slate-700 hover:bg-slate-100 transition-all border border-slate-200/80 shadow-2xs cursor-pointer group"
-            title="បិទកម្មវិធី និងផ្ញើរបាយការណ៍សរុបចូល Telegram"
+            title="បិទកម្មវិធី (Exit App)"
           >
             <div className="flex items-center gap-3">
               <span className="text-sm">❌</span>
               <span>បិទកម្មវិធី (Exit App)</span>
             </div>
-            <span className="text-[10px] text-sky-700 font-bold bg-sky-100 px-2 py-0.5 rounded-full border border-sky-200">
+            <span className="text-[10px] text-rose-700 font-bold bg-rose-50 px-2 py-0.5 rounded-full border border-rose-200">
               Close
             </span>
           </button>

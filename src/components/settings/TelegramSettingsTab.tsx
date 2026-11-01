@@ -25,7 +25,6 @@ import {
   Landmark,
   Radio,
   Zap,
-  LogOut,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import {
@@ -739,27 +738,7 @@ export const TelegramSettingsTab: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Auto Send Report on App Close Checkbox */}
-                  <label className="flex items-start gap-2.5 p-2.5 bg-white/80 hover:bg-white border border-sky-200/80 rounded-xl cursor-pointer select-none transition-colors shadow-2xs">
-                    <input
-                      type="checkbox"
-                      checked={config.notifyReportOnAppClose ?? true}
-                      onChange={(e) => updateConfig({ ...config, notifyReportOnAppClose: e.target.checked })}
-                      className="mt-0.5 w-4 h-4 rounded text-sky-600 focus:ring-0 cursor-pointer"
-                    />
-                    <div className="flex-1">
-                      <div className="text-xs font-bold text-slate-800 flex items-center gap-1.5 flex-wrap">
-                        <LogOut className="w-3.5 h-3.5 text-sky-600" />
-                        <span>ផ្ញើរបាយការណ៍សរុបស្វ័យប្រវត្តពេលបិទ App (Auto Send Report on App Close)</span>
-                        <span className="px-1.5 py-0.2 bg-emerald-100 text-emerald-800 rounded-md text-[9px] font-black uppercase">
-                          ស្វ័យប្រវត្តិ ⭐
-                        </span>
-                      </div>
-                      <p className="text-[11px] text-slate-600 mt-0.5 leading-relaxed">
-                        ពេលចុចបិទ App (កុំព្យូទ័រ Windows ឬ Browser) ប្រព័ន្ធនឹងផ្ញើរបាយការណ៍បូកសរុបការលក់ និងចំណាយប្រចាំថ្ងៃចូល Telegram Bot ដោយស្វ័យប្រវត្តមុនពេលចាកចេញ។
-                      </p>
-                    </div>
-                  </label>
+                  
 
                   {/* 24/7 Cloud Automated Schedule Notice */}
                   <div className="p-3 bg-gradient-to-r from-sky-50 to-indigo-50/80 border border-sky-200/90 rounded-2xl flex items-start gap-2.5 shadow-2xs">

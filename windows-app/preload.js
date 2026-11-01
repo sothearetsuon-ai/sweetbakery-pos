@@ -20,12 +20,8 @@ contextBridge.exposeInMainWorld('SweetBakeryDesktop', {
   onUpdateError: (callback) => {
     ipcRenderer.on('desktop-update-error', (event, error) => callback(error));
   },
-  onBeforeClose: (callback) => {
-    ipcRenderer.on('app-before-close', () => callback());
-  },
-  sendCloseReady: () => {
-    ipcRenderer.send('app-close-ready');
-  },
+  onBeforeClose: () => {},
+  sendCloseReady: () => {},
   exitApp: () => {
     ipcRenderer.send('app-exit-request');
   }

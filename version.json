@@ -1,13 +1,11 @@
 {
-  "version": "1.8.5",
-  "versionCode": 51,
-  "releaseDate": "2026-10-31",
+  "version": "1.8.6",
+  "versionCode": 52,
+  "releaseDate": "2026-11-01",
   "releaseNotes": [
-    "⚡ បង្កើនល្បឿន Realtime Sync រវាងទូរស័ព្ទ និងកុំព្យូទ័រ (Ultra-Fast Cloud & Local Dual-Sync Engine)៖ រាល់ពេលបញ្ចូលទិន្នន័យ (លក់, ចំណាយ, បន្ថែមទំនិញ, កុម្ម៉ង់នំខេក) ប្រព័ន្ធរក្សាទុកទាំងលើ Local (IndexedDB) ភ្លាមៗ (<10ms) និងរុញទៅកាន់ Cloud Firebase ក្នុងពេលដំណាលគ្នា (<1s)។",
-    "🔄 ធានាទិន្នន័យដូចគ្នា ១០០% គ្រប់ឧបករណ៍ (100% Data Consistency)៖ ទិន្នន័យលើទូរស័ព្ទ និងកុំព្យូទ័រ Sync ឆ្លងគ្នាទៅវិញទៅមក (Bidirectional Realtime) ដោយស្វ័យប្រវត្តិ ព្រមទាំងមានប្រព័ន្ធ Deletion Tracker រួមគ្នា។",
-    "🚀 បច្ចេកវិទ្យា Multi-Tab IndexedDB Persistence ជំនាន់ថ្មី៖ ធានាការអាន/សរសេរ Local Cache គ្មានការកកស្ទះ និងមិនបាត់បង់ទិន្នន័យទោះបីជាដាច់អ៊ីនធឺណិត (Offline Ready)។",
-    "📦 កាត់ស្តុកទំនិញជាបាច់ (Atomic Batch Updates)៖ ពេលលក់ទំនិញច្រើនមុខក្នុងវិក្កយបត្រតែមួយ ប្រព័ន្ធកាត់ស្តុកតាម Batch តែមួយជើង កាត់បន្ថយ network latency រហូតដល់ 90%។",
-    "🛡️ លុបបំបាត់ការ Save ជាន់គ្នាពីរដង (Zero Redundant Network Writes) និងបំពាក់ Smart Debounce ការពារទូរស័ព្ទកុំឱ្យគាំង ឬយឺតពេល Sync។"
+    "🚫 ដកចេញការផ្ញើរបាយការណ៍ស្វ័យប្រវត្តិពេលបិទ App (Remove Report on App Close)៖ ដោះស្រាយបញ្ហាផ្ញើរបាយការណ៍ចេញ 00 និងជួយឱ្យការបិទកម្មវិធីលើ Windows/Web ដំណើរការលឿនរហ័សភ្លាមៗ (Instant Close គ្មានការពន្យារពេល)។",
+    "☁️ រក្សាទុករបាយការណ៍ស្វ័យប្រវត្តិតាមរយៈ 24/7 Cloud Daily Report៖ ប្រព័ន្ធផ្ញើរបាយការណ៍បូកសរុបលក់ប្រចាំថ្ងៃចូល Telegram Bot នៅម៉ោង 9:00 យប់ ដោយស្វ័យប្រវត្តិតាម Cloud Server ទោះបីជាបិទកុំព្យូទ័រ និងទូរស័ព្ទក៏ដោយ។",
+    "⚡ រក្សាការធ្វើសមកាលកម្មទិន្នន័យល្បឿនលឿន (Ultra-Fast Cloud & Local Dual-Sync Engine)៖ ទិន្នន័យលើទូរស័ព្ទ និងកុំព្យូទ័រ Sync ឆ្លងគ្នាទៅវិញទៅមកភ្លាមៗ (<1s) និងធានាទិន្នន័យដូចគ្នា 100%។"
   ],
   "author": "សុធារិទ្ធ",
   "apkDownloadUrl": "https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/latest/download/SweetBakery-Android.apk",
