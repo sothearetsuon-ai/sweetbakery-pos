@@ -629,13 +629,17 @@ export const ExpenseManagement: React.FC<ExpenseManagementProps> = ({
         ].join(',')
       ),
     ];
-    const blob = new Blob([csvRows.join('\n')], { type: 'text/csv' });
+    const BOM = '\uFEFF';
+    const blob = new Blob([BOM + csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
     const dateLabel = datePreset !== 'ALL' ? (datePreset === 'CUSTOM_RANGE' ? `${customStartDate}_to_${customEndDate}` : datePreset.toLowerCase()) : 'all';
     a.download = `bakery-expenses-${mainTypeFilter.toLowerCase()}-${dateLabel}-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(a);
     a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   };
 
   // Reserve Fund calculations

@@ -297,29 +297,33 @@ export const ReportsDashboard: React.FC = () => {
 
   const topSellingList = Object.values(productSalesCount).sort((a, b) => b.count - a.count);
 
-  // Export CSV
+  // Export CSV with UTF-8 BOM so Microsoft Excel renders Khmer Unicode correctly
   const handleExportCsv = () => {
     soundFx.playPop();
+    const BOM = '\uFEFF';
     const csvRows = [
       ['OrderNumber', 'Date (DD/MM/YYYY)', 'Cashier', 'Customer', 'PaymentMethod', 'TotalUSD', 'TotalKHR'].join(','),
       ...filteredSales.map((s) =>
         [
           s.orderNumber,
           `"${formatDateTimeDMY(s.createdAt)}"`,
-          `"${s.cashierName}"`,
-          `"${s.customerName || 'N/A'}"`,
+          `"${(s.cashierName || '').replace(/"/g, '""')}"`,
+          `"${(s.customerName || 'N/A').replace(/"/g, '""')}"`,
           s.paymentMethod,
           s.totalUsd.toFixed(2),
           s.totalKhr,
         ].join(',')
       ),
     ];
-    const blob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+    const blob = new Blob([BOM + csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
     a.download = `bakery-report-${dateFilter}-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(a);
     a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   };
 
   const handleSendTelegramSummary = async () => {

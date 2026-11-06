@@ -240,29 +240,33 @@ export const SalesHistory: React.FC = () => {
     setIsConfirmClearAllSales(false);
   };
 
-  // Export CSV
+  // Export CSV with UTF-8 BOM so Microsoft Excel renders Khmer Unicode correctly
   const handleExportCsv = () => {
+    const BOM = '\uFEFF';
     const csvRows = [
       ['OrderNumber', 'Date (DD/MM/YYYY)', 'Customer', 'Cashier', 'PaymentMethod', 'TotalKHR', 'TotalUSD', 'Notes'].join(','),
       ...sales.map((s) =>
         [
           s.orderNumber,
           `"${formatDateTimeDMY(s.createdAt)}"`,
-          `"${s.customerName || 'N/A'}"`,
-          `"${s.cashierName}"`,
+          `"${(s.customerName || 'N/A').replace(/"/g, '""')}"`,
+          `"${(s.cashierName || '').replace(/"/g, '""')}"`,
           s.paymentMethod,
           s.totalKhr,
           s.totalUsd.toFixed(2),
-          `"${s.notes || ''}"`,
+          `"${(s.notes || '').replace(/"/g, '""')}"`,
         ].join(',')
       ),
     ];
-    const blob = new Blob([csvRows.join('\n')], { type: 'text/csv' });
+    const blob = new Blob([BOM + csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
     a.download = `bakery-sales-history-${todayStr}.csv`;
+    document.body.appendChild(a);
     a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   };
 
   return (
