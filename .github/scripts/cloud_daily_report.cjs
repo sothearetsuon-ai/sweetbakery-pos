@@ -374,6 +374,141 @@ function generateReportHtml(params) {
   );
 }
 
+async function sendReportForDate({
+  targetDate,
+  isForce,
+  isDryRun,
+  cambodiaCurrentTime,
+  scheduledTime,
+  sales,
+  expenses,
+  customOrders,
+  storeInfo,
+  exchangeRate,
+  botToken,
+  chatId,
+  adminChatId,
+  recipientMode,
+}) {
+  const eventKey = `daily_report_${targetDate}`;
+  let existingLog = null;
+  try {
+    existingLog = await fetchFirestoreDoc('daily_report_logs', eventKey);
+  } catch (e) {
+    console.warn('[Notice] Could not read daily_report_logs:', e.message);
+  }
+
+  // Calculate snapshot of target date to detect changes
+  const targetSales = sales.filter((s) => (s.createdAt || '').slice(0, 10) === targetDate);
+  const targetExpenses = expenses.filter((e) => (e.date || e.createdAt || '').slice(0, 10) === targetDate);
+  const targetSalesUsd = targetSales.reduce((sum, s) => sum + (s.totalUsd || 0), 0);
+  const targetExpensesUsd = targetExpenses.reduce((sum, e) => sum + (e.amountUsd || 0), 0);
+
+  if (existingLog && !isForce && !isDryRun) {
+    const prevSalesCount = existingLog.salesCount ?? -1;
+    const prevSalesUsd = existingLog.salesUsd ?? -1;
+    const prevExpCount = existingLog.expensesCount ?? -1;
+    const prevExpUsd = existingLog.expensesUsd ?? -1;
+
+    if (
+      prevSalesCount === targetSales.length &&
+      Math.abs(prevSalesUsd - targetSalesUsd) < 0.01 &&
+      prevExpCount === targetExpenses.length &&
+      Math.abs(prevExpUsd - targetExpensesUsd) < 0.01
+    ) {
+      console.log(`[Deduplication] Report for ${targetDate} was already sent (sentAt: ${new Date(existingLog.sentAt || 0).toISOString()}) and data is unchanged. Skipping duplicate notification.`);
+      return true;
+    } else {
+      console.log(`[Update] New sales/expenses detected since previous report. Re-sending updated summary for ${targetDate}.`);
+    }
+  }
+
+  console.log(`[Report] Generating report HTML text for ${targetDate}...`);
+  const timeDisplay = `${cambodiaCurrentTime} (ម៉ោង ${scheduledTime})`;
+  const reportHtml = generateReportHtml({
+    sales,
+    expenses,
+    customOrders,
+    storeInfo,
+    exchangeRate,
+    targetDate,
+    timeDisplay,
+  });
+
+  if (isDryRun) {
+    console.log(`\n--- GENERATED REPORT PREVIEW FOR ${targetDate} ---`);
+    console.log(reportHtml);
+    console.log('--------------------------------\n');
+    return true;
+  }
+
+  // Determine Target Chat IDs
+  let targetChatIds = [];
+  if (recipientMode === 'ADMIN_ONLY') {
+    targetChatIds = [adminChatId];
+  } else if (recipientMode === 'GROUP_ONLY') {
+    targetChatIds = parseTelegramChatIds(chatId, botToken);
+  } else {
+    // 'BOTH'
+    const groupIds = parseTelegramChatIds(chatId, botToken);
+    const set = new Set(groupIds);
+    if (adminChatId) set.add(adminChatId);
+    targetChatIds = Array.from(set);
+  }
+
+  targetChatIds = Array.from(new Set(targetChatIds.map((id) => String(id).trim()).filter(Boolean)));
+  console.log(`[Telegram] Sending daily report for ${targetDate} to recipients: ${targetChatIds.join(', ')}...`);
+
+  let anySuccess = false;
+  for (const tid of targetChatIds) {
+    try {
+      let res = await sendTelegramMessage(botToken, tid, reportHtml);
+      if (res.ok) {
+        console.log(`[Telegram] Successfully sent to chat ID ${tid}`);
+        anySuccess = true;
+      } else {
+        console.warn(`[Telegram] Failed to send to chat ID ${tid}:`, res.description);
+        // Smart Fallback: If Admin private chat is blocked (e.g. hasn't clicked /start), fallback to store group
+        if (
+          tid === adminChatId &&
+          (res.description?.includes('Forbidden') ||
+            res.description?.includes('/start') ||
+            res.description?.includes('initiate conversation'))
+        ) {
+          console.warn('[Telegram] Admin private chat blocked. Retrying to fallback store group -5528089668...');
+          const retryRes = await sendTelegramMessage(botToken, '-5528089668', reportHtml);
+          if (retryRes.ok) {
+            console.log('[Telegram] Successfully delivered to fallback store group -5528089668');
+            anySuccess = true;
+          }
+        }
+      }
+    } catch (e) {
+      console.error(`[Telegram] Network error sending to ${tid}:`, e.message);
+    }
+  }
+
+  // Record log in Firestore
+  if (anySuccess) {
+    console.log(`[Firestore] Updating daily_report_logs/${eventKey}...`);
+    await patchFirestoreDoc('daily_report_logs', eventKey, {
+      date: targetDate,
+      sentAt: Date.now(),
+      recipients: targetChatIds,
+      salesCount: targetSales.length,
+      salesUsd: targetSalesUsd,
+      expensesCount: targetExpenses.length,
+      expensesUsd: targetExpensesUsd,
+      source: 'CLOUD_BOT',
+    });
+    console.log(`✅ Daily report for ${targetDate} successfully processed and logged!`);
+    return true;
+  } else {
+    console.error(`❌ Failed to deliver report for ${targetDate} to any chat ID.`);
+    return false;
+  }
+}
+
 async function main() {
   console.log('=== [SweetBakery POS] 24/7 Cloud Automated Daily Report Bot ===');
   
@@ -381,11 +516,11 @@ async function main() {
   const args = process.argv.slice(2);
   const isDryRun = args.includes('--dry-run');
   const isForce = args.includes('--force');
-  let targetDate = '';
+  let customTargetDate = '';
 
   for (const arg of args) {
     if (arg.startsWith('--date=')) {
-      targetDate = arg.split('=')[1].trim();
+      customTargetDate = arg.split('=')[1].trim();
     }
   }
 
@@ -393,12 +528,8 @@ async function main() {
   const cambodiaToday = getCambodiaDateStr(now);
   const cambodiaCurrentTime = getCambodiaTimeStr(now);
 
-  if (!targetDate) {
-    targetDate = cambodiaToday;
-  }
-
   console.log(`[Time] Cambodia Date: ${cambodiaToday}, Current Time: ${cambodiaCurrentTime}`);
-  console.log(`[Target] Target Report Date: ${targetDate}`);
+  if (customTargetDate) console.log(`[Target] Explicit Date Requested: ${customTargetDate}`);
   if (isDryRun) console.log('[Mode] DRY RUN mode (no messages or database updates will be sent)');
   if (isForce) console.log('[Mode] FORCE mode (ignoring schedule and deduplication locks)');
 
@@ -440,30 +571,7 @@ async function main() {
     return;
   }
 
-  // 2. Schedule Timing Check (only when checking today's date in non-force mode)
-  if (!isForce && !isDryRun && targetDate === cambodiaToday) {
-    const [schedH, schedM] = scheduledTime.split(':').map((s) => parseInt(s, 10));
-    const [currH, currM] = cambodiaCurrentTime.split(':').map((s) => parseInt(s, 10));
-    const schedMinutes = (isNaN(schedH) ? 21 : schedH) * 60 + (isNaN(schedM) ? 0 : schedM);
-    const currMinutes = currH * 60 + currM;
-
-    // If current time is earlier than the scheduled time, skip run
-    if (currMinutes < schedMinutes) {
-      console.log(`[Schedule] Current time (${cambodiaCurrentTime}) is before scheduled time (${scheduledTime}). Skipping until scheduled hour.`);
-      return;
-    }
-  }
-
-  // 3. Deduplication Check via Firestore log
-  const eventKey = `daily_report_${targetDate}`;
-  let existingLog = null;
-  try {
-    existingLog = await fetchFirestoreDoc('daily_report_logs', eventKey);
-  } catch (e) {
-    console.warn('[Notice] Could not read daily_report_logs:', e.message);
-  }
-
-  // 4. Fetch sales, expenses, and custom orders
+  // 2. Fetch sales, expenses, and custom orders upfront
   console.log('[Firestore] Fetching sales, expenses, and custom orders...');
   const [sales, expenses, customOrders] = await Promise.all([
     fetchFirestoreCollection('sales'),
@@ -473,115 +581,65 @@ async function main() {
 
   console.log(`[Data] Loaded ${sales.length} sales, ${expenses.length} expenses, ${customOrders.length} custom orders.`);
 
-  // Calculate snapshot of target date to detect changes
-  const targetSales = sales.filter((s) => (s.createdAt || '').slice(0, 10) === targetDate);
-  const targetExpenses = expenses.filter((e) => (e.date || e.createdAt || '').slice(0, 10) === targetDate);
-  const targetSalesUsd = targetSales.reduce((sum, s) => sum + (s.totalUsd || 0), 0);
-  const targetExpensesUsd = targetExpenses.reduce((sum, e) => sum + (e.amountUsd || 0), 0);
-
-  if (existingLog && !isForce && !isDryRun) {
-    // If a report was already sent today, check if sales or expenses changed
-    const prevSalesCount = existingLog.salesCount ?? -1;
-    const prevSalesUsd = existingLog.salesUsd ?? -1;
-    const prevExpCount = existingLog.expensesCount ?? -1;
-    const prevExpUsd = existingLog.expensesUsd ?? -1;
-
-    if (
-      prevSalesCount === targetSales.length &&
-      Math.abs(prevSalesUsd - targetSalesUsd) < 0.01 &&
-      prevExpCount === targetExpenses.length &&
-      Math.abs(prevExpUsd - targetExpensesUsd) < 0.01
-    ) {
-      console.log(`[Deduplication] Report for ${targetDate} was already sent (sentAt: ${new Date(existingLog.sentAt || 0).toISOString()}) and data is unchanged. Skipping duplicate notification.`);
-      return;
-    } else {
-      console.log(`[Update] New sales/expenses detected since previous report. Re-sending updated summary for ${targetDate}.`);
-    }
-  }
-
-  // 5. Generate Report Text
-  console.log('[Report] Generating report HTML text...');
-  const timeDisplay = `${cambodiaCurrentTime} (ម៉ោង ${scheduledTime})`;
-  const reportHtml = generateReportHtml({
+  const sharedParams = {
+    isForce,
+    isDryRun,
+    cambodiaCurrentTime,
+    scheduledTime,
     sales,
     expenses,
     customOrders,
     storeInfo,
     exchangeRate,
-    targetDate,
-    timeDisplay,
-  });
+    botToken,
+    chatId,
+    adminChatId,
+    recipientMode,
+  };
 
-  if (isDryRun) {
-    console.log('\n--- GENERATED REPORT PREVIEW ---');
-    console.log(reportHtml);
-    console.log('--------------------------------\n');
+  // If explicit date requested:
+  if (customTargetDate) {
+    const ok = await sendReportForDate({ ...sharedParams, targetDate: customTargetDate });
+    if (!ok && !isDryRun) process.exit(1);
     return;
   }
 
-  // 6. Determine Target Chat IDs
-  let targetChatIds = [];
-  if (recipientMode === 'ADMIN_ONLY') {
-    targetChatIds = [adminChatId];
-  } else if (recipientMode === 'GROUP_ONLY') {
-    targetChatIds = parseTelegramChatIds(chatId, botToken);
-  } else {
-    // 'BOTH'
-    const groupIds = parseTelegramChatIds(chatId, botToken);
-    const set = new Set(groupIds);
-    if (adminChatId) set.add(adminChatId);
-    targetChatIds = Array.from(set);
-  }
+  // Automatic Scheduling & Catch-up Engine
+  // Step A: Catch-up Yesterday if missed (e.g. runner delayed, shop closed before scheduled hour)
+  const yesterdayObj = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+  const cambodiaYesterday = getCambodiaDateStr(yesterdayObj);
+  let yesterdayLog = null;
+  try {
+    yesterdayLog = await fetchFirestoreDoc('daily_report_logs', `daily_report_${cambodiaYesterday}`);
+  } catch (e) {}
 
-  targetChatIds = Array.from(new Set(targetChatIds.map((id) => String(id).trim()).filter(Boolean)));
-  console.log(`[Telegram] Sending daily report to recipients: ${targetChatIds.join(', ')}...`);
-
-  let anySuccess = false;
-  for (const tid of targetChatIds) {
-    try {
-      let res = await sendTelegramMessage(botToken, tid, reportHtml);
-      if (res.ok) {
-        console.log(`[Telegram] Successfully sent to chat ID ${tid}`);
-        anySuccess = true;
-      } else {
-        console.warn(`[Telegram] Failed to send to chat ID ${tid}:`, res.description);
-        // Smart Fallback: If Admin private chat is blocked (e.g. hasn't clicked /start), fallback to store group
-        if (
-          tid === adminChatId &&
-          (res.description?.includes('Forbidden') ||
-            res.description?.includes('/start') ||
-            res.description?.includes('initiate conversation'))
-        ) {
-          console.warn('[Telegram] Admin private chat blocked. Retrying to fallback store group -5528089668...');
-          const retryRes = await sendTelegramMessage(botToken, '-5528089668', reportHtml);
-          if (retryRes.ok) {
-            console.log('[Telegram] Successfully delivered to fallback store group -5528089668');
-            anySuccess = true;
-          }
-        }
-      }
-    } catch (e) {
-      console.error(`[Telegram] Network error sending to ${tid}:`, e.message);
+  if (!yesterdayLog) {
+    const yesterdaySales = sales.filter((s) => (s.createdAt || '').slice(0, 10) === cambodiaYesterday);
+    const yesterdayExpenses = expenses.filter((e) => (e.date || e.createdAt || '').slice(0, 10) === cambodiaYesterday);
+    if (yesterdaySales.length > 0 || yesterdayExpenses.length > 0) {
+      console.log(`[Auto Catchup] Missed daily report detected for yesterday (${cambodiaYesterday}) with ${yesterdaySales.length} sales, ${yesterdayExpenses.length} expenses. Delivering catchup report now...`);
+      await sendReportForDate({
+        ...sharedParams,
+        targetDate: cambodiaYesterday,
+        isForce: true, // force send missed report
+      });
     }
   }
 
-  // 7. Record log in Firestore
-  if (anySuccess) {
-    console.log(`[Firestore] Updating daily_report_logs/${eventKey}...`);
-    await patchFirestoreDoc('daily_report_logs', eventKey, {
-      date: targetDate,
-      sentAt: Date.now(),
-      recipients: targetChatIds,
-      salesCount: targetSales.length,
-      salesUsd: targetSalesUsd,
-      expensesCount: targetExpenses.length,
-      expensesUsd: targetExpensesUsd,
-      source: 'CLOUD_BOT',
+  // Step B: Process Today's report if scheduled hour reached
+  const [schedH, schedM] = scheduledTime.split(':').map((s) => parseInt(s, 10));
+  const [currH, currM] = cambodiaCurrentTime.split(':').map((s) => parseInt(s, 10));
+  const schedMinutes = (isNaN(schedH) ? 21 : schedH) * 60 + (isNaN(schedM) ? 0 : schedM);
+  const currMinutes = currH * 60 + currM;
+
+  if (currMinutes >= schedMinutes || isForce) {
+    console.log(`[Scheduled Run] Current time (${cambodiaCurrentTime}) reached scheduled time (${scheduledTime}). Processing today's report (${cambodiaToday})...`);
+    await sendReportForDate({
+      ...sharedParams,
+      targetDate: cambodiaToday,
     });
-    console.log('✅ Daily report successfully processed and logged!');
   } else {
-    console.error('❌ Failed to deliver report to any chat ID.');
-    process.exit(1);
+    console.log(`[Schedule] Current time (${cambodiaCurrentTime}) is before scheduled time (${scheduledTime}). Skipping today's report until scheduled hour.`);
   }
 }
 
