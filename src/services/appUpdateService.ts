@@ -121,7 +121,7 @@ export const checkForAppUpdates = async (): Promise<AppUpdateInfo> => {
   const manifestUrl = getStoredUpdateUrl();
   const cacheBuster = manifestUrl.includes('?') ? `&_t=${Date.now()}` : `?_t=${Date.now()}`;
 
-  const defaultApkUrl = 'https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/latest/download/SweetBakery-Android.apk';
+  const defaultApkUrl = 'https://sothearetsuon-ai.github.io/sweetbakery-pos/SweetBakery-Android.apk';
   const defaultWinExeUrl = 'https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/latest/download/SweetBakery-POS-Setup.exe';
 
   let foundLatestVersion = currentVer;
@@ -165,7 +165,10 @@ export const checkForAppUpdates = async (): Promise<AppUpdateInfo> => {
         }
         const apkAsset = ghData.assets?.find((a: any) => a.name?.endsWith('.apk'));
         const exeAsset = ghData.assets?.find((a: any) => a.name?.endsWith('.exe'));
-        if (apkAsset?.browser_download_url) foundApkUrl = apkAsset.browser_download_url;
+        // Prefer CDN mirror for APK to avoid GitHub Releases 504 timeouts in Southeast Asia
+        if (apkAsset?.browser_download_url && !foundApkUrl) {
+          foundApkUrl = apkAsset.browser_download_url;
+        }
         if (exeAsset?.browser_download_url) foundWinExeUrl = exeAsset.browser_download_url;
       }
     }
@@ -190,9 +193,11 @@ export const checkForAppUpdates = async (): Promise<AppUpdateInfo> => {
       if (manifestRes && manifestRes.ok) {
         const data = await manifestRes.json();
         const rawVer = (data.version || '').replace(/^v/i, '').trim();
-        if (rawVer && isVersionNewer(rawVer, foundLatestVersion)) {
-          foundLatestVersion = rawVer;
-          if (data.releaseDate) foundReleaseDate = data.releaseDate;
+        if (rawVer && (isVersionNewer(rawVer, foundLatestVersion) || rawVer === foundLatestVersion)) {
+          if (isVersionNewer(rawVer, foundLatestVersion)) {
+            foundLatestVersion = rawVer;
+            if (data.releaseDate) foundReleaseDate = data.releaseDate;
+          }
           if (Array.isArray(data.releaseNotes) && data.releaseNotes.length > 0) {
             foundReleaseNotes = data.releaseNotes;
           }
@@ -291,7 +296,7 @@ export const openExternalUrl = (url: string) => {
     console.warn('Blocked attempt to open internal appassets URL externally:', cleanUrl);
     // If it looks like an APK update request, redirect to official GitHub release
     if (cleanUrl.endsWith('.apk') || cleanUrl.includes('update')) {
-      const fallbackUrl = 'https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/latest/download/SweetBakery-Android.apk';
+      const fallbackUrl = 'https://sothearetsuon-ai.github.io/sweetbakery-pos/SweetBakery-Android.apk';
       const nativeApp = (window as any).SweetBakeryNative;
       if (nativeApp && typeof nativeApp.openBrowser === 'function') {
         nativeApp.openBrowser(fallbackUrl);

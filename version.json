@@ -6,7 +6,12 @@
     "✨ កែសម្រួលប្រអប់តម្លៃនំ និងប្រាក់កក់ឱ្យនៅទទេជាលំនាំដើម (Blank Default Values)៖ កន្លែងបញ្ចូលតម្លៃនំ (Cake Price) និងប្រាក់កក់ (Deposit) គឺដាក់នៅទំនេរ (ទទេ) ដោយស្វ័យប្រវត្តិនៅពេលបើកផ្ទាំងកុម្ម៉ង់ថ្មី ងាយស្រួលឱ្យអ្នកគិតប្រាក់វាយបញ្ចូលភ្លាមៗដោយមិនបាច់ចំណាយពេលចុចលុបលេខចាស់ចោលឡើយ។"
   ],
   "author": "សុធារិទ្ធ",
-  "apkDownloadUrl": "https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/latest/download/SweetBakery-Android.apk",
+  "apkDownloadUrl": "https://sothearetsuon-ai.github.io/sweetbakery-pos/SweetBakery-Android.apk",
+  "apkFallbackUrls": [
+    "https://raw.githubusercontent.com/sothearetsuon-ai/sweetbakery-pos/main/public/SweetBakery-Android.apk",
+    "https://cdn.jsdelivr.net/gh/sothearetsuon-ai/sweetbakery-pos@main/public/SweetBakery-Android.apk",
+    "https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/latest/download/SweetBakery-Android.apk"
+  ],
   "windowsInstallerUrl": "https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/latest/download/SweetBakery-POS-Setup.exe",
   "windowsDownloadUrl": "https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/latest/download/SweetBakery-POS-Setup.exe",
   "mandatory": false

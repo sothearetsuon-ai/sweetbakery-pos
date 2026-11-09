@@ -31,6 +31,7 @@ import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.Toast;
+import android.util.Log;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -569,7 +570,7 @@ public class MainActivity extends AppCompatActivity {
             String target = downloadUrl.trim();
             // Sanitize against relative or internal appassets URLs
             if (target.contains("appassets.androidplatform.net") || target.startsWith("/") || !target.startsWith("http")) {
-                target = "https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/latest/download/SweetBakery-Android.apk";
+                target = "https://sothearetsuon-ai.github.io/sweetbakery-pos/SweetBakery-Android.apk";
             }
             final String cleanUrl = target;
 
@@ -578,7 +579,7 @@ public class MainActivity extends AppCompatActivity {
                 webView.evaluateJavascript("window.onUpdateDownloadStart && window.onUpdateDownloadStart()", null);
             });
 
-            // Use robust direct stream downloader with automatic 302/307 redirect resolution & live progress
+            // Use robust direct stream downloader with automatic multi-mirror fallback
             downloadViaDirectStream(cleanUrl);
         }
 
@@ -857,108 +858,145 @@ public class MainActivity extends AppCompatActivity {
         }, 200, 300, TimeUnit.MILLISECONDS);
     }
 
-    private void downloadViaDirectStream(String downloadUrl) {
+    private static final String[] FALLBACK_APK_MIRRORS = new String[] {
+        "https://sothearetsuon-ai.github.io/sweetbakery-pos/SweetBakery-Android.apk",
+        "https://raw.githubusercontent.com/sothearetsuon-ai/sweetbakery-pos/main/public/SweetBakery-Android.apk",
+        "https://cdn.jsdelivr.net/gh/sothearetsuon-ai/sweetbakery-pos@main/public/SweetBakery-Android.apk",
+        "https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/latest/download/SweetBakery-Android.apk"
+    };
+
+    private void downloadViaDirectStream(String initialUrl) {
         Executors.newSingleThreadExecutor().execute(() -> {
-            File outputFile = null;
-            try {
-                File dir = getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS);
-                if (dir == null) dir = getCacheDir();
-                outputFile = new File(dir, "SweetBakery-Update.apk");
+            java.util.List<String> urlsToTry = new java.util.ArrayList<>();
+            if (initialUrl != null && !initialUrl.trim().isEmpty() && initialUrl.startsWith("http")) {
+                String clean = initialUrl.trim();
+                if (clean.contains("github.com") && clean.contains("/releases/")) {
+                    urlsToTry.add("https://sothearetsuon-ai.github.io/sweetbakery-pos/SweetBakery-Android.apk");
+                    urlsToTry.add("https://raw.githubusercontent.com/sothearetsuon-ai/sweetbakery-pos/main/public/SweetBakery-Android.apk");
+                    urlsToTry.add("https://cdn.jsdelivr.net/gh/sothearetsuon-ai/sweetbakery-pos@main/public/SweetBakery-Android.apk");
+                    urlsToTry.add(clean);
+                } else {
+                    urlsToTry.add(clean);
+                    for (String mirror : FALLBACK_APK_MIRRORS) {
+                        if (!urlsToTry.contains(mirror)) {
+                            urlsToTry.add(mirror);
+                        }
+                    }
+                }
+            } else {
+                java.util.Collections.addAll(urlsToTry, FALLBACK_APK_MIRRORS);
+            }
+
+            File dir = getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS);
+            if (dir == null) dir = getCacheDir();
+            File outputFile = new File(dir, "SweetBakery-Update.apk");
+
+            boolean success = false;
+            String lastError = "Download failed";
+
+            for (int i = 0; i < urlsToTry.size(); i++) {
+                String targetUrl = urlsToTry.get(i);
+                Log.d("SweetBakeryUpdate", "Attempting download mirror [" + (i + 1) + "/" + urlsToTry.size() + "]: " + targetUrl);
+
                 if (outputFile.exists()) {
                     outputFile.delete();
                 }
 
-                URL currentUrl = new URL(downloadUrl);
                 HttpURLConnection connection = null;
-                int responseCode = 0;
-                int redirectCount = 0;
+                try {
+                    URL currentUrl = new URL(targetUrl);
+                    int redirectCount = 0;
+                    int responseCode = 0;
 
-                while (redirectCount < 6) {
-                    connection = (HttpURLConnection) currentUrl.openConnection();
-                    connection.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android) SweetBakeryApp/1.0");
-                    connection.setConnectTimeout(25000);
-                    connection.setReadTimeout(60000);
-                    connection.setInstanceFollowRedirects(true);
-                    connection.connect();
+                    while (redirectCount < 6) {
+                        connection = (HttpURLConnection) currentUrl.openConnection();
+                        connection.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android) SweetBakeryApp/1.0");
+                        connection.setConnectTimeout(15000);
+                        connection.setReadTimeout(45000);
+                        connection.setInstanceFollowRedirects(true);
+                        connection.connect();
 
-                    responseCode = connection.getResponseCode();
-                    if (responseCode == HttpURLConnection.HTTP_MOVED_PERM ||
-                        responseCode == HttpURLConnection.HTTP_MOVED_TEMP ||
-                        responseCode == HttpURLConnection.HTTP_SEE_OTHER ||
-                        responseCode == 307 || responseCode == 308) {
-                        String newUrl = connection.getHeaderField("Location");
-                        if (newUrl != null && !newUrl.isEmpty()) {
-                            currentUrl = new URL(newUrl);
-                            redirectCount++;
-                            continue;
+                        responseCode = connection.getResponseCode();
+                        if (responseCode == HttpURLConnection.HTTP_MOVED_PERM ||
+                            responseCode == HttpURLConnection.HTTP_MOVED_TEMP ||
+                            responseCode == HttpURLConnection.HTTP_SEE_OTHER ||
+                            responseCode == 307 || responseCode == 308) {
+                            String newUrl = connection.getHeaderField("Location");
+                            if (newUrl != null && !newUrl.isEmpty()) {
+                                currentUrl = new URL(newUrl);
+                                redirectCount++;
+                                connection.disconnect();
+                                continue;
+                            }
+                        }
+                        break;
+                    }
+
+                    if (responseCode != HttpURLConnection.HTTP_OK) {
+                        lastError = "Server HTTP " + responseCode;
+                        Log.w("SweetBakeryUpdate", "Mirror returned HTTP " + responseCode + " for: " + targetUrl);
+                        if (connection != null) connection.disconnect();
+                        continue;
+                    }
+
+                    int fileLength = connection.getContentLength();
+                    InputStream input = connection.getInputStream();
+                    FileOutputStream output = new FileOutputStream(outputFile);
+
+                    byte[] data = new byte[8192];
+                    long total = 0;
+                    int count;
+                    long lastReportTime = 0;
+
+                    while ((count = input.read(data)) != -1) {
+                        total += count;
+                        output.write(data, 0, count);
+
+                        long now = System.currentTimeMillis();
+                        if (fileLength > 0 && (now - lastReportTime > 250)) {
+                            lastReportTime = now;
+                            final int progress = (int) (total * 100 / fileLength);
+                            runOnUiThread(() -> {
+                                webView.evaluateJavascript("window.onUpdateDownloadProgress && window.onUpdateDownloadProgress(" + progress + ")", null);
+                            });
                         }
                     }
-                    break;
-                }
 
-                if (responseCode != HttpURLConnection.HTTP_OK) {
-                    final String fallbackLatest = "https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/latest/download/SweetBakery-Android.apk";
-                    if (!fallbackLatest.equalsIgnoreCase(downloadUrl)) {
-                        // Automatically retry once with latest release asset before failing
-                        downloadViaDirectStream(fallbackLatest);
-                        return;
+                    output.flush();
+                    output.close();
+                    input.close();
+
+                    if (outputFile.exists() && outputFile.length() > 5000000) {
+                        success = true;
+                        Log.i("SweetBakeryUpdate", "Download successful from mirror: " + targetUrl + " size: " + outputFile.length());
+                        break;
+                    } else {
+                        lastError = "Downloaded file incomplete (" + outputFile.length() + " bytes)";
                     }
-
-                    final int finalResponseCode = responseCode;
-                    final String errMsg = "Download failed: Server returned HTTP " + finalResponseCode;
-                    runOnUiThread(() -> {
-                        Toast.makeText(MainActivity.this, "ការទាញយកបានបរាជ័យ (HTTP " + finalResponseCode + ") កំពុងបើកកម្មវិធីរុករក (Browser)...", Toast.LENGTH_LONG).show();
-                        webView.evaluateJavascript("window.onUpdateDownloadError && window.onUpdateDownloadError('" + errMsg + "')", null);
-                        try {
-                            Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse(fallbackLatest));
-                            browserIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                            startActivity(browserIntent);
-                        } catch (Exception ignored) {}
-                    });
-                    return;
-                }
-
-                int fileLength = connection.getContentLength();
-                InputStream input = connection.getInputStream();
-                FileOutputStream output = new FileOutputStream(outputFile);
-
-                byte[] data = new byte[8192];
-                long total = 0;
-                int count;
-                long lastReportTime = 0;
-
-                while ((count = input.read(data)) != -1) {
-                    total += count;
-                    output.write(data, 0, count);
-
-                    long now = System.currentTimeMillis();
-                    if (fileLength > 0 && (now - lastReportTime > 250)) {
-                        lastReportTime = now;
-                        final int progress = (int) (total * 100 / fileLength);
-                        runOnUiThread(() -> {
-                            webView.evaluateJavascript("window.onUpdateDownloadProgress && window.onUpdateDownloadProgress(" + progress + ")", null);
-                        });
+                } catch (Exception e) {
+                    lastError = e.getMessage() != null ? e.getMessage() : "Connection failed";
+                    Log.w("SweetBakeryUpdate", "Exception downloading from " + targetUrl + ": " + lastError);
+                } finally {
+                    if (connection != null) {
+                        try { connection.disconnect(); } catch (Exception ignored) {}
                     }
                 }
+            }
 
-                output.flush();
-                output.close();
-                input.close();
-
+            if (success) {
                 final File finalFile = outputFile;
                 runOnUiThread(() -> {
                     webView.evaluateJavascript("window.onUpdateDownloadComplete && window.onUpdateDownloadComplete()", null);
                     installApk(finalFile);
                 });
-
-            } catch (Exception e) {
-                final String err = e.getMessage() != null ? e.getMessage() : "Unknown error";
-                final String fallbackLatest = "https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/latest/download/SweetBakery-Android.apk";
+            } else {
+                final String finalErr = lastError;
+                final String directBrowserUrl = "https://sothearetsuon-ai.github.io/sweetbakery-pos/SweetBakery-Android.apk";
                 runOnUiThread(() -> {
-                    Toast.makeText(MainActivity.this, "កំហុសពេលទាញយក: " + err, Toast.LENGTH_LONG).show();
-                    webView.evaluateJavascript("window.onUpdateDownloadError && window.onUpdateDownloadError('" + err.replace("'", "\\'") + "')", null);
+                    Toast.makeText(MainActivity.this, "ការទាញយកបានបរាជ័យ (" + finalErr + ") កំពុងបើកទាញយកផ្ទាល់តាម Browser...", Toast.LENGTH_LONG).show();
+                    webView.evaluateJavascript("window.onUpdateDownloadError && window.onUpdateDownloadError('" + finalErr.replace("'", "\\'") + "')", null);
                     try {
-                        Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse(fallbackLatest));
+                        Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse(directBrowserUrl));
                         browserIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                         startActivity(browserIntent);
                     } catch (Exception ignored) {}

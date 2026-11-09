@@ -19,5 +19,4 @@ android-app/.gradle/
 *.idsig
 scratch/
 .vscode/
-public/*.apk
 
