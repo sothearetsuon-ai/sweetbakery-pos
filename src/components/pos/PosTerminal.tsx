@@ -562,21 +562,21 @@ export const PosTerminal: React.FC = () => {
               <span>KHQR ហាង</span>
             </button>
 
-            {/* 2. ស្កេនថាសនំ AI */}
+            {/* 2. ភ្នែកទិព្វស្កេនថាសនំ AI (AI Vision Tray Scanner) */}
             <button
               type="button"
               onClick={() => {
                 soundFx.playPop();
                 setIsAiTrayScannerOpen(true);
               }}
-              className="px-3.5 py-1.5 rounded-full text-xs font-black bg-pink-50/90 hover:bg-pink-100 text-pink-700 border border-pink-200/90 shadow-2xs flex items-center gap-1.5 shrink-0 whitespace-nowrap cursor-pointer active:scale-95 transition-all group"
-              title="ស្កេននំលើថាសស្វ័យប្រវត្តិតាមកាមេរ៉ា (AI BakeryScan)"
+              className="px-3.5 py-1.5 rounded-full text-xs font-black bg-gradient-to-r from-purple-500/15 via-pink-500/15 to-rose-500/15 hover:from-purple-500/25 hover:to-rose-500/25 text-purple-900 border border-purple-300/80 shadow-2xs flex items-center gap-1.5 shrink-0 whitespace-nowrap cursor-pointer active:scale-95 transition-all group"
+              title="ភ្នែកទិព្វ AI ស្កេនសម្គាល់នំលើថាសស្វ័យប្រវត្តិតាមកាមេរ៉ា (AI Bakery Vision Scanner)"
             >
-              <Camera className="w-4 h-4 text-pink-600 shrink-0 group-hover:scale-110 transition-transform" />
-              <span>ស្កេនថាសនំ AI</span>
+              <Camera className="w-4 h-4 text-purple-600 shrink-0 group-hover:scale-110 transition-transform" />
+              <span>👁️ ភ្នែកទិព្វ AI ស្កេននំ</span>
             </button>
 
-            {/* 3. រចនានំ 3D */}
+            {/* 3. រចនានំ 3D Studio */}
             <button
               type="button"
               onClick={() => {
@@ -590,7 +590,7 @@ export const PosTerminal: React.FC = () => {
                 <Cake className="w-4 h-4 text-purple-600 group-hover:rotate-12 transition-transform" />
                 <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-pink-500 animate-pulse" />
               </div>
-              <span>រចនានំ 3D</span>
+              <span>✨ រចនានំ 3D</span>
             </button>
 
             {/* 4. AI Chef រូបមន្ត */}
@@ -604,21 +604,21 @@ export const PosTerminal: React.FC = () => {
               title="មេចុងភៅឆ្លាតវៃ AI៖ បង្កើតរូបមន្តថ្មី គណនា % មេចុងភៅ និងថ្លៃដើមចំណេញ (AI Bakery Chef)"
             >
               <ChefHat className="w-4 h-4 text-emerald-600 shrink-0 group-hover:scale-110 transition-transform" />
-              <span>AI Chef រូបមន្ត</span>
+              <span>👨‍🍳 AI Chef រូបមន្ត</span>
             </button>
 
-            {/* 5. បញ្ជាសំឡេង */}
+            {/* 5. AI បញ្ជាសំឡេងខ្មែរ */}
             <button
               type="button"
               onClick={() => {
                 soundFx.playPop();
                 setIsVoicePosOpen(true);
               }}
-              className="px-3.5 py-1.5 rounded-full text-xs font-black bg-red-50/90 hover:bg-red-100 text-rose-700 border border-rose-200/90 shadow-2xs flex items-center gap-1.5 shrink-0 whitespace-nowrap cursor-pointer active:scale-95 transition-all group"
+              className="px-3.5 py-1.5 rounded-full text-xs font-black bg-rose-50/90 hover:bg-rose-100 text-rose-700 border border-rose-200/90 shadow-2xs flex items-center gap-1.5 shrink-0 whitespace-nowrap cursor-pointer active:scale-95 transition-all group"
               title="បញ្ជាគិតលុយ និងបញ្ចូលកន្ត្រកដោយសំឡេងខ្មែរ (Khmer Voice POS) ឬចុច F3"
             >
               <Mic className="w-4 h-4 text-rose-600 shrink-0 group-hover:scale-110 transition-transform" />
-              <span>បញ្ជាសំឡេង</span>
+              <span>🎙️ AI សំឡេងខ្មែរ</span>
             </button>
 
             {/* 6. អេក្រង់ភ្ញៀវ */}

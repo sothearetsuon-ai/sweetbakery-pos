@@ -36,6 +36,8 @@ import { formatDateDMY } from '../../utils/dateUtils';
 import { roundKhr } from '../../utils/currencyUtils';
 import { analyzeCakeImageWithGemini, AiCakeAnalysisResult } from '../../services/aiCakeVisionService';
 import { AiCakeAnalysisModal } from '../common/AiCakeAnalysisModal';
+import { GenerativeCakeDesignerModal } from './GenerativeCakeDesignerModal';
+import { GeneratedCakeDesign } from '../../services/generativeCakeService';
 
 interface NewCustomOrderModalProps {
   isOpen: boolean;
@@ -402,6 +404,34 @@ export const NewCustomOrderModal: React.FC<NewCustomOrderModalProps> = ({ isOpen
     }
     soundFx.playSuccess();
     setIsAiVisionModalOpen(false);
+  };
+
+  // Generative AI Cake Designer State
+  const [isGenerativeCakeDesignerOpen, setIsGenerativeCakeDesignerOpen] = useState(false);
+
+  const handleApplyAiDesign = (design: GeneratedCakeDesign) => {
+    if (design.renderedImage) {
+      setReferenceImage(design.renderedImage);
+    }
+    if (design.cakeNameKh) {
+      setCakeName(design.cakeNameKh);
+    }
+    if (design.estimatedSize) {
+      setSize(design.estimatedSize);
+    }
+    if (design.suggestedPriceKhr) {
+      setBaseCakePriceKhr(design.suggestedPriceKhr.toString());
+      setDepositKhr(design.suggestedDepositKhr.toString());
+    }
+    if (design.recommendedInscription) {
+      setInscription(design.recommendedInscription);
+    }
+    if (design.bakingTechniqueNotesKh) {
+      const notes = `[AI Cake Blueprint]: ${design.bakingTechniqueNotesKh}\nពណ៌ចម្បង: ${design.colorPalette.join(', ')}\nគ្រឿងតុបតែង: ${design.decorElements.join(', ')}`;
+      setThemeNotes((prev) => (prev ? `${prev}\n\n${notes}` : notes));
+    }
+    soundFx.playSuccess();
+    confetti({ particleCount: 50, spread: 60 });
   };
 
   // Auto fallback to first in-stock flavor if currently selected flavor is out of stock
@@ -955,7 +985,22 @@ export const NewCustomOrderModal: React.FC<NewCustomOrderModalProps> = ({ isOpen
                   ? 'រូបភាពគំរូនំដែលភ្ញៀវចង់បាន (Reference Photo)'
                   : 'រូបភាពគំរូនំបុ័ង / កញ្ចប់វេចខ្ចប់ (Reference Photo)'}
               </label>
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-1.5 flex-wrap justify-end">
+                {/* 🎨 Generative AI Cake Designer Button */}
+                {orderType === 'CAKE' && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      soundFx.playPop();
+                      setIsGenerativeCakeDesignerOpen(true);
+                    }}
+                    className="px-2.5 py-1 bg-gradient-to-r from-purple-600 via-pink-600 to-rose-600 hover:from-purple-700 hover:to-pink-700 text-white rounded-lg text-[11px] font-black flex items-center gap-1 cursor-pointer transition-all shadow-xs active:scale-95"
+                    title="បង្កើតម៉ូដនំ 3D តាមការស្រមើស្រមៃរបស់អតិថិជនជាមួយ Generative AI"
+                  >
+                    <Sparkles className="w-3.5 h-3.5 text-yellow-300" />
+                    <span>🎨 AI បង្កើតម៉ូដនំ</span>
+                  </button>
+                )}
                 {referenceImage && (
                   <button
                     type="button"
@@ -2160,6 +2205,14 @@ export const NewCustomOrderModal: React.FC<NewCustomOrderModalProps> = ({ isOpen
           soundFx.playSuccess();
           setIsAiVisionModalOpen(false);
         }}
+      />
+
+      {/* Generative AI Cake Designer Modal */}
+      <GenerativeCakeDesignerModal
+        isOpen={isGenerativeCakeDesignerOpen}
+        onClose={() => setIsGenerativeCakeDesignerOpen(false)}
+        exchangeRate={exchangeRate}
+        onApplyDesign={handleApplyAiDesign}
       />
     </div>
   );

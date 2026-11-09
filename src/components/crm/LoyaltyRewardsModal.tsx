@@ -327,3 +327,4 @@ export const LoyaltyRewardsModal: React.FC<LoyaltyRewardsModalProps> = ({
     </div>
   );
 };
+

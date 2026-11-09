@@ -41,6 +41,7 @@ import { RecordIngredientUsageModal } from './RecordIngredientUsageModal';
 import { BatchBakeModal } from './BatchBakeModal';
 import { WastageManagementModal } from './WastageManagementModal';
 import { CakeLabelPrintModal } from '../custom-orders/CakeLabelPrintModal';
+import { AiDemandForecastModal } from '../reports/AiDemandForecastModal';
 
 export const InventoryManagement: React.FC = () => {
   const {
@@ -109,6 +110,7 @@ export const InventoryManagement: React.FC = () => {
   const [isWastageOpen, setIsWastageOpen] = useState(false);
   const [isLabelPrintOpen, setIsLabelPrintOpen] = useState(false);
   const [labelPrintInitialData, setLabelPrintInitialData] = useState<Partial<CakeBoxLabelData>>({});
+  const [isAiForecastOpen, setIsAiForecastOpen] = useState(false);
 
   const filteredIngredients = ingredients.filter((ing) => {
     const q = searchQuery.toLowerCase().trim();
@@ -211,6 +213,21 @@ export const InventoryManagement: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+          {/* AI Demand Forecast & Predictive Baking Plan */}
+          <button
+            type="button"
+            onClick={() => {
+              soundFx.playPop();
+              setIsAiForecastOpen(true);
+            }}
+            className="px-3 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-xl text-xs font-bold shadow-sm shadow-purple-500/20 flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all"
+            title="AI ព្យាករណ៍តម្រូវការដុតនំប្រចាំថ្ងៃ & កាត់បន្ថយការខាតបង់ (Zero-Waste Demand Forecast)"
+          >
+            <Sparkles className="w-3.5 h-3.5 text-yellow-300" />
+            <span className="hidden md:inline">📈 ផែនការដុតនំ AI</span>
+            <span className="inline md:hidden">AI ផែនការ</span>
+          </button>
+
           {/* Quick Real-time Stock Sync Button */}
           {/* Phase 1: Batch Bake Button */}
           <button
@@ -1735,6 +1752,12 @@ export const InventoryManagement: React.FC = () => {
         isOpen={isLabelPrintOpen}
         onClose={() => setIsLabelPrintOpen(false)}
         initialData={labelPrintInitialData}
+      />
+
+      {/* AI Demand Forecast & Zero-Waste Baking Schedule Modal */}
+      <AiDemandForecastModal
+        isOpen={isAiForecastOpen}
+        onClose={() => setIsAiForecastOpen(false)}
       />
     </div>
   );
