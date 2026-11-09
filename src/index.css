@@ -403,4 +403,25 @@
   scrollbar-width: none;
 }
 
+/* ==========================================================================
+   Turbocharge Hardware & Scroll Performance (60-120 FPS Fluidity)
+   ========================================================================== */
+.pos-product-card {
+  content-visibility: auto;
+  contain-intrinsic-size: 240px 280px;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+.gpu-accelerated {
+  transform: translateZ(0);
+  will-change: transform;
+  backface-visibility: hidden;
+}
+
+.smooth-scroll {
+  scroll-behavior: smooth;
+  overscroll-behavior-y: contain;
+}
+
 

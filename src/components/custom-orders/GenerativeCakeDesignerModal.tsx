@@ -382,3 +382,4 @@ export const GenerativeCakeDesignerModal: React.FC<GenerativeCakeDesignerModalPr
     </div>
   );
 };
+

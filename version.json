@@ -1,14 +1,14 @@
 {
-  "version": "1.9.2",
-  "versionCode": 58,
-  "releaseDate": "2026-11-09",
+  "version": "1.9.3",
+  "versionCode": 59,
+  "releaseDate": "2026-11-10",
   "releaseNotes": [
-    "🎨 កំពូល Generative AI បង្កើតម៉ូដនំ (AI Cake Designer)៖ បង្កើតរូបភាពគំរូនំខេក 3D Photorealistic កម្រិតខ្ពស់តាមការស្រមើស្រមៃរបស់អតិថិជន (ប្រាសាទ Elsa, ឡានប្រណាំង, Unicorn, ផ្កាកុលាបមាស...) គណនាទំហំ តម្លៃ និងប្រាក់កក់ស្វ័យប្រវត្តិ",
-    "👁️ ភ្នែកទិព្វ AI ស្កេននំ (AI Vision Tray Scanner)៖ ស្កេនសម្គាល់មុខនំ និងរាប់ចំនួននំលើថាសស្វ័យប្រវត្តិតាមកាមេរ៉ា POS គិតលុយ និងបញ្ចូលកន្ត្រកភ្លាមៗ",
-    "📈 ផែនការដុតនំ AI & កាត់បន្ថយការខាតបង់ (AI Demand Forecast & Zero-Waste)៖ វិភាគទិន្នន័យលក់ចាស់ៗ និងណែនាំបរិមាណនំដែលត្រូវដុតប្រចាំថ្ងៃដើម្បីលក់អស់ មិនសល់ខាតបង់",
-    "🎙️ AI បញ្ជាសំឡេងខ្មែរ (Khmer Voice POS)៖ ស្គាល់សំឡេងខ្មែរ បញ្ជាបញ្ចូលកន្ត្រក គិតលុយ និងសាកសួររបាយការណ៍លក់",
-    "👨‍🍳 AI Bakery Chef រូបមន្ត៖ បង្កើតរូបមន្តនំថ្មីៗ គណនាថ្លៃដើមគ្រឿងផ្សំ BOM និងបច្ចេកទេសដុតនំ",
-    "🔥 មុខងារដុតនំជាឡូ BOM, បោះពុម្ពស្លាក Sticker ប្រអប់នំ, កត់ត្រានំសល់ចុងថ្ងៃ, និងពិន្ទុសន្សំ Loyalty Rewards"
+    "🚀 បង្កើនល្បឿន និងភាពរលូនកម្រិតខ្ពស់ Turbocharge Performance (GPU Composition, Content-Visibility Auto, 60-120 FPS Silky Smooth Scrolling)",
+    "🎯 កងបង្វិលសំណាង Sweet Bakery Lucky Wheel (Lucky Spin Game) សម្រាប់អតិថិជនបង្វិលយករង្វាន់នំ ភេសជ្ជៈ បញ្ចុះតម្លៃ 10% និងពិន្ទុ VIP +20/+50",
+    "🎨 កំពូល Generative AI បង្កើតម៉ូដនំ (AI Cake Designer) 3D Photorealistic កម្រិតខ្ពស់តាមការស្រមើស្រមៃរបស់អតិថិជន",
+    "👁️ ភ្នែកទិព្វ AI ស្កេននំ (AI Vision Tray Scanner) ស្កេនសម្គាល់មុខនំលើថាសស្វ័យប្រវត្តិតាមកាមេរ៉ា POS",
+    "📈 ផែនការដុតនំ AI & កាត់បន្ថយការខាតបង់ (AI Demand Forecast & Zero-Waste) វិភាគទិន្នន័យលក់ចាស់ៗ និងណែនាំបរិមាណដុតនំ",
+    "🎙️ AI បញ្ជាសំឡេងខ្មែរ (Khmer Voice POS) ស្គាល់សំឡេងខ្មែរ បញ្ជាបញ្ចូលកន្ត្រក និងគិតលុយ"
   ],
   "author": "សុធារិទ្ធ",
   "apkDownloadUrl": "https://sothearetsuon-ai.github.io/sweetbakery-pos/SweetBakery-Android.apk",

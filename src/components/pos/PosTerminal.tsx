@@ -27,6 +27,7 @@ import {
   Monitor,
   Mic,
   ChefHat,
+  Gift,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { useBakery } from '../../context/BakeryContext';
@@ -43,6 +44,7 @@ import { CustomerDisplayModal } from './CustomerDisplayModal';
 import { ThreeCakeStudioModal } from './ThreeCakeStudioModal';
 import { AiBakeryChefModal } from './AiBakeryChefModal';
 import { KhmerVoicePosModal } from './KhmerVoicePosModal';
+import { CustomerLuckyWheelModal } from './CustomerLuckyWheelModal';
 import { Product, CompletedSale } from '../../types';
 import { soundFx } from '../../utils/audio';
 import { sortProductsForPos, PosSortMode } from '../../utils/productUtils';
@@ -81,6 +83,7 @@ export const PosTerminal: React.FC = () => {
   const [isThreeCakeStudioOpen, setIsThreeCakeStudioOpen] = useState(false);
   const [isAiChefOpen, setIsAiChefOpen] = useState(false);
   const [isVoicePosOpen, setIsVoicePosOpen] = useState(false);
+  const [isLuckyWheelOpen, setIsLuckyWheelOpen] = useState(false);
   const [checkoutOptions, setCheckoutOptions] = useState<{
     isDeposit?: boolean;
     depositKhr?: number;
@@ -442,7 +445,7 @@ export const PosTerminal: React.FC = () => {
       )}
 
       {/* Products catalog area */}
-      <div className="flex-1 flex flex-col min-w-0 p-3 sm:p-6 overflow-y-auto pb-28 lg:pb-6">
+      <div className="flex-1 flex flex-col min-w-0 p-3 sm:p-6 overflow-y-auto pb-28 lg:pb-6 smooth-scroll">
         {/* Search & Category Tabs (Sticky at top when scrolling products) */}
         <div className="sticky -top-3 sm:-top-6 z-20 bg-white/75 backdrop-blur-2xl backdrop-saturate-180 pt-2 sm:pt-6 pb-2 sm:pb-2.5 mb-2.5 sm:mb-5 space-y-2 sm:space-y-4 border-b border-white/70 shadow-[0_4px_24px_rgba(15,23,42,0.03)] -mx-3 sm:-mx-6 px-3 sm:px-6 transition-all">
           {/* Row 1: Search Input & Add Product Button & Demo Mode toggle */}
@@ -633,6 +636,20 @@ export const PosTerminal: React.FC = () => {
             >
               <Monitor className="w-4 h-4 text-sky-600 shrink-0" />
               <span>អេក្រង់ភ្ញៀវ</span>
+            </button>
+
+            {/* 7. កងបង្វិលសំណាង Lucky Wheel */}
+            <button
+              type="button"
+              onClick={() => {
+                soundFx.playPop();
+                setIsLuckyWheelOpen(true);
+              }}
+              className="px-3.5 py-1.5 rounded-full text-xs font-black bg-amber-50/90 hover:bg-amber-100 text-amber-800 border border-amber-200/90 shadow-2xs flex items-center gap-1.5 shrink-0 whitespace-nowrap cursor-pointer active:scale-95 transition-all group"
+              title="បើកកងបង្វិលយករង្វាន់ Lucky Wheel ជូនអតិថិជន"
+            >
+              <Gift className="w-4 h-4 text-amber-600 shrink-0 group-hover:rotate-12 transition-transform" />
+              <span>🎯 កងសំណាង</span>
             </button>
 
             {/* 7. កន្ត្រកទំនិញ */}
@@ -1247,6 +1264,12 @@ export const PosTerminal: React.FC = () => {
         onCheckout={() => setIsCheckoutOpen(true)}
         onClearCart={clearCart}
         exchangeRate={exchangeRate}
+      />
+
+      {/* Customer Lucky Spin Wheel Modal */}
+      <CustomerLuckyWheelModal
+        isOpen={isLuckyWheelOpen}
+        onClose={() => setIsLuckyWheelOpen(false)}
       />
     </div>
   );
