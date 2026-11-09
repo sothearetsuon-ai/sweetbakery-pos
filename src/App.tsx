@@ -424,9 +424,16 @@ export const App: React.FC = () => {
 
   return (
     <div
-      className={`h-screen h-[100dvh] max-h-screen ${currentTheme.bgClass} flex flex-col font-sans selection:bg-pink-100 selection:text-pink-700 overflow-hidden transition-colors duration-300`}
+      className={`h-screen h-[100dvh] max-h-screen ${currentTheme.bgClass} flex flex-col font-sans selection:bg-pink-100 selection:text-pink-700 overflow-hidden transition-colors duration-300 relative`}
       style={currentTheme.bgStyle}
     >
+      {/* Ambient Glassmorphism Luminous Glow Orbs in Background */}
+      <div className="absolute inset-0 pointer-events-none overflow-hidden z-0 select-none">
+        <div className="absolute -top-[12%] -left-[10%] w-[48vw] h-[48vw] max-w-[620px] max-h-[620px] rounded-full bg-gradient-to-br from-pink-400/20 via-rose-300/15 to-transparent blur-3xl transform-gpu animate-float" />
+        <div className="absolute top-[18%] -right-[12%] w-[42vw] h-[42vw] max-w-[560px] max-h-[560px] rounded-full bg-gradient-to-bl from-amber-300/20 via-orange-300/12 to-transparent blur-3xl transform-gpu animate-float [animation-delay:2s]" />
+        <div className="absolute -bottom-[15%] left-[25%] w-[46vw] h-[46vw] max-w-[600px] max-h-[600px] rounded-full bg-gradient-to-tr from-purple-300/18 via-pink-200/12 to-transparent blur-3xl transform-gpu animate-float [animation-delay:4s]" />
+      </div>
+
       {/* Demo Sandbox Mode Sticky Banner */}
       <DemoModeBanner />
 

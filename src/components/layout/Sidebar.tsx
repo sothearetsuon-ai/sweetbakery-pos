@@ -347,9 +347,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     onClick={() => handleTabClick(item.id, item.permission)}
                     className={`w-full flex items-center justify-between px-3 py-2 rounded-2xl font-bold text-xs tracking-normal transition-all duration-200 relative group cursor-pointer ${
                       isActive
-                        ? 'bg-gradient-to-r from-[#FF6F68] via-[#FA5E57] to-[#E64C47] text-white shadow-md shadow-[#E64C47]/30 scale-[1.02] ring-2 ring-[#FFB4AE]'
+                        ? 'bg-gradient-to-r from-[#FF6F68] via-[#FA5E57] to-[#E64C47] text-white shadow-lg shadow-[#E64C47]/30 scale-[1.02] border border-white/50 ring-2 ring-[#FFB4AE]/50'
                         : isAllowed
-                        ? 'text-slate-700 hover:bg-white hover:text-[#E6514D] hover:shadow-xs hover:border hover:border-rose-100/80'
+                        ? 'text-slate-700 hover:bg-white/85 hover:text-[#E6514D] hover:shadow-xs hover:border hover:border-white/90 backdrop-blur-xs'
                         : 'text-slate-400 opacity-60 hover:opacity-80'
                     }`}
                   >
@@ -826,7 +826,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   return (
     <>
       {/* 1. Desktop Permanent Sidebar (Hidden on Mobile) */}
-      <aside className="hidden md:flex w-64 glass-panel border-r border-[#F2DBD3] flex-col shrink-0 h-full overflow-y-auto scrollbar-thin">
+      <aside className="hidden md:flex w-64 bg-white/75 backdrop-blur-2xl backdrop-saturate-180 border-r border-white/70 shadow-[4px_0_30px_rgba(15,23,42,0.02)] flex-col shrink-0 h-full overflow-y-auto scrollbar-thin transition-all">
         {renderNavList()}
       </aside>
 
@@ -840,7 +840,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           />
 
           {/* Sliding Drawer */}
-          <aside className="relative z-50 w-72 max-w-[82vw] bg-white h-full shadow-2xl flex flex-col justify-between overflow-y-auto animate-in slide-in-from-left duration-200">
+          <aside className="relative z-50 w-72 max-w-[82vw] bg-white/95 backdrop-blur-2xl h-full shadow-2xl flex flex-col justify-between overflow-y-auto animate-in slide-in-from-left duration-200 border-r border-white/70">
             {/* Mobile Drawer Header */}
             <div className="p-4 border-b border-[#F2DBD3] flex items-center justify-between bg-gradient-to-r from-[#FFF5F2] to-[#FFEFEA]">
               <div className="flex items-center gap-2.5">

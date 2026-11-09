@@ -194,14 +194,14 @@ export const CartPanel: React.FC<CartPanelProps> = ({
     <div
       className={`${
         isMobileSheet
-          ? 'w-full h-full max-h-[92vh] bg-white rounded-t-3xl flex flex-col justify-between overflow-hidden shadow-2xl'
+          ? 'w-full h-full max-h-[92vh] bg-white/95 backdrop-blur-2xl rounded-t-3xl flex flex-col justify-between overflow-hidden shadow-2xl border-t border-white/80'
           : isDrawer
-          ? 'w-full h-full bg-white flex flex-col justify-between overflow-hidden shadow-2xl'
-          : `${isWideView ? 'w-[520px] xl:w-[600px] 2xl:w-[680px]' : 'w-[420px] xl:w-[460px] 2xl:w-[500px]'} glass-panel border-l border-rose-100/80 flex flex-col justify-between shrink-0 h-[calc(100vh-65px)] sticky top-[65px] shadow-sm transition-all duration-300`
+          ? 'w-full h-full bg-white/95 backdrop-blur-2xl flex flex-col justify-between overflow-hidden shadow-2xl border-l border-white/80'
+          : `${isWideView ? 'w-[520px] xl:w-[600px] 2xl:w-[680px]' : 'w-[420px] xl:w-[460px] 2xl:w-[500px]'} bg-white/75 backdrop-blur-2xl backdrop-saturate-180 border-l border-white/70 flex flex-col justify-between shrink-0 h-[calc(100vh-65px)] sticky top-[65px] shadow-[-8px_0_32px_rgba(15,23,42,0.03)] transition-all duration-300`
       }`}
     >
       {/* Header */}
-      <div className="p-4 sm:p-4.5 border-b border-rose-100/70 flex items-center justify-between bg-white/90">
+      <div className="p-4 sm:p-4.5 border-b border-white/60 flex items-center justify-between bg-white/60 backdrop-blur-md">
         <div className="flex items-center gap-3">
           <div className="relative">
             <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-pink-500 via-rose-500 to-amber-500 text-white flex items-center justify-center shadow-md shadow-pink-500/25">

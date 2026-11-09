@@ -441,7 +441,7 @@ export const PosTerminal: React.FC = () => {
       {/* Products catalog area */}
       <div className="flex-1 flex flex-col min-w-0 p-3 sm:p-6 overflow-y-auto pb-28 lg:pb-6">
         {/* Search & Category Tabs (Sticky at top when scrolling products) */}
-        <div className="sticky -top-3 sm:-top-6 z-20 bg-white/95 backdrop-blur-md pt-2 sm:pt-6 pb-2 sm:pb-2.5 mb-2.5 sm:mb-5 space-y-2 sm:space-y-4 border-b border-rose-100/80 shadow-2xs -mx-3 sm:-mx-6 px-3 sm:px-6">
+        <div className="sticky -top-3 sm:-top-6 z-20 bg-white/75 backdrop-blur-2xl backdrop-saturate-180 pt-2 sm:pt-6 pb-2 sm:pb-2.5 mb-2.5 sm:mb-5 space-y-2 sm:space-y-4 border-b border-white/70 shadow-[0_4px_24px_rgba(15,23,42,0.03)] -mx-3 sm:-mx-6 px-3 sm:px-6 transition-all">
           {/* Row 1: Search Input & Add Product Button & Demo Mode toggle */}
           <div className="flex items-center justify-between gap-2 sm:gap-3">
             {/* Search Input with shortcut chip & instant clear button */}
@@ -454,7 +454,7 @@ export const PosTerminal: React.FC = () => {
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onKeyDown={handleSearchKeyDown}
                 placeholder="ស្វែងរកនំ ឬស្កេនបាកូដ..."
-                className="w-full pl-9 sm:pl-11 pr-14 sm:pr-20 py-2 sm:py-2.5 bg-white/95 border border-rose-200/80 rounded-2xl text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-rose-500/25 focus:border-rose-400 shadow-xs transition-all font-semibold"
+                className="w-full pl-9 sm:pl-11 pr-14 sm:pr-20 py-2 sm:py-2.5 bg-white/75 backdrop-blur-md border border-white/80 rounded-2xl text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-rose-500/25 focus:border-rose-400 shadow-[inset_0_1px_2px_rgba(0,0,0,0.02)] transition-all font-semibold"
               />
               <div className="absolute right-2.5 top-1/2 -translate-y-1/2 flex items-center gap-1">
                 {searchQuery && (
@@ -685,10 +685,10 @@ export const PosTerminal: React.FC = () => {
                     soundFx.playPop();
                     setSelectedCategory(cat.id);
                   }}
-                  className={`px-3 sm:px-4 py-1.5 sm:py-2.5 rounded-full text-[11px] sm:text-xs font-black whitespace-nowrap transition-all duration-200 flex items-center gap-1.5 shadow-2xs active:scale-95 cursor-pointer relative ${
+                  className={`px-3 sm:px-4 py-1.5 sm:py-2.5 rounded-full text-[11px] sm:text-xs font-black whitespace-nowrap transition-all duration-200 flex items-center gap-1.5 active:scale-95 cursor-pointer relative ${
                     isActive
-                      ? 'bg-gradient-to-r from-[#FF6F68] to-[#E6514D] text-white shadow-md shadow-[#E6514D]/30 scale-102 ring-2 ring-[#FFB4AE]'
-                      : 'bg-white/95 text-slate-700 hover:bg-rose-50/70 hover:text-[#E6514D] border border-rose-100/80 hover:shadow-xs'
+                      ? 'bg-gradient-to-r from-[#FF6F68] to-[#E6514D] text-white shadow-lg shadow-[#E6514D]/35 scale-102 border border-white/50 ring-2 ring-[#FFB4AE]/50'
+                      : 'bg-white/75 backdrop-blur-md text-slate-700 hover:bg-white/95 hover:text-[#E6514D] border border-white/80 hover:border-pink-300/60 shadow-[0_2px_8px_rgba(0,0,0,0.02)]'
                   }`}
                 >
                   {getCategoryIcon(cat.icon)}

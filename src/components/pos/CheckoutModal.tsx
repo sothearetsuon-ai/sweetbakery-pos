@@ -342,8 +342,8 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
   );
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-4">
-      <div className="bg-white rounded-3xl max-w-lg w-full shadow-2xl border border-rose-100 overflow-hidden animate-in fade-in zoom-in-95 duration-200 max-h-[95vh] flex flex-col">
+    <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-md flex items-center justify-center p-4">
+      <div className="bg-white/95 backdrop-blur-2xl rounded-3xl max-w-lg w-full shadow-[0_25px_60px_-15px_rgba(15,23,42,0.25)] border border-white/80 overflow-hidden animate-in fade-in zoom-in-95 duration-200 max-h-[95vh] flex flex-col">
         {/* Header */}
         <div className="px-6 py-4 border-b border-rose-100/70 flex items-center justify-between bg-gradient-to-r from-rose-50/60 to-pink-50/40 shrink-0">
           <div className="flex items-center gap-2.5">

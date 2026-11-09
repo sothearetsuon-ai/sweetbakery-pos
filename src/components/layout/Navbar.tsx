@@ -220,7 +220,7 @@ export const Navbar: React.FC<NavbarProps> = ({
       : 'Good Evening 🧁 Ready for cake pickups';
 
   return (
-    <header className="bg-white/95 backdrop-blur-md border-b border-[#F2DBD3] sticky top-0 z-40 px-2 sm:px-4 lg:px-6 py-2 sm:py-2.5 shadow-xs shrink-0">
+    <header className="bg-white/80 backdrop-blur-2xl backdrop-saturate-180 border-b border-white/70 shadow-[0_4px_30px_rgba(15,23,42,0.03)] sticky top-0 z-40 px-2 sm:px-4 lg:px-6 py-2 sm:py-2.5 shrink-0 transition-all">
       <div className="flex items-center justify-between gap-2 sm:gap-4">
         {/* Left Side: Mobile Hamburger Menu + Brand (Guaranteed Width, Never Squished) */}
         <div className="flex items-center gap-1.5 sm:gap-3 shrink-0 min-w-0 max-w-[280px] sm:max-w-[340px] md:max-w-[400px] lg:max-w-[480px]">

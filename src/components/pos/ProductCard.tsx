@@ -51,7 +51,7 @@ const ProductCardComponent: React.FC<ProductCardProps> = ({ product, onAddToCart
   return (
     <div
       onClick={handleAdd}
-      className="group bg-white/95 hover:bg-white rounded-3xl border border-rose-100/70 hover:border-pink-400/80 overflow-hidden shadow-xs hover:shadow-xl hover:shadow-pink-500/12 hover:-translate-y-1 transition-all duration-200 cursor-pointer flex flex-col justify-between select-none relative transform-gpu ring-1 ring-black/[0.03]"
+      className="group bg-white/80 hover:bg-white/95 backdrop-blur-xl backdrop-saturate-150 rounded-3xl border border-white/85 hover:border-pink-300/80 overflow-hidden shadow-[0_8px_24px_rgba(15,23,42,0.04)] hover:shadow-[0_16px_36px_rgba(244,63,117,0.14)] hover:-translate-y-1.5 transition-all duration-300 cursor-pointer flex flex-col justify-between select-none relative transform-gpu ring-1 ring-white/60"
     >
       <div>
         {/* Image Frame with Shimmer Skeleton */}
