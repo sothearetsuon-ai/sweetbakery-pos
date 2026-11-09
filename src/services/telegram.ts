@@ -915,6 +915,42 @@ export const notifyTelegramCustomOrder = async (
 };
 
 /**
+ * Phase 2: Send Telegram Customer Pickup Ready Notification
+ */
+export const notifyTelegramCustomerPickupReady = async (
+  order: CustomCakeOrder,
+  storeInfo?: StoreInfo
+): Promise<{ success: boolean; message: string }> => {
+  const config = await getStoredTelegramConfigAsync();
+  if (!config.enabled || !config.botToken) {
+    return { success: false, message: 'Telegram Bot មិនទាន់ត្រូវបានបើកដំណើរការទេ' };
+  }
+
+  const pickupDateFormatted = formatDateDMY(order.pickupDate);
+  const text = `🎂 <b>នំខួបកំណើតរបស់អ្នករួចរាល់ហើយ! (Ready for Pickup)</b>
+
+ជម្រាបសួរអតិថិជន <b>${escapeHtml(order.customerName)}</b>!
+នំខួបកំណើតរបស់អ្នកលេខកូដ <b>#${escapeHtml(order.orderNumber)}</b> ត្រូវបានមេជាងដេគ័ររួចរាល់យ៉ាងស្រស់ស្អាត 100% ហើយ!
+
+📋 <b>ព័ត៌មាននំ:</b>
+• <b>មុខនំ:</b> ${escapeHtml(order.cakeName)}
+• <b>ទំហំ:</b> ${escapeHtml(order.size)}
+• <b>រសជាតិ:</b> ${escapeHtml(order.flavor)}
+${order.inscription ? `• <b>អក្សរលើនំ:</b> <i>"${escapeHtml(order.inscription)}"</i>\n` : ''}
+📍 <b>ទីតាំងទទួលនំ:</b> ${escapeHtml(storeInfo?.nameKh || 'SweetBakery')}
+${storeInfo?.phone ? `📞 <b>ទូរស័ព្ទហាង:</b> ${escapeHtml(storeInfo.phone)}\n` : ''}
+${storeInfo?.address ? `🗺️ <b>អាសយដ្ឋាន:</b> ${escapeHtml(storeInfo.address)}\n` : ''}
+
+លោកអ្នកអាចអញ្ជើញមកទទួលយកនំបានគ្រប់ពេលវេលា។ សូមអរគុណដែលបានគាំទ្រ ${escapeHtml(storeInfo?.nameKh || 'SweetBakery')}! ✨`;
+
+  if (order.referenceImage) {
+    const photoRes = await sendTelegramPhoto(order.referenceImage, text, config);
+    if (photoRes.success) return photoRes;
+  }
+  return await sendTelegramMessage(text, config);
+};
+
+/**
  * Format & send notification for a recorded expense
  */
 export const notifyTelegramExpense = async (

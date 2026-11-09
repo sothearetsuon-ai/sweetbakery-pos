@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Clock, Phone, ChevronRight, CheckCircle2, Flame, Palette, Sparkles, CheckSquare, Wallet, Trash2, Printer, X, Globe, Eye, Pencil, User } from 'lucide-react';
+import { Clock, Phone, ChevronRight, CheckCircle2, Flame, Palette, Sparkles, CheckSquare, Wallet, Trash2, Printer, X, Globe, Eye, Pencil, User, Tag, BellRing, Send } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { CustomCakeOrder, OrderStatus } from '../../types';
 import { useBakery } from '../../context/BakeryContext';
 import { soundFx } from '../../utils/audio';
 import { getProductImageUrl } from '../../utils/imagePath';
 import { formatDateDMY } from '../../utils/dateUtils';
+import { notifyTelegramCustomerPickupReady } from '../../services/telegram';
 
 interface OrderCardProps {
   order: CustomCakeOrder;
@@ -15,11 +16,36 @@ interface OrderCardProps {
   onViewReceipt?: (order: CustomCakeOrder) => void;
   onAddPartyAddon?: (order: CustomCakeOrder) => void;
   onEdit?: (order: CustomCakeOrder) => void;
+  onPrintLabel?: (order: CustomCakeOrder) => void;
 }
 
-export const OrderCard: React.FC<OrderCardProps> = ({ order, onAdvanceStatus, onAddDeposit, onDelete, onViewReceipt, onAddPartyAddon, onEdit }) => {
-  const { exchangeRate } = useBakery();
+export const OrderCard: React.FC<OrderCardProps> = ({ order, onAdvanceStatus, onAddDeposit, onDelete, onViewReceipt, onAddPartyAddon, onEdit, onPrintLabel }) => {
+  const { exchangeRate, storeInfo } = useBakery();
   const [previewImage, setPreviewImage] = useState<{ url: string; title: string } | null>(null);
+  const [isNotifyingReady, setIsNotifyingReady] = useState(false);
+  const [notifySuccess, setNotifySuccess] = useState(false);
+
+  const handleNotifyCustomerReady = async () => {
+    setIsNotifyingReady(true);
+    soundFx.playChime();
+    try {
+      const res = await notifyTelegramCustomerPickupReady(order, storeInfo);
+      if (res.success) {
+        soundFx.playSuccess();
+        setNotifySuccess(true);
+        setTimeout(() => setNotifySuccess(false), 3000);
+      } else {
+        const msg = encodeURIComponent(
+          `ជម្រាបសួរ ${order.customerName}! នំខួបកំណើតរបស់អ្នកលេខ #${order.orderNumber} ត្រូវបានដេគ័ររួចរាល់ហើយ លោកអ្នកអាចអញ្ជើញមកទទួលយកនៅហាង ${storeInfo.nameKh || 'SweetBakery'} បានគ្រប់ពេលវេលា។ សូមអរគុណ!`
+        );
+        window.open(`https://t.me/share/url?url=${encodeURIComponent(window.location.origin)}&text=${msg}`, '_blank');
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsNotifyingReady(false);
+    }
+  };
 
   useEffect(() => {
     if (!previewImage) return;
@@ -418,6 +444,33 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, onAdvanceStatus, on
         </div>
       </div>
 
+      {/* Ready Status: Telegram & SMS Customer Ready Notification */}
+      {order.status === 'READY' && (
+        <button
+          type="button"
+          disabled={isNotifyingReady}
+          onClick={handleNotifyCustomerReady}
+          className={`w-full py-2 rounded-2xl text-xs font-black transition-all flex items-center justify-center gap-1.5 shadow-sm active:scale-95 cursor-pointer ${
+            notifySuccess
+              ? 'bg-emerald-600 text-white'
+              : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-blue-500/25'
+          }`}
+          title="ផ្ញើសារតាម Telegram / Bot ប្រាប់ភ្ញៀវថានំធ្វើរួចរាល់ហើយ"
+        >
+          {notifySuccess ? (
+            <>
+              <CheckCircle2 className="w-3.5 h-3.5 text-white" />
+              <span>បានផ្ញើសារជូនដំណឹងរួចរាល់!</span>
+            </>
+          ) : (
+            <>
+              <BellRing className="w-3.5 h-3.5 animate-bounce" />
+              <span>{isNotifyingReady ? 'កំពុងផ្ញើសារ...' : '📢 ជូនដំណឹងភ្ញៀវថានំរួចរាល់'}</span>
+            </>
+          )}
+        </button>
+      )}
+
       {/* Advance Status Button */}
       {nextStatus && (
         <button
@@ -468,6 +521,22 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, onAdvanceStatus, on
       <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400">
         <span className="font-mono text-[10px] text-slate-400">#{order.orderNumber}</span>
         <div className="flex items-center gap-1.5">
+          {onPrintLabel && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                soundFx.playPop();
+                onPrintLabel(order);
+              }}
+              className="flex items-center gap-1 text-rose-700 hover:text-rose-800 bg-rose-50 hover:bg-rose-100 px-2 py-1 rounded-xl transition-all font-bold cursor-pointer active:scale-95 border border-rose-200/80 shadow-2xs"
+              title="បោះពុម្ពស្លាក Sticker ប្រអប់នំ (Print Cake Box Label)"
+            >
+              <Tag className="w-3 h-3 text-rose-600" />
+              <span>Sticker</span>
+            </button>
+          )}
           {onEdit && (
             <button
               type="button"

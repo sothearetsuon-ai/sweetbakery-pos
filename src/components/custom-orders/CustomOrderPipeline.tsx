@@ -8,6 +8,7 @@ import { AddDepositModal } from './AddDepositModal';
 import { ReceiptModal } from '../pos/ReceiptModal';
 import { CustomerOrderLinkModal } from '../customer-order/CustomerOrderLinkModal';
 import { CakeFlavorsModal } from '../pos/CakeFlavorsModal';
+import { CakeLabelPrintModal } from './CakeLabelPrintModal';
 import { OrderStatus, CustomCakeOrder, CompletedSale } from '../../types';
 import { soundFx } from '../../utils/audio';
 
@@ -20,6 +21,7 @@ export const CustomOrderPipeline: React.FC = () => {
   const [isCustomerLinkModalOpen, setIsCustomerLinkModalOpen] = useState(false);
   const [isFlavorsModalOpen, setIsFlavorsModalOpen] = useState(false);
   const [selectedOrderForDeposit, setSelectedOrderForDeposit] = useState<CustomCakeOrder | null>(null);
+  const [labelPrintOrder, setLabelPrintOrder] = useState<CustomCakeOrder | null>(null);
   const [receiptSale, setReceiptSale] = useState<CompletedSale | null>(null);
   const [orderToDelete, setOrderToDelete] = useState<CustomCakeOrder | null>(null);
   const [restoreStockOnDelete, setRestoreStockOnDelete] = useState<boolean>(true);
@@ -602,6 +604,7 @@ export const CustomOrderPipeline: React.FC = () => {
                       onViewReceipt={handleOpenReceipt}
                       onAddPartyAddon={handleOpenReceipt}
                       onEdit={(ord) => setSelectedOrderForEdit(ord)}
+                      onPrintLabel={(ord) => setLabelPrintOrder(ord)}
                     />
                   ))
                 )}
@@ -798,6 +801,27 @@ export const CustomOrderPipeline: React.FC = () => {
         isOpen={isFlavorsModalOpen}
         onClose={() => setIsFlavorsModalOpen(false)}
       />
+
+      {/* Cake Box Sticker & Expiry Label Modal */}
+      {labelPrintOrder && (
+        <CakeLabelPrintModal
+          isOpen={!!labelPrintOrder}
+          onClose={() => setLabelPrintOrder(null)}
+          initialData={{
+            orderNumber: labelPrintOrder.orderNumber,
+            customerName: labelPrintOrder.customerName,
+            customerPhone: labelPrintOrder.phone,
+            cakeName: labelPrintOrder.cakeName,
+            size: labelPrintOrder.size,
+            flavor: labelPrintOrder.flavor,
+            inscription: labelPrintOrder.inscription,
+            pickupDate: labelPrintOrder.pickupDate,
+            pickupTime: labelPrintOrder.pickupTime,
+            priceUsd: labelPrintOrder.totalUsd,
+            priceKhr: labelPrintOrder.totalKhr,
+          }}
+        />
+      )}
     </div>
   );
 };

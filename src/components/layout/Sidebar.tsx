@@ -61,6 +61,7 @@ interface SidebarProps {
   onOpenVoicePos?: () => void;
   onOpenKds?: () => void;
   onOpenBirthdayCrm?: () => void;
+  onOpenLoyaltyRewards?: () => void;
   onOpenBakingForecast?: () => void;
   onOpenStoreAuthModal?: () => void;
   onOpenChatModal?: (channel?: ChatChannel) => void;
@@ -82,6 +83,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onOpenVoicePos,
   onOpenKds,
   onOpenBirthdayCrm,
+  onOpenLoyaltyRewards,
   onOpenBakingForecast,
   onOpenStoreAuthModal,
   onOpenChatModal,
@@ -643,6 +645,27 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </div>
             <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-purple-200/80 text-purple-800 font-mono">
               CRM
+            </span>
+          </button>
+        )}
+
+        {/* Phase 2: Loyalty & Rewards button */}
+        {onOpenLoyaltyRewards && (
+          <button
+            type="button"
+            onClick={() => {
+              soundFx.playPop();
+              onOpenLoyaltyRewards();
+              onCloseMobile?.();
+            }}
+            className="w-full flex items-center justify-between px-3.5 py-2 rounded-2xl font-bold text-xs text-amber-800 bg-amber-50/70 hover:bg-amber-100/80 transition-all border border-amber-200/70 shadow-2xs cursor-pointer group"
+          >
+            <div className="flex items-center gap-3">
+              <span className="text-sm group-hover:scale-125 transition-transform">🎁</span>
+              <span>ពិន្ទុសន្សំ & សមាជិក VIP</span>
+            </div>
+            <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-amber-200/80 text-amber-900 font-mono">
+              VIP
             </span>
           </button>
         )}

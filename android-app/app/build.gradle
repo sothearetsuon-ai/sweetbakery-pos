@@ -10,8 +10,8 @@ android {
         applicationId "com.bakery.sweetpos"
         minSdk 24
         targetSdk 34
-        versionCode 56
-        versionName "1.9.0"
+        versionCode 57
+        versionName "1.9.1"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -19,6 +19,7 @@ android {
     buildTypes {
         release {
             minifyEnabled false
+            signingConfig signingConfigs.debug
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }

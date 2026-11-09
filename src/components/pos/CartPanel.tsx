@@ -79,6 +79,9 @@ export const CartPanel: React.FC<CartPanelProps> = ({
     cartTotalUsd,
     cartTotalKhr,
     exchangeRate,
+    isHappyHourActive,
+    happyHourDiscountPercent,
+    toggleHappyHour,
   } = useBakery();
   const text = t[lang];
 
@@ -174,7 +177,10 @@ export const CartPanel: React.FC<CartPanelProps> = ({
   };
 
   // KHR-First calculations to prevent rounding drift (e.g. 27,500 becoming 27,520)
-  const discountKhr = discountPercent > 0 ? Math.round((cartTotalKhr * discountPercent) / 100) : 0;
+  const effectiveDiscountPercent = isHappyHourActive
+    ? Math.max(discountPercent, happyHourDiscountPercent)
+    : discountPercent;
+  const discountKhr = effectiveDiscountPercent > 0 ? Math.round((cartTotalKhr * effectiveDiscountPercent) / 100) : 0;
   const finalTotalKhr = Math.max(0, cartTotalKhr - discountKhr);
   const discountUsd = Number((discountKhr / exchangeRate).toFixed(2));
   const finalTotalUsd = Number((finalTotalKhr / exchangeRate).toFixed(2));
@@ -1123,7 +1129,7 @@ export const CartPanel: React.FC<CartPanelProps> = ({
 
             {discountUsd > 0 && (
               <div className="flex justify-between font-bold text-emerald-600">
-                <span>{text.discount} ({discountPercent}%):</span>
+                <span>{text.discount} ({effectiveDiscountPercent}%{isHappyHourActive ? ' 🌙 Happy Hour' : ''}):</span>
                 <span>-{discountKhr.toLocaleString()} ៛ (-${discountUsd.toFixed(2)})</span>
               </div>
             )}

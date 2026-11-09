@@ -65,6 +65,9 @@ export const PosTerminal: React.FC = () => {
     toggleHideDemoPrices,
     currentStaff,
     clearCart,
+    isHappyHourActive,
+    happyHourDiscountPercent,
+    toggleHappyHour,
   } = useBakery();
   const text = t[lang];
 
@@ -476,8 +479,31 @@ export const PosTerminal: React.FC = () => {
               </div>
             </div>
 
-            {/* Quick Action in Row 1: Add New Product & Demo toggle */}
+            {/* Quick Action in Row 1: Add New Product & Demo toggle & Happy Hour */}
             <div className="flex items-center gap-2 shrink-0">
+              {/* Happy Hour Clearance Button */}
+              <button
+                type="button"
+                onClick={() => {
+                  soundFx.playPop();
+                  toggleHappyHour();
+                }}
+                className={`px-3 py-1.5 sm:py-2.5 rounded-2xl text-xs font-black transition-all flex items-center gap-1.5 border shadow-2xs cursor-pointer active:scale-95 ${
+                  isHappyHourActive
+                    ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white border-purple-400 shadow-md shadow-purple-500/30 ring-2 ring-purple-300'
+                    : 'bg-white hover:bg-purple-50 text-purple-700 border-purple-200'
+                }`}
+                title="Happy Hour បញ្ចុះតម្លៃ 30% រំដោះនំសល់ចុងថ្ងៃ"
+              >
+                <span>🌙</span>
+                <span className="hidden sm:inline">
+                  {isHappyHourActive ? `Happy Hour -${happyHourDiscountPercent}%` : 'Happy Hour'}
+                </span>
+                <span className="sm:hidden">
+                  {isHappyHourActive ? `-${happyHourDiscountPercent}%` : '🌙'}
+                </span>
+              </button>
+
               {isDemoMode && (
                 <button
                   type="button"

@@ -47,6 +47,7 @@ const AppUpdateModal = lazy(() => import('./components/common/AppUpdateModal').t
 const KhmerVoicePosModal = lazy(() => import('./components/pos/KhmerVoicePosModal').then((m) => ({ default: m.KhmerVoicePosModal })));
 const KitchenDisplayModal = lazy(() => import('./components/kds/KitchenDisplayModal').then((m) => ({ default: m.KitchenDisplayModal })));
 const SmartBirthdayCrmModal = lazy(() => import('./components/crm/SmartBirthdayCrmModal').then((m) => ({ default: m.SmartBirthdayCrmModal })));
+const LoyaltyRewardsModal = lazy(() => import('./components/crm/LoyaltyRewardsModal').then((m) => ({ default: m.LoyaltyRewardsModal })));
 const AiDemandForecastModal = lazy(() => import('./components/reports/AiDemandForecastModal').then((m) => ({ default: m.AiDemandForecastModal })));
 const InAppChatModal = lazy(() => import('./components/chat/InAppChatModal').then((m) => ({ default: m.InAppChatModal })));
 const CustomerDisplayView = lazy(() => import('./components/pos/CustomerDisplayView').then((m) => ({ default: m.CustomerDisplayView })));
@@ -86,6 +87,7 @@ export const App: React.FC = () => {
   const [isVoicePosOpen, setIsVoicePosOpen] = useState(false);
   const [isKdsOpen, setIsKdsOpen] = useState(false);
   const [isBirthdayCrmOpen, setIsBirthdayCrmOpen] = useState(false);
+  const [isLoyaltyRewardsOpen, setIsLoyaltyRewardsOpen] = useState(false);
   const [isBakingForecastOpen, setIsBakingForecastOpen] = useState(false);
 
   // In-App Live Chat Suite Modal (Customer Live Chat, AI Assistant, Staff Team Chat)
@@ -533,6 +535,7 @@ export const App: React.FC = () => {
         onOpenVoicePos={() => setIsVoicePosOpen(true)}
         onOpenKds={() => setIsKdsOpen(true)}
         onOpenBirthdayCrm={() => setIsBirthdayCrmOpen(true)}
+        onOpenLoyaltyRewards={() => setIsLoyaltyRewardsOpen(true)}
         onOpenBakingForecast={() => setIsBakingForecastOpen(true)}
         onOpenStoreAuthModal={() => setIsStoreAuthModalOpen(true)}
         onOpenChatModal={handleOpenChatModal}
@@ -556,6 +559,7 @@ export const App: React.FC = () => {
           onOpenVoicePos={() => setIsVoicePosOpen(true)}
           onOpenKds={() => setIsKdsOpen(true)}
           onOpenBirthdayCrm={() => setIsBirthdayCrmOpen(true)}
+        onOpenLoyaltyRewards={() => setIsLoyaltyRewardsOpen(true)}
           onOpenBakingForecast={() => setIsBakingForecastOpen(true)}
           onOpenStoreAuthModal={() => setIsStoreAuthModalOpen(true)}
           onOpenChatModal={handleOpenChatModal}

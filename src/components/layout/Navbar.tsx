@@ -66,6 +66,7 @@ interface NavbarProps {
   onOpenVoicePos?: () => void;
   onOpenKds?: () => void;
   onOpenBirthdayCrm?: () => void;
+  onOpenLoyaltyRewards?: () => void;
   onOpenBakingForecast?: () => void;
   onOpenStoreAuthModal?: () => void;
   onOpenChatModal?: (channel?: ChatChannel) => void;
@@ -92,6 +93,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenVoicePos,
   onOpenKds,
   onOpenBirthdayCrm,
+  onOpenLoyaltyRewards,
   onOpenBakingForecast,
   onOpenStoreAuthModal,
   onOpenChatModal,
@@ -671,6 +673,36 @@ export const Navbar: React.FC<NavbarProps> = ({
                         </div>
                         <span className="text-[10px] font-black px-1.5 py-0.2 rounded-full bg-purple-100 text-purple-700 font-mono">
                           CRM
+                        </span>
+                      </button>
+                    )}
+
+                    {/* Phase 2: Loyalty Rewards */}
+                    {onOpenLoyaltyRewards && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          soundFx.playPop();
+                          setIsQuickToolsOpen(false);
+                          onOpenLoyaltyRewards();
+                        }}
+                        className="w-full flex items-center justify-between p-2 rounded-xl hover:bg-white/80 text-slate-800 transition-colors cursor-pointer group text-left border border-transparent hover:border-amber-200 shadow-2xs"
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-amber-500 to-rose-500 text-white flex items-center justify-center text-xs shadow-xs group-hover:scale-105 transition-transform shrink-0">
+                            🎁
+                          </div>
+                          <div>
+                            <div className="text-xs font-black text-slate-800 group-hover:text-amber-600">
+                              ពិន្ទុសន្សំ & សមាជិក VIP
+                            </div>
+                            <div className="text-[10px] text-slate-400">
+                              គណនាពិន្ទុ ដូររង្វាន់ & កម្រិតសមាជិក (Loyalty)
+                            </div>
+                          </div>
+                        </div>
+                        <span className="text-[10px] font-black px-1.5 py-0.2 rounded-full bg-amber-100 text-amber-800 font-mono">
+                          VIP
                         </span>
                       </button>
                     )}

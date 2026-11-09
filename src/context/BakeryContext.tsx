@@ -20,6 +20,9 @@ import {
   ReserveFund,
   ReserveFundTransaction,
   DemoDeviceVisitor,
+  WastageRecord,
+  BatchBakeLog,
+  CakeBoxLabelData,
 } from '../types';
 import { recordDemoDeviceVisit, subscribeToDemoDevices } from '../services/demoTracker';
 import {
@@ -35,6 +38,7 @@ import {
   initialStaffMembers,
   demoStaffMembers,
   initialRecipes,
+  initialWastageRecords,
 } from '../data/mockData';
 import { sortProductsNewestFirst } from '../utils/productUtils';
 import { roundKhr, usdToKhr, formatKhr } from '../utils/currencyUtils';
@@ -630,6 +634,20 @@ interface BakeryContextType {
   addRecipe: (recipe: Omit<Recipe, 'id'>) => Recipe;
   updateRecipe: (recipe: Recipe) => void;
   deleteRecipe: (id: string) => void;
+
+  // Phase 1: Bakery Wastage & Write-Off Management
+  wastageRecords: WastageRecord[];
+  recordWastage: (record: Omit<WastageRecord, 'id' | 'createdAt'>) => void;
+  deleteWastageRecord: (id: string) => void;
+
+  // Phase 1: Batch Baking Production & Auto Deduct
+  batchBakeLogs: BatchBakeLog[];
+  executeBatchBake: (recipeId: string, batchQty: number, bakedBy: string, targetProductId?: string) => { success: boolean; message: string };
+
+  // Phase 1: Happy Hour Day-End Clearance
+  isHappyHourActive: boolean;
+  happyHourDiscountPercent: number;
+  toggleHappyHour: (active?: boolean, percent?: number) => void;
 
   expenses: Expense[];
   addExpense: (expense: Omit<Expense, 'id' | 'createdAt'>) => void;
@@ -1755,6 +1773,30 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     return saved ? JSON.parse(saved) : initialRecipes;
   });
 
+  // Wastage Records (កត់ត្រានំសល់/ខូចខាត)
+  const [wastageRecords, setWastageRecords] = useState<WastageRecord[]>(() => {
+    if (globalIsDemoMode) {
+      seedDemoDataIfMissing();
+      const saved = localStorage.getItem('demo_bakery_wastage');
+      return saved ? JSON.parse(saved) : initialWastageRecords;
+    }
+    const saved = localStorage.getItem('bakery_wastage');
+    if (!isDefaultStore(getStoreId())) {
+      return saved ? JSON.parse(saved) : [];
+    }
+    return saved ? JSON.parse(saved) : initialWastageRecords;
+  });
+
+  // Batch Baking Logs (ដុតនំជាឡូ)
+  const [batchBakeLogs, setBatchBakeLogs] = useState<BatchBakeLog[]>(() => {
+    if (globalIsDemoMode) {
+      const saved = localStorage.getItem('demo_bakery_batch_bakes');
+      return saved ? JSON.parse(saved) : [];
+    }
+    const saved = localStorage.getItem('bakery_batch_bakes');
+    return saved ? JSON.parse(saved) : [];
+  });
+
   // Expenses management
   const [expenses, setExpenses] = useState<Expense[]>(() => {
     let list: Expense[] = [];
@@ -2005,6 +2047,14 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   useEffect(() => {
     safeSetStorage('bakery_recipes', JSON.stringify(recipes));
   }, [recipes]);
+
+  useEffect(() => {
+    safeSetStorage(globalIsDemoMode ? 'demo_bakery_wastage' : 'bakery_wastage', JSON.stringify(wastageRecords));
+  }, [wastageRecords]);
+
+  useEffect(() => {
+    safeSetStorage(globalIsDemoMode ? 'demo_bakery_batch_bakes' : 'bakery_batch_bakes', JSON.stringify(batchBakeLogs));
+  }, [batchBakeLogs]);
 
   useEffect(() => {
     safeSetStorage('bakery_expenses', JSON.stringify(expenses));
@@ -5030,6 +5080,184 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     deleteFirestoreDoc('recipes', id);
   };
 
+  // Phase 1: Bakery Wastage & Write-Off Actions
+  const recordWastage = (recordData: Omit<WastageRecord, 'id' | 'createdAt'>) => {
+    isUpdatingFromLan.current = false;
+    const newRecord: WastageRecord = {
+      ...recordData,
+      id: `waste-${Date.now()}`,
+      createdAt: new Date().toISOString(),
+    };
+
+    setWastageRecords((prev) => {
+      const updated = [newRecord, ...prev];
+      try {
+        localStorage.setItem(globalIsDemoMode ? 'demo_bakery_wastage' : 'bakery_wastage', JSON.stringify(updated));
+      } catch (e) {}
+      return updated;
+    });
+
+    // Deduct stock of the wasted product if linked
+    if (recordData.productId && recordData.quantity > 0) {
+      setProducts((prev) => {
+        const updated = prev.map((p) => {
+          if (p.id === recordData.productId) {
+            const newStock = Math.max(0, (p.stockQty || 0) - recordData.quantity);
+            return { ...p, stockQty: newStock };
+          }
+          return p;
+        });
+        try {
+          localStorage.setItem(globalIsDemoMode ? 'demo_bakery_products' : 'bakery_products', JSON.stringify(updated));
+        } catch (e) {}
+        return updated;
+      });
+
+      const prod = products.find((p) => p.id === recordData.productId);
+      if (prod) {
+        saveFirestoreDoc('products', prod.id, {
+          ...prod,
+          stockQty: Math.max(0, (prod.stockQty || 0) - recordData.quantity),
+        });
+      }
+    }
+
+    saveFirestoreDoc('wastage_records', newRecord.id, newRecord);
+  };
+
+  const deleteWastageRecord = (id: string) => {
+    isUpdatingFromLan.current = false;
+    setWastageRecords((prev) => {
+      const updated = prev.filter((w) => w.id !== id);
+      try {
+        localStorage.setItem(globalIsDemoMode ? 'demo_bakery_wastage' : 'bakery_wastage', JSON.stringify(updated));
+      } catch (e) {}
+      return updated;
+    });
+    deleteFirestoreDoc('wastage_records', id);
+  };
+
+  // Phase 1: Batch Baking Production & Auto Deduct
+  const executeBatchBake = (recipeId: string, batchQty: number, bakedBy: string, targetProductId?: string) => {
+    const recipe = recipes.find((r) => r.id === recipeId);
+    if (!recipe) {
+      return { success: false, message: 'រកមិនឃើញរូបមន្តនំនេះទេ!' };
+    }
+    if (batchQty <= 0) {
+      return { success: false, message: 'ចំនួនដុតត្រូវតែធំជាង ០!' };
+    }
+
+    const multiplier = batchQty / (recipe.yieldQty || 1);
+    const deductedIngredientsList: BatchBakeLog['deductedIngredients'] = [];
+
+    // Deduct ingredients
+    setIngredients((prev) => {
+      const updated = [...prev];
+      for (const item of recipe.items) {
+        const requiredQty = (item.quantity || 0) * multiplier;
+        const ingIndex = updated.findIndex((ing) => ing.id === item.ingredientId || ing.nameKh === item.nameKh);
+        if (ingIndex !== -1) {
+          const currentStock = updated[ingIndex].currentStock || 0;
+          const newStock = Math.max(0, currentStock - requiredQty);
+          updated[ingIndex] = {
+            ...updated[ingIndex],
+            currentStock: Math.round(newStock * 100) / 100,
+            totalUsed: Math.round(((updated[ingIndex].totalUsed || 0) + requiredQty) * 100) / 100,
+          };
+          deductedIngredientsList.push({
+            ingredientId: updated[ingIndex].id,
+            ingredientNameKh: updated[ingIndex].nameKh,
+            quantityUsed: Math.round(requiredQty * 100) / 100,
+            unit: item.unit || updated[ingIndex].unit,
+            costUsd: Math.round((item.itemCostUsd || 0) * multiplier * 100) / 100,
+          });
+        }
+      }
+      try {
+        localStorage.setItem(globalIsDemoMode ? 'demo_bakery_ingredients' : 'bakery_ingredients', JSON.stringify(updated));
+      } catch (e) {}
+      return updated;
+    });
+
+    // Increment target product stock
+    const prodIdToUpdate = targetProductId || recipe.productId;
+    if (prodIdToUpdate) {
+      setProducts((prev) => {
+        const updated = prev.map((p) => {
+          if (p.id === prodIdToUpdate) {
+            return { ...p, stockQty: (p.stockQty || 0) + batchQty };
+          }
+          return p;
+        });
+        try {
+          localStorage.setItem(globalIsDemoMode ? 'demo_bakery_products' : 'bakery_products', JSON.stringify(updated));
+        } catch (e) {}
+        return updated;
+      });
+      const targetProd = products.find((p) => p.id === prodIdToUpdate);
+      if (targetProd) {
+        saveFirestoreDoc('products', targetProd.id, {
+          ...targetProd,
+          stockQty: (targetProd.stockQty || 0) + batchQty,
+        });
+      }
+    }
+
+    const totalCostUsd = Math.round((recipe.costPerUnitUsd || 0) * batchQty * 100) / 100;
+    const newLog: BatchBakeLog = {
+      id: `bake-${Date.now()}`,
+      recipeId: recipe.id,
+      recipeNameKh: recipe.cakeNameKh,
+      productId: prodIdToUpdate,
+      productNameKh: products.find((p) => p.id === prodIdToUpdate)?.nameKh || recipe.cakeNameKh,
+      batchQty,
+      unit: recipe.yieldUnit || 'នំ',
+      totalCostUsd,
+      totalCostKhr: roundKhr(totalCostUsd * exchangeRate),
+      costPerUnitUsd: recipe.costPerUnitUsd || 0,
+      costPerUnitKhr: recipe.costPerUnitKhr || 0,
+      deductedIngredients: deductedIngredientsList,
+      bakedBy: bakedBy || 'មេជាងនំ Bakery Chef',
+      date: new Date().toISOString().split('T')[0],
+      createdAt: new Date().toISOString(),
+    };
+
+    setBatchBakeLogs((prev) => {
+      const updated = [newLog, ...prev];
+      try {
+        localStorage.setItem(globalIsDemoMode ? 'demo_bakery_batch_bakes' : 'bakery_batch_bakes', JSON.stringify(updated));
+      } catch (e) {}
+      return updated;
+    });
+
+    saveFirestoreDoc('batch_bake_logs', newLog.id, newLog);
+    return {
+      success: true,
+      message: `ដុតនំ ${batchQty} ${recipe.yieldUnit || 'នំ'} បានជោគជ័យ និងបានកាត់ស្តុកគ្រឿងផ្សំរួចរាល់!`,
+    };
+  };
+
+  // Phase 1: Happy Hour Clearance State & Toggle
+  const [isHappyHourActive, setIsHappyHourActive] = useState<boolean>(() => {
+    return localStorage.getItem('bakery_happy_hour_active') === 'true';
+  });
+  const [happyHourDiscountPercent, setHappyHourDiscountPercent] = useState<number>(() => {
+    const saved = localStorage.getItem('bakery_happy_hour_percent');
+    return saved ? Number(saved) : 30;
+  });
+
+  const toggleHappyHour = (active?: boolean, percent?: number) => {
+    setIsHappyHourActive((prev) => {
+      const next = active !== undefined ? active : !prev;
+      localStorage.setItem('bakery_happy_hour_active', String(next));
+      return next;
+    });
+    if (percent !== undefined) {
+      setHappyHourDiscountPercent(percent);
+      localStorage.setItem('bakery_happy_hour_percent', String(percent));
+    }
+  };
+
   // Helper to ensure all KHR currency fields in a sale are strictly rounded to 100 Riel
   const sanitizeSaleKhr = (sale: CompletedSale): CompletedSale => {
     return {
@@ -6951,6 +7179,14 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         addRecipe,
         updateRecipe,
         deleteRecipe,
+        wastageRecords,
+        recordWastage,
+        deleteWastageRecord,
+        batchBakeLogs,
+        executeBatchBake,
+        isHappyHourActive,
+        happyHourDiscountPercent,
+        toggleHappyHour,
         expenses,
         addExpense,
         batchAddExpenses,

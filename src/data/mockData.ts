@@ -1,4 +1,4 @@
-import { Category, Product, CustomCakeOrder, Ingredient, Shift, CompletedSale, Expense, StaffMember, Recipe } from '../types';
+import { Category, Product, CustomCakeOrder, Ingredient, Shift, CompletedSale, Expense, StaffMember, Recipe, WastageRecord } from '../types';
 
 export const initialCategories: Category[] = [
   { id: 'all', nameKh: 'ទាំងអស់', nameEn: 'All Items', icon: 'Sparkles' },
@@ -1879,5 +1879,45 @@ export const initialRecipes: Recipe[] = [
     updatedAt: new Date().toISOString(),
   },
 ];
+
+export const initialWastageRecords: WastageRecord[] = [
+  {
+    id: 'waste-1',
+    productId: 'p-1789395510512',
+    productNameKh: 'នំប៉័ង ក្រូសង់ ប៊ឺស្រស់ (Butter Croissant)',
+    productNameEn: 'French Butter Croissant',
+    categoryName: 'ក្រូសង់ & នំប៉័ង',
+    quantity: 4,
+    unit: 'ដុំ',
+    unitCostUsd: 0.65,
+    unitCostKhr: 2665,
+    totalLossUsd: 2.6,
+    totalLossKhr: 10660,
+    reason: 'DAY_END_LEFTOVER',
+    recordedBy: 'គិតលុយ Cashier A',
+    notes: 'សល់ចុងថ្ងៃម៉ោង ៩:០០ យប់ មិនអាចលក់បន្តបាន',
+    date: new Date().toISOString().split('T')[0],
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: 'waste-2',
+    productId: 'p-1789395510514',
+    productNameKh: 'នំប៉័ងបារាំង បាហ្គេត (Baguette)',
+    productNameEn: 'Traditional French Baguette',
+    categoryName: 'ក្រូសង់ & នំប៉័ង',
+    quantity: 3,
+    unit: 'ដើម',
+    unitCostUsd: 0.45,
+    unitCostKhr: 1845,
+    totalLossUsd: 1.35,
+    totalLossKhr: 5535,
+    reason: 'BURNT_OVERBAKED',
+    recordedBy: 'មេជាងនំ Bakery Chef',
+    notes: 'ភ្លើងឡខ្លាំងបន្តិច ខ្លោចគែម',
+    date: new Date().toISOString().split('T')[0],
+    createdAt: new Date().toISOString(),
+  },
+];
+
 
 

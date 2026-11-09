@@ -408,3 +408,84 @@ export interface CustomerChatSession {
   createdAt: number;
   status: 'ACTIVE' | 'RESOLVED';
 }
+
+// ==========================================
+// Phase 1: Bakery Wastage & Write-Off Types
+// ==========================================
+export type WastageReason =
+  | 'DAY_END_LEFTOVER'  // សល់ចុងថ្ងៃ
+  | 'BURNT_OVERBAKED'   // ខ្លោច / ខូចទ្រង់ទ្រាយពេលដុត
+  | 'EXPIRED'           // ផុតកំណត់ / ផ្អូម
+  | 'DAMAGED_DISPLAY'   // ខូចខាតពេលតាំងបង្ហាញ / ធ្លាក់
+  | 'TASTING_SAMPLE'    // សម្រាប់ភ្ញៀវភ្លក្ស / ញ៉ាំតេស្ត
+  | 'OTHER';
+
+export interface WastageRecord {
+  id: string;
+  productId: string;
+  productNameKh: string;
+  productNameEn?: string;
+  categoryName?: string;
+  quantity: number;
+  unit: string;
+  unitCostUsd: number;
+  unitCostKhr: number;
+  totalLossUsd: number;
+  totalLossKhr: number;
+  reason: WastageReason;
+  recordedBy: string;
+  notes?: string;
+  date: string; // YYYY-MM-DD
+  createdAt: string;
+}
+
+// ==========================================
+// Phase 1: Batch Baking & Production Types
+// ==========================================
+export interface BatchBakeLog {
+  id: string;
+  recipeId: string;
+  recipeNameKh: string;
+  productId?: string;
+  productNameKh?: string;
+  batchQty: number; // ចំនួនដុត (e.g. 20 នំ)
+  unit: string;
+  totalCostUsd: number;
+  totalCostKhr: number;
+  costPerUnitUsd: number;
+  costPerUnitKhr: number;
+  deductedIngredients: {
+    ingredientId: string;
+    ingredientNameKh: string;
+    quantityUsed: number;
+    unit: string;
+    costUsd: number;
+  }[];
+  bakedBy: string;
+  date: string; // YYYY-MM-DD
+  createdAt: string;
+}
+
+// ==========================================
+// Phase 1: Cake Box & Expiry Label Types
+// ==========================================
+export interface CakeBoxLabelData {
+  orderNumber?: string;
+  customerName?: string;
+  customerPhone?: string;
+  cakeName: string;
+  size?: string;
+  flavor?: string;
+  inscription?: string; // អក្សរជូនពរលើនំ
+  pickupDate?: string;
+  pickupTime?: string;
+  mfgDate: string; // ថ្ងៃផលិត YYYY-MM-DD HH:mm
+  expiryDate: string; // ថ្ងៃផុតកំណត់ YYYY-MM-DD HH:mm
+  shelfLifeDays?: number; // ចំនួនថ្ងៃរក្សាទុក
+  storageTemp?: string; // 'រក្សាទុកក្នុងទូរទឹកកក (0°C - 4°C)'
+  priceUsd?: number;
+  priceKhr?: number;
+  qrCodeUrl?: string;
+  notes?: string;
+}
+

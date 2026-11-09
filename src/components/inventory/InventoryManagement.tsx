@@ -23,10 +23,13 @@ import {
   TrendingDown,
   CheckCircle2,
   MinusCircle,
+  Flame,
+  PackageX,
+  Tag,
 } from 'lucide-react';
 import { useBakery } from '../../context/BakeryContext';
 import { t } from '../../utils/translations';
-import { Ingredient, Product, Recipe } from '../../types';
+import { Ingredient, Product, Recipe, CakeBoxLabelData } from '../../types';
 import { soundFx } from '../../utils/audio';
 import { getProductImageUrl } from '../../utils/imagePath';
 import { AddProductModal } from '../pos/AddProductModal';
@@ -35,6 +38,9 @@ import { AddEditIngredientModal } from './AddEditIngredientModal';
 import { AddEditRecipeModal } from './AddEditRecipeModal';
 import { RecipeDetailModal } from './RecipeDetailModal';
 import { RecordIngredientUsageModal } from './RecordIngredientUsageModal';
+import { BatchBakeModal } from './BatchBakeModal';
+import { WastageManagementModal } from './WastageManagementModal';
+import { CakeLabelPrintModal } from '../custom-orders/CakeLabelPrintModal';
 
 export const InventoryManagement: React.FC = () => {
   const {
@@ -96,6 +102,13 @@ export const InventoryManagement: React.FC = () => {
   const [viewingRecipe, setViewingRecipe] = useState<Recipe | null>(null);
   const [recipeToDelete, setRecipeToDelete] = useState<Recipe | null>(null);
   const [syncSuccessRecipeId, setSyncSuccessRecipeId] = useState<string | null>(null);
+
+  // Phase 1: Batch Bake, Wastage & Label Print states
+  const [isBatchBakeOpen, setIsBatchBakeOpen] = useState(false);
+  const [batchBakeRecipeId, setBatchBakeRecipeId] = useState<string | undefined>(undefined);
+  const [isWastageOpen, setIsWastageOpen] = useState(false);
+  const [isLabelPrintOpen, setIsLabelPrintOpen] = useState(false);
+  const [labelPrintInitialData, setLabelPrintInitialData] = useState<Partial<CakeBoxLabelData>>({});
 
   const filteredIngredients = ingredients.filter((ing) => {
     const q = searchQuery.toLowerCase().trim();
@@ -199,6 +212,53 @@ export const InventoryManagement: React.FC = () => {
 
         <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
           {/* Quick Real-time Stock Sync Button */}
+          {/* Phase 1: Batch Bake Button */}
+          <button
+            type="button"
+            onClick={() => {
+              soundFx.playPop();
+              setBatchBakeRecipeId(undefined);
+              setIsBatchBakeOpen(true);
+            }}
+            className="px-3 py-2 bg-gradient-to-r from-amber-500 to-rose-500 hover:from-amber-600 hover:to-rose-600 text-white rounded-xl text-xs font-bold shadow-sm shadow-amber-500/20 flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all"
+            title="ដុតនំជាឡូ & កាត់ស្តុកគ្រឿងផ្សំ (Batch Baking BOM)"
+          >
+            <Flame className="w-3.5 h-3.5" />
+            <span className="hidden md:inline">ដុតនំជាឡូ</span>
+            <span className="inline md:hidden">ដុតនំ</span>
+          </button>
+
+          {/* Phase 1: Wastage Management Button */}
+          <button
+            type="button"
+            onClick={() => {
+              soundFx.playPop();
+              setIsWastageOpen(true);
+            }}
+            className="px-3 py-2 bg-white hover:bg-rose-50 text-rose-700 border border-rose-200 rounded-xl text-xs font-bold shadow-2xs flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all"
+            title="កត់ត្រានំសល់ចុងថ្ងៃ / នំខូចខាត (Bakery Wastage & Write-Off)"
+          >
+            <PackageX className="w-3.5 h-3.5 text-rose-500" />
+            <span className="hidden md:inline">នំសល់/ខូចខាត</span>
+            <span className="inline md:hidden">ខូចខាត</span>
+          </button>
+
+          {/* Phase 1: Cake Label Print Button */}
+          <button
+            type="button"
+            onClick={() => {
+              soundFx.playPop();
+              setLabelPrintInitialData({});
+              setIsLabelPrintOpen(true);
+            }}
+            className="px-3 py-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-xl text-xs font-bold shadow-2xs flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all"
+            title="បោះពុម្ពស្លាក Sticker ប្រអប់នំ & ថ្ងៃផុតកំណត់ (Thermal Label Printer)"
+          >
+            <Tag className="w-3.5 h-3.5 text-rose-500" />
+            <span className="hidden md:inline">ស្លាក Sticker</span>
+            <span className="inline md:hidden">Sticker</span>
+          </button>
+
           <button
             type="button"
             onClick={handleSyncStock}
@@ -1252,6 +1312,20 @@ export const InventoryManagement: React.FC = () => {
                           type="button"
                           onClick={() => {
                             soundFx.playPop();
+                            setBatchBakeRecipeId(recipe.id);
+                            setIsBatchBakeOpen(true);
+                          }}
+                          className="px-2.5 py-1.5 bg-gradient-to-r from-amber-500 to-rose-500 hover:from-amber-600 hover:to-rose-600 text-white rounded-xl text-xs font-bold transition-all shadow-sm flex items-center gap-1 cursor-pointer"
+                          title="ដុតនំនេះជាឡូ & កាត់ស្តុកគ្រឿងផ្សំ (Batch Bake)"
+                        >
+                          <Flame className="w-3.5 h-3.5" />
+                          <span>ដុតនំ</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            soundFx.playPop();
                             setViewingRecipe(recipe);
                           }}
                           className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-colors flex items-center gap-1 cursor-pointer"
@@ -1638,6 +1712,29 @@ export const InventoryManagement: React.FC = () => {
           setViewingRecipe(null);
           setRecipeToDelete(r);
         }}
+      />
+
+      {/* Phase 1: Batch Bake Modal */}
+      <BatchBakeModal
+        isOpen={isBatchBakeOpen}
+        onClose={() => {
+          setIsBatchBakeOpen(false);
+          setBatchBakeRecipeId(undefined);
+        }}
+        preselectedRecipeId={batchBakeRecipeId}
+      />
+
+      {/* Phase 1: Wastage Management Modal */}
+      <WastageManagementModal
+        isOpen={isWastageOpen}
+        onClose={() => setIsWastageOpen(false)}
+      />
+
+      {/* Phase 1: Cake Box Label Print Modal */}
+      <CakeLabelPrintModal
+        isOpen={isLabelPrintOpen}
+        onClose={() => setIsLabelPrintOpen(false)}
+        initialData={labelPrintInitialData}
       />
     </div>
   );
