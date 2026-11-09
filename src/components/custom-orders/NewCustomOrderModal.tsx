@@ -171,8 +171,8 @@ export const NewCustomOrderModal: React.FC<NewCustomOrderModalProps> = ({ isOpen
   const [inscription, setInscription] = useState('');
   const [themeNotes, setThemeNotes] = useState('');
   const [selectedAddonQuantities, setSelectedAddonQuantities] = useState<Record<string, number>>({});
-  const [baseCakePriceKhr, setBaseCakePriceKhr] = useState('100000');
-  const [depositKhr, setDepositKhr] = useState('60000');
+  const [baseCakePriceKhr, setBaseCakePriceKhr] = useState('');
+  const [depositKhr, setDepositKhr] = useState('');
 
   // Bread specific state
   const [breadItems, setBreadItems] = useState<
@@ -287,8 +287,8 @@ export const NewCustomOrderModal: React.FC<NewCustomOrderModalProps> = ({ isOpen
       setBreadBakingNotes('');
       setReferenceImage('');
       setSelectedAddonQuantities({});
-      setBaseCakePriceKhr('100000');
-      setDepositKhr('60000');
+      setBaseCakePriceKhr('');
+      setDepositKhr('');
       setBreadDepositKhr('');
       const tomorrow = new Date();
       tomorrow.setDate(tomorrow.getDate() + 1);
@@ -1313,7 +1313,7 @@ export const NewCustomOrderModal: React.FC<NewCustomOrderModalProps> = ({ isOpen
                   <label className="block text-xs font-bold text-slate-700 mb-1 flex items-center justify-between">
                     <span>តម្លៃនំ (Cake Price) <span className="text-rose-500">*</span></span>
                     <span className="text-[10px] text-pink-600 font-bold font-sans">
-                      ~${((parseInt(baseCakePriceKhr, 10) || 0) / exchangeRate).toFixed(2)} USD
+                      {baseCakePriceKhr ? `~$${((parseInt(baseCakePriceKhr, 10) || 0) / exchangeRate).toFixed(2)} USD` : ''}
                     </span>
                   </label>
                   <div className="relative">
@@ -1324,7 +1324,7 @@ export const NewCustomOrderModal: React.FC<NewCustomOrderModalProps> = ({ isOpen
                       required
                       value={baseCakePriceKhr}
                       onChange={(e) => setBaseCakePriceKhr(e.target.value)}
-                      placeholder="100000"
+                      placeholder="ឧ. 100000"
                       className="w-full px-3.5 py-2.5 pr-8 text-sm font-black text-pink-600 border border-pink-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500 bg-pink-50/30"
                     />
                     <span className="absolute right-3 top-1/2 -translate-y-1/2 text-pink-500 font-bold text-xs">
@@ -1972,13 +1972,19 @@ export const NewCustomOrderModal: React.FC<NewCustomOrderModalProps> = ({ isOpen
                   type="number"
                   step="any"
                   required
-                  value={finalTotalKhr}
+                  value={orderType === 'CAKE' && baseCakePriceKhr === '' && addonsTotalKhr === 0 ? '' : finalTotalKhr}
                   onChange={(e) => {
-                    const newTotal = parseInt(e.target.value, 10) || 0;
-                    if (orderType === 'CAKE') {
-                      setBaseCakePriceKhr(String(Math.max(0, newTotal - addonsTotalKhr)));
+                    const val = e.target.value;
+                    if (val === '') {
+                      if (orderType === 'CAKE') setBaseCakePriceKhr('');
+                    } else {
+                      const newTotal = parseInt(val, 10) || 0;
+                      if (orderType === 'CAKE') {
+                        setBaseCakePriceKhr(String(Math.max(0, newTotal - addonsTotalKhr)));
+                      }
                     }
                   }}
+                  placeholder="ឧ. 100000"
                   className="w-full px-3 py-2 text-base font-black text-pink-600 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500"
                 />
                 <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-xs">
@@ -1992,11 +1998,11 @@ export const NewCustomOrderModal: React.FC<NewCustomOrderModalProps> = ({ isOpen
 
             <div>
               <div className="flex items-center justify-between mb-1">
-                <label className="block text-xs font-bold text-slate-700">ប្រាក់កក់ (Deposit ៛) <span className="text-rose-500">*</span></label>
+                <label className="block text-xs font-bold text-slate-700">ប្រាក់កក់ (Deposit ៛)</label>
                 <span className="text-[10px] font-bold text-rose-500">
                   {finalTotalKhr > finalDepositKhr
                     ? `នៅខ្វះ ${(finalTotalKhr - finalDepositKhr).toLocaleString()} ៛`
-                    : 'បង់គ្រប់ ១០០%'}
+                    : (finalDepositKhr > 0 ? 'បង់គ្រប់ ១០០%' : 'គ្មានប្រាក់កក់')}
                 </span>
               </div>
               <div className="relative">
@@ -2004,13 +2010,13 @@ export const NewCustomOrderModal: React.FC<NewCustomOrderModalProps> = ({ isOpen
                   type="number"
                   step="any"
                   min="0"
-                  max={finalTotalKhr}
-                  required
-                  value={orderType === 'CAKE' ? depositKhr : breadDepositKhr || String(finalDepositKhr)}
+                  max={finalTotalKhr > 0 ? finalTotalKhr : undefined}
+                  value={orderType === 'CAKE' ? depositKhr : breadDepositKhr}
                   onChange={(e) => {
                     if (orderType === 'CAKE') setDepositKhr(e.target.value);
                     else setBreadDepositKhr(e.target.value);
                   }}
+                  placeholder="0 (ឬ ឧ. 50000)"
                   className="w-full px-3 py-2 text-base font-black text-emerald-600 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500"
                 />
                 <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-xs">
