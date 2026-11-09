@@ -1,10 +1,10 @@
 {
-  "version": "1.8.7",
-  "versionCode": 53,
-  "releaseDate": "2026-11-06",
+  "version": "1.8.8",
+  "versionCode": 54,
+  "releaseDate": "2026-11-09",
   "releaseNotes": [
-    "🇰🇭 ជួសជុលបញ្ហា Font ខ្មែរលើឯកសារ CSV (Fix Khmer Unicode Font in Excel)៖ បំពាក់ UTF-8 Byte Order Mark (BOM) លើរាល់ឯកសារ CSV នាំចេញ (ការលក់, របាយការណ៍, ចំណាយ, និងមូលនិធិបម្រុង) ជួយឱ្យ Microsoft Excel បង្ហាញអក្សរខ្មែរបានច្បាស់ 100% គ្មានការបែក Font ឬចេញសញ្ញាចម្លែក។",
-    "☁️ ពង្រឹងប្រព័ន្ធ 24/7 Cloud Daily Report & Auto Catch-up៖ បំពាក់ប្រព័ន្ធតាមដានស្ទាក់ផ្ញើរបាយការណ៍សង្ខេបស្វ័យប្រវត្តិ និងចៀសវាងការកកស្ទះម៉ោងលើ Server ធានាការផ្ញើចូល Telegram ទៀងទាត់ជារៀងរាល់ថ្ងៃ។"
+    "🎂 កែលម្អផ្ទាំងកត់ត្រាកុម្ម៉ង់ខួបកំណើត (Custom Cake Order UX)៖ បន្ថែមប្រអប់ «តម្លៃនំ (Cake Price)» ភ្លាមៗនៅជួរខាងលើជាប់ឈ្មោះម៉ូដនំ និងទំហំ/ទម្ងន់នំ ងាយស្រួលមើល និងវាយបញ្ចូលតម្លៃភ្លាមៗដោយមិនបាច់ Scroll ចុះក្រោម។",
+    "⚡ ធ្វើសមកាលកម្មតម្លៃស្វ័យប្រវត្តិ (Auto Price & Deposit Sync)៖ តម្លៃនំនៅខាងលើនឹងគណនាចូលទៅក្នុងតម្លៃសរុប (Total Amount) និងប្រាក់កក់ (Deposit) នៅផ្នែកខាងក្រោមដោយស្វ័យប្រវត្តិតាមពេលវេលាជាក់ស្តែង។"
   ],
   "author": "សុធារិទ្ធ",
   "apkDownloadUrl": "https://github.com/sothearetsuon-ai/sweetbakery-pos/releases/latest/download/SweetBakery-Android.apk",
