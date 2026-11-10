@@ -105,6 +105,34 @@ export const PosTerminal: React.FC = () => {
     customerDisplaySync.updateCart(cart, exchangeRate, currentStaff?.name);
   }, [cart, exchangeRate, currentStaff]);
 
+  const [customerNotice, setCustomerNotice] = useState<{
+    productName: string;
+    time: number;
+  } | null>(null);
+
+  // Listen to Customer Self-Order Selections from Secondary Screen
+  useEffect(() => {
+    const unsub = customerDisplaySync.subscribeToCustomerActions((action) => {
+      if (action.type === 'ADD_PRODUCT' && action.product) {
+        soundFx.playSuccess();
+        addToCart(action.product);
+        setCustomerNotice({
+          productName: action.product.nameKh || action.product.nameEn || 'នំ',
+          time: Date.now(),
+        });
+      }
+    });
+    return () => unsub();
+  }, [addToCart]);
+
+  useEffect(() => {
+    if (!customerNotice) return;
+    const timer = setTimeout(() => {
+      setCustomerNotice(null);
+    }, 4500);
+    return () => clearTimeout(timer);
+  }, [customerNotice]);
+
   // POS Sorting & Stock Filter State
   const [posSortMode, setPosSortMode] = useState<PosSortMode>(() => {
     try {
@@ -1269,6 +1297,24 @@ export const PosTerminal: React.FC = () => {
           </div>
           <div className="flex-1 min-h-0 overflow-auto">
             <CustomerDisplayView />
+          </div>
+        </div>
+      )}
+
+      {/* Customer Self-Ordering Alert Notification on Cashier POS */}
+      {customerNotice && (
+        <div className="fixed top-20 right-5 z-[160] bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 text-white px-4 py-3 rounded-2xl shadow-2xl border-2 border-emerald-300 flex items-center gap-3 animate-in slide-in-from-top-4 duration-300">
+          <div className="w-9 h-9 rounded-xl bg-white/25 flex items-center justify-center text-xl animate-bounce shrink-0">
+            🛎️
+          </div>
+          <div>
+            <div className="text-xs font-black flex items-center gap-1.5">
+              <span>ភ្ញៀវបានចុចរើសនំពីអេក្រង់ទី ២!</span>
+              <span className="px-1.5 py-0.5 rounded-md bg-yellow-400 text-black text-[10px] font-mono font-bold">+1</span>
+            </div>
+            <div className="text-[11px] font-bold text-emerald-100 mt-0.5">
+              បានបន្ថែម {customerNotice.productName} ចូលកន្ត្រកស្វ័យប្រវត្តិ
+            </div>
           </div>
         </div>
       )}

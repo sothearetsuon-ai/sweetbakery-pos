@@ -1,13 +1,13 @@
 {
-  "version": "1.9.8",
-  "versionCode": 64,
+  "version": "1.9.9",
+  "versionCode": 65,
   "releaseDate": "2026-11-10",
   "releaseNotes": [
-    "🚀 ជួសជុល និងដោះស្រាយបញ្ហា Real-time Dual Screen Sync ១០០% ៖ ពេល Cashier ចុចលើនំ ឬកែប្រែកន្ត្រក ទំនិញលោតចូលអេក្រង់ទី ២ ភ្លាមៗដោយគ្មានការយឺតយ៉ាវ",
-    "☁️ Cloud Firestore Real-time Sync ៖ ភ្ជាប់អេក្រង់ភ្ញៀវឆ្លងឧបករណ៍ដោយស្វ័យប្រវត្តិ (Tablet, iPad, iPhone, Android ឬ Monitor ដាច់ដោយឡែក)",
-    "🖥️ Windows Native Dual Monitor Support ៖ កម្មវិធី Windows Electron រកឃើញ Monitor ទី ២ ដោយស្វ័យប្រវត្តិតាមរយៈ HDMI/VGA និងបើក Fullscreen លើកញ្ចក់ភ្ញៀវ",
-    "👁️ មុខងារសាកល្បងអេក្រង់ភ្ញៀវក្នុង App (In-App Live Dual Screen Preview) ៖ Cashier អាចចុចមើលទិដ្ឋភាពអេក្រង់ភ្ញៀវផ្ទាល់ក្នុង App ជាមួយទំនិញក្នុងកន្ត្រកភ្លាមៗ",
-    "🔗 ស្វ័យប្រវត្តិភ្ជាប់ Store ID (Auto Tenant Pairing) ៖ ស្កេន QR Code ពីទូរស័ព្ទដៃ ឬ Tablet ផ្សេង ភ្ជាប់ចូលហាងផ្ទាល់ដោយស្វ័យប្រវត្តិ"
+    "🎂 មុខងារកុម្ម៉ង់នំផ្ទាល់ពីអេក្រង់ភ្ញៀវ (Interactive Dual-Screen Self-Ordering) ៖ ភ្ញៀវអាចចុចលើនំ ឬនំពិសេសប្រចាំថ្ងៃលើអេក្រង់ទី ២ ហើយលោតចូលកន្ត្រកហាងភ្លាមៗ",
+    "🛎️ កណ្ដឹងដំណឹង និងផ្ទាំងជូនដំណឹងលើ POS ៖ ពេលភ្ញៀវចុចរើសនំ ម៉ាស៊ីន Cashier នឹងបន្លឺសំឡេងរោទ៍ Ding-Dong និងបង្ហាញឈ្មោះនំដែលភ្ញៀវទើបតែបានជ្រើសរើស",
+    "⚡ បញ្ជូនទិន្នន័យទ្វេទិស (Bidirectional Sync) ៖ Cashier កែសម្រួលកន្ត្រក -> លោតទៅអេក្រង់ភ្ញៀវ, ភ្ញៀវចុចនំ -> លោតមក Cashier វិញភ្លាមៗ (ក្រោម ២០០ms)",
+    "🎉 បង្ហាញផ្ទាំងអបអរលើអេក្រង់ភ្ញៀវ (Order Sent Toast) ៖ ភ្ញៀវដឹងច្បាស់ថានំរបស់ខ្លួនត្រូវបានបញ្ជូនទៅកាន់អ្នកគិតលុយរួចរាល់",
+    "📱 គាំទ្រទាំង Tablet/iPad លើតុភ្ញៀវ និង Monitor កុំព្យូទ័រតាមរយៈ Cloud Firestore & Local Broadcast"
   ],
   "author": "សុធារិទ្ធ",
   "apkDownloadUrl": "https://sothearetsuon-ai.github.io/sweetbakery-pos/SweetBakery-Android.apk",

@@ -1,4 +1,4 @@
-import { CartItem } from '../types';
+import { CartItem, Product } from '../types';
 import {
   saveFirestoreDoc,
   subscribeToFirestoreDoc,
@@ -38,10 +38,18 @@ export interface CustomerDisplayState {
   lastUpdated: number;
 }
 
+export interface CustomerAction {
+  type: 'ADD_PRODUCT';
+  product: Product;
+  timestamp: number;
+  actionId: string;
+}
+
 const STORAGE_KEY = 'sweetbakery_customer_display_state';
 const CHANNEL_NAME = 'sweetbakery_customer_display_channel';
 const FIRESTORE_COLLECTION = 'customer_display';
 const FIRESTORE_DOC_ID = 'live';
+const FIRESTORE_ACTION_DOC_ID = 'customer_actions';
 
 const defaultState: CustomerDisplayState = {
   status: 'idle',
@@ -57,10 +65,13 @@ const defaultState: CustomerDisplayState = {
 class CustomerDisplaySyncManager {
   private channel: BroadcastChannel | null = null;
   private listeners: Set<(state: CustomerDisplayState) => void> = new Set();
+  private actionListeners: Set<(action: CustomerAction) => void> = new Set();
   private currentState: CustomerDisplayState = defaultState;
   private cloudUnsub: (() => void) | null = null;
+  private actionUnsub: (() => void) | null = null;
   private cloudDebounceTimer: any = null;
   private isPushingToCloud = false;
+  private lastProcessedActionId: string = '';
 
   constructor() {
     this.init();
@@ -95,6 +106,16 @@ class CustomerDisplaySyncManager {
         this.channel = new BroadcastChannel(CHANNEL_NAME);
         this.channel.onmessage = (event) => {
           if (event.data && typeof event.data === 'object') {
+            // Check if this is a customer-initiated action (from secondary display)
+            if (event.data.type === 'CUSTOMER_ACTION') {
+              const act = event.data.action as CustomerAction;
+              if (act && act.actionId !== this.lastProcessedActionId) {
+                this.lastProcessedActionId = act.actionId;
+                this.notifyCustomerAction(act);
+              }
+              return;
+            }
+
             const incoming = event.data as CustomerDisplayState;
             if (incoming.lastUpdated >= this.currentState.lastUpdated) {
               this.currentState = incoming;
@@ -140,8 +161,13 @@ class CustomerDisplaySyncManager {
       this.cloudUnsub();
       this.cloudUnsub = null;
     }
+    if (this.actionUnsub) {
+      this.actionUnsub();
+      this.actionUnsub = null;
+    }
 
     try {
+      // A. Listen to cart / checkout / payment display state
       this.cloudUnsub = subscribeToFirestoreDoc<CustomerDisplayState>(
         FIRESTORE_COLLECTION,
         FIRESTORE_DOC_ID,
@@ -162,6 +188,30 @@ class CustomerDisplaySyncManager {
         },
         (error) => {
           console.warn('[CustomerDisplaySync] Cloud listener warning:', error);
+        }
+      );
+
+      // B. Listen to customer-initiated selections (customer taps cake on 2nd screen)
+      this.actionUnsub = subscribeToFirestoreDoc<any>(
+        FIRESTORE_COLLECTION,
+        FIRESTORE_ACTION_DOC_ID,
+        (remoteAction) => {
+          if (!remoteAction || !remoteAction.actionId || !remoteAction.productData) return;
+          if (remoteAction.actionId === this.lastProcessedActionId) return;
+          // Ignore events older than 2 minutes to prevent replay on reload
+          if (Date.now() - (Number(remoteAction.timestamp) || 0) > 120000) return;
+
+          this.lastProcessedActionId = remoteAction.actionId;
+          const action: CustomerAction = {
+            type: remoteAction.type || 'ADD_PRODUCT',
+            product: remoteAction.productData as Product,
+            timestamp: remoteAction.timestamp,
+            actionId: remoteAction.actionId,
+          };
+          this.notifyCustomerAction(action);
+        },
+        (error) => {
+          console.warn('[CustomerDisplaySync] Customer action listener warning:', error);
         }
       );
     } catch (err) {
@@ -242,6 +292,73 @@ class CustomerDisplaySyncManager {
         listener(this.currentState);
       } catch (e) {
         console.error('[CustomerDisplaySync] Listener error:', e);
+      }
+    }
+  }
+
+  /**
+   * Customer Self-Ordering: Customer taps a cake on the 2nd screen to send it directly into the Cashier POS cart!
+   */
+  public sendCustomerSelection(product: Product) {
+    const actionId = `act_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+    this.lastProcessedActionId = actionId;
+
+    const action: CustomerAction = {
+      type: 'ADD_PRODUCT',
+      product,
+      timestamp: Date.now(),
+      actionId,
+    };
+
+    // 1. Post to BroadcastChannel (for same PC / local windows)
+    if (this.channel) {
+      try {
+        this.channel.postMessage({
+          type: 'CUSTOMER_ACTION',
+          action,
+        });
+      } catch (_) {}
+    }
+
+    // 2. Notify local in-app listeners
+    this.notifyCustomerAction(action);
+
+    // 3. Save to Firestore (for cross-device tablets / phones)
+    saveFirestoreDoc(FIRESTORE_COLLECTION, FIRESTORE_ACTION_DOC_ID, {
+      type: 'ADD_PRODUCT',
+      productId: String(product.id || ''),
+      productData: {
+        id: String(product.id || ''),
+        nameKh: String(product.nameKh || ''),
+        nameEn: String(product.nameEn || ''),
+        priceKhr: Number(product.priceKhr) || 0,
+        priceUsd: Number(product.priceUsd) || 0,
+        categoryId: String(product.categoryId || ''),
+        imageUrl: String(product.imageUrl || ''),
+        unit: String(product.unit || 'ដុំ'),
+        stockQty: Number(product.stockQty) || 0,
+        barcode: String(product.barcode || ''),
+      },
+      timestamp: Date.now(),
+      actionId,
+    }).catch((err) => {
+      console.warn('[CustomerDisplaySync] Failed to push customer action to cloud:', err);
+    });
+  }
+
+  public subscribeToCustomerActions(listener: (action: CustomerAction) => void): () => void {
+    this.actionListeners.add(listener);
+    return () => {
+      this.actionListeners.delete(listener);
+    };
+  }
+
+  private notifyCustomerAction(action: CustomerAction) {
+    for (const listener of this.actionListeners) {
+      try {
+        listener(action);
+      } catch (err) {
+        console.error('[CustomerDisplaySync] Action listener error:', err);
       }
     }
   }

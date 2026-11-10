@@ -25,6 +25,8 @@ import {
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { useBakery } from '../../context/BakeryContext';
+import { Product } from '../../types';
+import { soundFx } from '../../utils/audio';
 import {
   customerDisplaySync,
   CustomerDisplayState,
@@ -54,6 +56,25 @@ export const CustomerDisplayView: React.FC = () => {
       return 'dark';
     }
   });
+
+  const [orderedToast, setOrderedToast] = useState<{ nameKh: string; time: number } | null>(null);
+
+  const handleCustomerOrderProduct = (p: Product) => {
+    soundFx.playPop();
+    customerDisplaySync.sendCustomerSelection(p);
+    setOrderedToast({
+      nameKh: p.nameKh || p.nameEn || 'នំខេក',
+      time: Date.now(),
+    });
+  };
+
+  useEffect(() => {
+    if (!orderedToast) return;
+    const timer = setTimeout(() => {
+      setOrderedToast(null);
+    }, 3500);
+    return () => clearTimeout(timer);
+  }, [orderedToast]);
 
   const toggleTheme = () => {
     setTheme((prev) => {
@@ -181,6 +202,24 @@ export const CustomerDisplayView: React.FC = () => {
           : 'bg-gradient-to-br from-rose-50/70 via-white to-pink-50/60 text-slate-800'
       }`}
     >
+      {/* Toast Notification when customer taps a cake */}
+      {orderedToast && (
+        <div className="fixed top-18 left-1/2 -translate-x-1/2 z-50 bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 text-white px-5 py-3 rounded-2xl shadow-2xl border-2 border-emerald-300 flex items-center gap-3 animate-in zoom-in-95 duration-200">
+          <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-lg animate-bounce shrink-0">
+            🎉
+          </div>
+          <div>
+            <div className="text-xs sm:text-sm font-black flex items-center gap-2">
+              <span>បានបញ្ជូន "{orderedToast.nameKh}" ទៅកាន់ Cashier!</span>
+              <span className="px-1.5 py-0.5 rounded-md bg-yellow-400 text-black text-[10px] font-mono font-bold">+1</span>
+            </div>
+            <div className="text-[11px] text-emerald-100 font-medium">
+              ទំនិញត្រូវបានបន្ថែមចូលកន្ត្រកគិតលុយរបស់អ្នកដោយស្វ័យប្រវត្តិ
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Ambient Lighting Glows */}
       <div
         className={`absolute -top-32 -left-32 w-96 h-96 rounded-full blur-3xl pointer-events-none ${
@@ -490,7 +529,8 @@ export const CustomerDisplayView: React.FC = () => {
                       return (
                         <div
                           key={prod.id}
-                          className={`rounded-2xl border p-2.5 flex flex-col justify-between transition-all group overflow-hidden relative shadow-xs ${
+                          onClick={() => handleCustomerOrderProduct(prod)}
+                          className={`rounded-2xl border p-2.5 flex flex-col justify-between transition-all group overflow-hidden relative shadow-xs cursor-pointer active:scale-95 ${
                             isDark
                               ? 'bg-slate-950/70 hover:bg-slate-950 border-slate-800 hover:border-pink-500/50'
                               : 'bg-white hover:bg-rose-50/30 border-rose-100 hover:border-pink-300'
@@ -548,6 +588,19 @@ export const CustomerDisplayView: React.FC = () => {
                               ${priceUsd.toFixed(2)}
                             </span>
                           </div>
+
+                          {/* Quick Customer Touch Order Button */}
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleCustomerOrderProduct(prod);
+                            }}
+                            className="w-full mt-2 py-1.5 px-2 rounded-xl bg-gradient-to-r from-pink-500 to-rose-600 hover:from-pink-600 hover:to-rose-700 text-white text-xs font-black shadow-sm flex items-center justify-center gap-1.5 transition-all cursor-pointer active:scale-95"
+                          >
+                            <ShoppingBag className="w-3.5 h-3.5" />
+                            <span>កុម្ម៉ង់មុខនេះ (+១)</span>
+                          </button>
                         </div>
                       );
                     })}
@@ -717,6 +770,16 @@ export const CustomerDisplayView: React.FC = () => {
                       (${currentShowcaseProduct.priceUsd.toFixed(2)})
                     </span>
                   </div>
+
+                  {/* Customer Quick Order Spotlight Button */}
+                  <button
+                    type="button"
+                    onClick={() => handleCustomerOrderProduct(currentShowcaseProduct)}
+                    className="w-full mt-2 py-2 px-3 rounded-2xl bg-gradient-to-r from-pink-500 via-rose-500 to-amber-500 hover:opacity-95 text-white text-xs font-black shadow-md shadow-pink-500/20 flex items-center justify-center gap-1.5 transition-all cursor-pointer active:scale-95"
+                  >
+                    <Sparkles className="w-3.5 h-3.5 text-yellow-200" />
+                    <span>ខ្ញុំចង់បាននំពិសេសនេះ (+១)</span>
+                  </button>
                 </div>
 
                 {/* Dots indicator */}
