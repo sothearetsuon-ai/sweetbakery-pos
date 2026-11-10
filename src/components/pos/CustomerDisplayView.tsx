@@ -22,6 +22,9 @@ import {
   Check,
   Calendar,
   MessageCircle,
+  ZoomIn,
+  X,
+  Eye,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { useBakery } from '../../context/BakeryContext';
@@ -58,6 +61,27 @@ export const CustomerDisplayView: React.FC = () => {
   });
 
   const [orderedToast, setOrderedToast] = useState<{ nameKh: string; time: number } | null>(null);
+  const [previewProduct, setPreviewProduct] = useState<Product | null>(null);
+  const [imageFitMode, setImageFitMode] = useState<'contain' | 'cover'>(() => {
+    try {
+      return (
+        (localStorage.getItem('sweetbakery_customer_display_img_fit') as 'contain' | 'cover') ||
+        'contain'
+      );
+    } catch (_) {
+      return 'contain';
+    }
+  });
+
+  const toggleImageFitMode = () => {
+    setImageFitMode((prev) => {
+      const next = prev === 'contain' ? 'cover' : 'contain';
+      try {
+        localStorage.setItem('sweetbakery_customer_display_img_fit', next);
+      } catch (_) {}
+      return next;
+    });
+  };
 
   const handleCustomerOrderProduct = (p: Product) => {
     soundFx.playPop();
@@ -475,8 +499,37 @@ export const CustomerDisplayView: React.FC = () => {
                       </div>
                     </div>
 
-                    {/* Pagination Controls */}
+                    {/* Pagination & Fit View Controls */}
                     <div className="flex items-center gap-2">
+                      {/* Fit Mode Switcher: Contain (Full Uncropped) vs Cover (Fill Box) */}
+                      <button
+                        type="button"
+                        onClick={toggleImageFitMode}
+                        className={`px-2.5 py-1 text-xs font-bold rounded-xl border flex items-center gap-1.5 transition-colors cursor-pointer ${
+                          isDark
+                            ? 'bg-slate-950 border-slate-800 text-slate-300 hover:text-white hover:border-pink-500/50'
+                            : 'bg-rose-50 border-rose-200 text-rose-700 hover:bg-rose-100'
+                        }`}
+                        title={
+                          imageFitMode === 'contain'
+                            ? 'ប្តូរទៅបង្ហាញពេញប្រអប់ (Fill Box)'
+                            : 'ប្តូរទៅបង្ហាញរូបពេញ 100% គ្មានកាត់ (Fit 100%)'
+                        }
+                      >
+                        {imageFitMode === 'contain' ? (
+                          <>
+                            <Eye className="w-3.5 h-3.5 text-pink-500" />
+                            <span className="hidden sm:inline">រូបពេញ</span>
+                            <span className="text-[10px] font-mono text-pink-400">100%</span>
+                          </>
+                        ) : (
+                          <>
+                            <Maximize2 className="w-3.5 h-3.5 text-amber-500" />
+                            <span className="hidden sm:inline">ពេញប្រអប់</span>
+                          </>
+                        )}
+                      </button>
+
                       <span
                         className={`text-xs font-mono font-bold px-2.5 py-1 rounded-xl border ${
                           isDark
@@ -529,26 +582,53 @@ export const CustomerDisplayView: React.FC = () => {
                       return (
                         <div
                           key={prod.id}
-                          onClick={() => handleCustomerOrderProduct(prod)}
-                          className={`rounded-2xl border p-2.5 flex flex-col justify-between transition-all group overflow-hidden relative shadow-xs cursor-pointer active:scale-95 ${
+                          className={`rounded-2xl border p-2.5 flex flex-col justify-between transition-all group overflow-hidden relative shadow-xs ${
                             isDark
                               ? 'bg-slate-950/70 hover:bg-slate-950 border-slate-800 hover:border-pink-500/50'
                               : 'bg-white hover:bg-rose-50/30 border-rose-100 hover:border-pink-300'
                           }`}
                         >
-                          <div className="relative w-full h-28 sm:h-32 rounded-xl overflow-hidden mb-2 bg-rose-50/50 flex items-center justify-center">
+                          {/* Image Box: Full Uncropped with Ambient Backdrop + 1-Click Zoom Lightbox */}
+                          <div
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setPreviewProduct(prod);
+                            }}
+                            className="relative w-full h-36 sm:h-44 md:h-48 rounded-xl overflow-hidden mb-2 bg-slate-900/40 flex items-center justify-center group/img cursor-zoom-in border border-slate-800/40"
+                            title="ចុចដើម្បីមើលរូបភាពធំពេញអេក្រង់ (Click to view full image)"
+                          >
                             {prod.imageUrl ? (
-                              <img
-                                src={getProductImageUrl(prod.imageUrl)}
-                                alt={prod.nameKh}
-                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                              />
+                              <>
+                                {/* Blurred ambient cake colors in contain mode */}
+                                {imageFitMode === 'contain' && (
+                                  <img
+                                    src={getProductImageUrl(prod.imageUrl)}
+                                    alt=""
+                                    aria-hidden="true"
+                                    className="absolute inset-0 w-full h-full object-cover filter blur-md opacity-30 scale-110 pointer-events-none"
+                                  />
+                                )}
+                                <img
+                                  src={getProductImageUrl(prod.imageUrl)}
+                                  alt={prod.nameKh}
+                                  className={`w-full h-full transition-transform duration-300 group-hover:scale-105 drop-shadow-md ${
+                                    imageFitMode === 'contain'
+                                      ? 'relative z-1 object-contain p-1.5'
+                                      : 'object-cover'
+                                  }`}
+                                />
+                                {/* Quick Zoom Pill Badge */}
+                                <div className="absolute bottom-1.5 right-1.5 z-2 bg-black/65 hover:bg-pink-600 text-white p-1 rounded-lg opacity-80 sm:opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center gap-1 text-[10px] px-1.5 py-0.5 pointer-events-none">
+                                  <ZoomIn className="w-3 h-3 text-pink-300" />
+                                  <span className="hidden sm:inline">ពង្រីក</span>
+                                </div>
+                              </>
                             ) : (
                               <span className="text-4xl">🎂</span>
                             )}
 
                             {isHot && (
-                              <span className="absolute top-2 left-2 bg-gradient-to-r from-rose-500 to-amber-500 text-white text-[9px] font-black px-2 py-0.5 rounded-full shadow-md flex items-center gap-1">
+                              <span className="absolute top-2 left-2 z-2 bg-gradient-to-r from-rose-500 to-amber-500 text-white text-[9px] font-black px-2 py-0.5 rounded-full shadow-md flex items-center gap-1">
                                 <Flame className="w-2.5 h-2.5 text-yellow-200" />
                                 <span>ពេញនិយម</span>
                               </span>
@@ -609,18 +689,34 @@ export const CustomerDisplayView: React.FC = () => {
               ) : idleTab === 'spotlight' ? (
                 /* Spotlight Banner Showcase */
                 <div className="flex-1 flex flex-col items-center justify-center text-center p-6 space-y-4">
-                  <div className="relative w-64 h-64 sm:w-80 sm:h-80 rounded-3xl overflow-hidden border-4 border-pink-500/40 shadow-2xl shadow-pink-500/20 group">
+                  <div
+                    onClick={() => setPreviewProduct(currentShowcaseProduct)}
+                    className="relative w-72 h-72 sm:w-88 sm:h-88 rounded-3xl overflow-hidden border-4 border-pink-500/40 shadow-2xl shadow-pink-500/20 group flex items-center justify-center bg-slate-900/40 cursor-zoom-in"
+                    title="ចុចដើម្បីមើលរូបភាពធំពេញអេក្រង់ (Click to view full image)"
+                  >
+                    {currentShowcaseProduct.imageUrl && (
+                      <img
+                        src={getProductImageUrl(currentShowcaseProduct.imageUrl)}
+                        alt=""
+                        aria-hidden="true"
+                        className="absolute inset-0 w-full h-full object-cover filter blur-xl opacity-35 scale-110 pointer-events-none"
+                      />
+                    )}
                     <img
                       src={getProductImageUrl(
                         currentShowcaseProduct.imageUrl ||
                           'https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=800'
                       )}
                       alt={currentShowcaseProduct.nameKh}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                      className="relative z-1 w-full h-full object-contain p-3 group-hover:scale-105 transition-transform duration-700 drop-shadow-2xl"
                     />
-                    <div className="absolute top-3 left-3 bg-gradient-to-r from-pink-600 to-rose-500 text-white text-xs font-black px-3 py-1 rounded-full shadow-lg flex items-center gap-1.5">
+                    <div className="absolute top-3 left-3 z-2 bg-gradient-to-r from-pink-600 to-rose-500 text-white text-xs font-black px-3 py-1 rounded-full shadow-lg flex items-center gap-1.5">
                       <Sparkles className="w-3.5 h-3.5 text-yellow-300" />
                       <span>នំពិសេសប្រចាំថ្ងៃ (Daily Special)</span>
+                    </div>
+                    <div className="absolute bottom-3 right-3 z-2 bg-black/70 text-white px-2.5 py-1 rounded-xl text-xs flex items-center gap-1.5 opacity-90 group-hover:opacity-100 transition-opacity">
+                      <ZoomIn className="w-3.5 h-3.5 text-pink-300" />
+                      <span>មើលរូបធំពេញអេក្រង់</span>
                     </div>
                   </div>
 
@@ -725,17 +821,33 @@ export const CustomerDisplayView: React.FC = () => {
                 </div>
 
                 <div className="my-auto py-3 flex flex-col items-center text-center space-y-3">
-                  <div className="w-40 h-40 sm:w-44 sm:h-44 rounded-2xl overflow-hidden border-2 border-pink-500/30 shadow-xl relative group">
+                  <div
+                    onClick={() => setPreviewProduct(currentShowcaseProduct)}
+                    className="w-44 h-44 sm:w-52 sm:h-52 rounded-2xl overflow-hidden border-2 border-pink-500/30 shadow-xl relative group flex items-center justify-center bg-slate-900/40 cursor-zoom-in"
+                    title="ចុចដើម្បីមើលរូបភាពធំពេញអេក្រង់ (Click to view full image)"
+                  >
+                    {currentShowcaseProduct.imageUrl && (
+                      <img
+                        src={getProductImageUrl(currentShowcaseProduct.imageUrl)}
+                        alt=""
+                        aria-hidden="true"
+                        className="absolute inset-0 w-full h-full object-cover filter blur-md opacity-30 scale-110 pointer-events-none"
+                      />
+                    )}
                     <img
                       src={getProductImageUrl(
                         currentShowcaseProduct.imageUrl ||
                           'https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=500'
                       )}
                       alt={currentShowcaseProduct.nameKh}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      className="relative z-1 w-full h-full object-contain p-2 group-hover:scale-105 transition-transform duration-500 drop-shadow-md"
                     />
-                    <div className="absolute top-2 right-2 px-2 py-0.5 rounded-lg bg-black/75 text-[9px] font-black text-amber-300 font-mono">
+                    <div className="absolute top-2 right-2 z-2 px-2 py-0.5 rounded-lg bg-black/75 text-[9px] font-black text-amber-300 font-mono">
                       {currentShowcaseProduct.categoryId.toUpperCase()}
+                    </div>
+                    <div className="absolute bottom-2 right-2 z-2 bg-black/65 text-white p-1 rounded-lg opacity-80 sm:opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 text-[10px] px-2 py-0.5 pointer-events-none">
+                      <ZoomIn className="w-3 h-3 text-pink-300" />
+                      <span>ពង្រីក</span>
                     </div>
                   </div>
 
@@ -1102,6 +1214,106 @@ export const CustomerDisplayView: React.FC = () => {
           </>
         )}
       </div>
+
+      {/* ========================================================================= */}
+      {/* FULLSCREEN CAKE IMAGE LIGHTBOX MODAL (100% Full Uncropped View) */}
+      {/* ========================================================================= */}
+      {previewProduct && (
+        <div
+          className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 animate-in fade-in duration-200"
+          onClick={() => setPreviewProduct(null)}
+        >
+          <div
+            className={`relative max-w-2xl w-full rounded-3xl border shadow-2xl overflow-hidden flex flex-col max-h-[94vh] animate-in zoom-in-95 duration-200 ${
+              isDark
+                ? 'bg-slate-950 border-slate-800 text-white'
+                : 'bg-white border-rose-100 text-slate-900'
+            }`}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div
+              className={`flex items-center justify-between p-4 border-b shrink-0 ${
+                isDark ? 'border-slate-800' : 'border-rose-100'
+              }`}
+            >
+              <div className="flex items-center gap-2.5 min-w-0">
+                <span className="text-2xl">🎂</span>
+                <div className="min-w-0">
+                  <h3 className="font-black text-base sm:text-lg font-muol truncate">
+                    {previewProduct.nameKh}
+                  </h3>
+                  <p className="text-xs text-slate-400 font-sans truncate">
+                    {previewProduct.nameEn || previewProduct.categoryId?.toUpperCase() || 'Cake Detail'}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPreviewProduct(null)}
+                className="p-2 rounded-xl bg-slate-800/60 hover:bg-rose-600 text-white transition-colors cursor-pointer shrink-0 ml-2"
+                title="បិទ (Close)"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Image Body (100% Full Uncropped Preview) */}
+            <div className="relative flex-1 min-h-[300px] sm:min-h-[440px] max-h-[65vh] bg-slate-950 flex items-center justify-center p-3 sm:p-5 overflow-hidden">
+              {/* Subtle blurred ambient backdrop matching cake frosting */}
+              {previewProduct.imageUrl && (
+                <img
+                  src={getProductImageUrl(previewProduct.imageUrl)}
+                  alt=""
+                  aria-hidden="true"
+                  className="absolute inset-0 w-full h-full object-cover filter blur-2xl opacity-30 scale-125 pointer-events-none"
+                />
+              )}
+              {/* Crisp uncropped cake image showing 100% of top and bottom */}
+              <img
+                src={getProductImageUrl(previewProduct.imageUrl)}
+                alt={previewProduct.nameKh}
+                className="relative z-1 max-h-[58vh] max-w-full w-auto h-auto object-contain drop-shadow-2xl rounded-2xl"
+              />
+            </div>
+
+            {/* Modal Footer with Price & Quick Customer Order */}
+            <div
+              className={`p-4 sm:p-5 border-t flex flex-col sm:flex-row items-center justify-between gap-3 shrink-0 ${
+                isDark ? 'border-slate-800 bg-slate-950/90' : 'border-rose-100 bg-rose-50/30'
+              }`}
+            >
+              <div className="text-center sm:text-left">
+                <div className="text-xs text-slate-400 font-battambang">តម្លៃលក់ផ្លូវការ</div>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-2xl sm:text-3xl font-black font-mono text-rose-500">
+                    {(
+                      previewProduct.priceKhr ??
+                      roundKhr(previewProduct.priceUsd * exchangeRate)
+                    ).toLocaleString()}{' '}
+                    ៛
+                  </span>
+                  <span className="text-sm font-mono text-slate-400">
+                    (${previewProduct.priceUsd.toFixed(2)})
+                  </span>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  handleCustomerOrderProduct(previewProduct);
+                  setPreviewProduct(null);
+                }}
+                className="w-full sm:w-auto py-3 px-6 rounded-2xl bg-gradient-to-r from-pink-500 via-rose-500 to-amber-500 hover:opacity-95 text-white font-black text-sm shadow-lg shadow-pink-500/25 flex items-center justify-center gap-2 cursor-pointer active:scale-95 transition-all"
+              >
+                <ShoppingBag className="w-4 h-4" />
+                <span>កុម្ម៉ង់នំនេះ (+១)</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
