@@ -543,10 +543,14 @@ interface BakeryContextType {
 
   // Real Store Passcode Authentication & Logout
   isRealStoreAuthModalOpen: boolean;
-  openRealStoreAuthModal: (onSuccessCallback?: (authenticatedStaff?: StaffMember) => void) => void;
+  openRealStoreAuthModal: (
+    onSuccessCallback?: (authenticatedStaff?: StaffMember) => void,
+    initialTab?: 'LOGIN' | 'SIGNUP' | 'JOIN' | 'MY_STORES' | 'NEW_STORE'
+  ) => void;
   closeRealStoreAuthModal: () => void;
   verifyRealStorePin: (pin: string) => boolean;
   realStoreAuthSuccessCallback: ((authenticatedStaff?: StaffMember) => void) | null;
+  realStoreAuthInitialTab: 'LOGIN' | 'SIGNUP' | 'JOIN' | 'MY_STORES' | 'NEW_STORE' | null;
   logoutAndLock: () => void;
 
   isFirebaseConnected: boolean;
@@ -6991,19 +6995,25 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     return true;
   });
   const [realStoreAuthSuccessCallback, setRealStoreAuthSuccessCallback] = useState<((authenticatedStaff?: StaffMember) => void) | null>(null);
+  const [realStoreAuthInitialTab, setRealStoreAuthInitialTab] = useState<'LOGIN' | 'SIGNUP' | 'JOIN' | 'MY_STORES' | 'NEW_STORE' | null>(null);
 
-  const openRealStoreAuthModal = (onSuccess?: (authenticatedStaff?: StaffMember) => void) => {
+  const openRealStoreAuthModal = (
+    onSuccess?: (authenticatedStaff?: StaffMember) => void,
+    initialTab?: 'LOGIN' | 'SIGNUP' | 'JOIN' | 'MY_STORES' | 'NEW_STORE'
+  ) => {
     if (onSuccess) {
       setRealStoreAuthSuccessCallback(() => onSuccess);
     } else {
       setRealStoreAuthSuccessCallback(null);
     }
+    setRealStoreAuthInitialTab(initialTab || null);
     setIsRealStoreAuthModalOpen(true);
   };
 
   const closeRealStoreAuthModal = () => {
     setIsRealStoreAuthModalOpen(false);
     setRealStoreAuthSuccessCallback(null);
+    setRealStoreAuthInitialTab(null);
   };
 
   const verifyRealStorePin = (pin: string): boolean => {
@@ -7118,6 +7128,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         closeRealStoreAuthModal,
         verifyRealStorePin,
         realStoreAuthSuccessCallback,
+        realStoreAuthInitialTab,
         storeInfo,
         updateStoreInfo,
         staffMembers,

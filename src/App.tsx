@@ -160,6 +160,7 @@ export const App: React.FC = () => {
     closeRealStoreAuthModal,
     openRealStoreAuthModal,
     realStoreAuthSuccessCallback,
+    realStoreAuthInitialTab,
     storeInfo,
     products,
     addToCart,
@@ -797,6 +798,7 @@ export const App: React.FC = () => {
       <RealStoreAuthModal
         isOpen={isRealStoreAuthModalOpen}
         onClose={closeRealStoreAuthModal}
+        initialTab={realStoreAuthInitialTab}
         onSuccess={(authenticatedStaff) => {
           exitDemoMode(authenticatedStaff);
           if (realStoreAuthSuccessCallback) {

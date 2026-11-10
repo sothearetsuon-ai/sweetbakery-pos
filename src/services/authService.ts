@@ -17,18 +17,31 @@ import {
 } from './firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { idbGet, idbSet, idbDel } from '../utils/idbStorage';
-import { StoreInfo, StaffMember, ReserveFund } from '../types';
+import { StoreInfo, StaffMember, ReserveFund, Product } from '../types';
+import { initialProducts, initialFlavors } from '../data/mockData';
+
+export interface UserStoreRef {
+  storeId: string;
+  storeName: string;
+  role: 'OWNER' | 'MANAGER' | 'CASHIER';
+  createdAt: string;
+  logoUrl?: string;
+  address?: string;
+  phone?: string;
+}
 
 export interface StoreUserAccount {
   uid: string;
   storeId: string;
   storeName: string;
+  displayName?: string;
   email?: string;
   phone?: string;
   role: 'OWNER' | 'MANAGER' | 'CASHIER';
   authProvider: 'email' | 'phone' | 'google' | 'telegram' | 'store_id';
   createdAt: string;
   lastLoginAt: string;
+  stores?: UserStoreRef[];
 }
 
 const STORAGE_STORE_USER = 'bakery_store_user';
@@ -204,7 +217,8 @@ export const setupCleanStoreTenant = async (
   storeName: string,
   phone?: string,
   email?: string,
-  ownerUid?: string
+  ownerUid?: string,
+  seedStarterCatalog: boolean = true
 ): Promise<{
   cleanStoreInfo: StoreInfo;
   ownerStaff: StaffMember;
@@ -283,16 +297,28 @@ export const setupCleanStoreTenant = async (
     notifyCustomerChat: false,
   };
 
+  // Luxury Starter Products Catalog (Cloned with unique isolated IDs for this tenant)
+  const starterProducts: Product[] = seedStarterCatalog
+    ? initialProducts.map((p, idx) => ({
+        ...p,
+        id: `p-${newStoreId.toLowerCase().replace(/[^a-z0-9]/g, '')}-${idx + 1}-${Date.now().toString(36)}`,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      }))
+    : [];
+
+  const starterFlavors = seedStarterCatalog ? [...initialFlavors] : [];
+
   const cleanSnapshot = {
     sales: [],
     customOrders: [],
     expenses: [],
-    products: [],
+    products: starterProducts,
     storeInfo: cleanStoreInfo,
     ingredients: [],
     recipes: [],
     partyAddons: [],
-    flavors: [],
+    flavors: starterFlavors,
     staffMembers: [ownerStaff],
     currentStaff: ownerStaff,
     reserveFund: cleanReserveFund,
@@ -332,16 +358,16 @@ export const setupCleanStoreTenant = async (
     localStorage.setItem(snapKey, JSON.stringify(cleanSnapshot));
     idbSet(snapKey, JSON.stringify(cleanSnapshot)).catch(() => {});
 
-    // 3. Immediately set active localStorage keys to completely empty / fresh store
+    // 3. Immediately set active localStorage keys to fresh store
     localStorage.setItem('bakery_store_info', JSON.stringify(cleanStoreInfo));
     localStorage.setItem('bakery_sales', JSON.stringify([]));
     localStorage.setItem('bakery_custom_orders', JSON.stringify([]));
     localStorage.setItem('bakery_expenses', JSON.stringify([]));
-    localStorage.setItem('bakery_products', JSON.stringify([]));
+    localStorage.setItem('bakery_products', JSON.stringify(starterProducts));
     localStorage.setItem('bakery_ingredients', JSON.stringify([]));
     localStorage.setItem('bakery_recipes', JSON.stringify([]));
     localStorage.setItem('bakery_party_addons', JSON.stringify([]));
-    localStorage.setItem('bakery_flavors', JSON.stringify([]));
+    localStorage.setItem('bakery_flavors', JSON.stringify(starterFlavors));
     localStorage.setItem('bakery_staff_members', JSON.stringify([ownerStaff]));
     localStorage.setItem('bakery_current_staff', JSON.stringify(ownerStaff));
     localStorage.setItem('bakery_reserve_fund', JSON.stringify(cleanReserveFund));
@@ -356,23 +382,23 @@ export const setupCleanStoreTenant = async (
     localStorage.removeItem('bakery_deleted_party_addons_ids');
     localStorage.removeItem('bakery_deleted_staff_ids');
 
-    // 5. Update IndexedDB to completely empty state
+    // 5. Update IndexedDB to empty/starter state
     idbSet('bakery_store_info', JSON.stringify(cleanStoreInfo)).catch(() => {});
     idbSet('bakery_sales', JSON.stringify([])).catch(() => {});
     idbSet('bakery_custom_orders', JSON.stringify([])).catch(() => {});
     idbSet('bakery_expenses', JSON.stringify([])).catch(() => {});
-    idbSet('bakery_products', JSON.stringify([])).catch(() => {});
+    idbSet('bakery_products', JSON.stringify(starterProducts)).catch(() => {});
     idbSet('bakery_ingredients', JSON.stringify([])).catch(() => {});
     idbSet('bakery_recipes', JSON.stringify([])).catch(() => {});
     idbSet('bakery_party_addons', JSON.stringify([])).catch(() => {});
-    idbSet('bakery_flavors', JSON.stringify([])).catch(() => {});
+    idbSet('bakery_flavors', JSON.stringify(starterFlavors)).catch(() => {});
     idbSet('bakery_staff_members', JSON.stringify([ownerStaff])).catch(() => {});
     idbSet('bakery_current_staff', JSON.stringify(ownerStaff)).catch(() => {});
     idbSet('bakery_reserve_fund', JSON.stringify(cleanReserveFund)).catch(() => {});
     idbDel('bakery_shift').catch(() => {});
   }
 
-  // 6. Save initial storeInfo and owner staff to Firestore tenant partition
+  // 6. Save initial storeInfo, owner staff, and starter products to Firestore tenant partition
   const db = getFirestoreDb();
   if (db) {
     try {
@@ -386,6 +412,11 @@ export const setupCleanStoreTenant = async (
         ownerStaff,
         { merge: true }
       );
+      if (starterProducts.length > 0) {
+        for (const prod of starterProducts) {
+          setDoc(doc(db, 'tenants', newStoreId, 'products', prod.id), prod, { merge: true }).catch(() => {});
+        }
+      }
     } catch (e) {
       console.warn('Error seeding new store info/staff to Firestore:', e);
     }
@@ -401,14 +432,17 @@ export const signUpStore = async (params: {
   emailOrPhone: string;
   password?: string;
   storeName: string;
+  displayName?: string;
   phone?: string;
   email?: string;
+  seedStarterCatalog?: boolean;
 }): Promise<{ success: boolean; error?: string; account?: StoreUserAccount }> => {
   const auth = getFirebaseAuth();
   const db = getFirestoreDb();
 
   const rawIdent = params.emailOrPhone.trim();
   const storeName = params.storeName.trim() || 'ហាងនំ SweetBakery';
+  const displayName = params.displayName?.trim() || storeName;
   const isPhone = !rawIdent.includes('@');
   const firebaseEmail = toFirebaseEmail(rawIdent);
   const password = params.password || 'BakeryPass123!';
@@ -466,25 +500,35 @@ export const signUpStore = async (params: {
   const uidPart = uid.replace(/[^A-Za-z0-9]/g, '').slice(0, 6).toUpperCase();
   const newStoreId = `STORE-${phonePart || uidPart || Math.floor(100000 + Math.random() * 900000)}`;
 
-  // Setup 100% empty, isolated new store data
+  // Setup isolated new store data (with optional starter catalog)
   const { cleanStoreInfo, ownerStaff } = await setupCleanStoreTenant(
     newStoreId,
     storeName,
     phone,
     email,
-    uid
+    uid,
+    params.seedStarterCatalog !== false
   );
+
+  const initialStoreRef: UserStoreRef = {
+    storeId: newStoreId,
+    storeName,
+    role: 'OWNER',
+    createdAt: new Date().toISOString(),
+  };
 
   const account: StoreUserAccount = {
     uid,
     storeId: newStoreId,
     storeName,
+    displayName,
     email: email || undefined,
     phone: phone || undefined,
     role: 'OWNER',
     authProvider: isPhone ? 'phone' : 'email',
     createdAt: new Date().toISOString(),
     lastLoginAt: new Date().toISOString(),
+    stores: [initialStoreRef],
   };
 
   const accountDocData = {
@@ -549,6 +593,131 @@ export const signUpStore = async (params: {
   saveLocalAccountCache(account, passwordHash);
 
   return { success: true, account };
+};
+
+/**
+ * Create an additional independent Store under the same User Account (Facebook Pages style)
+ * Guaranteed 100% clean, non-overlapping tenant partition!
+ */
+export const createAdditionalStore = async (params: {
+  storeName: string;
+  seedStarterCatalog?: boolean;
+}): Promise<{ success: boolean; error?: string; newStoreId?: string; account?: StoreUserAccount }> => {
+  const currentUser = getCurrentStoreUser();
+  if (!currentUser) {
+    return { success: false, error: 'សូមចូលគណនីជាមុនសិន!' };
+  }
+
+  const storeName = params.storeName.trim() || 'ហាងនំថ្មី';
+  // Generate random 6-digit collision-free Store ID
+  const randNum = Math.floor(100000 + Math.random() * 900000);
+  const newStoreId = `STORE-${randNum}`;
+
+  // 1. Setup clean tenant for new store
+  await setupCleanStoreTenant(
+    newStoreId,
+    storeName,
+    currentUser.phone,
+    currentUser.email,
+    currentUser.uid,
+    params.seedStarterCatalog !== false
+  );
+
+  // 2. Append new store to user's stores list
+  const existingStores: UserStoreRef[] = Array.isArray(currentUser.stores) && currentUser.stores.length > 0
+    ? [...currentUser.stores]
+    : [
+        {
+          storeId: currentUser.storeId,
+          storeName: currentUser.storeName,
+          role: currentUser.role,
+          createdAt: currentUser.createdAt,
+        },
+      ];
+
+  const newStoreRef: UserStoreRef = {
+    storeId: newStoreId,
+    storeName,
+    role: 'OWNER',
+    createdAt: new Date().toISOString(),
+  };
+
+  const updatedStores = [...existingStores.filter((s) => s.storeId !== newStoreId), newStoreRef];
+
+  const updatedAccount: StoreUserAccount = {
+    ...currentUser,
+    storeId: newStoreId,
+    storeName,
+    stores: updatedStores,
+    lastLoginAt: new Date().toISOString(),
+  };
+
+  // 3. Persist to Firestore
+  const db = getFirestoreDb();
+  if (db) {
+    try {
+      const cleanPhone = currentUser.phone ? cleanPhoneNumber(currentUser.phone) : '';
+      if (cleanPhone) {
+        await setDoc(doc(db, 'store_accounts', `phone_${cleanPhone}`), updatedAccount, { merge: true });
+      }
+      if (currentUser.email) {
+        await setDoc(doc(db, 'store_accounts', `email_${currentUser.email.trim().toLowerCase()}`), updatedAccount, { merge: true });
+      }
+      await setDoc(doc(db, 'store_accounts', `store_${newStoreId}`), updatedAccount, { merge: true });
+      await setDoc(
+        doc(db, 'store_registry', newStoreId),
+        {
+          storeId: newStoreId,
+          storeName,
+          ownerUid: currentUser.uid,
+          ownerPhone: currentUser.phone || '',
+          ownerEmail: currentUser.email || '',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+        { merge: true }
+      );
+      if (currentUser.uid) {
+        await setDoc(doc(db, 'users', currentUser.uid), updatedAccount, { merge: true });
+      }
+    } catch (e) {
+      console.warn('Error saving additional store to Firestore:', e);
+    }
+  }
+
+  // 4. Activate new store ID and save session
+  setStoreId(newStoreId);
+  saveStoreUserSession(updatedAccount);
+
+  return { success: true, newStoreId, account: updatedAccount };
+};
+
+/**
+ * Switch active store for the current logged-in user (Instant 1-Click Store Switcher)
+ */
+export const switchActiveStore = async (
+  targetStoreId: string
+): Promise<{ success: boolean; error?: string; account?: StoreUserAccount }> => {
+  const currentUser = getCurrentStoreUser();
+  if (!currentUser) {
+    return { success: false, error: 'រកមិនឃើញគណនីបច្ចុប្បន្ន!' };
+  }
+
+  const cleanTarget = targetStoreId.trim().toUpperCase();
+  const matchedStore = currentUser.stores?.find((s) => s.storeId.toUpperCase() === cleanTarget);
+
+  const updatedAccount: StoreUserAccount = {
+    ...currentUser,
+    storeId: cleanTarget,
+    storeName: matchedStore?.storeName || currentUser.storeName,
+    lastLoginAt: new Date().toISOString(),
+  };
+
+  // Persist session and activate new store ID
+  setStoreId(cleanTarget);
+  saveStoreUserSession(updatedAccount);
+
+  return { success: true, account: updatedAccount };
 };
 
 /**
@@ -637,16 +806,29 @@ export const signInStore = async (
           await setDoc(doc(db, 'store_accounts', matchedKey), { passwordHash: pwdHash }, { merge: true }).catch(() => {});
         }
 
+        let userStores: UserStoreRef[] = Array.isArray(foundData.stores) && foundData.stores.length > 0
+          ? foundData.stores
+          : [
+              {
+                storeId: foundData.storeId,
+                storeName: foundData.storeName || 'ហាងនំ SweetBakery',
+                role: foundData.role || 'OWNER',
+                createdAt: foundData.createdAt || new Date().toISOString(),
+              },
+            ];
+
         const account: StoreUserAccount = {
           uid: foundData.uid || firebaseUid || `user_${Date.now()}`,
           storeId: foundData.storeId,
           storeName: foundData.storeName || 'ហាងនំ SweetBakery',
+          displayName: foundData.displayName || foundData.storeName || 'ម្ចាស់ហាង',
           email: foundData.email,
           phone: foundData.phone || (digits ? rawIdent : undefined),
           role: foundData.role || 'OWNER',
           authProvider: isEmail ? 'email' : 'phone',
           createdAt: foundData.createdAt || new Date().toISOString(),
           lastLoginAt: new Date().toISOString(),
+          stores: userStores,
         };
 
         // Update last login
@@ -673,16 +855,27 @@ export const signInStore = async (
             const regPhone = cleanPhoneNumber(regData.ownerPhone || '');
 
             if (!regPhone || regPhone === digits || regData.storeId === possibleStoreId) {
+              const initialStores: UserStoreRef[] = [
+                {
+                  storeId: possibleStoreId,
+                  storeName: regData.storeName || 'ហាងនំ SweetBakery',
+                  role: 'OWNER',
+                  createdAt: regData.createdAt || new Date().toISOString(),
+                },
+              ];
+
               const account: StoreUserAccount = {
                 uid: regData.ownerUid || firebaseUid || `user_${Date.now()}`,
                 storeId: possibleStoreId,
                 storeName: regData.storeName || 'ហាងនំ SweetBakery',
+                displayName: regData.storeName || 'ម្ចាស់ហាង',
                 phone: regData.ownerPhone || (digits ? rawIdent : undefined),
                 email: regData.ownerEmail || (isEmail ? rawIdent : undefined),
                 role: 'OWNER',
                 authProvider: isEmail ? 'email' : 'phone',
                 createdAt: regData.createdAt || new Date().toISOString(),
                 lastLoginAt: new Date().toISOString(),
+                stores: initialStores,
               };
 
               // Persist credentials in store_accounts so future logins are password-protected

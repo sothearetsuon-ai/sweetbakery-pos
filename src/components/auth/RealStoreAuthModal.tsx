@@ -29,9 +29,12 @@ import {
   signInWithGoogle,
   joinStoreById,
   logoutStore,
+  createAdditionalStore,
+  switchActiveStore,
   getCurrentStoreUser,
   subscribeStoreUser,
   StoreUserAccount,
+  UserStoreRef,
   formatAuthErrorMessage,
 } from '../../services/authService';
 import { initialStaffMembers } from '../../data/mockData';
@@ -41,12 +44,14 @@ interface RealStoreAuthModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess?: (authenticatedStaff?: StaffMember) => void;
+  initialTab?: 'LOGIN' | 'SIGNUP' | 'JOIN' | 'MY_STORES' | 'NEW_STORE' | null;
 }
 
 export const RealStoreAuthModal: React.FC<RealStoreAuthModalProps> = ({
   isOpen,
   onClose,
   onSuccess,
+  initialTab,
 }) => {
   const {
     verifyRealStorePin,
@@ -69,17 +74,20 @@ export const RealStoreAuthModal: React.FC<RealStoreAuthModalProps> = ({
     return 'NEW_FORM';
   });
 
-  // Sub-tabs in NEW_FORM: 'LOGIN' | 'SIGNUP' | 'JOIN'
-  const [activeFormTab, setActiveFormTab] = useState<'LOGIN' | 'SIGNUP' | 'JOIN'>('LOGIN');
-
   // Multi-Store User & Tenant State
   const [currentUser, setCurrentUser] = useState<StoreUserAccount | null>(() => getCurrentStoreUser());
   const [currentStoreId, setCurrentStoreId] = useState<string>(() => getStoreId());
 
-  // Form Fields (Email/Phone, Password, Store Name, Join Store ID)
+  // Sub-tabs in NEW_FORM: 'MY_STORES' | 'NEW_STORE' | 'LOGIN' | 'SIGNUP' | 'JOIN'
+  const [activeFormTab, setActiveFormTab] = useState<'LOGIN' | 'SIGNUP' | 'JOIN' | 'MY_STORES' | 'NEW_STORE'>('LOGIN');
+
+  // Form Fields (Email/Phone, Password, Store Name, Join Store ID, Display Name, New Store)
   const [emailOrPhone, setEmailOrPhone] = useState('');
   const [password, setPassword] = useState('');
   const [storeName, setStoreName] = useState('');
+  const [displayName, setDisplayName] = useState('');
+  const [newStoreName, setNewStoreName] = useState('');
+  const [seedStarterCatalog, setSeedStarterCatalog] = useState(true);
   const [targetStoreId, setTargetStoreId] = useState('');
   const [showPassword, setShowPassword] = useState(false);
 
@@ -144,10 +152,19 @@ export const RealStoreAuthModal: React.FC<RealStoreAuthModalProps> = ({
       setIsShaking(false);
       setSelectedStaffId(null);
       authenticatedStaffRef.current = null;
-      setCurrentUser(getCurrentStoreUser());
-      setCurrentStoreId(getStoreId());
+      const u = getCurrentStoreUser();
+      const sId = getStoreId();
+      setCurrentUser(u);
+      setCurrentStoreId(sId);
+      if (initialTab) {
+        setActiveFormTab(initialTab);
+      } else if (u && !isDefaultStore(sId)) {
+        setActiveFormTab('MY_STORES');
+      } else {
+        setActiveFormTab('LOGIN');
+      }
     }
-  }, [isOpen]);
+  }, [isOpen, initialTab]);
 
   useEffect(() => {
     const unsub = subscribeStoreUser((u) => {
@@ -271,6 +288,8 @@ export const RealStoreAuthModal: React.FC<RealStoreAuthModalProps> = ({
         emailOrPhone: emailOrPhone.trim(),
         password,
         storeName: storeName.trim(),
+        displayName: displayName.trim() || undefined,
+        seedStarterCatalog,
       });
 
       if (res.success && res.account) {
@@ -291,6 +310,79 @@ export const RealStoreAuthModal: React.FC<RealStoreAuthModalProps> = ({
       }
     } catch (err: any) {
       setFormError(formatAuthErrorMessage(err.message || 'កំហុសបច្ចេកទេស'));
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleCreateNewStore = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newStoreName.trim()) {
+      setFormError('សូមបញ្ចូលឈ្មោះហាងថ្មីរបស់អ្នក!');
+      return;
+    }
+
+    setIsLoading(true);
+    setFormError('');
+    setFormSuccess('');
+
+    try {
+      const res = await createAdditionalStore({
+        storeName: newStoreName.trim(),
+        seedStarterCatalog,
+      });
+
+      if (res.success && res.account && res.newStoreId) {
+        updateStoreInfo({
+          nameKh: res.account.storeName,
+          nameEn: res.account.storeName,
+          phone: res.account.phone || '',
+          storeId: res.account.storeId,
+        });
+        setFormSuccess(`🎉 បានបង្កើតហាងថ្មី «${res.account.storeName}» (${res.newStoreId}) ជោគជ័យ!`);
+        setNewStoreName('');
+        setTimeout(() => {
+          const adminStaff = realStaffList.find((s) => s.role === 'ADMIN') || realStaffList[0];
+          unlockAndFinish(adminStaff);
+        }, 1000);
+      } else {
+        soundFx.playPop();
+        setFormError(formatAuthErrorMessage(res.error || 'មិនអាចបង្កើតហាងថ្មីបានទេ'));
+      }
+    } catch (err: any) {
+      setFormError(formatAuthErrorMessage(err.message || 'កំហុសបច្ចេកទេស'));
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSwitchStore = async (targetId: string) => {
+    if (targetId === currentStoreId) return;
+    setIsLoading(true);
+    setFormError('');
+    setFormSuccess('');
+
+    try {
+      const res = await switchActiveStore(targetId);
+      if (res.success && res.account) {
+        soundFx.playSuccess();
+        updateStoreInfo({
+          nameKh: res.account.storeName,
+          nameEn: res.account.storeName,
+          phone: res.account.phone || '',
+          storeId: res.account.storeId,
+        });
+        setFormSuccess(`🔄 បានប្ដូរទៅកាន់ហាង «${res.account.storeName}» (${targetId}) ជោគជ័យ!`);
+        setTimeout(() => {
+          const adminStaff = realStaffList.find((s) => s.role === 'ADMIN') || realStaffList[0];
+          unlockAndFinish(adminStaff);
+        }, 600);
+      } else {
+        soundFx.playPop();
+        setFormError(res.error || 'មិនអាចប្ដូរហាងបានទេ');
+      }
+    } catch (e: any) {
+      setFormError(e.message || 'កំហុសបច្ចេកទេសក្នុងការប្ដូរហាង');
     } finally {
       setIsLoading(false);
     }
@@ -652,8 +744,46 @@ export const RealStoreAuthModal: React.FC<RealStoreAuthModalProps> = ({
         {/* MODE 1: NEW LOGIN / SIGN UP / MULTI-STORE FORM */}
         {authMode === 'NEW_FORM' && (
           <div className="flex flex-col flex-1 overflow-y-auto">
-            {/* Sub Tabs: LOGIN | SIGNUP | JOIN */}
-            <div className="flex items-center border-b border-slate-100 bg-slate-50/70 p-1.5 gap-1 shrink-0">
+            {/* Sub Tabs: MY_STORES | NEW_STORE | LOGIN | SIGNUP | JOIN */}
+            <div className="flex items-center border-b border-slate-100 bg-slate-50/70 p-1.5 gap-1 shrink-0 overflow-x-auto">
+              {currentUser && !isDefaultStore(currentStoreId) && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveFormTab('MY_STORES');
+                    setFormError('');
+                    setFormSuccess('');
+                  }}
+                  className={`py-1.5 px-2.5 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center justify-center gap-1 shrink-0 ${
+                    activeFormTab === 'MY_STORES'
+                      ? 'bg-white text-rose-600 shadow-xs border border-rose-100'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  <Store className="w-3.5 h-3.5 text-rose-500" />
+                  <span>🏪 ហាងរបស់ខ្ញុំ ({(currentUser?.stores || []).length || 1})</span>
+                </button>
+              )}
+
+              {currentUser && !isDefaultStore(currentStoreId) && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveFormTab('NEW_STORE');
+                    setFormError('');
+                    setFormSuccess('');
+                  }}
+                  className={`py-1.5 px-2.5 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center justify-center gap-1 shrink-0 ${
+                    activeFormTab === 'NEW_STORE'
+                      ? 'bg-white text-rose-600 shadow-xs border border-rose-100'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                  <span>➕ បង្កើតហាងថ្មី</span>
+                </button>
+              )}
+
               <button
                 type="button"
                 onClick={() => {
@@ -661,32 +791,34 @@ export const RealStoreAuthModal: React.FC<RealStoreAuthModalProps> = ({
                   setFormError('');
                   setFormSuccess('');
                 }}
-                className={`flex-1 py-1.5 px-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1 ${
+                className={`flex-1 py-1.5 px-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1 shrink-0 ${
                   activeFormTab === 'LOGIN'
                     ? 'bg-white text-rose-600 shadow-xs border border-rose-100'
                     : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
                 <User className="w-3.5 h-3.5" />
-                <span>ចូលគណនី (Login)</span>
+                <span>{currentUser && !isDefaultStore(currentStoreId) ? '🔄 ចូលគណនីផ្សេង' : 'ចូលគណនី (Login)'}</span>
               </button>
 
-              <button
-                type="button"
-                onClick={() => {
-                  setActiveFormTab('SIGNUP');
-                  setFormError('');
-                  setFormSuccess('');
-                }}
-                className={`flex-1 py-1.5 px-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1 ${
-                  activeFormTab === 'SIGNUP'
-                    ? 'bg-white text-rose-600 shadow-xs border border-rose-100'
-                    : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-                <span>បង្កើតហាងថ្មី (Sign Up)</span>
-              </button>
+              {(!currentUser || isDefaultStore(currentStoreId)) && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveFormTab('SIGNUP');
+                    setFormError('');
+                    setFormSuccess('');
+                  }}
+                  className={`flex-1 py-1.5 px-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1 shrink-0 ${
+                    activeFormTab === 'SIGNUP'
+                      ? 'bg-white text-rose-600 shadow-xs border border-rose-100'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                  <span>បង្កើតគណនី & ហាង</span>
+                </button>
+              )}
 
               <button
                 type="button"
@@ -695,14 +827,14 @@ export const RealStoreAuthModal: React.FC<RealStoreAuthModalProps> = ({
                   setFormError('');
                   setFormSuccess('');
                 }}
-                className={`flex-1 py-1.5 px-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1 ${
+                className={`py-1.5 px-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1 shrink-0 ${
                   activeFormTab === 'JOIN'
                     ? 'bg-white text-rose-600 shadow-xs border border-rose-100'
                     : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
                 <Laptop className="w-3.5 h-3.5" />
-                <span>ភ្ជាប់ Store ID</span>
+                <span>Store ID</span>
               </button>
             </div>
 
@@ -738,6 +870,242 @@ export const RealStoreAuthModal: React.FC<RealStoreAuthModalProps> = ({
                   <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
                   <span>{formSuccess}</span>
                 </div>
+              )}
+
+              {/* TAB 0: MY STORES (Facebook-Style Store & Account Switcher) */}
+              {activeFormTab === 'MY_STORES' && (
+                <div className="space-y-3.5">
+                  {/* Account Profile Card */}
+                  <div className="p-3 sm:p-3.5 rounded-2xl bg-gradient-to-r from-slate-900 via-rose-950 to-pink-950 text-white shadow-md flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-amber-400 to-rose-500 text-white flex items-center justify-center font-black text-lg shadow-sm shrink-0">
+                        👑
+                      </div>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-black text-xs sm:text-sm text-white truncate font-battambang">
+                            {currentUser?.displayName || currentUser?.storeName || 'ម្ចាស់ហាង'}
+                          </span>
+                          <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 font-bold">
+                            Pro Cloud
+                          </span>
+                        </div>
+                        <div className="text-[11px] text-rose-200/80 font-mono mt-0.5 truncate">
+                          {currentUser?.phone || currentUser?.email || 'គណនីម្ចាស់ហាង'}
+                        </div>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        soundFx.playPop();
+                        setActiveFormTab('NEW_STORE');
+                      }}
+                      className="px-2.5 py-1.5 rounded-xl bg-gradient-to-r from-pink-500 to-rose-600 hover:from-pink-600 hover:to-rose-700 text-white text-[11px] font-black shadow-sm flex items-center gap-1 shrink-0 active:scale-95 cursor-pointer font-battambang"
+                    >
+                      <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                      <span>+ ហាងថ្មី</span>
+                    </button>
+                  </div>
+
+                  {/* Store List */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between text-xs font-black text-slate-700 px-1">
+                      <span>ហាងរបស់អ្នក (Your Bakeries / Branches)</span>
+                      <span className="text-[10px] text-slate-400 font-normal">
+                        {(currentUser?.stores || []).length || 1} ហាង
+                      </span>
+                    </div>
+
+                    <div className="space-y-2 max-h-[250px] overflow-y-auto pr-1">
+                      {(currentUser?.stores && currentUser.stores.length > 0
+                        ? currentUser.stores
+                        : [
+                            {
+                              storeId: currentUser?.storeId || currentStoreId,
+                              storeName: currentUser?.storeName || storeInfo.nameKh,
+                              role: currentUser?.role || 'OWNER',
+                              createdAt: currentUser?.createdAt || new Date().toISOString(),
+                            },
+                          ]
+                      ).map((store) => {
+                        const isActive = store.storeId.toUpperCase() === currentStoreId.toUpperCase();
+                        return (
+                          <div
+                            key={store.storeId}
+                            onClick={() => {
+                              if (!isActive) handleSwitchStore(store.storeId);
+                            }}
+                            className={`p-3 rounded-2xl border transition-all flex items-center justify-between gap-2.5 cursor-pointer ${
+                              isActive
+                                ? 'bg-gradient-to-r from-rose-50/90 to-pink-50/70 border-rose-300 shadow-sm ring-2 ring-rose-400/20'
+                                : 'bg-white hover:bg-slate-50 border-slate-200 hover:border-rose-200 shadow-2xs'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2.5 min-w-0">
+                              <div
+                                className={`w-9 h-9 rounded-xl flex items-center justify-center text-sm font-black shadow-2xs shrink-0 ${
+                                  isActive
+                                    ? 'bg-gradient-to-tr from-rose-600 to-pink-500 text-white shadow-rose-500/20'
+                                    : 'bg-slate-100 text-slate-700'
+                                }`}
+                              >
+                                🏪
+                              </div>
+                              <div className="min-w-0">
+                                <div className="flex items-center gap-1.5">
+                                  <span className="font-black text-xs text-slate-800 truncate font-battambang">
+                                    {store.storeName}
+                                  </span>
+                                  {isActive && (
+                                    <span className="text-[9px] font-black px-1.5 py-0.2 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200 shrink-0 font-battambang">
+                                      កំពុងប្រើ ✔️
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-2 mt-0.5">
+                                  <span className="text-[10px] font-mono font-bold text-slate-500 bg-slate-100 px-1 py-0.2 rounded border border-slate-200">
+                                    {store.storeId}
+                                  </span>
+                                  <span className="text-[10px] text-slate-400 font-battambang">
+                                    ម្ចាស់ហាង 👑
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+
+                            {isActive ? (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  unlockAndFinish();
+                                }}
+                                className="px-2.5 py-1 rounded-xl bg-emerald-600 text-white text-[11px] font-black shadow-xs shrink-0 hover:bg-emerald-700 active:scale-95 cursor-pointer font-battambang"
+                              >
+                                ចូលផ្ទាំង POS
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                disabled={isLoading}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleSwitchStore(store.storeId);
+                                }}
+                                className="px-2.5 py-1 rounded-xl bg-slate-100 hover:bg-rose-600 hover:text-white text-slate-700 text-[11px] font-black border border-slate-200 hover:border-rose-600 transition-all shadow-2xs shrink-0 active:scale-95 cursor-pointer font-battambang"
+                              >
+                                ប្ដូរមកហាងនេះ ➔
+                              </button>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Bottom Actions */}
+                  <div className="pt-2 flex items-center gap-2 border-t border-slate-100">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        soundFx.playPop();
+                        setActiveFormTab('NEW_STORE');
+                      }}
+                      className="flex-1 py-2 px-3 rounded-xl bg-gradient-to-r from-rose-600 to-pink-600 text-white font-black text-xs shadow-md shadow-rose-600/20 hover:from-rose-700 hover:to-pink-700 active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer font-battambang"
+                    >
+                      <Sparkles className="w-3.5 h-3.5 text-amber-200" />
+                      <span>➕ បង្កើតហាងថ្មីបន្ថែម</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={handleLogout}
+                      disabled={isLoading}
+                      className="py-2 px-3 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold text-xs active:scale-95 flex items-center gap-1 cursor-pointer font-battambang"
+                      title="ចាកចេញពីគណនី"
+                    >
+                      <LogOut className="w-3.5 h-3.5" />
+                      <span>ចាកចេញ</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* TAB 0.5: CREATE NEW STORE UNDER ACCOUNT */}
+              {activeFormTab === 'NEW_STORE' && (
+                <form onSubmit={handleCreateNewStore} className="space-y-3.5">
+                  <div className="p-3 rounded-2xl bg-amber-50/80 border border-amber-200 text-amber-900 text-xs">
+                    <div className="flex items-center gap-1.5 font-black text-amber-950 mb-0.5">
+                      <Sparkles className="w-4 h-4 text-amber-600" />
+                      <span>បំបែកហាងថ្មីដូច Facebook Pages (មិនជាន់ហាងចាស់)</span>
+                    </div>
+                    <p className="text-[11px] text-amber-800 leading-relaxed">
+                      ហាងថ្មីនឹងត្រូវបានបង្កើតឡើងដោយមានទិន្នន័យ (វិក្កយបត្រ, ស្តុក, នំ, ចំណាយ) ដាច់ដោយឡែក ១០០%។ អ្នកអាចប្ដូរទៅវិញទៅមកបានគ្រប់ពេល!
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-black text-slate-700 mb-1">
+                      ឈ្មោះហាងថ្មី (New Bakery / Branch Name)
+                    </label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                        <Store className="w-4 h-4" />
+                      </div>
+                      <input
+                        type="text"
+                        required
+                        autoFocus
+                        value={newStoreName}
+                        onChange={(e) => setNewStoreName(e.target.value)}
+                        placeholder="ឧ. ហាងនំ សាខាទួលគោក ឬ Cafe & Bakery..."
+                        className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-slate-200 focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20 text-xs sm:text-sm font-medium"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Starter Catalog Option */}
+                  <label className="flex items-start gap-2.5 p-3 rounded-2xl bg-rose-50/60 border border-rose-200/80 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={seedStarterCatalog}
+                      onChange={(e) => setSeedStarterCatalog(e.target.checked)}
+                      className="mt-0.5 w-4 h-4 rounded text-rose-600 border-slate-300 focus:ring-rose-500 cursor-pointer"
+                    />
+                    <div>
+                      <div className="text-xs font-black text-rose-950 font-battambang">
+                        ✨ ដាក់បញ្ចូលបញ្ជីនំគំរូប្រណិតដំបូង (Starter Luxury Catalog)
+                      </div>
+                      <div className="text-[10px] text-rose-700/90 leading-tight mt-0.5">
+                        បញ្ចូលនំខួបកំណើត នំចំណិត និងភេសជ្ជៈគំរូស្អាតៗភ្លាមៗ ងាយស្រួលសាកល្បងលក់ (អ្នកអាចកែប្រែ ឬលុបបានគ្រប់ពេល)
+                      </div>
+                    </div>
+                  </label>
+
+                  <div className="flex items-center gap-2 pt-1">
+                    {currentUser && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          soundFx.playPop();
+                          setActiveFormTab('MY_STORES');
+                        }}
+                        className="py-2.5 px-3 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold text-xs active:scale-95 cursor-pointer font-battambang"
+                      >
+                        ត្រឡប់ក្រោយ
+                      </button>
+                    )}
+                    <button
+                      type="submit"
+                      disabled={isLoading}
+                      className="flex-1 py-2.5 px-4 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-black text-xs sm:text-sm rounded-xl shadow-md shadow-emerald-600/20 transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-98 font-battambang"
+                    >
+                      <Sparkles className="w-4 h-4 text-yellow-200" />
+                      <span>{isLoading ? 'កំពុងបង្កើតហាងថ្មី...' : '✨ បង្កើតហាងថ្មីឥឡូវនេះ ➜'}</span>
+                    </button>
+                  </div>
+                </form>
               )}
 
               {/* TAB 1: LOGIN */}
@@ -838,12 +1206,30 @@ export const RealStoreAuthModal: React.FC<RealStoreAuthModalProps> = ({
                 </form>
               )}
 
-              {/* TAB 2: SIGN UP (បង្កើតហាងថ្មី) */}
+              {/* TAB 2: SIGN UP (បង្កើតគណនី & ហាងថ្មី) */}
               {activeFormTab === 'SIGNUP' && (
                 <form onSubmit={handleSignUp} className="space-y-3">
                   <div>
                     <label className="block text-xs font-black text-slate-700 mb-1">
-                      ឈ្មោះហាងនំរបស់អ្នក (Store Name)
+                      ឈ្មោះរបស់អ្នក (Your Full Name / Owner Name)
+                    </label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                        <User className="w-4 h-4" />
+                      </div>
+                      <input
+                        type="text"
+                        value={displayName}
+                        onChange={(e) => setDisplayName(e.target.value)}
+                        placeholder="ឧ. សុខា ខេក (ឬឈ្មោះម្ចាស់ហាង)"
+                        className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-slate-200 focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20 text-xs sm:text-sm font-medium"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-black text-slate-700 mb-1">
+                      ឈ្មោះហាងនំដំបូងរបស់អ្នក (Store Name)
                     </label>
                     <div className="relative">
                       <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
@@ -862,7 +1248,7 @@ export const RealStoreAuthModal: React.FC<RealStoreAuthModalProps> = ({
 
                   <div>
                     <label className="block text-xs font-black text-slate-700 mb-1">
-                      លេខទូរស័ព្ទ ឬ អ៊ីមែលម្ចាស់ហាង
+                      លេខទូរស័ព្ទ ឬ អ៊ីមែលម្ចាស់ហាង (Phone or Email)
                     </label>
                     <div className="relative">
                       <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
@@ -906,13 +1292,31 @@ export const RealStoreAuthModal: React.FC<RealStoreAuthModalProps> = ({
                     </div>
                   </div>
 
+                  {/* Starter Catalog Option */}
+                  <label className="flex items-start gap-2.5 p-3 rounded-2xl bg-rose-50/60 border border-rose-200/80 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={seedStarterCatalog}
+                      onChange={(e) => setSeedStarterCatalog(e.target.checked)}
+                      className="mt-0.5 w-4 h-4 rounded text-rose-600 border-slate-300 focus:ring-rose-500 cursor-pointer"
+                    />
+                    <div>
+                      <div className="text-xs font-black text-rose-950 font-battambang">
+                        ✨ ដាក់បញ្ចូលបញ្ជីនំគំរូប្រណិតដំបូង (Starter Luxury Catalog)
+                      </div>
+                      <div className="text-[10px] text-rose-700/90 leading-tight mt-0.5">
+                        បញ្ចូលនំខួបកំណើត នំចំណិត និងភេសជ្ជៈគំរូស្អាតៗភ្លាមៗ ងាយស្រួលសាកល្បងលក់ (អ្នកអាចកែប្រែ ឬលុបបានគ្រប់ពេល)
+                      </div>
+                    </div>
+                  </label>
+
                   <button
                     type="submit"
                     disabled={isLoading}
-                    className="w-full py-2.5 px-4 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-black text-xs sm:text-sm rounded-xl shadow-md shadow-emerald-600/20 transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-98"
+                    className="w-full py-2.5 px-4 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-black text-xs sm:text-sm rounded-xl shadow-md shadow-emerald-600/20 transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-98 font-battambang"
                   >
                     <Sparkles className="w-4 h-4 text-yellow-200" />
-                    <span>{isLoading ? 'កំពុងបង្កើតហាង...' : '✓ បង្កើតហាងថ្មីភ្លាមៗ ➜'}</span>
+                    <span>{isLoading ? 'កំពុងបង្កើតហាង...' : '✓ ចុះឈ្មោះ & បង្កើតហាងភ្លាមៗ ➜'}</span>
                   </button>
                 </form>
               )}

@@ -27,10 +27,17 @@ import {
   Rocket,
   Download,
   Store,
+  Laptop,
   MessageCircle,
 } from 'lucide-react';
 import { getStoreId, isDefaultStore } from '../../services/firebase';
-import { getCurrentStoreUser, subscribeStoreUser, StoreUserAccount } from '../../services/authService';
+import {
+  getCurrentStoreUser,
+  subscribeStoreUser,
+  StoreUserAccount,
+  switchActiveStore,
+  logoutStore,
+} from '../../services/authService';
 import { useBakery } from '../../context/BakeryContext';
 import { t } from '../../utils/translations';
 import { soundFx } from '../../utils/audio';
@@ -68,7 +75,7 @@ interface NavbarProps {
   onOpenBirthdayCrm?: () => void;
   onOpenLoyaltyRewards?: () => void;
   onOpenBakingForecast?: () => void;
-  onOpenStoreAuthModal?: () => void;
+  onOpenStoreAuthModal?: (tab?: 'LOGIN' | 'SIGNUP' | 'JOIN' | 'MY_STORES' | 'NEW_STORE') => void;
   onOpenChatModal?: (channel?: ChatChannel) => void;
 }
 
@@ -178,6 +185,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   // Store User & Tenant ID State
   const [storeUser, setStoreUser] = useState<StoreUserAccount | null>(() => getCurrentStoreUser());
   const [currentStoreTenantId, setCurrentStoreTenantId] = useState<string>(() => getStoreId());
+  const [isStoreDropdownOpen, setIsStoreDropdownOpen] = useState(false);
+  const storeDropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const unsub = subscribeStoreUser((u) => {
@@ -186,6 +195,18 @@ export const Navbar: React.FC<NavbarProps> = ({
     });
     return unsub;
   }, []);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (storeDropdownRef.current && !storeDropdownRef.current.contains(e.target as Node)) {
+        setIsStoreDropdownOpen(false);
+      }
+    };
+    if (isStoreDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isStoreDropdownOpen]);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -304,29 +325,185 @@ export const Navbar: React.FC<NavbarProps> = ({
 
         {/* Right Side: Clean & Consolidated Actions */}
         <div className="flex items-center gap-1 sm:gap-1.5 shrink-0 justify-end min-w-0 flex-1">
-          {/* Store Tenant Pill Button */}
+          {/* Store Tenant & Account Switcher Dropdown (Facebook Style) */}
           {onOpenStoreAuthModal && (
-            <button
-              type="button"
-              onClick={() => {
-                soundFx.playPop();
-                onOpenStoreAuthModal();
-              }}
-              title="គណនីហាង & Multi-Store (ចូលគណនី / បង្កើតហាងថ្មី / ភ្ជាប់ Store ID)"
-              className={`hidden md:flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1.5 rounded-2xl border text-xs font-black transition-all shadow-2xs hover:scale-105 active:scale-95 cursor-pointer shrink-0 font-battambang ${
-                !isDefaultStore(currentStoreTenantId)
-                  ? 'bg-gradient-to-r from-rose-50 to-pink-50 border-rose-300 text-rose-900 ring-1 ring-rose-200'
-                  : 'bg-white hover:bg-slate-50 border-slate-200 text-slate-700'
-              }`}
-            >
-              <span className="text-sm">🏪</span>
-              <span className="hidden 2xl:inline truncate max-w-[90px]">
-                {storeUser?.storeName || storeInfo.nameKh || 'ហាង'}
-              </span>
-              <span className="text-[10px] font-mono px-1.5 py-0.2 rounded-md bg-slate-100 border border-slate-200 text-slate-700 font-bold">
-                {isDefaultStore(currentStoreTenantId) ? 'Root' : currentStoreTenantId.replace('STORE-', '')}
-              </span>
-            </button>
+            <div className="relative hidden md:block" ref={storeDropdownRef}>
+              <button
+                type="button"
+                onClick={() => {
+                  soundFx.playPop();
+                  setIsStoreDropdownOpen((prev) => !prev);
+                }}
+                title="គណនីហាង & Multi-Store (ចុចដើម្បីប្ដូរហាង ឬបង្កើតហាងថ្មី)"
+                className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1.5 rounded-2xl border text-xs font-black transition-all shadow-2xs hover:scale-105 active:scale-95 cursor-pointer shrink-0 font-battambang ${
+                  !isDefaultStore(currentStoreTenantId)
+                    ? 'bg-gradient-to-r from-rose-50 to-pink-50 border-rose-300 text-rose-900 ring-1 ring-rose-200'
+                    : 'bg-white hover:bg-slate-50 border-slate-200 text-slate-700'
+                }`}
+              >
+                <span className="text-sm">🏪</span>
+                <span className="hidden xl:inline truncate max-w-[110px]">
+                  {storeUser?.storeName || storeInfo.nameKh || 'ហាង'}
+                </span>
+                <span className="text-[10px] font-mono px-1.5 py-0.2 rounded-md bg-slate-100 border border-slate-200 text-slate-700 font-bold">
+                  {isDefaultStore(currentStoreTenantId) ? 'Root' : currentStoreTenantId.replace('STORE-', '')}
+                </span>
+                <ChevronDown
+                  className={`w-3.5 h-3.5 text-slate-500 transition-transform duration-200 ${
+                    isStoreDropdownOpen ? 'rotate-180' : ''
+                  }`}
+                />
+              </button>
+
+              {/* Facebook-style Dropdown Menu */}
+              {isStoreDropdownOpen && (
+                <div className="absolute right-0 top-full mt-2 w-72 sm:w-80 bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl border border-slate-200/80 p-2.5 z-50 animate-in fade-in zoom-in-95 font-battambang">
+                  {/* Account Header */}
+                  <div className="p-3 rounded-2xl bg-gradient-to-r from-slate-900 via-rose-950 to-pink-950 text-white shadow-xs mb-2">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-amber-400 to-rose-500 text-white flex items-center justify-center font-black text-base shadow-sm shrink-0">
+                        👑
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-black text-xs text-white truncate">
+                            {storeUser?.displayName || storeUser?.storeName || 'គណនីម្ចាស់ហាង'}
+                          </span>
+                          <span className="text-[8px] font-black px-1.5 py-0.2 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/30">
+                            PRO
+                          </span>
+                        </div>
+                        <div className="text-[10px] text-rose-200/80 font-mono truncate">
+                          {storeUser?.phone || storeUser?.email || 'Cloud Multi-Tenant'}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Stores List Header */}
+                  <div className="px-1.5 py-1 flex items-center justify-between text-[11px] font-black text-slate-700">
+                    <span>ហាងរបស់អ្នក (Your Bakeries)</span>
+                    <span className="text-[10px] text-slate-400">
+                      {(storeUser?.stores || []).length || 1} ហាង
+                    </span>
+                  </div>
+
+                  {/* Stores List */}
+                  <div className="space-y-1 max-h-48 overflow-y-auto mb-2 pr-0.5">
+                    {(storeUser?.stores && storeUser.stores.length > 0
+                      ? storeUser.stores
+                      : [
+                          {
+                            storeId: storeUser?.storeId || currentStoreTenantId,
+                            storeName: storeUser?.storeName || storeInfo.nameKh || 'ហាងនំ',
+                            role: storeUser?.role || 'OWNER',
+                            createdAt: storeUser?.createdAt || new Date().toISOString(),
+                          },
+                        ]
+                    ).map((st) => {
+                      const isActive = st.storeId.toUpperCase() === currentStoreTenantId.toUpperCase();
+                      return (
+                        <div
+                          key={st.storeId}
+                          onClick={async () => {
+                            if (!isActive) {
+                              soundFx.playSuccess();
+                              await switchActiveStore(st.storeId);
+                              setIsStoreDropdownOpen(false);
+                            }
+                          }}
+                          className={`p-2 rounded-xl border flex items-center justify-between gap-2 transition-all cursor-pointer ${
+                            isActive
+                              ? 'bg-rose-50/80 border-rose-300 text-rose-950 shadow-2xs font-bold'
+                              : 'bg-white hover:bg-slate-50 border-slate-100 text-slate-700 hover:border-slate-200'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className="text-base shrink-0">🏪</span>
+                            <div className="min-w-0">
+                              <div className="text-xs truncate font-black">
+                                {st.storeName}
+                              </div>
+                              <div className="text-[10px] font-mono text-slate-400">
+                                {st.storeId}
+                              </div>
+                            </div>
+                          </div>
+                          {isActive ? (
+                            <span className="text-[9px] font-black px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200 shrink-0">
+                              កំពុងប្រើ ✔️
+                            </span>
+                          ) : (
+                            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-600 shrink-0">
+                              ប្ដូរ ➔
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Actions */}
+                  <div className="pt-2 border-t border-slate-100 space-y-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        soundFx.playPop();
+                        setIsStoreDropdownOpen(false);
+                        onOpenStoreAuthModal('NEW_STORE');
+                      }}
+                      className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-xl hover:bg-pink-50 text-slate-800 hover:text-pink-600 transition-colors text-xs font-bold cursor-pointer"
+                    >
+                      <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                      <span>➕ បង្កើតហាងថ្មីបន្ថែម (New Store)</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        soundFx.playPop();
+                        setIsStoreDropdownOpen(false);
+                        onOpenStoreAuthModal('MY_STORES');
+                      }}
+                      className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-xl hover:bg-slate-50 text-slate-800 transition-colors text-xs font-bold cursor-pointer"
+                    >
+                      <Store className="w-3.5 h-3.5 text-rose-500" />
+                      <span>⚙️ គ្រប់គ្រងគណនី & ផ្ទៀងផ្ទាត់</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        soundFx.playPop();
+                        setIsStoreDropdownOpen(false);
+                        onOpenStoreAuthModal('JOIN');
+                      }}
+                      className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-xl hover:bg-slate-50 text-slate-800 transition-colors text-xs font-bold cursor-pointer"
+                    >
+                      <Laptop className="w-3.5 h-3.5 text-purple-500" />
+                      <span>🔑 ភ្ជាប់ Store ID បុគ្គលិក</span>
+                    </button>
+
+                    {!isDefaultStore(currentStoreTenantId) && (
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          if (window.confirm('តើអ្នកពិតជាចង់ចាកចេញពីគណនីហាងនេះមែនទេ?')) {
+                            soundFx.playPop();
+                            setIsStoreDropdownOpen(false);
+                            await logoutStore();
+                          }
+                        }}
+                        className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-xl hover:bg-rose-50 text-rose-700 transition-colors text-xs font-bold cursor-pointer"
+                      >
+                        <LogOut className="w-3.5 h-3.5" />
+                        <span>🚪 ចាកចេញពីគណនី (Sign Out)</span>
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
           )}
           {/* 1. Unified Cloud Auto-Sync & Status Indicator (Single Clean Pill) */}
           <button
@@ -794,7 +971,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                       onClick={() => {
                         soundFx.playPop();
                         setIsQuickToolsOpen(false);
-                        onOpenStoreAuthModal();
+                        onOpenStoreAuthModal(storeUser && !isDefaultStore(currentStoreTenantId) ? 'MY_STORES' : 'LOGIN');
                       }}
                       className="w-full flex items-center justify-between p-2.5 rounded-2xl bg-gradient-to-r from-rose-50/70 to-pink-50/70 hover:from-rose-100 hover:to-pink-100 text-slate-800 transition-colors cursor-pointer group text-left border border-rose-200/60"
                     >
