@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   X,
   Sparkles,
@@ -30,14 +30,6 @@ interface CustomerExpressOrderModalProps {
   onOrderSuccess?: (order: CustomCakeOrder) => void;
 }
 
-const EXPRESS_SIZES = [
-  { id: '1.5 ទឹក (~15cm)', label: '1.5 ទឹក (~15cm)', desc: '2-4 នាក់', priceKhr: 30000, priceUsd: 7.5 },
-  { id: '2 ទឹក (~20cm)', label: '2 ទឹក (~20cm)', desc: '6-8 នាក់ (ពេញនិយម ⭐)', priceKhr: 40000, priceUsd: 10, isPopular: true },
-  { id: '2.5 ទឹក (~25cm)', label: '2.5 ទឹក (~25cm)', desc: '10-14 នាក់', priceKhr: 60000, priceUsd: 15 },
-  { id: '3 ទឹក (~30cm)', label: '3 ទឹក (~30cm)', desc: '15-20 នាក់', priceKhr: 80000, priceUsd: 20 },
-  { id: '2 ជាន់ (2-Tier)', label: '2 ជាន់ (2-Tier)', desc: '20+ នាក់ កម្មវិធីធំ', priceKhr: 150000, priceUsd: 37.5 },
-];
-
 const EXPRESS_FLAVORS = [
   { id: 'vanilla', nameKh: 'វ៉ានីឡា', icon: '🍦', label: 'វ៉ានីឡា (Vanilla)' },
   { id: 'chocolate', nameKh: 'សូកូឡា', icon: '🍫', label: 'សូកូឡា (Chocolate)' },
@@ -55,6 +47,8 @@ const QUICK_INSCRIPTIONS = [
   '🌟 Congratulations',
 ];
 
+const POPULAR_BUDGET_KHR = [30000, 40000, 50000, 60000, 80000, 100000, 150000];
+
 export const CustomerExpressOrderModal: React.FC<CustomerExpressOrderModalProps> = ({
   isOpen,
   onClose,
@@ -63,8 +57,8 @@ export const CustomerExpressOrderModal: React.FC<CustomerExpressOrderModalProps>
 }) => {
   const { storeInfo, exchangeRate, addCustomOrder } = useBakery();
 
-  // Selected Size & Price
-  const [selectedSizeObj, setSelectedSizeObj] = useState(EXPRESS_SIZES[1]); // default to 2 ទឹក
+  // Custom Price / Budget Typed by Customer (Defaults to product price or 40,000 KHR)
+  const [cakePriceKhrStr, setCakePriceKhrStr] = useState<string>('40000');
   const [selectedFlavor, setSelectedFlavor] = useState(EXPRESS_FLAVORS[0].label);
   const [inscription, setInscription] = useState('');
 
@@ -88,10 +82,43 @@ export const CustomerExpressOrderModal: React.FC<CustomerExpressOrderModalProps>
   const [completedOrder, setCompletedOrder] = useState<CustomCakeOrder | null>(null);
   const [isCopiedOrderNum, setIsCopiedOrderNum] = useState(false);
 
-  if (!isOpen || !product) return null;
+  // Sync initial price when product changes
+  useEffect(() => {
+    if (product) {
+      const initialKhr =
+        product.priceKhr && product.priceKhr > 0
+          ? product.priceKhr
+          : product.priceUsd > 0
+          ? Math.round(product.priceUsd * exchangeRate)
+          : 40000;
+      setCakePriceKhrStr(initialKhr.toString());
+      setCompletedOrder(null);
+    }
+  }, [product?.id, product?.priceKhr, product?.priceUsd, exchangeRate]);
 
-  const cakePriceKhr = selectedSizeObj.priceKhr;
-  const cakePriceUsd = Number((cakePriceKhr / exchangeRate).toFixed(2));
+  // Clean numerical price in KHR & USD
+  const cakePriceKhr = useMemo(() => {
+    const cleaned = cakePriceKhrStr.replace(/[^0-9]/g, '');
+    const num = Number(cleaned);
+    return isNaN(num) ? 0 : num;
+  }, [cakePriceKhrStr]);
+
+  const cakePriceUsd = useMemo(() => {
+    return Number((cakePriceKhr / exchangeRate).toFixed(2));
+  }, [cakePriceKhr, exchangeRate]);
+
+  // Dynamic estimated size hint based on the customer's typed budget
+  const estimatedSizeText = useMemo(() => {
+    if (cakePriceKhr <= 0) return 'កំណត់តាមការចរចាជាក់ស្តែង';
+    if (cakePriceKhr <= 25000) return '1.5 ទឹក (~15cm) សម្រាប់ 2-4 នាក់';
+    if (cakePriceKhr <= 35000) return '1.5 - 2 ទឹក (~18cm) សម្រាប់ 4-6 នាក់';
+    if (cakePriceKhr <= 55000) return '2 ទឹក (~20cm) សម្រាប់ 6-8 នាក់ (ពេញនិយម ⭐)';
+    if (cakePriceKhr <= 75000) return '2.5 ទឹក (~25cm) សម្រាប់ 10-14 នាក់';
+    if (cakePriceKhr <= 110000) return '3 ទឹក (~30cm) សម្រាប់ 15-20 នាក់';
+    return 'នំ ២ ជាន់ ឬទំហំធំពិសេស សម្រាប់ 20+ នាក់';
+  }, [cakePriceKhr]);
+
+  if (!isOpen || !product) return null;
 
   // Quick Date Selectors
   const setToday = () => {
@@ -109,6 +136,12 @@ export const CustomerExpressOrderModal: React.FC<CustomerExpressOrderModalProps>
 
   // Submit Order directly into Bakery POS System
   const handleConfirmOrder = () => {
+    if (cakePriceKhr <= 0) {
+      soundFx.playPop();
+      alert('សូមវាយបញ្ចូលតម្លៃ ឬថវិកានំដែលលោកអ្នកចង់បាន!');
+      return;
+    }
+
     if (!phone.trim()) {
       soundFx.playPop();
       alert('សូមបញ្ចូលលេខទូរស័ព្ទរបស់លោកអ្នកដើម្បីឱ្យហាងទាក់ទងបញ្ជាក់ការកុម្ម៉ង់!');
@@ -129,10 +162,10 @@ export const CustomerExpressOrderModal: React.FC<CustomerExpressOrderModalProps>
         pickupDate: pickupDate,
         pickupTime: pickupTime,
         cakeName: product.nameKh || 'នំខួបកំណើត',
-        size: selectedSizeObj.label,
+        size: estimatedSizeText.split(' សម្រាប់')[0] || '2 ទឹក (~20cm)',
         flavor: selectedFlavor,
         inscription: inscription.trim() || 'មិនមានអក្សរលើនំ',
-        themeNotes: `កុម្ម៉ង់រហ័ស (Express Order) | ការទូទាត់៖ ${payMethod === 'PICKUP' ? 'បង់ពេលមកយកនំ' : 'កក់តាម KHQR 50%'}`,
+        themeNotes: `កុម្ម៉ង់រហ័ស (Express Order) | តម្លៃភ្ញៀវកំណត់៖ ${cakePriceKhr.toLocaleString()} ៛ | ការទូទាត់៖ ${payMethod === 'PICKUP' ? 'បង់ពេលមកយកនំ' : 'កក់តាម KHQR 50%'}`,
         referenceImage: product.imageUrl || (product.images && product.images[0]) || '',
         status: 'PENDING',
         totalUsd: cakePriceUsd,
@@ -163,15 +196,14 @@ export const CustomerExpressOrderModal: React.FC<CustomerExpressOrderModalProps>
   const handleOrderViaTelegram = () => {
     soundFx.playPop();
     const storeTelegram = (storeInfo.telegramUsername || '').replace(/^@/, '') || 'sweetbakery_admin';
-    const storePhone = storeInfo.phone || '012 629 160';
 
     const orderSummaryText = `🎂 សួស្តី Sweet Bakery! ខ្ញុំចង់កុម្ម៉ង់នំរហ័ស (Express Order)៖
 • នំ៖ ${product.nameKh}
-• ទំហំ៖ ${selectedSizeObj.label} (${selectedSizeObj.desc})
+• តម្លៃដែលចង់បាន៖ ${cakePriceKhr.toLocaleString()} ៛ (~$${cakePriceUsd})
+• ទំហំប្រហែល៖ ${estimatedSizeText}
 • រសជាតិ៖ ${selectedFlavor}
 • អក្សរលើនំ៖ ${inscription.trim() || 'មិនមាន'}
 • ថ្ងៃយកនំ៖ ${pickupDate} វេលាម៉ោង ${pickupTime}
-• តម្លៃ៖ ${cakePriceKhr.toLocaleString()} ៛ (~$${cakePriceUsd})
 • វិធីទូទាត់៖ ${payMethod === 'PICKUP' ? 'បង់ប្រាក់ពេលមកយកនំ' : 'កក់តាម KHQR'}
 • លេខទូរស័ព្ទភ្ញៀវ៖ ${phone.trim() || '(សូមទាក់ទងមក Telegram នេះ)'}
 ${name.trim() ? `• ឈ្មោះភ្ញៀវ៖ ${name.trim()}` : ''}
@@ -205,7 +237,7 @@ ${name.trim() ? `• ឈ្មោះភ្ញៀវ៖ ${name.trim()}` : ''}
                 ⚡ កុម្ម៉ង់នំរហ័ស (Express Cake Order)
               </h3>
               <p className="text-[10px] text-pink-100">
-                ជ្រើសរើសទំហំ រសជាតិ និងបញ្ជាក់ការកុម្ម៉ង់ក្នុងរយៈពេល ៣០ វិនាទី
+                វាយបញ្ចូលតម្លៃតាមចិត្ត ជ្រើសរើសរសជាតិ និងបញ្ជាក់ការកុម្ម៉ង់ក្នុងរយៈពេល ៣០ វិនាទី
               </p>
             </div>
           </div>
@@ -268,8 +300,16 @@ ${name.trim() ? `• ឈ្មោះភ្ញៀវ៖ ${name.trim()}` : ''}
                   <span className="font-bold text-slate-800">{completedOrder.cakeName}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-500">ទំហំ & រសជាតិ៖</span>
-                  <span className="font-bold text-slate-800">{completedOrder.size} • {completedOrder.flavor}</span>
+                  <span className="text-slate-500">តម្លៃកុម្ម៉ង់៖</span>
+                  <span className="font-black text-rose-600">{(completedOrder.totalKhr || 0).toLocaleString()} ៛</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">ទំហំប្រហែល៖</span>
+                  <span className="font-bold text-slate-800">{completedOrder.size}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">រសជាតិ៖</span>
+                  <span className="font-bold text-slate-800">{completedOrder.flavor}</span>
                 </div>
                 {completedOrder.inscription && completedOrder.inscription !== 'មិនមានអក្សរលើនំ' && (
                   <div className="flex justify-between">
@@ -280,10 +320,6 @@ ${name.trim() ? `• ឈ្មោះភ្ញៀវ៖ ${name.trim()}` : ''}
                 <div className="flex justify-between">
                   <span className="text-slate-500">ថ្ងៃ & ម៉ោងយក៖</span>
                   <span className="font-bold text-slate-800">{completedOrder.pickupDate} វេលាម៉ោង {completedOrder.pickupTime}</span>
-                </div>
-                <div className="flex justify-between pt-2 border-t border-slate-200 font-black text-slate-900 text-sm">
-                  <span>តម្លៃសរុប៖</span>
-                  <span className="text-rose-600">{(completedOrder.totalKhr || 0).toLocaleString()} ៛</span>
                 </div>
               </div>
 
@@ -329,47 +365,78 @@ ${name.trim() ? `• ឈ្មោះភ្ញៀវ៖ ${name.trim()}` : ''}
                     {product.nameEn || 'Fresh Bakery Custom Cake'}
                   </p>
                   <div className="text-xs font-black text-rose-600 mt-0.5">
-                    {cakePriceKhr.toLocaleString()} ៛ <span className="text-[10px] text-slate-400 font-semibold">(${cakePriceUsd})</span>
+                    {cakePriceKhr > 0 ? `${cakePriceKhr.toLocaleString()} ៛` : '០ ៛'}{' '}
+                    <span className="text-[10px] text-slate-400 font-semibold">(${cakePriceUsd.toFixed(2)})</span>
                   </div>
                 </div>
               </div>
 
-              {/* 1. Size Selection */}
-              <div className="space-y-1.5">
-                <label className="text-xs font-black text-slate-800 flex items-center justify-between">
-                  <span>១. ជ្រើសរើសទំហំនំ (Size):</span>
-                  <span className="text-[11px] text-pink-600 font-bold">{selectedSizeObj.label}</span>
-                </label>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                  {EXPRESS_SIZES.map((sz) => {
-                    const isSelected = selectedSizeObj.id === sz.id;
-                    return (
-                      <button
-                        key={sz.id}
-                        type="button"
-                        onClick={() => {
-                          soundFx.playPop();
-                          setSelectedSizeObj(sz);
-                        }}
-                        className={`p-2.5 rounded-2xl text-left border transition-all cursor-pointer relative active:scale-95 ${
-                          isSelected
-                            ? 'bg-rose-50 border-rose-400 ring-2 ring-rose-400/30 text-rose-950 font-bold shadow-xs'
-                            : 'bg-white hover:bg-slate-50 border-slate-200 text-slate-700'
-                        }`}
-                      >
-                        {sz.isPopular && (
-                          <span className="absolute -top-1.5 right-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-[8px] font-black px-1.5 py-0.2 rounded-full shadow-2xs">
-                            ពេញនិយម
-                          </span>
-                        )}
-                        <div className="text-xs font-black truncate">{sz.label}</div>
-                        <div className="text-[10px] text-slate-400 leading-tight mt-0.5">{sz.desc}</div>
-                        <div className="text-[11px] font-black text-rose-600 mt-1">
-                          {sz.priceKhr.toLocaleString()} ៛
-                        </div>
-                      </button>
-                    );
-                  })}
+              {/* 1. Custom Price / Budget Typed by Customer */}
+              <div className="space-y-2.5 p-3.5 bg-gradient-to-br from-amber-50/70 via-rose-50/40 to-pink-50/60 rounded-2xl border border-amber-200/90 shadow-2xs">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-black text-slate-800 flex items-center gap-1.5">
+                    <span className="w-5 h-5 rounded-full bg-gradient-to-tr from-amber-500 to-rose-500 text-white flex items-center justify-center text-[10px] font-black">
+                      ៛
+                    </span>
+                    <span>១. វាយបញ្ចូលតម្លៃនំតាមចិត្តចង់បាន (Cake Price / Budget) *</span>
+                  </label>
+                  <span className="text-[11px] font-black text-rose-600 bg-white px-2 py-0.5 rounded-full border border-rose-200 shadow-2xs">
+                    ${cakePriceUsd.toFixed(2)}
+                  </span>
+                </div>
+
+                {/* Large Number Input for Price in KHR */}
+                <div className="relative">
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    value={cakePriceKhrStr}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/[^0-9]/g, '');
+                      setCakePriceKhrStr(val);
+                    }}
+                    placeholder="ឧ. 40000"
+                    className="w-full pl-3.5 pr-14 py-2.5 bg-white border-2 border-rose-200 focus:border-rose-500 rounded-xl text-base sm:text-lg font-black text-rose-600 focus:outline-none shadow-xs font-num"
+                  />
+                  <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-black text-slate-400">
+                    រៀល ៛
+                  </span>
+                </div>
+
+                {/* Quick Budget Suggestion Chips */}
+                <div className="space-y-1">
+                  <div className="text-[10px] font-bold text-slate-500">
+                    ឬចុចរើសតម្លៃរហ័ស (Popular Budgets)៖
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {POPULAR_BUDGET_KHR.map((khrVal) => {
+                      const isCurrent = cakePriceKhr === khrVal;
+                      return (
+                        <button
+                          key={khrVal}
+                          type="button"
+                          onClick={() => {
+                            soundFx.playPop();
+                            setCakePriceKhrStr(khrVal.toString());
+                          }}
+                          className={`px-2.5 py-1 rounded-xl text-xs font-black transition-all cursor-pointer active:scale-95 ${
+                            isCurrent
+                              ? 'bg-gradient-to-r from-rose-600 to-pink-600 text-white shadow-xs'
+                              : 'bg-white hover:bg-rose-50 text-slate-700 border border-slate-200 shadow-2xs'
+                          }`}
+                        >
+                          {khrVal.toLocaleString()} ៛
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Estimated Size Hint based on typed budget */}
+                <div className="flex items-center gap-1.5 text-[11px] text-slate-600 bg-white/80 p-2 rounded-xl border border-rose-100">
+                  <Sparkles className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                  <span>ទំហំនំប្រហែល៖ </span>
+                  <span className="font-black text-rose-700">{estimatedSizeText}</span>
                 </div>
               </div>
 
@@ -551,7 +618,7 @@ ${name.trim() ? `• ឈ្មោះភ្ញៀវ៖ ${name.trim()}` : ''}
                   className="w-full py-3.5 bg-gradient-to-r from-rose-600 to-pink-600 hover:from-rose-700 hover:to-pink-700 text-white rounded-2xl font-black text-xs sm:text-sm shadow-lg shadow-rose-500/25 flex items-center justify-center gap-2 cursor-pointer active:scale-95 transition-all disabled:opacity-50"
                 >
                   <ShoppingBag className="w-4 h-4" />
-                  <span>{isSubmitting ? 'កំពុងបញ្ជូន...' : `✨ បញ្ជាក់ការកុម្ម៉ង់ឥឡូវនេះ (${cakePriceKhr.toLocaleString()} ៛)`}</span>
+                  <span>{isSubmitting ? 'កំពុងបញ្ជូន...' : `✨ បញ្ជាក់ការកុម្ម៉ង់ឥឡូវនេះ (${cakePriceKhr > 0 ? `${cakePriceKhr.toLocaleString()} ៛` : '០ ៛'})`}</span>
                 </button>
 
                 {/* Button 2 & 3: Telegram & Call */}
@@ -582,4 +649,3 @@ ${name.trim() ? `• ឈ្មោះភ្ញៀវ៖ ${name.trim()}` : ''}
     </div>
   );
 };
-
