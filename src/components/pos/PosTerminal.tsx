@@ -41,6 +41,7 @@ import { PartyAccessoriesModal } from './PartyAccessoriesModal';
 import { KhqrStandeeModal } from './KhqrStandeeModal';
 import { AiPastryScannerModal } from './AiPastryScannerModal';
 import { CustomerDisplayModal } from './CustomerDisplayModal';
+import { CustomerDisplayView } from './CustomerDisplayView';
 import { ThreeCakeStudioModal } from './ThreeCakeStudioModal';
 import { AiBakeryChefModal } from './AiBakeryChefModal';
 import { KhmerVoicePosModal } from './KhmerVoicePosModal';
@@ -80,6 +81,7 @@ export const PosTerminal: React.FC = () => {
   const [isKhqrStandeeOpen, setIsKhqrStandeeOpen] = useState(false);
   const [isAiTrayScannerOpen, setIsAiTrayScannerOpen] = useState(false);
   const [isCustomerDisplayOpen, setIsCustomerDisplayOpen] = useState(false);
+  const [isCustomerPreviewOpen, setIsCustomerPreviewOpen] = useState(false);
   const [isThreeCakeStudioOpen, setIsThreeCakeStudioOpen] = useState(false);
   const [isAiChefOpen, setIsAiChefOpen] = useState(false);
   const [isVoicePosOpen, setIsVoicePosOpen] = useState(false);
@@ -1241,7 +1243,35 @@ export const PosTerminal: React.FC = () => {
       <CustomerDisplayModal
         isOpen={isCustomerDisplayOpen}
         onClose={() => setIsCustomerDisplayOpen(false)}
+        onOpenInAppPreview={() => setIsCustomerPreviewOpen(true)}
       />
+
+      {/* In-App Customer Display Preview (Staff View) */}
+      {isCustomerPreviewOpen && (
+        <div className="fixed inset-0 z-[150] bg-black/90 flex flex-col animate-in fade-in duration-200">
+          <div className="bg-slate-900 text-white px-4 py-2.5 flex items-center justify-between border-b border-slate-800 shrink-0">
+            <div className="flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
+              <span className="font-black text-xs sm:text-sm text-pink-300">
+                👁️ ផ្ទាំងសាកល្បងមើលអេក្រង់ភ្ញៀវផ្ទាល់ក្នុង App (In-App Live Dual Screen Preview)
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                soundFx.playPop();
+                setIsCustomerPreviewOpen(false);
+              }}
+              className="px-3 py-1 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-black transition-colors cursor-pointer"
+            >
+              បិទផ្ទាំងសាកល្បង (Close)
+            </button>
+          </div>
+          <div className="flex-1 min-h-0 overflow-auto">
+            <CustomerDisplayView />
+          </div>
+        </div>
+      )}
 
       {/* 3D Interactive Custom Cake Studio Modal */}
       <ThreeCakeStudioModal

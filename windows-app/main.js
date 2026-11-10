@@ -388,5 +388,60 @@ ipcMain.on('start-desktop-silent-update', async (event, downloadUrl) => {
   }
 });
 
+let customerDisplayWindow = null;
+
+function openCustomerDisplayWindow() {
+  if (customerDisplayWindow && !customerDisplayWindow.isDestroyed()) {
+    customerDisplayWindow.focus();
+    return;
+  }
+
+  const { screen } = require('electron');
+  const displays = screen.getAllDisplays();
+  // Find external secondary display if attached
+  const externalDisplay = displays.find((display) => {
+    return display.bounds.x !== 0 || display.bounds.y !== 0;
+  });
+
+  const winOptions = {
+    width: 1200,
+    height: 800,
+    minWidth: 800,
+    minHeight: 600,
+    title: 'SweetBakery POS - អេក្រង់ទី ២ សម្រាប់អតិថិជន (Dual Customer Display)',
+    icon: path.join(__dirname, 'icon.png'),
+    backgroundColor: '#020617',
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
+      nodeIntegration: false,
+      contextIsolation: true,
+      sandbox: false,
+      spellcheck: false
+    }
+  };
+
+  if (externalDisplay) {
+    winOptions.x = externalDisplay.bounds.x;
+    winOptions.y = externalDisplay.bounds.y;
+    winOptions.fullscreen = true;
+  }
+
+  customerDisplayWindow = new BrowserWindow(winOptions);
+  customerDisplayWindow.loadFile(path.join(__dirname, 'app-dist', 'index.html'), {
+    hash: 'customer-display'
+  }).catch(err => {
+    console.error('Error loading customer display in Electron:', err);
+  });
+
+  customerDisplayWindow.on('closed', () => {
+    customerDisplayWindow = null;
+  });
+}
+
+ipcMain.on('open-customer-display', () => {
+  openCustomerDisplayWindow();
+});
+
+
 
 

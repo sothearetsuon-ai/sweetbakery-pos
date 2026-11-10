@@ -1,5 +1,5 @@
 import { Phone, Rocket, X } from 'lucide-react';
-import React, { useState, Suspense, lazy } from 'react';
+import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { Navbar } from './components/layout/Navbar';
 import { Sidebar, TabType } from './components/layout/Sidebar';
 import { BottomNav } from './components/layout/BottomNav';
@@ -20,6 +20,7 @@ import { checkForAppUpdates, AppUpdateInfo, getNativeAppVersion } from './servic
 import { getStaffUnreadChatCount, subscribeToCustomerSessions } from './services/liveChatService';
 import { bankAlertListener } from './services/bankAlertListener';
 import { RealStoreAuthModal } from './components/auth/RealStoreAuthModal';
+import { setStoreId } from './services/firebase';
 import type { SettingsTab } from './components/settings/SettingsModal';
 import type { ChatChannel } from './types';
 
@@ -380,6 +381,16 @@ export const App: React.FC = () => {
     typeof window !== 'undefined' &&
     (new URLSearchParams(window.location.search).get('display') === 'true' ||
       window.location.hash === '#customer-display');
+
+  // Auto-bind storeId if passed via query params (e.g. from Customer Display QR or link)
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const urlStoreId = new URLSearchParams(window.location.search).get('storeId');
+      if (urlStoreId && urlStoreId.trim()) {
+        setStoreId(urlStoreId.trim());
+      }
+    }
+  }, []);
 
   if (isCustomerDisplay) {
     return (

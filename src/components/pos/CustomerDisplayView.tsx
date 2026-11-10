@@ -29,6 +29,7 @@ import {
   customerDisplaySync,
   CustomerDisplayState,
 } from '../../services/customerDisplaySync';
+import { setStoreId } from '../../services/firebase';
 import { getProductImageUrl } from '../../utils/imagePath';
 import { roundKhr } from '../../utils/currencyUtils';
 
@@ -63,6 +64,17 @@ export const CustomerDisplayView: React.FC = () => {
       return next;
     });
   };
+
+  // Ensure storeId is bound from URL if opened on separate device
+  useEffect(() => {
+    try {
+      const urlStoreId = new URLSearchParams(window.location.search).get('storeId');
+      if (urlStoreId && urlStoreId.trim()) {
+        setStoreId(urlStoreId.trim());
+        customerDisplaySync.setupCloudSync();
+      }
+    } catch (_) {}
+  }, []);
 
   // Subscribe to live dual-screen updates
   useEffect(() => {

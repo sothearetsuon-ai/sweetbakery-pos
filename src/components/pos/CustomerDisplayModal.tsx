@@ -10,8 +10,11 @@ import {
   Smartphone,
   Eye,
   CheckCircle2,
+  Wifi,
+  Cloud,
 } from 'lucide-react';
 import { soundFx } from '../../utils/audio';
+import { getStoreId } from '../../services/firebase';
 
 interface CustomerDisplayModalProps {
   isOpen: boolean;
@@ -20,25 +23,20 @@ interface CustomerDisplayModalProps {
 }
 
 export const getCustomerDisplayUrl = (): string => {
+  const storeId = getStoreId();
+  const storeParam = storeId ? `&storeId=${encodeURIComponent(storeId)}` : '';
+
   if (typeof window !== 'undefined' && window.location) {
     const origin = window.location.origin;
-    const isLocalOrContainer =
-      !origin ||
-      origin.startsWith('file:') ||
-      origin === 'null' ||
-      origin.includes('localhost') ||
-      origin.includes('127.0.0.1') ||
-      origin.includes('androidplatform.net') ||
-      origin.includes('appassets') ||
-      Boolean((window as any).SweetBakeryDesktop) ||
-      Boolean((window as any).SweetBakeryNative);
+    const isDesktop = Boolean((window as any).SweetBakeryDesktop);
+    const isNativeAndroid = Boolean((window as any).SweetBakeryNative);
 
-    if (!isLocalOrContainer && (origin.startsWith('http://') || origin.startsWith('https://'))) {
+    if (!isDesktop && !isNativeAndroid && origin && (origin.startsWith('http://') || origin.startsWith('https://'))) {
       const cleanPath = (window.location.pathname || '/').replace(/\/index\.html$/, '').replace(/\/+$/, '');
-      return `${origin}${cleanPath}/?display=true`;
+      return `${origin}${cleanPath}/?display=true${storeParam}`;
     }
   }
-  return 'https://sothearetsuon-ai.github.io/sweetbakery-pos/?display=true';
+  return `https://sothearetsuon-ai.github.io/sweetbakery-pos/?display=true${storeParam}`;
 };
 
 export const CustomerDisplayModal: React.FC<CustomerDisplayModalProps> = ({
@@ -60,10 +58,17 @@ export const CustomerDisplayModal: React.FC<CustomerDisplayModalProps> = ({
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const isDesktopApp = typeof window !== 'undefined' && Boolean((window as any).SweetBakeryDesktop);
+
   const handleOpenWindow = () => {
     soundFx.playSuccess();
+    if (typeof window !== 'undefined' && (window as any).SweetBakeryDesktop?.openCustomerDisplay) {
+      (window as any).SweetBakeryDesktop.openCustomerDisplay();
+      onClose();
+      return;
+    }
     if (typeof window !== 'undefined') {
-      window.open(displayUrl, 'SweetBakeryCustomerDisplay', 'width=1100,height=750,menubar=no,toolbar=no');
+      window.open(displayUrl, 'SweetBakeryCustomerDisplay', 'width=1200,height=800,menubar=no,toolbar=no');
     }
   };
 
@@ -100,13 +105,19 @@ export const CustomerDisplayModal: React.FC<CustomerDisplayModalProps> = ({
         {/* Body */}
         <div className="p-5 space-y-4 overflow-y-auto">
           {/* Explanation Banner */}
-          <div className="p-3.5 bg-sky-50 rounded-2xl border border-sky-200/80 space-y-1.5 text-xs text-sky-900">
-            <div className="font-black flex items-center gap-1.5 text-sky-800">
-              <Sparkles className="w-4 h-4 text-sky-600 shrink-0" />
-              <span>ងាយស្រួលភ្ជាប់ជាមួយគ្រប់ Tablet & Monitor៖</span>
+          <div className="p-3.5 bg-gradient-to-r from-sky-50 to-indigo-50/60 rounded-2xl border border-sky-200/80 space-y-1.5 text-xs text-sky-950 shadow-2xs">
+            <div className="font-black flex items-center justify-between text-sky-900">
+              <span className="flex items-center gap-1.5">
+                <Sparkles className="w-4 h-4 text-sky-600 shrink-0" />
+                <span>ភ្ជាប់ស្វ័យប្រវត្តិតាម Real-time Cloud & LocalSync</span>
+              </span>
+              <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-700 border border-emerald-500/30 font-mono text-[10px] font-bold flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                <span>Live Sync Active</span>
+              </span>
             </div>
-            <p className="text-[11px] text-sky-700 leading-relaxed font-medium">
-              នៅពេលគិតលុយ អេក្រង់ភ្ញៀវនឹងបង្ហាញទំនិញក្នុងកន្ត្រក តម្លៃសរុប និង <strong>Bakong KHQR ធំច្បាស់ពេញអេក្រង់</strong> ដោយស្វ័យប្រវត្តិតាមរយៈ Real-time BroadcastChannel & LocalSync។
+            <p className="text-[11px] text-slate-600 leading-relaxed font-medium">
+              នៅពេល Cashier ចុចជ្រើសរើសនំ អេក្រង់ទី ២ នឹងលោតបង្ហាញទំនិញក្នុងកន្ត្រកភ្លាមៗ (Real-time Sync)។ គាំទ្រទាំង <strong>Monitor ទី ២ លើ PC</strong>, <strong>Tablet នៅមុខភ្ញៀវ</strong>, ឬ <strong>ទូរស័ព្ទដៃ</strong> ដោយស្កេន QR Code ខាងក្រោម។
             </p>
           </div>
 
@@ -197,7 +208,7 @@ export const CustomerDisplayModal: React.FC<CustomerDisplayModalProps> = ({
               className="px-4 py-2.5 bg-gradient-to-r from-sky-600 to-blue-600 hover:from-sky-700 hover:to-blue-700 text-white text-xs font-black rounded-xl shadow-md transition-all flex items-center gap-1.5 cursor-pointer active:scale-95"
             >
               <ExternalLink className="w-3.5 h-3.5" />
-              <span>បើកផ្ទាំងដាច់ដោយឡែក (Popout)</span>
+              <span>{isDesktopApp ? 'បើកផ្ទាំងលើ Monitor ទី ២' : 'បើកផ្ទាំងដាច់ដោយឡែក (Popout)'}</span>
             </button>
           </div>
         </div>

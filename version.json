@@ -1,15 +1,13 @@
 {
-  "version": "1.9.7",
-  "versionCode": 63,
+  "version": "1.9.8",
+  "versionCode": 64,
   "releaseDate": "2026-11-10",
   "releaseNotes": [
-    "🖥️ អេក្រង់ទី ២ សម្រាប់អតិថិជនកម្រិតខ្ពស់ (Next-Gen Customer Dual Screen Display Upgrade)",
-    "🧁 កាតាឡុកនំពេញនិយមប្រចាំហាង (Digital Menu Grid) ៖ បង្ហាញរូបភាពនំ ឈ្មោះ តម្លៃ KHR & USD ស្វ័យប្រវត្តិពេលទំនេរ មិនមែនផ្ទាំងទទេទៀតឡើយ",
-    "✨ នំពិសេសប្រចាំថ្ងៃ & ផ្ទាំងផ្សាយពាណិជ្ជកម្ម (Spotlight Daily Specials & Promo Ticker)",
-    "📱 Store Bakong KHQR Standee ៖ បង្ហាញ QR ហាងផ្លូវការសម្រាប់ស្កេនកុម្ម៉ង់នំតាមទូរស័ព្ទដៃ",
-    "🛒 ផ្សាយផ្ទាល់បញ្ជីទំនិញ (Real-time Live Cart Sync) ៖ ពេលអ្នកលក់ចុចទំនិញ អេក្រង់ភ្ញៀវបង្ហាញភ្លាមៗ",
-    "💵 បង្ហាញកូដ Bakong KHQR ទូទាត់ប្រាក់ធំច្បាស់ និងបាញ់កាំជ្រួច Confetti ពេលបង់ប្រាក់រួច",
-    "🎨 ប្តូរ Theme ពណ៌រវាង Dark Obsidian (ពណ៌រាត្រី) និង Luxury Rose Cream (ពណ៌ផ្កាឈូកស្រាល) ដោយសេរី"
+    "🚀 ជួសជុល និងដោះស្រាយបញ្ហា Real-time Dual Screen Sync ១០០% ៖ ពេល Cashier ចុចលើនំ ឬកែប្រែកន្ត្រក ទំនិញលោតចូលអេក្រង់ទី ២ ភ្លាមៗដោយគ្មានការយឺតយ៉ាវ",
+    "☁️ Cloud Firestore Real-time Sync ៖ ភ្ជាប់អេក្រង់ភ្ញៀវឆ្លងឧបករណ៍ដោយស្វ័យប្រវត្តិ (Tablet, iPad, iPhone, Android ឬ Monitor ដាច់ដោយឡែក)",
+    "🖥️ Windows Native Dual Monitor Support ៖ កម្មវិធី Windows Electron រកឃើញ Monitor ទី ២ ដោយស្វ័យប្រវត្តិតាមរយៈ HDMI/VGA និងបើក Fullscreen លើកញ្ចក់ភ្ញៀវ",
+    "👁️ មុខងារសាកល្បងអេក្រង់ភ្ញៀវក្នុង App (In-App Live Dual Screen Preview) ៖ Cashier អាចចុចមើលទិដ្ឋភាពអេក្រង់ភ្ញៀវផ្ទាល់ក្នុង App ជាមួយទំនិញក្នុងកន្ត្រកភ្លាមៗ",
+    "🔗 ស្វ័យប្រវត្តិភ្ជាប់ Store ID (Auto Tenant Pairing) ៖ ស្កេន QR Code ពីទូរស័ព្ទដៃ ឬ Tablet ផ្សេង ភ្ជាប់ចូលហាងផ្ទាល់ដោយស្វ័យប្រវត្តិ"
   ],
   "author": "សុធារិទ្ធ",
   "apkDownloadUrl": "https://sothearetsuon-ai.github.io/sweetbakery-pos/SweetBakery-Android.apk",

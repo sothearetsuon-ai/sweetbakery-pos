@@ -24,5 +24,8 @@ contextBridge.exposeInMainWorld('SweetBakeryDesktop', {
   sendCloseReady: () => {},
   exitApp: () => {
     ipcRenderer.send('app-exit-request');
+  },
+  openCustomerDisplay: () => {
+    ipcRenderer.send('open-customer-display');
   }
 });
