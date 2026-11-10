@@ -47,6 +47,7 @@ import { verifyBankSlipWithGemini, AiBankSlipResult } from '../../services/aiBan
 import { AiCakeAnalysisModal } from '../common/AiCakeAnalysisModal';
 import { getCustomerSessionId, subscribeToChatMessages, markChatAsRead } from '../../services/liveChatService';
 import { ChatMessage } from '../../types';
+import { CustomerExpressOrderModal } from './CustomerExpressOrderModal';
 
 const CAKE_SIZES = [
   { id: '1.5 ទឹក', label: '1.5 ទឹក (~15cm)', desc: 'សម្រាប់ 2-4 នាក់', priceUsd: 12 },
@@ -93,6 +94,9 @@ export const CustomerOrderPortal: React.FC<CustomerOrderPortalProps> = ({ onBack
 
   // Current Step: 1 = Catalog/Design, 2 = Customization, 3 = Pickup & Contact, 4 = Deposit & KHQR, 5 = Confirmation
   const [step, setStep] = useState<1 | 2 | 3 | 4 | 5>(1);
+
+  // Express 1-Click Fast Order State
+  const [expressProduct, setExpressProduct] = useState<Product | null>(null);
 
   // Search & Filter in Step 1
   const [searchQuery, setSearchQuery] = useState('');
@@ -1014,20 +1018,40 @@ export const CustomerOrderPortal: React.FC<CustomerOrderPortalProps> = ({ onBack
                 return (
                   <div
                     key={p.id}
-                    onClick={() => handleSelectProduct(p)}
-                    className="bg-white rounded-3xl border border-rose-100 overflow-hidden shadow-2xs hover:shadow-xl hover:shadow-pink-500/10 hover:-translate-y-1 transition-all duration-300 cursor-pointer flex flex-col justify-between group"
+                    className="pos-product-card bg-white rounded-3xl border border-rose-100 overflow-hidden shadow-2xs hover:shadow-xl hover:shadow-pink-500/10 hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between group relative"
                   >
-                    <div className="relative w-full h-36 sm:h-44 bg-rose-50 overflow-hidden">
+                    {/* Top Express Badge */}
+                    <div className="absolute top-2.5 left-2.5 z-10 flex flex-col gap-1">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          soundFx.playPop();
+                          setExpressProduct(p);
+                        }}
+                        className="px-2.5 py-1 rounded-full text-[10px] font-black bg-gradient-to-r from-amber-500 to-rose-500 text-white shadow-md flex items-center gap-1 active:scale-95 transition-all cursor-pointer backdrop-blur-xs hover:brightness-110"
+                        title="កុម្ម៉ង់នំរហ័សក្នុងរយៈពេល ៣០ វិនាទី"
+                      >
+                        <Sparkles className="w-3 h-3 text-yellow-200" />
+                        <span>⚡ កុម្ម៉ង់រហ័ស 30s</span>
+                      </button>
+                    </div>
+
+                    <div
+                      onClick={() => handleSelectProduct(p)}
+                      className="relative w-full h-36 sm:h-44 bg-rose-50 overflow-hidden cursor-pointer"
+                    >
                       <img
                         src={getProductImageUrl(p.imageUrl || 'https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=500')}
                         alt={p.nameKh}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                         loading="lazy"
+                        decoding="async"
                       />
                     </div>
 
                     <div className="p-3 space-y-1.5 flex-1 flex flex-col justify-between">
-                      <div>
+                      <div onClick={() => handleSelectProduct(p)} className="cursor-pointer">
                         <h4 className="font-black text-slate-800 text-xs sm:text-sm line-clamp-1 group-hover:text-pink-600 transition-colors">
                           {p.nameKh}
                         </h4>
@@ -1036,7 +1060,7 @@ export const CustomerOrderPortal: React.FC<CustomerOrderPortalProps> = ({ onBack
                         </p>
                       </div>
 
-                      <div className="pt-2 border-t border-rose-50 flex items-center justify-between">
+                      <div className="pt-2 border-t border-rose-50 flex items-center justify-between gap-1.5 flex-wrap">
                         {hidePrices ? (
                           <div className="flex items-center gap-1 text-[11px] font-bold text-pink-700 bg-pink-50 px-2.5 py-1 rounded-xl border border-pink-200">
                             <Sparkles className="w-3 h-3 text-pink-500 shrink-0" />
@@ -1054,9 +1078,32 @@ export const CustomerOrderPortal: React.FC<CustomerOrderPortalProps> = ({ onBack
                             )}
                           </div>
                         )}
-                        <button className="px-3 py-1.5 bg-gradient-to-r from-pink-600 to-rose-500 text-white rounded-xl text-[10px] font-black transition-all shadow-2xs group-hover:scale-105 cursor-pointer">
-                          រើសម៉ូដនេះ ✨
-                        </button>
+
+                        <div className="flex items-center gap-1">
+                          {/* Button 1: Express 30s Order */}
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              soundFx.playPop();
+                              setExpressProduct(p);
+                            }}
+                            className="px-2.5 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-[10px] font-black transition-all shadow-2xs active:scale-95 cursor-pointer flex items-center gap-1"
+                            title="កុម្ម៉ង់រហ័ស"
+                          >
+                            <span>⚡ កុម្ម៉ង់រហ័ស</span>
+                          </button>
+
+                          {/* Button 2: Detailed Customization */}
+                          <button
+                            type="button"
+                            onClick={() => handleSelectProduct(p)}
+                            className="px-2.5 py-1.5 bg-gradient-to-r from-pink-600 to-rose-500 hover:from-pink-700 hover:to-rose-600 text-white rounded-xl text-[10px] font-black transition-all shadow-2xs active:scale-95 cursor-pointer"
+                            title="កែប្រែម៉ូដលម្អិត"
+                          >
+                            <span>រើសម៉ូដ ✨</span>
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -2280,6 +2327,12 @@ export const CustomerOrderPortal: React.FC<CustomerOrderPortalProps> = ({ onBack
           soundFx.playSuccess();
           setIsAiVisionModalOpen(false);
         }}
+      />
+      {/* Express 30-Second Fast Order Drawer */}
+      <CustomerExpressOrderModal
+        isOpen={!!expressProduct}
+        onClose={() => setExpressProduct(null)}
+        product={expressProduct}
       />
     </div>
   );

@@ -45,6 +45,7 @@ import { getProductImageUrl } from '../../utils/imagePath';
 import { StoreLocationModal } from '../common/StoreLocationModal';
 import { ContactModal } from '../common/ContactModal';
 import { roundKhr } from '../../utils/currencyUtils';
+import { CustomerExpressOrderModal } from '../customer-order/CustomerExpressOrderModal';
 
 // Iconic Chef Hat SVG matching the bakery logo aesthetic
 export const ChefHatIcon: React.FC<{ className?: string }> = ({ className = 'w-6 h-6' }) => (
@@ -81,6 +82,7 @@ interface ShowcaseCardProps {
   product: Product;
   onClick: () => void;
   onEdit?: (product: Product) => void;
+  onExpressOrder?: (product: Product) => void;
   exchangeRate: number;
   lang: string;
   hidePrices?: boolean;
@@ -90,6 +92,7 @@ const ShowcaseCard: React.FC<ShowcaseCardProps> = ({
   product,
   onClick,
   onEdit,
+  onExpressOrder,
   exchangeRate,
   lang,
   hidePrices = true,
@@ -221,33 +224,43 @@ const ShowcaseCard: React.FC<ShowcaseCardProps> = ({
           </p>
         )}
 
-        <div className="pt-2 border-t border-[#F8EAE5] flex items-center justify-between">
+        <div className="pt-2 border-t border-[#F8EAE5] flex items-center justify-between gap-1.5 flex-wrap">
           {hidePrices ? (
-            <>
-              <span className="text-[11px] font-bold text-[#A82B27] bg-[#FFEAE7] px-2.5 py-1 rounded-xl flex items-center gap-1 border border-[#FFCCC6]">
-                <Sparkles className="w-3 h-3 text-[#E6514D]" />
-                <span>តម្លៃតាមម៉ូដ</span>
-              </span>
-              <span className="px-3 py-1.5 bg-gradient-to-r from-[#FF6F68] to-[#E6514D] text-white rounded-xl text-xs font-black transition-all shadow-2xs group-hover:scale-105">
-                រើសម៉ូដនំ ✨
-              </span>
-            </>
+            <span className="text-[11px] font-bold text-[#A82B27] bg-[#FFEAE7] px-2.5 py-1 rounded-xl flex items-center gap-1 border border-[#FFCCC6]">
+              <Sparkles className="w-3 h-3 text-[#E6514D]" />
+              <span>តម្លៃតាមម៉ូដ</span>
+            </span>
           ) : (
-            <>
-              <div>
-                <div className="text-lg font-black text-[#E6514D]">
-                  {priceKhr.toLocaleString()} ៛
-                </div>
-                <div className="text-[11px] text-slate-400 font-semibold">
-                  ~ ${priceUsd.toFixed(2)}
-                </div>
+            <div>
+              <div className="text-base sm:text-lg font-black text-[#E6514D]">
+                {priceKhr.toLocaleString()} ៛
               </div>
-
-              <span className="px-3 py-1.5 bg-[#FFF0ED] group-hover:bg-[#E6514D] group-hover:text-white text-[#E6514D] rounded-xl text-xs font-bold transition-all shadow-2xs">
-                មើលលម្អិត
-              </span>
-            </>
+              <div className="text-[10px] text-slate-400 font-semibold">
+                ~ ${priceUsd.toFixed(2)}
+              </div>
+            </div>
           )}
+
+          <div className="flex items-center gap-1">
+            {onExpressOrder && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  soundFx.playPop();
+                  onExpressOrder(product);
+                }}
+                className="px-2.5 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-xs font-black transition-all shadow-2xs active:scale-95 cursor-pointer flex items-center gap-1"
+                title="កុម្ម៉ង់រហ័ស 30 វិនាទី"
+              >
+                <span>⚡ រហ័ស</span>
+              </button>
+            )}
+
+            <span className="px-3 py-1.5 bg-gradient-to-r from-[#FF6F68] to-[#E6514D] text-white rounded-xl text-xs font-black transition-all shadow-2xs group-hover:scale-105">
+              រើសម៉ូដ ✨
+            </span>
+          </div>
         </div>
       </div>
     </div>
@@ -319,6 +332,9 @@ export const CustomerShowcase: React.FC = () => {
 
   // System Contact Modal State
   const [isContactModalOpen, setIsContactModalOpen] = useState(false);
+
+  // Express 30-Second Fast Order State
+  const [expressOrderProduct, setExpressOrderProduct] = useState<Product | null>(null);
 
   // Lightbox slideshow state
   const [lightboxImgIdx, setLightboxImgIdx] = useState(0);
@@ -778,6 +794,10 @@ export const CustomerShowcase: React.FC = () => {
               setPreviewProduct(product);
             }}
             onEdit={handleOpenEditProduct}
+            onExpressOrder={(prod) => {
+              soundFx.playPop();
+              setExpressOrderProduct(prod);
+            }}
             exchangeRate={exchangeRate}
             lang={lang}
             hidePrices={hidePrices}
@@ -1029,17 +1049,32 @@ export const CustomerShowcase: React.FC = () => {
               </div>
 
               <div className="space-y-2 pt-2">
-                {/* Order / Select design button */}
+                {/* 1. Instant 30-Second Express Order button */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    soundFx.playPop();
+                    const prod = previewProduct;
+                    setPreviewProduct(null);
+                    setExpressOrderProduct(prod);
+                  }}
+                  className="w-full py-3.5 rounded-2xl font-black text-xs bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500 hover:brightness-110 text-white shadow-lg shadow-amber-500/25 flex items-center justify-center gap-2 active:scale-95 cursor-pointer transition-all"
+                >
+                  <Sparkles className="w-4 h-4 text-yellow-200" />
+                  <span>⚡ កុម្ម៉ង់រហ័ស 30 វិនាទី (Express Order 30s)</span>
+                </button>
+
+                {/* 2. Order / Select design button */}
                 <button
                   type="button"
                   onClick={() => {
                     handleOpenCustomPrice(previewProduct);
                     setPreviewProduct(null);
                   }}
-                  className="w-full py-3.5 rounded-2xl font-black text-xs bg-gradient-to-r from-pink-600 to-rose-500 hover:from-pink-700 hover:to-rose-600 text-white shadow-lg shadow-pink-500/25 flex items-center justify-center gap-2 active:scale-95 cursor-pointer transition-all"
+                  className="w-full py-3 rounded-2xl font-black text-xs bg-gradient-to-r from-pink-600 to-rose-500 hover:from-pink-700 hover:to-rose-600 text-white shadow-md shadow-pink-500/20 flex items-center justify-center gap-2 active:scale-95 cursor-pointer transition-all"
                 >
                   <ShoppingBag className="w-4 h-4" />
-                  <span>រើសម៉ូដនំនេះ & កំណត់តម្លៃ ✨ (Select Design & Set Price)</span>
+                  <span>រើសម៉ូដនំនេះ & កំណត់តម្លៃលម្អិត ✨ (Custom Price)</span>
                 </button>
 
                 {/* Upload & Edit Cake Action */}
@@ -1153,6 +1188,12 @@ export const CustomerShowcase: React.FC = () => {
           <span>+ Upload រូបនំ</span>
         </button>
       </div>
+      {/* Express 30-Second Fast Order Drawer */}
+      <CustomerExpressOrderModal
+        isOpen={!!expressOrderProduct}
+        onClose={() => setExpressOrderProduct(null)}
+        product={expressOrderProduct}
+      />
     </div>
   );
 };
