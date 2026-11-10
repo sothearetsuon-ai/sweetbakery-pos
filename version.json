@@ -1,14 +1,15 @@
 {
-  "version": "1.9.6",
-  "versionCode": 62,
+  "version": "1.9.7",
+  "versionCode": 63,
   "releaseDate": "2026-11-10",
   "releaseNotes": [
-    "🚀 បង្កើនល្បឿនខ្លាំង និងបំបាត់ការទាក់ៗ ១០០% (Ultra Performance & Zero Stuttering Upgrade)",
-    "⚡ GPU-Accelerated Hardware Layer Compositing: រំកិល Scroll រលូនកម្រិត 60-120 FPS គ្មានភាពទាក់ៗឡើយ",
-    "✨ Optimized React Memoization: កាតទំនិញ ProductCard & ShowcaseCard ដំណើរការលឿនរហ័ស មិន re-render នាំឱ្យធ្ងន់ម៉ាស៊ីន",
-    "📱 Android WebView Offscreen Pre-Rastering: បង្ហាញកាតាឡុកនំ និងរូបភាពភ្លាមៗ មិនរង់ចាំ",
-    "🎂 កុម្ម៉ង់នំតាមថវិកាជាក់ស្តែង (Flexible Budget Order) ៖ ភ្ញៀវអាចវាយបញ្ចូលតម្លៃនំតាមចិត្តចង់បានដោយសេរី",
-    "⚡ មុខងារកុម្ម៉ង់នំរហ័ស ៣០ វិនាទី (Express 30s Cake Order) & កុម្ម៉ង់តាម Telegram ហាងភ្លាមៗ"
+    "🖥️ អេក្រង់ទី ២ សម្រាប់អតិថិជនកម្រិតខ្ពស់ (Next-Gen Customer Dual Screen Display Upgrade)",
+    "🧁 កាតាឡុកនំពេញនិយមប្រចាំហាង (Digital Menu Grid) ៖ បង្ហាញរូបភាពនំ ឈ្មោះ តម្លៃ KHR & USD ស្វ័យប្រវត្តិពេលទំនេរ មិនមែនផ្ទាំងទទេទៀតឡើយ",
+    "✨ នំពិសេសប្រចាំថ្ងៃ & ផ្ទាំងផ្សាយពាណិជ្ជកម្ម (Spotlight Daily Specials & Promo Ticker)",
+    "📱 Store Bakong KHQR Standee ៖ បង្ហាញ QR ហាងផ្លូវការសម្រាប់ស្កេនកុម្ម៉ង់នំតាមទូរស័ព្ទដៃ",
+    "🛒 ផ្សាយផ្ទាល់បញ្ជីទំនិញ (Real-time Live Cart Sync) ៖ ពេលអ្នកលក់ចុចទំនិញ អេក្រង់ភ្ញៀវបង្ហាញភ្លាមៗ",
+    "💵 បង្ហាញកូដ Bakong KHQR ទូទាត់ប្រាក់ធំច្បាស់ និងបាញ់កាំជ្រួច Confetti ពេលបង់ប្រាក់រួច",
+    "🎨 ប្តូរ Theme ពណ៌រវាង Dark Obsidian (ពណ៌រាត្រី) និង Luxury Rose Cream (ពណ៌ផ្កាឈូកស្រាល) ដោយសេរី"
   ],
   "author": "សុធារិទ្ធ",
   "apkDownloadUrl": "https://sothearetsuon-ai.github.io/sweetbakery-pos/SweetBakery-Android.apk",
