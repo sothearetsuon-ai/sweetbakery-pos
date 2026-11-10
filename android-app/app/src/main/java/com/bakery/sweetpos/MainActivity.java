@@ -90,6 +90,10 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        getWindow().setFlags(
+            android.view.WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED,
+            android.view.WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED
+        );
         setContentView(R.layout.activity_main);
 
         // Initialize Android TextToSpeech engine
@@ -166,6 +170,13 @@ public class MainActivity extends AppCompatActivity {
         webSettings.setJavaScriptCanOpenWindowsAutomatically(true);
         webSettings.setSupportMultipleWindows(true);
         webSettings.setUserAgentString(webSettings.getUserAgentString() + " SweetBakeryAndroidApp/1.0");
+
+        // High-performance offscreen tile pre-rasterization for ultra-smooth 60-120fps scrolling
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            webSettings.setOffscreenPreRaster(true);
+        }
+        webView.setDrawingCacheEnabled(false);
+        webView.setScrollBarStyle(View.SCROLLBARS_INSIDE_OVERLAY);
 
         webView.setWebViewClient(new WebViewClient() {
             @Override

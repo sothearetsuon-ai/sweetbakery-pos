@@ -75,6 +75,119 @@ interface CustomerOrderPortalProps {
   onBackToPos?: () => void;
 }
 
+interface PortalCatalogCardProps {
+  product: Product;
+  exchangeRate: number;
+  hidePrices: boolean;
+  onSelect: (product: Product) => void;
+  onExpress: (product: Product) => void;
+}
+
+const PortalCatalogCardComponent: React.FC<PortalCatalogCardProps> = ({
+  product,
+  exchangeRate,
+  hidePrices,
+  onSelect,
+  onExpress,
+}) => {
+  const priceKhr = product.priceKhr ?? Math.round(product.priceUsd * exchangeRate);
+  return (
+    <div
+      style={{ contentVisibility: 'auto', containIntrinsicSize: '240px' }}
+      className="pos-product-card bg-white rounded-3xl border border-rose-100 overflow-hidden shadow-2xs hover:shadow-xl hover:shadow-pink-500/10 hover:-translate-y-1 transition-transform duration-200 flex flex-col justify-between group relative transform-gpu"
+    >
+      {/* Top Express Badge */}
+      <div className="absolute top-2.5 left-2.5 z-10 flex flex-col gap-1">
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            soundFx.playPop();
+            onExpress(product);
+          }}
+          className="px-2.5 py-1 rounded-full text-[10px] font-black bg-gradient-to-r from-amber-500 to-rose-500 text-white shadow-md flex items-center gap-1 active:scale-95 transition-all cursor-pointer hover:brightness-110"
+          title="កុម្ម៉ង់នំរហ័សក្នុងរយៈពេល ៣០ វិនាទី"
+        >
+          <Sparkles className="w-3 h-3 text-yellow-200" />
+          <span>⚡ កុម្ម៉ង់រហ័ស 30s</span>
+        </button>
+      </div>
+
+      <div
+        onClick={() => onSelect(product)}
+        className="relative w-full h-36 sm:h-44 bg-rose-50 overflow-hidden cursor-pointer"
+      >
+        <img
+          src={getProductImageUrl(product.imageUrl || 'https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=500')}
+          alt={product.nameKh}
+          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+          loading="lazy"
+          decoding="async"
+        />
+      </div>
+
+      <div className="p-3 space-y-1.5 flex-1 flex flex-col justify-between">
+        <div onClick={() => onSelect(product)} className="cursor-pointer">
+          <h4 className="font-black text-slate-800 text-xs sm:text-sm line-clamp-1 group-hover:text-pink-600 transition-colors">
+            {product.nameKh}
+          </h4>
+          <p className="text-[10px] text-slate-400 line-clamp-1">
+            {product.nameEn}
+          </p>
+        </div>
+
+        <div className="pt-2 border-t border-rose-50 flex items-center justify-between gap-1.5 flex-wrap">
+          {hidePrices ? (
+            <div className="flex items-center gap-1 text-[11px] font-bold text-pink-700 bg-pink-50 px-2.5 py-1 rounded-xl border border-pink-200">
+              <Sparkles className="w-3 h-3 text-pink-500 shrink-0" />
+              <span>តម្លៃតាមទំហំ & ម៉ូដ</span>
+            </div>
+          ) : (
+            <div>
+              <div className="text-xs sm:text-sm font-black text-rose-600 tracking-tight">
+                {priceKhr > 0 ? `${priceKhr.toLocaleString()} ៛` : 'តម្លៃចរចា'}
+              </div>
+              {product.priceUsd > 0 && (
+                <div className="text-[10px] text-slate-400 font-semibold">
+                  ${product.priceUsd.toFixed(2)}
+                </div>
+              )}
+            </div>
+          )}
+
+          <div className="flex items-center gap-1">
+            {/* Button 1: Express 30s Order */}
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                soundFx.playPop();
+                onExpress(product);
+              }}
+              className="px-2.5 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-[10px] font-black transition-all shadow-2xs active:scale-95 cursor-pointer flex items-center gap-1"
+              title="កុម្ម៉ង់រហ័ស"
+            >
+              <span>⚡ កុម្ម៉ង់រហ័ស</span>
+            </button>
+
+            {/* Button 2: Detailed Customization */}
+            <button
+              type="button"
+              onClick={() => onSelect(product)}
+              className="px-2.5 py-1.5 bg-gradient-to-r from-pink-600 to-rose-500 hover:from-pink-700 hover:to-rose-600 text-white rounded-xl text-[10px] font-black transition-all shadow-2xs active:scale-95 cursor-pointer"
+              title="កែប្រែម៉ូដលម្អិត"
+            >
+              <span>រើសម៉ូដ ✨</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const PortalCatalogCard = React.memo(PortalCatalogCardComponent);
+
 export const CustomerOrderPortal: React.FC<CustomerOrderPortalProps> = ({ onBackToPos }) => {
   const {
     products,
@@ -1013,102 +1126,16 @@ export const CustomerOrderPortal: React.FC<CustomerOrderPortalProps> = ({ onBack
               </div>
 
               {/* Catalog Products */}
-              {filteredProducts.map((p) => {
-                const priceKhr = p.priceKhr ?? Math.round(p.priceUsd * exchangeRate);
-                return (
-                  <div
-                    key={p.id}
-                    className="pos-product-card bg-white rounded-3xl border border-rose-100 overflow-hidden shadow-2xs hover:shadow-xl hover:shadow-pink-500/10 hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between group relative"
-                  >
-                    {/* Top Express Badge */}
-                    <div className="absolute top-2.5 left-2.5 z-10 flex flex-col gap-1">
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          soundFx.playPop();
-                          setExpressProduct(p);
-                        }}
-                        className="px-2.5 py-1 rounded-full text-[10px] font-black bg-gradient-to-r from-amber-500 to-rose-500 text-white shadow-md flex items-center gap-1 active:scale-95 transition-all cursor-pointer backdrop-blur-xs hover:brightness-110"
-                        title="កុម្ម៉ង់នំរហ័សក្នុងរយៈពេល ៣០ វិនាទី"
-                      >
-                        <Sparkles className="w-3 h-3 text-yellow-200" />
-                        <span>⚡ កុម្ម៉ង់រហ័ស 30s</span>
-                      </button>
-                    </div>
-
-                    <div
-                      onClick={() => handleSelectProduct(p)}
-                      className="relative w-full h-36 sm:h-44 bg-rose-50 overflow-hidden cursor-pointer"
-                    >
-                      <img
-                        src={getProductImageUrl(p.imageUrl || 'https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=500')}
-                        alt={p.nameKh}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                        loading="lazy"
-                        decoding="async"
-                      />
-                    </div>
-
-                    <div className="p-3 space-y-1.5 flex-1 flex flex-col justify-between">
-                      <div onClick={() => handleSelectProduct(p)} className="cursor-pointer">
-                        <h4 className="font-black text-slate-800 text-xs sm:text-sm line-clamp-1 group-hover:text-pink-600 transition-colors">
-                          {p.nameKh}
-                        </h4>
-                        <p className="text-[10px] text-slate-400 line-clamp-1">
-                          {p.nameEn}
-                        </p>
-                      </div>
-
-                      <div className="pt-2 border-t border-rose-50 flex items-center justify-between gap-1.5 flex-wrap">
-                        {hidePrices ? (
-                          <div className="flex items-center gap-1 text-[11px] font-bold text-pink-700 bg-pink-50 px-2.5 py-1 rounded-xl border border-pink-200">
-                            <Sparkles className="w-3 h-3 text-pink-500 shrink-0" />
-                            <span>តម្លៃតាមទំហំ & ម៉ូដ</span>
-                          </div>
-                        ) : (
-                          <div>
-                            <div className="text-xs sm:text-sm font-black text-rose-600 tracking-tight">
-                              {priceKhr > 0 ? `${priceKhr.toLocaleString()} ៛` : 'តម្លៃចរចា'}
-                            </div>
-                            {p.priceUsd > 0 && (
-                              <div className="text-[10px] text-slate-400 font-semibold">
-                                ${p.priceUsd.toFixed(2)}
-                              </div>
-                            )}
-                          </div>
-                        )}
-
-                        <div className="flex items-center gap-1">
-                          {/* Button 1: Express 30s Order */}
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              soundFx.playPop();
-                              setExpressProduct(p);
-                            }}
-                            className="px-2.5 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-[10px] font-black transition-all shadow-2xs active:scale-95 cursor-pointer flex items-center gap-1"
-                            title="កុម្ម៉ង់រហ័ស"
-                          >
-                            <span>⚡ កុម្ម៉ង់រហ័ស</span>
-                          </button>
-
-                          {/* Button 2: Detailed Customization */}
-                          <button
-                            type="button"
-                            onClick={() => handleSelectProduct(p)}
-                            className="px-2.5 py-1.5 bg-gradient-to-r from-pink-600 to-rose-500 hover:from-pink-700 hover:to-rose-600 text-white rounded-xl text-[10px] font-black transition-all shadow-2xs active:scale-95 cursor-pointer"
-                            title="កែប្រែម៉ូដលម្អិត"
-                          >
-                            <span>រើសម៉ូដ ✨</span>
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
+              {filteredProducts.map((p) => (
+                <PortalCatalogCard
+                  key={p.id}
+                  product={p}
+                  exchangeRate={exchangeRate}
+                  hidePrices={hidePrices}
+                  onSelect={handleSelectProduct}
+                  onExpress={setExpressProduct}
+                />
+              ))}
             </div>
           </div>
         )}

@@ -122,6 +122,11 @@ export const PosTerminal: React.FC = () => {
     } catch (_) {}
   };
 
+  // High-performance stable add to cart callback for memoized ProductCard components
+  const handleAddToCart = React.useCallback((p: Product) => {
+    addToCart(p);
+  }, [addToCart]);
+
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (sortMenuRef.current && !sortMenuRef.current.contains(e.target as Node)) {
@@ -1008,7 +1013,7 @@ export const PosTerminal: React.FC = () => {
                   <ProductCard
                     key={product.id}
                     product={product}
-                    onAddToCart={(p: Product) => addToCart(p)}
+                    onAddToCart={handleAddToCart}
                   />
                 ))}
 
@@ -1042,7 +1047,7 @@ export const PosTerminal: React.FC = () => {
                   <ProductCard
                     key={product.id}
                     product={product}
-                    onAddToCart={(p: Product) => addToCart(p)}
+                    onAddToCart={handleAddToCart}
                   />
                 ))}
               </>
@@ -1051,7 +1056,7 @@ export const PosTerminal: React.FC = () => {
                 <ProductCard
                   key={product.id}
                   product={product}
-                  onAddToCart={(p: Product) => addToCart(p)}
+                  onAddToCart={handleAddToCart}
                 />
               ))
             )}

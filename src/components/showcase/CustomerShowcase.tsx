@@ -80,7 +80,7 @@ export const getCategoryIcon = (iconName?: string) => {
 // Animated Individual Cake Card with Auto-Transitions
 interface ShowcaseCardProps {
   product: Product;
-  onClick: () => void;
+  onClick: (product: Product) => void;
   onEdit?: (product: Product) => void;
   onExpressOrder?: (product: Product) => void;
   exchangeRate: number;
@@ -88,7 +88,7 @@ interface ShowcaseCardProps {
   hidePrices?: boolean;
 }
 
-const ShowcaseCard: React.FC<ShowcaseCardProps> = ({
+const ShowcaseCardComponent: React.FC<ShowcaseCardProps> = ({
   product,
   onClick,
   onEdit,
@@ -115,7 +115,7 @@ const ShowcaseCard: React.FC<ShowcaseCardProps> = ({
       ([entry]) => {
         setIsInView(entry.isIntersecting);
       },
-      { rootMargin: '120px 0px', threshold: 0.05 }
+      { rootMargin: '80px 0px', threshold: 0.05 }
     );
     observer.observe(cardRef.current);
     return () => observer.disconnect();
@@ -126,7 +126,7 @@ const ShowcaseCard: React.FC<ShowcaseCardProps> = ({
     if (!isInView || images.length <= 1) return;
     const interval = setInterval(() => {
       setCurrentIdx((prev) => (prev + 1) % images.length);
-    }, 4500);
+    }, 6000);
     return () => clearInterval(interval);
   }, [isInView, images.length]);
 
@@ -137,36 +137,51 @@ const ShowcaseCard: React.FC<ShowcaseCardProps> = ({
   return (
     <div
       ref={cardRef}
-      onClick={onClick}
+      onClick={() => onClick(product)}
       style={{ contentVisibility: 'auto', containIntrinsicSize: '360px' }}
       className="group bg-white rounded-3xl border-2 border-[#F3DFD8]/80 hover:border-[#E6514D]/40 overflow-hidden shadow-sm hover:shadow-2xl hover:shadow-[#E6514D]/15 hover:-translate-y-2 transition-all duration-300 cursor-pointer flex flex-col justify-between transform-gpu"
     >
       {/* Photo with smooth transition */}
       <div className="relative w-full h-56 bg-[#FFF5F2] overflow-hidden">
-        {images.map((img, idx) => {
-          const isActive = idx === currentIdx;
-          return (
-            <img
-              key={idx}
-              src={getProductImageUrl(img)}
-              alt={`${name} ${idx + 1}`}
-              loading="lazy"
-              decoding="async"
-              onError={(e) => {
-                (e.target as HTMLImageElement).src = fallbackCake;
-              }}
-              className={`w-full h-full object-cover absolute inset-0 transition-opacity duration-500 ease-out transform-gpu group-hover:scale-105 ${
-                isActive
-                  ? 'opacity-100 z-10'
-                  : 'opacity-0 z-0 pointer-events-none'
-              }`}
-            />
-          );
-        })}
+        {images.length === 1 ? (
+          <img
+            src={getProductImageUrl(images[0])}
+            alt={name}
+            loading="lazy"
+            decoding="async"
+            onError={(e) => {
+              (e.target as HTMLImageElement).src = fallbackCake;
+            }}
+            className="w-full h-full object-cover transform-gpu group-hover:scale-105 transition-transform duration-300"
+          />
+        ) : (
+          images.map((img, idx) => {
+            const isActive = idx === currentIdx;
+            // Memory & render optimization: only render active image or adjacent during transition
+            if (!isActive && Math.abs(idx - currentIdx) > 1 && idx !== 0) return null;
+            return (
+              <img
+                key={idx}
+                src={getProductImageUrl(img)}
+                alt={`${name} ${idx + 1}`}
+                loading="lazy"
+                decoding="async"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = fallbackCake;
+                }}
+                className={`w-full h-full object-cover absolute inset-0 transition-opacity duration-500 ease-out transform-gpu group-hover:scale-105 ${
+                  isActive
+                    ? 'opacity-100 z-10'
+                    : 'opacity-0 z-0 pointer-events-none'
+                }`}
+              />
+            );
+          })
+        )}
 
         {/* Multi-image badge */}
         {images.length > 1 && (
-          <div className="absolute top-3 left-3 z-20 bg-black/60 backdrop-blur-md text-white text-[10px] font-black px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow-xs border border-white/10">
+          <div className="absolute top-3 left-3 z-20 bg-black/70 text-white text-[10px] font-black px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow-xs border border-white/10">
             <Sparkles className="w-2.5 h-2.5 text-yellow-300" />
             <span>
               {currentIdx + 1}/{images.length} • ស្លាយ
@@ -184,7 +199,7 @@ const ShowcaseCard: React.FC<ShowcaseCardProps> = ({
               onEdit(product);
             }}
             title="Upload រូបភាពថ្មី ឬកែសម្រួលនំនេះ"
-            className="absolute top-3 right-3 z-30 bg-black/60 hover:bg-[#E6514D] text-white px-2.5 py-1.5 rounded-xl backdrop-blur-md border border-white/20 shadow-md transition-all active:scale-90 flex items-center gap-1.5 text-[11px] font-bold cursor-pointer opacity-90 hover:opacity-100"
+            className="absolute top-3 right-3 z-30 bg-black/70 hover:bg-[#E6514D] text-white px-2.5 py-1.5 rounded-xl border border-white/20 shadow-md transition-all active:scale-90 flex items-center gap-1.5 text-[11px] font-bold cursor-pointer opacity-90 hover:opacity-100"
           >
             <Camera className="w-3.5 h-3.5 text-pink-300" />
             <span className="hidden sm:inline">Upload រូប</span>
@@ -193,7 +208,7 @@ const ShowcaseCard: React.FC<ShowcaseCardProps> = ({
 
         {/* Dot indicators at bottom */}
         {images.length > 1 && (
-          <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1.5 bg-black/35 backdrop-blur-md px-2.5 py-1 rounded-full">
+          <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1.5 bg-black/40 px-2.5 py-1 rounded-full">
             {images.map((_, idx) => (
               <span
                 key={idx}
@@ -206,7 +221,7 @@ const ShowcaseCard: React.FC<ShowcaseCardProps> = ({
         )}
 
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-4 z-20">
-          <span className="text-white text-xs font-bold flex items-center gap-1.5 bg-black/40 backdrop-blur-md px-3 py-1.5 rounded-xl">
+          <span className="text-white text-xs font-bold flex items-center gap-1.5 bg-black/50 px-3 py-1.5 rounded-xl">
             <Eye className="w-4 h-4" />
             <span>{hidePrices ? 'ចុចមើលម៉ូដនំ & កំណត់តម្លៃ' : 'ចុចមើលរូបធំ & កុម្ម៉ង់'}</span>
           </span>
@@ -267,6 +282,8 @@ const ShowcaseCard: React.FC<ShowcaseCardProps> = ({
   );
 };
 
+const ShowcaseCard = React.memo(ShowcaseCardComponent);
+
 export const CustomerShowcase: React.FC = () => {
   const {
     lang,
@@ -313,11 +330,22 @@ export const CustomerShowcase: React.FC = () => {
   const [isKioskOpen, setIsKioskOpen] = useState(false);
   const [orderConfirmed, setOrderConfirmed] = useState(false);
 
-  const handleOpenEditProduct = (prod: Product) => {
+  // Stable callbacks for memoized ShowcaseCard
+  const handleCardClick = React.useCallback((product: Product) => {
+    soundFx.playPop();
+    setPreviewProduct(product);
+  }, []);
+
+  const handleCardExpressOrder = React.useCallback((prod: Product) => {
+    soundFx.playPop();
+    setExpressOrderProduct(prod);
+  }, []);
+
+  const handleOpenEditProduct = React.useCallback((prod: Product) => {
     soundFx.playPop();
     setProductToEdit(prod);
     setIsAddProductOpen(true);
-  };
+  }, []);
 
   // Custom price selection modal state
   const [productForCustomPricing, setProductForCustomPricing] = useState<Product | null>(null);
@@ -789,15 +817,9 @@ export const CustomerShowcase: React.FC = () => {
           <ShowcaseCard
             key={product.id}
             product={product}
-            onClick={() => {
-              soundFx.playPop();
-              setPreviewProduct(product);
-            }}
+            onClick={handleCardClick}
             onEdit={handleOpenEditProduct}
-            onExpressOrder={(prod) => {
-              soundFx.playPop();
-              setExpressOrderProduct(prod);
-            }}
+            onExpressOrder={handleCardExpressOrder}
             exchangeRate={exchangeRate}
             lang={lang}
             hidePrices={hidePrices}

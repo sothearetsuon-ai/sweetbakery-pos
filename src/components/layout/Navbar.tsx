@@ -72,6 +72,33 @@ interface NavbarProps {
   onOpenChatModal?: (channel?: ChatChannel) => void;
 }
 
+const LiveClock: React.FC = React.memo(() => {
+  const [time, setTime] = useState(() =>
+    new Date().toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: true,
+    })
+  );
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setTime(
+        new Date().toLocaleTimeString('en-US', {
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+          hour12: true,
+        })
+      );
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  return <span>{time}</span>;
+});
+
 export const Navbar: React.FC<NavbarProps> = ({
   onOpenShiftModal,
   onOpenSettingsModal,
@@ -172,14 +199,6 @@ export const Navbar: React.FC<NavbarProps> = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [isQuickToolsOpen]);
 
-  // Live real-time clock
-  const [currentTime, setCurrentTime] = useState(new Date());
-
-  useEffect(() => {
-    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
-    return () => clearInterval(timer);
-  }, []);
-
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
     const handleOffline = () => setIsOnline(false);
@@ -199,13 +218,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   };
 
   // Time format
-  const hours = currentTime.getHours();
-  const timeString = currentTime.toLocaleTimeString('en-US', {
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hour12: true,
-  });
+  const hours = new Date().getHours();
 
   const greetingKh =
     hours < 12
@@ -534,7 +547,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-1.5 text-xs font-mono font-bold text-slate-200">
                       <Clock className="w-3.5 h-3.5 text-rose-400 animate-spin-slow" />
-                      <span>{timeString}</span>
+                      <LiveClock />
                     </div>
                     <button
                       type="button"

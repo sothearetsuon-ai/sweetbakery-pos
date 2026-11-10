@@ -1,14 +1,14 @@
 {
-  "version": "1.9.5",
-  "versionCode": 61,
+  "version": "1.9.6",
+  "versionCode": 62,
   "releaseDate": "2026-11-10",
   "releaseNotes": [
-    "🎂 កុម្ម៉ង់នំតាមថវិកាជាក់ស្តែង (Flexible Budget Order)៖ ភ្ញៀវអាចវាយបញ្ចូលតម្លៃនំតាមចិត្តចង់បានដោយសេរី មិនជាប់កាតទំហំរឹងឡើយ (Custom Price & Auto Size Estimation)",
-    "⚡ មុខងារកុម្ម៉ង់នំរហ័ស ៣០ វិនាទី (Express 30s Cake Order)៖ ជ្រើសរើសរសជាតិ អក្សរលើនំ និងបញ្ជាក់ការកុម្ម៉ង់ក្នុងផ្ទាំងតែមួយ",
-    "📲 កុម្ម៉ង់តាម Telegram ហាងភ្លាមៗ (1-Click Telegram Order)៖ បញ្ជូនព័ត៌មានកុម្ម៉ង់ពេញលេញចូល Telegram ហាងដោយស្វ័យប្រវត្តិ",
-    "💵 ជម្រើសបង់ប្រាក់ពេលមកយកនំ (Pay on Pickup) & កក់តាម Bakong KHQR រហ័ស",
-    "🚀 បង្កើនល្បឿន និងភាពរលូនកម្រិតខ្ពស់ (Turbocharged Performance & Zero-Lag Scrolling)",
-    "🎯 កងបង្វិលសំណាង Sweet Bakery (Lucky Spin Wheel Game)"
+    "🚀 បង្កើនល្បឿនខ្លាំង និងបំបាត់ការទាក់ៗ ១០០% (Ultra Performance & Zero Stuttering Upgrade)",
+    "⚡ GPU-Accelerated Hardware Layer Compositing: រំកិល Scroll រលូនកម្រិត 60-120 FPS គ្មានភាពទាក់ៗឡើយ",
+    "✨ Optimized React Memoization: កាតទំនិញ ProductCard & ShowcaseCard ដំណើរការលឿនរហ័ស មិន re-render នាំឱ្យធ្ងន់ម៉ាស៊ីន",
+    "📱 Android WebView Offscreen Pre-Rastering: បង្ហាញកាតាឡុកនំ និងរូបភាពភ្លាមៗ មិនរង់ចាំ",
+    "🎂 កុម្ម៉ង់នំតាមថវិកាជាក់ស្តែង (Flexible Budget Order) ៖ ភ្ញៀវអាចវាយបញ្ចូលតម្លៃនំតាមចិត្តចង់បានដោយសេរី",
+    "⚡ មុខងារកុម្ម៉ង់នំរហ័ស ៣០ វិនាទី (Express 30s Cake Order) & កុម្ម៉ង់តាម Telegram ហាងភ្លាមៗ"
   ],
   "author": "សុធារិទ្ធ",
   "apkDownloadUrl": "https://sothearetsuon-ai.github.io/sweetbakery-pos/SweetBakery-Android.apk",
