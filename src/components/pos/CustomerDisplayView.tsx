@@ -76,11 +76,16 @@ export const CustomerDisplayView: React.FC = () => {
   });
 
   const customerEReceiptUrl = useMemo(() => {
+    if (displayState.eReceiptUrl) return displayState.eReceiptUrl;
+    if (displayState.completedSale) {
+      return getEReceiptWebUrl(displayState.completedSale, storeInfo, exchangeRate);
+    }
     const saleLike: CompletedSale = {
       id: displayState.orderNumber || '0001',
       orderNumber: displayState.orderNumber || '0001',
       createdAt: new Date().toISOString(),
       cashierName: displayState.cashierName || 'Staff',
+      customerName: displayState.customerName,
       items: (displayState.items || []).map((i) => ({
         productId: i.id,
         nameKh: i.nameKh,
@@ -1238,27 +1243,31 @@ export const CustomerDisplayView: React.FC = () => {
             {/* Split Grid: Left = Paperless E-Receipt QR | Right = 5-Star Customer Rating */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 max-w-4xl mx-auto w-full flex-1">
               {/* Card 1: 📱 Digital E-Receipt QR */}
-              <div className="bg-slate-900/80 border border-emerald-500/30 rounded-3xl p-5 flex flex-col items-center justify-center text-center space-y-3 shadow-xl">
-                <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-emerald-400">
-                  <QrCode className="w-4 h-4" />
+              <div className="bg-slate-900/90 border-2 border-emerald-500/50 rounded-3xl p-5 flex flex-col items-center justify-center text-center space-y-3.5 shadow-2xl relative group">
+                <div className="flex items-center gap-2 text-xs sm:text-sm font-black uppercase tracking-wider text-emerald-400">
+                  <QrCode className="w-4 h-4 text-emerald-400" />
                   <span>📱 វិក្កយបត្រអេឡិចត្រូនិច (Paperless E-Receipt)</span>
                 </div>
 
-                <div className="p-3 bg-white rounded-2xl shadow-md border-2 border-emerald-400/40 flex items-center justify-center">
+                <div className="p-3.5 bg-white rounded-2xl shadow-xl border-4 border-emerald-400/50 flex flex-col items-center justify-center">
                   <QrCodeImage
                     data={customerEReceiptUrl || `https://sothearetsuon-ai.github.io/sweetbakery-pos/`}
-                    size={176}
+                    size={180}
                     alt="Paperless E-Receipt QR"
                     className="w-36 h-36 sm:w-44 sm:h-44 object-contain rounded-lg"
                   />
+                  <div className="mt-1 flex items-center gap-1 text-[10px] font-mono font-bold text-slate-700">
+                    <Sparkles className="w-3 h-3 text-emerald-600" />
+                    <span>#{displayState.orderNumber || '0001'}</span>
+                  </div>
                 </div>
 
                 <div className="space-y-1">
-                  <p className="text-xs font-bold text-white font-battambang">
-                    ស្កេនដោយទូរស័ព្ទដៃ ដើម្បីរក្សាទុកវិក្កយបត្រ
+                  <p className="text-xs sm:text-sm font-bold text-white font-battambang">
+                    ស្កេនដោយទូរស័ព្ទដៃ ដើម្បីរក្សាទុកវិក្កយបត្រពេញលេញ
                   </p>
-                  <p className="text-[11px] text-slate-400">
-                    🌱 មិនបាច់បោះពុម្ពក្រដាស • ជួយការពារបរិស្ថាន
+                  <p className="text-[11px] text-emerald-300 font-bold">
+                    🌱 មិនបាច់បោះពុម្ពក្រដាស • ឃើញទំនិញ តម្លៃ និងហាង ១០០%
                   </p>
                 </div>
               </div>

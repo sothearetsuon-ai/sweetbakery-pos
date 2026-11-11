@@ -271,6 +271,17 @@ export const App: React.FC = () => {
   });
   const [isCustomerOrderLinkModalOpen, setIsCustomerOrderLinkModalOpen] = useState(false);
 
+  // Digital E-Receipt on mobile reactive view
+  const [isReceiptView, setIsReceiptView] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return (
+      Boolean(new URLSearchParams(window.location.search).get('receipt')) ||
+      window.location.hash.startsWith('#receipt') ||
+      window.location.hash.startsWith('#ereceipt') ||
+      window.location.href.includes('receipt=')
+    );
+  });
+
   // Initialize Telegram Mini App Native SDK
   React.useEffect(() => {
     initTelegramMiniApp();
@@ -301,6 +312,13 @@ export const App: React.FC = () => {
         tgParam === 'order' ||
         tgParam === 'catalog';
       setIsCustomerPortalOpen(isOrder);
+
+      const checkReceipt =
+        Boolean(new URLSearchParams(window.location.search).get('receipt')) ||
+        window.location.hash.startsWith('#receipt') ||
+        window.location.hash.startsWith('#ereceipt') ||
+        window.location.href.includes('receipt=');
+      setIsReceiptView(checkReceipt);
     };
     const handleOpenPortal = () => setIsCustomerPortalOpen(true);
     const handleClosePortal = () => setIsCustomerPortalOpen(false);
@@ -380,12 +398,6 @@ export const App: React.FC = () => {
   };
 
   // Render dedicated Digital E-Receipt on mobile if in (?receipt=... or #receipt)
-  const isReceiptView =
-    typeof window !== 'undefined' &&
-    (Boolean(new URLSearchParams(window.location.search).get('receipt')) ||
-      window.location.hash === '#receipt' ||
-      window.location.hash === '#ereceipt');
-
   if (isReceiptView) {
     return (
       <Suspense fallback={<ViewLoadingFallback />}>

@@ -1,4 +1,4 @@
-import { CartItem, Product } from '../types';
+import { CartItem, Product, CompletedSale } from '../types';
 import {
   saveFirestoreDoc,
   subscribeToFirestoreDoc,
@@ -36,6 +36,10 @@ export interface CustomerDisplayState {
   paidCurrency?: 'KHR' | 'USD';
   paidBankName?: string;
   orderNumber?: string;
+  customerName?: string;
+  customerPhone?: string;
+  eReceiptUrl?: string;
+  completedSale?: CompletedSale;
   lastUpdated: number;
 }
 
@@ -383,6 +387,10 @@ class CustomerDisplaySyncManager {
     discountKhr = 0
   ) {
     if (!cart || cart.length === 0) {
+      // If customer is currently viewing the paid E-receipt screen, do NOT prematurely wipe it!
+      if (this.currentState.status === 'paid' && Date.now() - this.currentState.lastUpdated < 25000) {
+        return;
+      }
       this.resetIdle();
       return;
     }
@@ -452,24 +460,62 @@ class CustomerDisplaySyncManager {
     amount: number,
     currency: 'KHR' | 'USD' = 'KHR',
     bankName = 'Bakong KHQR',
-    orderNumber?: string
+    orderNumber?: string,
+    completedSale?: CompletedSale,
+    eReceiptUrl?: string
   ) {
+    let items = this.currentState.items;
+    let cashierName = this.currentState.cashierName;
+    let totalKhr = this.currentState.totalKhr;
+    let totalUsd = this.currentState.totalUsd;
+    let discountKhr = this.currentState.discountKhr;
+    let customerName = this.currentState.customerName;
+
+    if (completedSale) {
+      if (completedSale.items && completedSale.items.length > 0) {
+        items = completedSale.items.map((i) => ({
+          id: i.productId || `item_${Math.random()}`,
+          nameKh: i.nameKh || i.nameEn || 'Item',
+          nameEn: i.nameEn || i.nameKh || 'Item',
+          quantity: i.quantity,
+          unitPriceKhr: i.priceKhr || 0,
+          totalKhr: (i.priceKhr || 0) * i.quantity,
+          unitPriceUsd: i.priceUsd || 0,
+          totalUsd: Number(((i.priceUsd || 0) * i.quantity).toFixed(2)),
+          imageUrl: (i as any).imageUrl || '',
+        }));
+      }
+      cashierName = completedSale.cashierName || cashierName;
+      totalKhr = completedSale.totalKhr ?? totalKhr;
+      totalUsd = completedSale.totalUsd ?? totalUsd;
+      discountKhr = completedSale.discountKhr ?? discountKhr;
+      customerName = completedSale.customerName;
+    }
+
     this.broadcast({
       ...this.currentState,
       status: 'paid',
-      paidAmount: Number(amount) || 0,
+      items,
+      cashierName,
+      totalKhr,
+      totalUsd,
+      discountKhr,
+      customerName,
+      paidAmount: Number(amount) || totalKhr || 0,
       paidCurrency: currency,
       paidBankName: bankName || 'Bakong KHQR',
-      orderNumber: orderNumber || `ORD-${Date.now().toString().slice(-6)}`,
+      orderNumber: orderNumber || completedSale?.orderNumber || `ORD-${Date.now().toString().slice(-6)}`,
+      completedSale,
+      eReceiptUrl,
       lastUpdated: Date.now(),
     });
 
-    // Auto-reset to idle after 14 seconds (giving customer time to scan E-receipt or leave 5-star rating)
+    // Auto-reset to idle after 25 seconds (giving customer time to scan E-receipt or leave 5-star rating)
     setTimeout(() => {
       if (this.currentState.status === 'paid') {
         this.resetIdle();
       }
-    }, 14000);
+    }, 25000);
   }
 
   public resetIdle() {

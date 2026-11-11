@@ -31,6 +31,7 @@ import { soundFx } from '../../utils/audio';
 import { KhqrStandeeModal } from './KhqrStandeeModal';
 import { formatDateDMY } from '../../utils/dateUtils';
 import { roundKhr } from '../../utils/currencyUtils';
+import { getEReceiptWebUrl } from '../../utils/eReceiptUrl';
 import { paymentListener, PaymentNotification } from '../../services/paymentListener';
 import { khmerVoiceSoundbox } from '../../utils/khmerVoice';
 import { customerDisplaySync } from '../../services/customerDisplaySync';
@@ -395,9 +396,11 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
       ? (storeInfo.khqrMerchantName ? `${storeInfo.khqrMerchantName} KHQR` : 'Bakong KHQR')
       : 'សាច់ប្រាក់ (Cash)';
 
+    const eReceiptUrl = getEReceiptWebUrl(newSale, storeInfo, exchangeRate);
+
     setTimeout(() => {
       try {
-        customerDisplaySync.paymentSuccess(dueNowKhr, 'KHR', paymentBankName, newSale.orderNumber);
+        customerDisplaySync.paymentSuccess(dueNowKhr, 'KHR', paymentBankName, newSale.orderNumber, newSale, eReceiptUrl);
         khmerVoiceSoundbox.announcePayment(dueNowKhr, 'KHR', paymentBankName);
         confetti({
           particleCount: 60,
