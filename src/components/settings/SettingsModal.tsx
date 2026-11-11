@@ -41,6 +41,7 @@ import {
   Tag,
   Percent,
   Plus,
+  Gift,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { useBakery } from '../../context/BakeryContext';
@@ -182,6 +183,17 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [facebookUrl, setFacebookUrl] = useState(storeInfo?.facebookUrl || '');
   const [hideCustomerPrices, setHideCustomerPrices] = useState(storeInfo?.hideCustomerPrices ?? true);
 
+  // In-App Promotion Settings state
+  const [appPromoEnabled, setAppPromoEnabled] = useState(storeInfo?.appPromoEnabled !== false);
+  const [appPromoType, setAppPromoType] = useState<'PERCENT' | 'FIXED_KHR'>(storeInfo?.appPromoType || 'PERCENT');
+  const [appPromoValue, setAppPromoValue] = useState<string>(
+    storeInfo?.appPromoValue !== undefined ? String(storeInfo.appPromoValue) : '10'
+  );
+  const [appPromoMinSpendKhr, setAppPromoMinSpendKhr] = useState<string>(
+    storeInfo?.appPromoMinSpendKhr !== undefined ? String(storeInfo.appPromoMinSpendKhr) : '0'
+  );
+  const [appPromoBannerTextKh, setAppPromoBannerTextKh] = useState(storeInfo?.appPromoBannerTextKh || '');
+
   const [savedSuccess, setSavedSuccess] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
@@ -222,6 +234,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       setHotlinePhone(storeInfo.hotlinePhone || '');
       setFacebookUrl(storeInfo.facebookUrl || '');
       setHideCustomerPrices(storeInfo.hideCustomerPrices ?? true);
+      setAppPromoEnabled(storeInfo.appPromoEnabled !== false);
+      setAppPromoType(storeInfo.appPromoType || 'PERCENT');
+      setAppPromoValue(storeInfo.appPromoValue !== undefined ? String(storeInfo.appPromoValue) : '10');
+      setAppPromoMinSpendKhr(storeInfo.appPromoMinSpendKhr !== undefined ? String(storeInfo.appPromoMinSpendKhr) : '0');
+      setAppPromoBannerTextKh(storeInfo.appPromoBannerTextKh || '');
     } else if (!isOpen) {
       isInitializedRef.current = false;
     }
@@ -470,6 +487,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       hotlinePhone: hotlinePhone.trim(),
       facebookUrl: facebookUrl.trim(),
       hideCustomerPrices,
+      appPromoEnabled,
+      appPromoType,
+      appPromoValue: parseFloat(appPromoValue) || 0,
+      appPromoMinSpendKhr: parseInt(appPromoMinSpendKhr, 10) || 0,
+      appPromoBannerTextKh: appPromoBannerTextKh.trim(),
     };
 
     updateStoreInfo(updatedStoreData);
@@ -1511,6 +1533,122 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                         ))}
                       </div>
                     </div>
+                  </div>
+
+                  {/* In-App Promotion Settings Card */}
+                  <div className="p-4 sm:p-5 rounded-3xl bg-gradient-to-br from-amber-50/60 via-pink-50/50 to-rose-50/60 border-2 border-pink-200/80 space-y-4 shadow-2xs">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-9 h-9 rounded-2xl bg-gradient-to-tr from-pink-500 to-rose-500 text-white flex items-center justify-center shadow-xs">
+                          <Gift className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <h4 className="text-xs sm:text-sm font-black text-slate-800">
+                            ប្រូម៉ូសិនកុម្ម៉ង់តាម App ទូរស័ព្ទដៃ (In-App Promotion)
+                          </h4>
+                          <p className="text-[11px] text-slate-500">
+                            បញ្ចុះតម្លៃស្វ័យប្រវត្តិពេលភ្ញៀវស្កេនកុម្ម៉ង់តាម App & បង្ហាញលើផ្ទាំងភ្ញៀវ
+                          </p>
+                        </div>
+                      </div>
+
+                      <label className="relative inline-flex items-center cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={appPromoEnabled}
+                          onChange={(e) => setAppPromoEnabled(e.target.checked)}
+                          className="sr-only peer"
+                        />
+                        <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-pink-600"></div>
+                      </label>
+                    </div>
+
+                    {appPromoEnabled && (
+                      <div className="space-y-3 pt-2 border-t border-pink-200/60 animate-in fade-in duration-200">
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                          <div>
+                            <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                              ប្រភេទបញ្ចុះតម្លៃ (Discount Type)
+                            </label>
+                            <div className="flex gap-1.5 p-1 bg-white rounded-xl border border-pink-200">
+                              <button
+                                type="button"
+                                onClick={() => setAppPromoType('PERCENT')}
+                                className={`flex-1 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                                  appPromoType === 'PERCENT'
+                                    ? 'bg-pink-600 text-white shadow-2xs'
+                                    : 'text-slate-600 hover:text-slate-900'
+                                }`}
+                              >
+                                ភាគរយ (%)
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setAppPromoType('FIXED_KHR')}
+                                className={`flex-1 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                                  appPromoType === 'FIXED_KHR'
+                                    ? 'bg-pink-600 text-white shadow-2xs'
+                                    : 'text-slate-600 hover:text-slate-900'
+                                }`}
+                              >
+                                ប្រាក់រៀល (៛)
+                              </button>
+                            </div>
+                          </div>
+
+                          <div>
+                            <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                              {appPromoType === 'PERCENT' ? 'តម្លៃបញ្ចុះ (%)' : 'តម្លៃបញ្ចុះ (៛)'}
+                            </label>
+                            <div className="relative">
+                              <input
+                                type="number"
+                                min="0"
+                                max={appPromoType === 'PERCENT' ? '100' : '1000000'}
+                                value={appPromoValue}
+                                onChange={(e) => setAppPromoValue(e.target.value)}
+                                className="w-full px-3 py-1.5 text-xs sm:text-sm border border-pink-200 rounded-xl font-bold bg-white focus:ring-2 focus:ring-pink-500"
+                                placeholder={appPromoType === 'PERCENT' ? '10' : '5000'}
+                              />
+                              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">
+                                {appPromoType === 'PERCENT' ? '%' : '៛'}
+                              </span>
+                            </div>
+                          </div>
+
+                          <div>
+                            <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                              ទិញចាប់ពី (Min Spend ៛)
+                            </label>
+                            <input
+                              type="number"
+                              min="0"
+                              step="1000"
+                              value={appPromoMinSpendKhr}
+                              onChange={(e) => setAppPromoMinSpendKhr(e.target.value)}
+                              className="w-full px-3 py-1.5 text-xs sm:text-sm border border-pink-200 rounded-xl font-bold bg-white focus:ring-2 focus:ring-pink-500"
+                              placeholder="0 = គ្មានកំណត់"
+                            />
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                            អត្ថបទប្រកាសប្រូម៉ូសិន (Banner Announcement Text)
+                          </label>
+                          <input
+                            type="text"
+                            value={appPromoBannerTextKh}
+                            onChange={(e) => setAppPromoBannerTextKh(e.target.value)}
+                            placeholder={`ឧ. ប្រូម៉ូសិនកុម្ម៉ង់តាម App បញ្ចុះតម្លៃ ${appPromoValue || 10}% ភ្លាមៗ!`}
+                            className="w-full px-3 py-1.5 text-xs border border-pink-200 rounded-xl font-medium bg-white focus:ring-2 focus:ring-pink-500"
+                          />
+                          <p className="text-[10px] text-slate-500 mt-1">
+                            អត្ថបទនេះនឹងបង្ហាញរត់លើ Ticker និងលើផ្ទាំងផ្សព្វផ្សាយរបស់ភ្ញៀវ។
+                          </p>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </>
               )}

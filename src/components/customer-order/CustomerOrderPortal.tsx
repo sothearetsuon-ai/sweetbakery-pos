@@ -494,9 +494,25 @@ export const CustomerOrderPortal: React.FC<CustomerOrderPortalProps> = ({ onBack
   }, [selectedAddons, availableAddons]);
 
   const basePriceUsd = cakePriceUsd;
+  const rawSubtotalUsd = Number((basePriceUsd + addonsTotalUsd).toFixed(2));
+  const rawSubtotalKhr = Math.round(cakePriceKhr + (addonsTotalUsd * exchangeRate));
 
-  const totalUsd = Number((basePriceUsd + addonsTotalUsd).toFixed(2));
-  const totalKhr = Math.round(cakePriceKhr + (addonsTotalUsd * exchangeRate));
+  // In-App Order Promotion Calculation (Auto discount for customer portal orders)
+  const isAppPromoActive = storeInfo.appPromoEnabled !== false;
+  const promoDiscountKhr = useMemo(() => {
+    if (!isAppPromoActive) return 0;
+    const minSpend = storeInfo.appPromoMinSpendKhr || 0;
+    if (rawSubtotalKhr < minSpend) return 0;
+    if (storeInfo.appPromoType === 'FIXED_KHR') {
+      return Math.min(rawSubtotalKhr, storeInfo.appPromoValue || 0);
+    }
+    const percent = storeInfo.appPromoValue || 10;
+    return Math.round((rawSubtotalKhr * percent) / 100);
+  }, [isAppPromoActive, storeInfo.appPromoEnabled, storeInfo.appPromoType, storeInfo.appPromoValue, storeInfo.appPromoMinSpendKhr, rawSubtotalKhr]);
+
+  const promoDiscountUsd = Number((promoDiscountKhr / exchangeRate).toFixed(2));
+  const totalKhr = Math.max(0, rawSubtotalKhr - promoDiscountKhr);
+  const totalUsd = Number(Math.max(0, rawSubtotalUsd - promoDiscountUsd).toFixed(2));
 
   const depositUsd = useMemo(() => {
     if (depositOption === '100%') return totalUsd;
@@ -719,6 +735,9 @@ export const CustomerOrderPortal: React.FC<CustomerOrderPortalProps> = ({ onBack
         status: 'PENDING' as OrderStatus,
         totalUsd,
         totalKhr,
+        discountUsd: promoDiscountUsd > 0 ? promoDiscountUsd : undefined,
+        discountKhr: promoDiscountKhr > 0 ? promoDiscountKhr : undefined,
+        promoCode: promoDiscountKhr > 0 ? (storeInfo.appPromoType === 'PERCENT' ? `APP_${storeInfo.appPromoValue}%` : 'APP_PROMO') : undefined,
         depositUsd,
         depositKhr,
         paymentMethod: 'KHQR_BAKONG',
@@ -836,6 +855,21 @@ export const CustomerOrderPortal: React.FC<CustomerOrderPortalProps> = ({ onBack
               {tgUser.username && <span className="text-sky-200">(@{tgUser.username})</span>}
             </div>
           )}
+        </div>
+      )}
+
+      {/* In-App Order Special Promotion Sticky Banner */}
+      {storeInfo.appPromoEnabled !== false && (
+        <div className="bg-gradient-to-r from-amber-500 via-rose-500 to-pink-600 text-white text-[11px] sm:text-xs font-black px-4 py-2 flex items-center justify-between shadow-md font-battambang animate-in slide-in-from-top duration-300">
+          <div className="flex items-center gap-2 truncate">
+            <span className="text-sm animate-bounce shrink-0">🎁</span>
+            <span className="truncate">
+              {storeInfo.appPromoBannerTextKh || `ប្រូម៉ូសិនកុម្ម៉ង់តាម App ៖ បញ្ចុះតម្លៃ ${storeInfo.appPromoValue || 10}% ស្វ័យប្រវត្តិកំពុងដំណើរការ!`}
+            </span>
+          </div>
+          <span className="bg-white/25 border border-white/40 text-white text-[9.5px] px-2 py-0.5 rounded-full font-mono font-black shrink-0 ml-2">
+            AUTO APPLIED (-{storeInfo.appPromoValue || 10}%)
+          </span>
         </div>
       )}
 
@@ -1808,15 +1842,46 @@ export const CustomerOrderPortal: React.FC<CustomerOrderPortalProps> = ({ onBack
                 <span className="font-bold text-pink-600">{finalFlavor}</span>
               </div>
 
-              <div className="flex items-center justify-between text-xs pb-2 border-b border-slate-100">
-                <span className="text-slate-500 font-bold">តម្លៃសរុប (Total Amount)៖</span>
-                <div className="text-right">
-                  <span className="text-base font-black text-slate-900">${totalUsd.toFixed(2)}</span>
-                  <span className="text-[11px] text-slate-400 font-bold block">
-                    {totalKhr.toLocaleString()} ៛
-                  </span>
+              {promoDiscountKhr > 0 ? (
+                <>
+                  <div className="flex items-center justify-between text-xs pb-1.5 border-b border-slate-100">
+                    <span className="text-slate-500 font-bold">តម្លៃនំសរុប (Subtotal)៖</span>
+                    <span className="font-bold text-slate-700">
+                      ${rawSubtotalUsd.toFixed(2)} ({rawSubtotalKhr.toLocaleString()} ៛)
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between text-xs pb-1.5 border-b border-slate-100 bg-emerald-50/70 p-2 rounded-xl border border-emerald-200">
+                    <span className="text-emerald-800 font-black flex items-center gap-1">
+                      <span>🎁</span>
+                      <span>ប្រូម៉ូសិនកុម្ម៉ង់តាម App ({storeInfo.appPromoType === 'PERCENT' ? `${storeInfo.appPromoValue || 10}%` : `${(storeInfo.appPromoValue || 0).toLocaleString()}៛`})៖</span>
+                    </span>
+                    <span className="font-black text-emerald-700">
+                      -{promoDiscountKhr.toLocaleString()} ៛ (-${promoDiscountUsd.toFixed(2)})
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between text-xs pb-2 border-b border-slate-100">
+                    <span className="text-slate-800 font-black">តម្លៃក្រោយបញ្ចុះ (Final Total)៖</span>
+                    <div className="text-right">
+                      <span className="text-base font-black text-pink-600">${totalUsd.toFixed(2)}</span>
+                      <span className="text-[11px] text-pink-700 font-bold block">
+                        {totalKhr.toLocaleString()} ៛
+                      </span>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div className="flex items-center justify-between text-xs pb-2 border-b border-slate-100">
+                  <span className="text-slate-500 font-bold">តម្លៃសរុប (Total Amount)៖</span>
+                  <div className="text-right">
+                    <span className="text-base font-black text-slate-900">${totalUsd.toFixed(2)}</span>
+                    <span className="text-[11px] text-slate-400 font-bold block">
+                      {totalKhr.toLocaleString()} ៛
+                    </span>
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Deposit Option Selector */}
               <div className="pt-1">

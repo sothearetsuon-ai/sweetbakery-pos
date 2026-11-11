@@ -212,6 +212,11 @@ export const demoStoreInfo: StoreInfo = {
   khqrBankName: 'Demo Bank / Bakong',
   alwaysRequireLoginOnStartup: true,
   hideCustomerPrices: true,
+  appPromoEnabled: true,
+  appPromoType: 'PERCENT',
+  appPromoValue: 10,
+  appPromoMinSpendKhr: 10000,
+  appPromoBannerTextKh: '🎁 ប្រូម៉ូសិនពិសេស៖ កុម្ម៉ង់តាម App ទូរស័ព្ទដៃ បញ្ចុះតម្លៃ 10% ភ្លាមៗ!',
 };
 
 export const defaultStoreInfo: StoreInfo = {
@@ -231,6 +236,11 @@ export const defaultStoreInfo: StoreInfo = {
   requireRealStorePin: true,
   alwaysRequireLoginOnStartup: true,
   hideCustomerPrices: true,
+  appPromoEnabled: true,
+  appPromoType: 'PERCENT',
+  appPromoValue: 10,
+  appPromoMinSpendKhr: 10000,
+  appPromoBannerTextKh: '🎁 ប្រូម៉ូសិនពិសេស៖ កុម្ម៉ង់តាម App ទូរស័ព្ទដៃ បញ្ចុះតម្លៃ 10% ភ្លាមៗ!',
 };
 
 export const initialPartyAddons: PartyAddon[] = [

@@ -25,6 +25,12 @@ export interface StoreInfo {
   hotlinePhone?: string;
   chatbotWelcomeMessage?: string;
   hideCustomerPrices?: boolean;
+  // In-App Order Promotion Configuration
+  appPromoEnabled?: boolean;
+  appPromoType?: 'PERCENT' | 'FIXED_KHR';
+  appPromoValue?: number;
+  appPromoMinSpendKhr?: number;
+  appPromoBannerTextKh?: string;
 }
 
 export interface Category {
@@ -96,6 +102,9 @@ export interface CustomCakeOrder {
   status: OrderStatus;
   totalUsd: number;
   totalKhr?: number;
+  discountUsd?: number;
+  discountKhr?: number;
+  promoCode?: string;
   depositUsd: number;
   depositKhr?: number;
   paymentMethod: 'CASH_USD' | 'CASH_KHR' | 'KHQR_BAKONG';

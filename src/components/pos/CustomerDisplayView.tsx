@@ -41,7 +41,7 @@ import { getEReceiptWebUrl } from '../../utils/eReceiptUrl';
 import { QrCodeImage } from '../common/QrCodeImage';
 
 type DisplayTheme = 'dark' | 'light';
-type IdleTab = 'menu' | 'spotlight' | 'qr';
+type IdleTab = 'menu' | 'spotlight' | 'qr' | 'promo';
 
 export const CustomerDisplayView: React.FC = () => {
   const { storeInfo, exchangeRate, products, categories } = useBakery();
@@ -306,6 +306,50 @@ export const CustomerDisplayView: React.FC = () => {
   const autoStoreQr = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(fallbackQrData)}`;
   const storeQrImage = storeInfo.khqrQrImage ? getProductImageUrl(storeInfo.khqrQrImage) : autoStoreQr;
 
+  // Customer Self-Order Link URL
+  const customerOrderUrl = useMemo(() => {
+    const currentStoreId = getStoreId();
+    const storeParam = currentStoreId ? `&storeId=${encodeURIComponent(currentStoreId)}` : '';
+    const customUrl = storeInfo.customerPortalUrl || storeInfo.website;
+    if (
+      customUrl &&
+      (customUrl.startsWith('http://') || customUrl.startsWith('https://')) &&
+      !customUrl.includes('androidplatform.net') &&
+      !customUrl.includes('appassets')
+    ) {
+      const base = customUrl.replace(/\/+$/, '');
+      const withOrder = base.includes('?order=true') ? base : `${base}/?order=true`;
+      return `${withOrder}${storeParam}#order`;
+    }
+    if (typeof window !== 'undefined' && window.location) {
+      const origin = window.location.origin;
+      const pathname = window.location.pathname || '/';
+      const isLocalOrContainer =
+        !origin ||
+        origin.startsWith('file:') ||
+        origin === 'null' ||
+        origin.includes('localhost') ||
+        origin.includes('127.0.0.1') ||
+        origin.includes('androidplatform.net') ||
+        origin.includes('appassets') ||
+        Boolean((window as any).SweetBakeryDesktop) ||
+        Boolean((window as any).SweetBakeryNative);
+
+      if (!isLocalOrContainer && (origin.startsWith('http://') || origin.startsWith('https://'))) {
+        const cleanPath = pathname.replace(/\/index\.html$/, '').replace(/\/+$/, '');
+        return `${origin}${cleanPath}/?order=true${storeParam}#order`;
+      }
+    }
+    return `https://sothearetsuon-ai.github.io/sweetbakery-pos/?order=true${storeParam}#order`;
+  }, [storeInfo.customerPortalUrl, storeInfo.website]);
+
+  // Customer Self-Order with Promo Applied URL
+  const promoOrderUrl = useMemo(() => {
+    return customerOrderUrl.includes('?') 
+      ? customerOrderUrl.replace('?order=true', '?order=true&promo=app')
+      : `${customerOrderUrl}?order=true&promo=app`;
+  }, [customerOrderUrl]);
+
   const isDark = theme === 'dark';
 
   return (
@@ -457,6 +501,22 @@ export const CustomerDisplayView: React.FC = () => {
               <QrCode className="w-3.5 h-3.5" />
               <span>QR ហាង & កុម្ម៉ង់</span>
             </button>
+            {storeInfo.appPromoEnabled !== false && (
+              <button
+                type="button"
+                onClick={() => setIdleTab('promo')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${
+                  idleTab === 'promo'
+                    ? 'bg-gradient-to-r from-amber-500 via-rose-500 to-pink-600 text-white shadow-md shadow-pink-500/20'
+                    : isDark
+                    ? 'text-amber-400 hover:text-white'
+                    : 'text-rose-600 hover:text-rose-700'
+                }`}
+              >
+                <Gift className="w-3.5 h-3.5 text-amber-300 animate-bounce" />
+                <span>ប្រូម៉ូសិន App (-{storeInfo.appPromoValue || 10}%)</span>
+              </button>
+            )}
           </div>
         )}
 
@@ -527,7 +587,16 @@ export const CustomerDisplayView: React.FC = () => {
               : 'bg-gradient-to-r from-pink-100/70 via-rose-50 to-pink-100/70 border-rose-100 text-pink-800'
           }`}
         >
-          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar whitespace-nowrap">
+          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar whitespace-nowrap font-battambang">
+            {storeInfo.appPromoEnabled !== false && (
+              <>
+                <span className="flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-gradient-to-r from-amber-500 via-rose-500 to-pink-600 text-white text-[10px] font-black uppercase tracking-wider animate-pulse shadow-xs shrink-0">
+                  <Gift className="w-3 h-3 text-amber-200" />
+                  <span>{storeInfo.appPromoBannerTextKh || `ប្រូម៉ូសិនកុម្ម៉ង់តាម App បញ្ចុះតម្លៃ ${storeInfo.appPromoValue || 10}% ភ្លាមៗ!`}</span>
+                </span>
+                <span className="text-pink-400">•</span>
+              </>
+            )}
             <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-pink-500 text-white text-[10px] font-black uppercase tracking-wider">
               <Flame className="w-3 h-3 text-yellow-200" />
               HOT SPECIAL
@@ -847,7 +916,7 @@ export const CustomerDisplayView: React.FC = () => {
                     </div>
                   </div>
                 </div>
-              ) : (
+              ) : idleTab === 'qr' ? (
                 /* Store KHQR Standee & Online Order QR Mode */
                 <div className="flex-1 flex flex-col items-center justify-center text-center p-6 space-y-4">
                   <div className="w-16 h-16 rounded-3xl bg-gradient-to-tr from-pink-500 to-rose-500 text-white flex items-center justify-center text-3xl shadow-xl shadow-pink-500/25">
@@ -871,16 +940,115 @@ export const CustomerDisplayView: React.FC = () => {
                   </div>
 
                   <div className="p-4 bg-white rounded-3xl shadow-2xl border-4 border-pink-500/40 inline-block">
-                    <img
-                      src={storeQrImage}
-                      alt="Store Order QR"
-                      className="w-48 h-48 sm:w-56 sm:h-56 object-contain rounded-2xl"
-                    />
+                    {storeInfo.khqrQrImage ? (
+                      <img
+                        src={getProductImageUrl(storeInfo.khqrQrImage)}
+                        alt="Store Order QR"
+                        className="w-48 h-48 sm:w-56 sm:h-56 object-contain rounded-2xl"
+                      />
+                    ) : (
+                      <QrCodeImage
+                        data={customerOrderUrl}
+                        size={220}
+                        className="w-48 h-48 sm:w-56 sm:h-56"
+                      />
+                    )}
                   </div>
 
                   <div className="flex items-center gap-2 text-xs font-bold text-pink-500">
                     <Sparkles className="w-4 h-4" />
                     <span>គាំទ្រទាំង iOS, Android & Telegram Mini App</span>
+                  </div>
+                </div>
+              ) : (
+                /* In-App Promo Showcase Mode (idleTab === 'promo') */
+                <div className="flex-1 flex flex-col items-center justify-between p-4 sm:p-6 text-center overflow-y-auto">
+                  {/* Top Badge & Header */}
+                  <div className="space-y-2 max-w-xl">
+                    <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-gradient-to-r from-pink-600 via-rose-500 to-amber-500 text-white text-xs sm:text-sm font-black shadow-lg shadow-pink-500/30 animate-pulse">
+                      <Gift className="w-4 h-4 text-amber-200" />
+                      <span>ប្រូម៉ូសិនពិសេសសម្រាប់អតិថិជនកុម្ម៉ង់តាម App</span>
+                    </div>
+
+                    <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black font-muol bg-gradient-to-r from-pink-500 via-rose-500 to-amber-500 bg-clip-text text-transparent">
+                      {storeInfo.appPromoType === 'FIXED_KHR'
+                        ? `បញ្ចុះតម្លៃ ${(storeInfo.appPromoValue || 5000).toLocaleString()} ៛ ភ្លាមៗ!`
+                        : `បញ្ចុះតម្លៃ ${storeInfo.appPromoValue || 10}% ភ្លាមៗរាល់ការកុម្ម៉ង់!`}
+                    </h2>
+
+                    <p className={`text-xs sm:text-sm font-battambang leading-relaxed ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
+                      {storeInfo.appPromoBannerTextKh || 'ស្កេន QR កុម្ម៉ង់នំខួបកំណើត ឬនំបុ័ងតាមទូរស័ព្ទដៃផ្ទាល់ ដើម្បីទទួលបានការបញ្ចុះតម្លៃស្វ័យប្រវត្តិ មិនបាច់ចាំយូរ!'}
+                    </p>
+                  </div>
+
+                  {/* Middle: QR Code Card & 3 Easy Steps */}
+                  <div className="my-3 flex flex-col md:flex-row items-center justify-center gap-6 max-w-2xl w-full">
+                    {/* QR Standee Card */}
+                    <div className="p-4 bg-white rounded-3xl shadow-2xl border-4 border-pink-500/50 flex flex-col items-center shrink-0 relative group">
+                      <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-pink-600 text-white text-[10px] font-black px-3 py-0.5 rounded-full shadow-md whitespace-nowrap flex items-center gap-1">
+                        <Sparkles className="w-3 h-3 text-amber-300" />
+                        <span>ស្កេនទទួលការបញ្ចុះតម្លៃ</span>
+                      </div>
+                      <QrCodeImage
+                        data={promoOrderUrl}
+                        size={210}
+                        className="w-44 h-44 sm:w-52 sm:h-52"
+                      />
+                      <span className="text-[10px] font-mono font-bold text-slate-500 mt-2">
+                        In-App Promo Discount: <strong className="text-pink-600 font-black">{storeInfo.appPromoType === 'FIXED_KHR' ? `${(storeInfo.appPromoValue || 5000).toLocaleString()} ៛` : `${storeInfo.appPromoValue || 10}%`}</strong> (Auto)
+                      </span>
+                    </div>
+
+                    {/* 3 Step Benefits Checklist */}
+                    <div className="space-y-3 text-left w-full max-w-sm">
+                      <div className={`p-3 rounded-2xl border flex items-start gap-3 transition-transform hover:scale-[1.02] ${isDark ? 'bg-slate-950/60 border-slate-800' : 'bg-rose-50/60 border-rose-100'}`}>
+                        <div className="w-8 h-8 rounded-xl bg-pink-500/20 text-pink-500 flex items-center justify-center font-black shrink-0 text-sm">
+                          1
+                        </div>
+                        <div>
+                          <div className={`text-xs sm:text-sm font-black ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                            ស្កេន QR តាមទូរស័ព្ទដៃ
+                          </div>
+                          <div className={`text-[11px] font-battambang ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                            បើកកាមេរ៉ាស្កេនចូលភ្លាម មិនបាច់ដំឡើង App
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className={`p-3 rounded-2xl border flex items-start gap-3 transition-transform hover:scale-[1.02] ${isDark ? 'bg-slate-950/60 border-slate-800' : 'bg-rose-50/60 border-rose-100'}`}>
+                        <div className="w-8 h-8 rounded-xl bg-amber-500/20 text-amber-500 flex items-center justify-center font-black shrink-0 text-sm">
+                          2
+                        </div>
+                        <div>
+                          <div className={`text-xs sm:text-sm font-black ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                            ជ្រើសរើសម៉ូដនំ & រសជាតិ
+                          </div>
+                          <div className={`text-[11px] font-battambang ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                            រើសទំហំ រសជាតិ និងសរសេរពាក្យជូនពរតាមចិត្ត
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className={`p-3 rounded-2xl border flex items-start gap-3 transition-transform hover:scale-[1.02] ${isDark ? 'bg-slate-950/60 border-slate-800' : 'bg-rose-50/60 border-rose-100'}`}>
+                        <div className="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-500 flex items-center justify-center font-black shrink-0 text-sm">
+                          3
+                        </div>
+                        <div>
+                          <div className={`text-xs sm:text-sm font-black ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                            បញ្ចុះតម្លៃស្វ័យប្រវត្តិ
+                          </div>
+                          <div className={`text-[11px] font-battambang ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                            ប្រព័ន្ធកាត់ {storeInfo.appPromoType === 'FIXED_KHR' ? `${(storeInfo.appPromoValue || 5000).toLocaleString()} ៛` : `${storeInfo.appPromoValue || 10}%`} ភ្លាមៗក្នុងវិក្កយបត្រ
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Bottom Footer Note */}
+                  <div className={`text-[11px] font-battambang flex items-center gap-2 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                    <Sparkles className="w-3.5 h-3.5 text-pink-500" />
+                    <span>គាំទ្រទាំង iOS, Android • បង់ប្រាក់កក់តាម Bakong KHQR គ្រប់ធនាគារ</span>
                   </div>
                 </div>
               )}
