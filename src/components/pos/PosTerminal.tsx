@@ -46,6 +46,7 @@ import { ThreeCakeStudioModal } from './ThreeCakeStudioModal';
 import { AiBakeryChefModal } from './AiBakeryChefModal';
 import { KhmerVoicePosModal } from './KhmerVoicePosModal';
 import { CustomerLuckyWheelModal } from './CustomerLuckyWheelModal';
+import { BarcodeScannerModal } from './BarcodeScannerModal';
 import { Product, CompletedSale } from '../../types';
 import { soundFx } from '../../utils/audio';
 import { sortProductsForPos, PosSortMode } from '../../utils/productUtils';
@@ -86,6 +87,7 @@ export const PosTerminal: React.FC = () => {
   const [isAiChefOpen, setIsAiChefOpen] = useState(false);
   const [isVoicePosOpen, setIsVoicePosOpen] = useState(false);
   const [isLuckyWheelOpen, setIsLuckyWheelOpen] = useState(false);
+  const [isBarcodeScannerOpen, setIsBarcodeScannerOpen] = useState(false);
   const [checkoutOptions, setCheckoutOptions] = useState<{
     isDeposit?: boolean;
     depositKhr?: number;
@@ -598,6 +600,20 @@ export const PosTerminal: React.FC = () => {
             >
               <QrCode className="w-4 h-4 text-red-600 shrink-0" />
               <span>KHQR ហាង</span>
+            </button>
+
+            {/* 2. ស្កេនបាកូដទំនិញ (Barcode Scanner) */}
+            <button
+              type="button"
+              onClick={() => {
+                soundFx.playPop();
+                setIsBarcodeScannerOpen(true);
+              }}
+              className="px-3.5 py-1.5 rounded-full text-xs font-black bg-indigo-50/90 hover:bg-indigo-100 text-indigo-700 border border-indigo-200/90 shadow-2xs flex items-center gap-1.5 shrink-0 whitespace-nowrap cursor-pointer active:scale-95 transition-all group"
+              title="ស្កេនបាកូដរហ័ស តាមកាមេរ៉ា ឬបញ្ចូលលេខកូដ (Barcode Scanner)"
+            >
+              <Barcode className="w-4 h-4 text-indigo-600 shrink-0 group-hover:scale-110 transition-transform" />
+              <span>🔍 ស្កេនបាកូដ</span>
             </button>
 
             {/* 2. ភ្នែកទិព្វស្កេនថាសនំ AI (AI Vision Tray Scanner) */}
@@ -1351,6 +1367,15 @@ export const PosTerminal: React.FC = () => {
       <CustomerLuckyWheelModal
         isOpen={isLuckyWheelOpen}
         onClose={() => setIsLuckyWheelOpen(false)}
+      />
+
+      {/* Fast Barcode Scanner Modal */}
+      <BarcodeScannerModal
+        isOpen={isBarcodeScannerOpen}
+        onClose={() => setIsBarcodeScannerOpen(false)}
+        products={products}
+        onAddProduct={(p) => addToCart(p)}
+        exchangeRate={exchangeRate}
       />
     </div>
   );

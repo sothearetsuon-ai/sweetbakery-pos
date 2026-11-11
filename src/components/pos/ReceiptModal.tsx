@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Printer, CheckCircle2, Sparkles } from 'lucide-react';
+import { X, Printer, CheckCircle2, Sparkles, QrCode, Smartphone, Share2 } from 'lucide-react';
 import { CompletedSale } from '../../types';
 import { useBakery } from '../../context/BakeryContext';
 import { t } from '../../utils/translations';
@@ -21,8 +21,8 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({ sale, isOpen, onClos
 
   const [activeSale, setActiveSale] = useState<CompletedSale | null>(sale);
   const [isAddPartyOpen, setIsAddPartyOpen] = useState(false);
-
   const [isPrinting, setIsPrinting] = useState(false);
+  const [showEReceiptQr, setShowEReceiptQr] = useState(false);
 
   useEffect(() => {
     setActiveSale(sale);
@@ -254,8 +254,46 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({ sale, isOpen, onClos
           </div>
         </div>
 
+        {/* E-Receipt Paperless Expandable Card */}
+        {showEReceiptQr && (
+          <div className="p-4 bg-emerald-50 border-t border-emerald-200 flex flex-col items-center text-center space-y-2 animate-in fade-in duration-200">
+            <div className="flex items-center gap-1.5 text-xs font-black text-emerald-800 uppercase">
+              <QrCode className="w-4 h-4 text-emerald-600" />
+              <span>📱 ស្កេនយក E-Receipt លើទូរស័ព្ទ</span>
+            </div>
+            <div className="p-2 bg-white rounded-2xl shadow-sm border border-emerald-200">
+              <img
+                src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(
+                  `SWEET_BAKERY_RECEIPT|STORE:${storeInfo.nameKh || 'Bakery'}|ORDER:${
+                    currentSale.orderNumber
+                  }|TOTAL:${roundKhr(currentSale.totalKhr).toLocaleString()}KHR|$${currentSale.totalUsd.toFixed(
+                    2
+                  )}|DATE:${new Date(currentSale.createdAt).toLocaleDateString('en-GB')}|ITEMS:${currentSale.items
+                    .map((i) => `${i.nameKh}x${i.quantity}`)
+                    .join(';')}`
+                )}`}
+                alt="E-Receipt QR"
+                className="w-32 h-32 object-contain rounded-lg"
+              />
+            </div>
+            <p className="text-[11px] text-emerald-700 font-bold">
+              អតិថិជនអាចស្កេនកាមេរ៉ាទូរស័ព្ទ ដើម្បីរក្សាទុកបង្កាន់ដៃ
+            </p>
+          </div>
+        )}
+
         {/* Modal Buttons */}
         <div className="p-3.5 bg-slate-50 border-t border-slate-100 space-y-2">
+          {/* E-Receipt Paperless Toggle Button */}
+          <button
+            type="button"
+            onClick={() => setShowEReceiptQr((prev) => !prev)}
+            className="w-full py-2 bg-emerald-100/70 hover:bg-emerald-100 text-emerald-900 border border-emerald-300 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-2xs active:scale-98"
+          >
+            <Smartphone className="w-3.5 h-3.5 text-emerald-700" />
+            <span>📱 {showEReceiptQr ? 'បិទផ្ទាំង QR E-Receipt' : 'ស្កេនយក E-Receipt លើទូរស័ព្ទ (Paperless)'}</span>
+          </button>
+
           {/* Post-purchase Add Party Add-ons Button */}
           <button
             type="button"

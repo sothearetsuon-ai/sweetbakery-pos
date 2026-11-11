@@ -19,6 +19,9 @@ import {
   VolumeX,
   Radio,
   ShieldCheck,
+  Tag,
+  Ticket,
+  Percent,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { useBakery } from '../../context/BakeryContext';
@@ -31,6 +34,7 @@ import { roundKhr } from '../../utils/currencyUtils';
 import { paymentListener, PaymentNotification } from '../../services/paymentListener';
 import { khmerVoiceSoundbox } from '../../utils/khmerVoice';
 import { customerDisplaySync } from '../../services/customerDisplaySync';
+import { validatePromoCode, PromoCode, getStoredPromoCodes } from '../../services/promoService';
 
 interface CheckoutModalProps {
   isOpen: boolean;
@@ -99,6 +103,56 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
   const [receivedUsd, setReceivedUsd] = useState<string>('');
   const [isStandeeOpen, setIsStandeeOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Promo code & discount voucher state
+  const [promoCodeInput, setPromoCodeInput] = useState('');
+  const [appliedPromo, setAppliedPromo] = useState<PromoCode | null>(null);
+  const [promoDiscountKhr, setPromoDiscountKhr] = useState(0);
+  const [promoDiscountUsd, setPromoDiscountUsd] = useState(0);
+  const [promoFeedback, setPromoFeedback] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  // Reset promo on open/close
+  useEffect(() => {
+    if (isOpen) {
+      setAppliedPromo(null);
+      setPromoDiscountKhr(0);
+      setPromoDiscountUsd(0);
+      setPromoCodeInput('');
+      setPromoFeedback(null);
+    }
+  }, [isOpen]);
+
+  const handleApplyPromo = () => {
+    if (!promoCodeInput.trim()) return;
+    const res = validatePromoCode(promoCodeInput.trim(), cartTotalKhr, exchangeRate);
+    if (res.valid && res.promo) {
+      soundFx.playSuccess();
+      setAppliedPromo(res.promo);
+      setPromoDiscountKhr(res.discountKhr);
+      setPromoDiscountUsd(res.discountUsd);
+      setPromoFeedback({ type: 'success', text: res.messageKh });
+      confetti({
+        particleCount: 35,
+        spread: 60,
+        origin: { y: 0.6 },
+      });
+    } else {
+      soundFx.playPop();
+      setAppliedPromo(null);
+      setPromoDiscountKhr(0);
+      setPromoDiscountUsd(0);
+      setPromoFeedback({ type: 'error', text: res.messageKh });
+    }
+  };
+
+  const handleRemovePromo = () => {
+    soundFx.playPop();
+    setAppliedPromo(null);
+    setPromoDiscountKhr(0);
+    setPromoDiscountUsd(0);
+    setPromoCodeInput('');
+    setPromoFeedback(null);
+  };
 
   // Sync state when opened or props change
   useEffect(() => {
@@ -174,17 +228,28 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
     };
   }, [isOpen, isDeposit, depositAmountKhr, defaultDeposit50Pct, cartTotalKhr, exchangeRate]);
 
+  // Final Net Totals after Promo Discount
+  const finalCartTotalKhr = Math.max(0, cartTotalKhr - promoDiscountKhr);
+  const finalCartTotalUsd = Number((finalCartTotalKhr / exchangeRate).toFixed(2));
+
   // Deposit & Due calculations
   const numDepositKhr = isDeposit
-    ? roundKhr(Math.min(cartTotalKhr, Math.max(0, parseInt(depositAmountKhr, 10) || 0)))
-    : cartTotalKhr;
+    ? roundKhr(Math.min(finalCartTotalKhr, Math.max(0, parseInt(depositAmountKhr, 10) || 0)))
+    : finalCartTotalKhr;
   const numDepositUsd = Number((numDepositKhr / exchangeRate).toFixed(2));
-  const remainingKhr = roundKhr(Math.max(0, cartTotalKhr - numDepositKhr));
+  const remainingKhr = roundKhr(Math.max(0, finalCartTotalKhr - numDepositKhr));
   const remainingUsd = Number((remainingKhr / exchangeRate).toFixed(2));
 
   // The actual money being paid in THIS checkout step
-  const dueNowKhr = isDeposit ? numDepositKhr : cartTotalKhr;
-  const dueNowUsd = isDeposit ? numDepositUsd : cartTotalUsd;
+  const dueNowKhr = isDeposit ? numDepositKhr : finalCartTotalKhr;
+  const dueNowUsd = isDeposit ? numDepositUsd : finalCartTotalUsd;
+
+  // Re-sync received amount if promo discount changes
+  useEffect(() => {
+    const due = isDeposit ? numDepositKhr : finalCartTotalKhr;
+    setReceivedKhr(due.toString());
+    setReceivedUsd(Number((due / exchangeRate).toFixed(2)).toString());
+  }, [promoDiscountKhr]);
 
   const numReceivedUsd = parseFloat(receivedUsd) || 0;
   const numReceivedKhr = parseFloat(receivedKhr) || 0;
@@ -265,9 +330,11 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
     const newSale = completeSale({
       items: saleItems,
       subtotalUsd: cartTotalUsd,
-      discountUsd: 0,
-      totalUsd: cartTotalUsd,
-      totalKhr: cartTotalKhr,
+      discountUsd: promoDiscountUsd,
+      discountKhr: promoDiscountKhr,
+      promoCode: appliedPromo?.code,
+      totalUsd: finalCartTotalUsd,
+      totalKhr: finalCartTotalKhr,
       paymentMethod,
       paidKhr: paymentMethod === 'CASH_KHR' ? numReceivedKhr : undefined,
       paidUsd: paymentMethod === 'CASH_USD' ? numReceivedUsd : undefined,
@@ -330,7 +397,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
 
     setTimeout(() => {
       try {
-        customerDisplaySync.paymentSuccess(dueNowKhr, 'KHR', paymentBankName);
+        customerDisplaySync.paymentSuccess(dueNowKhr, 'KHR', paymentBankName, newSale.orderNumber);
         khmerVoiceSoundbox.announcePayment(dueNowKhr, 'KHR', paymentBankName);
         confetti({
           particleCount: 60,
@@ -420,11 +487,21 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
               <span className="text-[11px] font-black uppercase tracking-widest text-pink-100">
                 {text.totalPayable} (គិតជាលុយរៀល)
               </span>
-              <div className="text-3xl font-black mt-0.5 tracking-tight">
-                {cartTotalKhr.toLocaleString()} ៛
+              <div className="text-3xl font-black mt-0.5 tracking-tight flex items-center justify-center gap-2">
+                {promoDiscountKhr > 0 && (
+                  <span className="line-through text-pink-200/70 text-lg">
+                    {cartTotalKhr.toLocaleString()} ៛
+                  </span>
+                )}
+                <span>{finalCartTotalKhr.toLocaleString()} ៛</span>
               </div>
               <div className="text-xs font-bold text-pink-100/90 mt-1">
-                ~ ${cartTotalUsd.toFixed(2)} USD (អត្រា 1$ = {exchangeRate.toLocaleString()} ៛)
+                ~ ${finalCartTotalUsd.toFixed(2)} USD (អត្រា 1$ = {exchangeRate.toLocaleString()} ៛)
+                {promoDiscountKhr > 0 && (
+                  <span className="ml-2 bg-white/20 px-2 py-0.5 rounded-full text-white font-black text-[11px]">
+                    ចំណេញ {promoDiscountKhr.toLocaleString()} ៛
+                  </span>
+                )}
               </div>
             </div>
           ) : (
@@ -508,6 +585,92 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
               </div>
             </div>
           )}
+
+          {/* Promo Code & Voucher Section */}
+          <div className="p-3.5 bg-gradient-to-r from-pink-50/90 via-rose-50/70 to-pink-50/90 border border-pink-200/80 rounded-2xl space-y-2">
+            <div className="flex items-center justify-between text-xs font-bold text-slate-800">
+              <div className="flex items-center gap-1.5 text-pink-700">
+                <Ticket className="w-3.5 h-3.5" />
+                <span>លេខកូដបញ្ចុះតម្លៃ (Promo Code / Voucher)</span>
+              </div>
+              {appliedPromo && (
+                <span className="text-[11px] font-black text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full flex items-center gap-1 shadow-2xs">
+                  ✓ {appliedPromo.code} (-{promoDiscountKhr.toLocaleString()} ៛)
+                </span>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2">
+              <div className="relative flex-1">
+                <input
+                  type="text"
+                  placeholder="បញ្ចូលកូដ (ឧ. WELCOME, BAKERY5K, SWEET15, VIP20)"
+                  value={promoCodeInput}
+                  onChange={(e) => setPromoCodeInput(e.target.value.toUpperCase())}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleApplyPromo();
+                    }
+                  }}
+                  className="w-full pl-8 pr-3 py-2 text-xs border border-pink-200 rounded-xl bg-white font-mono font-black tracking-wider uppercase focus:outline-none focus:ring-2 focus:ring-pink-500 shadow-2xs"
+                />
+                <Tag className="w-3.5 h-3.5 text-pink-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+              </div>
+
+              {appliedPromo ? (
+                <button
+                  type="button"
+                  onClick={handleRemovePromo}
+                  className="px-3.5 py-2 bg-rose-100 hover:bg-rose-200 text-rose-700 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-2xs active:scale-95"
+                >
+                  ដកចេញ
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleApplyPromo}
+                  disabled={!promoCodeInput.trim()}
+                  className="px-4 py-2 bg-gradient-to-r from-pink-600 to-rose-500 hover:from-pink-700 hover:to-rose-600 disabled:opacity-50 text-white rounded-xl text-xs font-bold transition-all shadow-xs active:scale-95 cursor-pointer"
+                >
+                  ប្រើកូដ
+                </button>
+              )}
+            </div>
+
+            {promoFeedback && (
+              <p className={`text-[11px] font-bold ${promoFeedback.type === 'success' ? 'text-emerald-600' : 'text-rose-500'}`}>
+                {promoFeedback.text}
+              </p>
+            )}
+
+            {/* Quick Promo Suggestions */}
+            {!appliedPromo && (
+              <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                <span className="text-[10px] text-slate-500 font-medium">កូដមានស្រាប់៖</span>
+                {['WELCOME', 'BAKERY5K', 'SWEET15', 'VIP20'].map((c) => (
+                  <button
+                    key={c}
+                    type="button"
+                    onClick={() => {
+                      soundFx.playPop();
+                      setPromoCodeInput(c);
+                      const res = validatePromoCode(c, cartTotalKhr, exchangeRate);
+                      if (res.valid && res.promo) {
+                        setAppliedPromo(res.promo);
+                        setPromoDiscountKhr(res.discountKhr);
+                        setPromoDiscountUsd(res.discountUsd);
+                        setPromoFeedback({ type: 'success', text: res.messageKh });
+                      }
+                    }}
+                    className="text-[10px] font-mono font-black px-2 py-0.5 bg-white hover:bg-pink-100 text-pink-700 border border-pink-200/90 rounded-lg transition-colors cursor-pointer shadow-2xs"
+                  >
+                    {c}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
 
           {/* Customer Info & Pickup Schedule Fields (Always Available) */}
           <div className="p-3.5 bg-slate-50 border border-slate-200/80 rounded-2xl space-y-2.5">

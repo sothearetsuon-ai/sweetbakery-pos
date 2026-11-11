@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Cake, Plus, Search, Clock, Flame, Palette, CheckCircle2, CheckSquare, Sparkles, Trash2, Link as LinkIcon, RotateCcw } from 'lucide-react';
+import { Cake, Plus, Search, Clock, Flame, Palette, CheckCircle2, CheckSquare, Sparkles, Trash2, Link as LinkIcon, RotateCcw, Calendar, LayoutGrid } from 'lucide-react';
 import { useBakery } from '../../context/BakeryContext';
 import { t } from '../../utils/translations';
 import { OrderCard } from './OrderCard';
@@ -9,6 +9,7 @@ import { ReceiptModal } from '../pos/ReceiptModal';
 import { CustomerOrderLinkModal } from '../customer-order/CustomerOrderLinkModal';
 import { CakeFlavorsModal } from '../pos/CakeFlavorsModal';
 import { CakeLabelPrintModal } from './CakeLabelPrintModal';
+import { OrderCalendarView } from './OrderCalendarView';
 import { OrderStatus, CustomCakeOrder, CompletedSale } from '../../types';
 import { soundFx } from '../../utils/audio';
 
@@ -46,6 +47,7 @@ export const CustomOrderPipeline: React.FC = () => {
     return `${y}-${m}-${day}`;
   });
   const [typeFilter, setTypeFilter] = useState<'ALL' | 'CAKE' | 'BREAD'>('ALL');
+  const [viewMode, setViewMode] = useState<'KANBAN' | 'CALENDAR'>('KANBAN');
 
   const todayStr = new Date().toISOString().slice(0, 10);
 
@@ -243,6 +245,40 @@ export const CustomOrderPipeline: React.FC = () => {
         </div>
 
         <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+          {/* View Mode Switcher (Kanban vs Calendar) */}
+          <div className="flex items-center bg-white/95 p-1 rounded-2xl border border-rose-200/80 shadow-2xs">
+            <button
+              type="button"
+              onClick={() => {
+                soundFx.playPop();
+                setViewMode('KANBAN');
+              }}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                viewMode === 'KANBAN'
+                  ? 'bg-slate-900 text-white shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <LayoutGrid className="w-3.5 h-3.5" />
+              <span>📋 ដំណាក់កាល</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                soundFx.playPop();
+                setViewMode('CALENDAR');
+              }}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                viewMode === 'CALENDAR'
+                  ? 'bg-gradient-to-r from-pink-600 to-rose-500 text-white shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <Calendar className="w-3.5 h-3.5" />
+              <span>📅 ប្រតិទិននំ ({filteredOrders.length})</span>
+            </button>
+          </div>
+
           {/* Type Filter Pills */}
           <div className="flex items-center bg-white/90 p-1 rounded-2xl border border-rose-100 shadow-2xs">
             <button
@@ -460,8 +496,19 @@ export const CustomOrderPipeline: React.FC = () => {
         </div>
       </div>
 
-      {/* Mobile Status Tabs Switcher (Visible on Mobile) */}
-      <div className="md:hidden flex items-center gap-1.5 overflow-x-auto pb-2 mb-3 scrollbar-none shrink-0">
+      {/* Content View: Calendar View OR Kanban Columns */}
+      {viewMode === 'CALENDAR' ? (
+        <div className="flex-1 overflow-y-auto pb-4">
+          <OrderCalendarView
+            orders={filteredOrders}
+            onSelectOrder={(order) => setSelectedOrderForEdit(order)}
+            exchangeRate={exchangeRate}
+          />
+        </div>
+      ) : (
+        <>
+          {/* Mobile Status Tabs Switcher (Visible on Mobile) */}
+          <div className="md:hidden flex items-center gap-1.5 overflow-x-auto pb-2 mb-3 scrollbar-none shrink-0">
         <button
           onClick={() => {
             soundFx.playPop();
@@ -613,6 +660,8 @@ export const CustomOrderPipeline: React.FC = () => {
           );
         })}
       </div>
+      </>
+      )}
 
       {/* Modal to add or edit custom order */}
       <NewCustomOrderModal

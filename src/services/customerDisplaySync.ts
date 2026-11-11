@@ -35,6 +35,7 @@ export interface CustomerDisplayState {
   paidAmount?: number;
   paidCurrency?: 'KHR' | 'USD';
   paidBankName?: string;
+  orderNumber?: string;
   lastUpdated: number;
 }
 
@@ -447,22 +448,28 @@ class CustomerDisplaySyncManager {
     });
   }
 
-  public paymentSuccess(amount: number, currency: 'KHR' | 'USD' = 'KHR', bankName = 'Bakong KHQR') {
+  public paymentSuccess(
+    amount: number,
+    currency: 'KHR' | 'USD' = 'KHR',
+    bankName = 'Bakong KHQR',
+    orderNumber?: string
+  ) {
     this.broadcast({
       ...this.currentState,
       status: 'paid',
       paidAmount: Number(amount) || 0,
       paidCurrency: currency,
       paidBankName: bankName || 'Bakong KHQR',
+      orderNumber: orderNumber || `ORD-${Date.now().toString().slice(-6)}`,
       lastUpdated: Date.now(),
     });
 
-    // Auto-reset to idle after 8 seconds
+    // Auto-reset to idle after 14 seconds (giving customer time to scan E-receipt or leave 5-star rating)
     setTimeout(() => {
       if (this.currentState.status === 'paid') {
         this.resetIdle();
       }
-    }, 8000);
+    }, 14000);
   }
 
   public resetIdle() {

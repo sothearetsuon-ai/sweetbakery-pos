@@ -504,7 +504,7 @@ export const RealStoreAuthModal: React.FC<RealStoreAuthModalProps> = ({
     if (clean === '1111' || clean === '2222') {
       soundFx.playPop();
       setIsShaking(true);
-      setPinError('លេខកូដ 1111 និង 2222 សម្រាប់តែរបៀប Demo ប៉ុណ្ណោះ! សូមប្រើលេខកូដហាងពិត (660168 / 0202)។');
+      setPinError('លេខកូដ 1111 និង 2222 សម្រាប់តែរបៀប Demo ប៉ុណ្ណោះ! សូមប្រើលេខសម្ងាត់ PIN ហាងពិតរបស់លោកអ្នក។');
       setTimeout(() => setIsShaking(false), 500);
       return;
     }

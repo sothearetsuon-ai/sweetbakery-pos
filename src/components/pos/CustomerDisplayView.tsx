@@ -34,7 +34,7 @@ import {
   customerDisplaySync,
   CustomerDisplayState,
 } from '../../services/customerDisplaySync';
-import { setStoreId } from '../../services/firebase';
+import { setStoreId, saveFirestoreDoc, getStoreId } from '../../services/firebase';
 import { getProductImageUrl } from '../../utils/imagePath';
 import { roundKhr } from '../../utils/currencyUtils';
 
@@ -90,6 +90,65 @@ export const CustomerDisplayView: React.FC = () => {
       nameKh: p.nameKh || p.nameEn || 'នំខេក',
       time: Date.now(),
     });
+  };
+
+  // 5-Star Customer Feedback State (Dual-screen interactive)
+  const [customerRating, setCustomerRating] = useState<number | null>(null);
+  const [selectedFeedbackTags, setSelectedFeedbackTags] = useState<string[]>([]);
+  const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
+
+  useEffect(() => {
+    if (displayState.status !== 'paid') {
+      setCustomerRating(null);
+      setSelectedFeedbackTags([]);
+      setFeedbackSubmitted(false);
+    }
+  }, [displayState.status]);
+
+  const handleRateStar = (star: number) => {
+    soundFx.playSuccess();
+    setCustomerRating(star);
+    confetti({
+      particleCount: 35,
+      spread: 60,
+      origin: { y: 0.65 },
+      colors: ['#F59E0B', '#FBBF24', '#F43F5E', '#10B981'],
+    });
+  };
+
+  const handleToggleFeedbackTag = (tag: string) => {
+    soundFx.playPop();
+    setSelectedFeedbackTags((prev) =>
+      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
+    );
+  };
+
+  const handleSubmitFeedback = async () => {
+    soundFx.playSuccess();
+    setFeedbackSubmitted(true);
+
+    const feedbackPayload = {
+      id: `fb_${Date.now()}`,
+      rating: customerRating || 5,
+      tags: selectedFeedbackTags,
+      orderNumber: displayState.orderNumber || '',
+      amountKhr: displayState.paidAmount || displayState.totalKhr || 0,
+      timestamp: Date.now(),
+      createdAt: new Date().toISOString(),
+    };
+
+    // Save locally
+    try {
+      const key = 'sweetbakery_customer_ratings';
+      const existing = JSON.parse(localStorage.getItem(key) || '[]');
+      existing.unshift(feedbackPayload);
+      localStorage.setItem(key, JSON.stringify(existing.slice(0, 50)));
+    } catch (_) {}
+
+    // Cloud sync
+    try {
+      saveFirestoreDoc('customer_feedback', feedbackPayload.id, feedbackPayload);
+    } catch (_) {}
   };
 
   useEffect(() => {
@@ -951,36 +1010,170 @@ export const CustomerDisplayView: React.FC = () => {
           </>
         ) : displayState.status === 'paid' ? (
           /* ======================================================================= */
-          /* SCENARIO 2: PAYMENT SUCCESSFUL (CELEBRATION CONFETTI SCREEN) */
+          /* SCENARIO 2: PAYMENT SUCCESSFUL + DIGITAL E-RECEIPT + 5-STAR RATING      */
           /* ======================================================================= */
-          <div className="flex-1 flex flex-col items-center justify-center text-center p-6 sm:p-12 bg-gradient-to-b from-emerald-950/80 via-slate-950 to-emerald-950/80 border-2 border-emerald-500/60 rounded-3xl shadow-2xl space-y-6 animate-in zoom-in-95 duration-300">
-            <div className="relative">
-              <div className="w-28 h-28 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center border-4 border-emerald-400/60 shadow-2xl shadow-emerald-500/40 animate-bounce">
-                <CheckCircle2 className="w-16 h-16" />
+          <div className="flex-1 flex flex-col p-4 sm:p-8 bg-gradient-to-b from-emerald-950/90 via-slate-950 to-slate-950 border-2 border-emerald-500/60 rounded-3xl shadow-2xl overflow-y-auto animate-in zoom-in-95 duration-300">
+            {/* Top Celebration Header */}
+            <div className="flex flex-col items-center text-center space-y-2 mb-6">
+              <div className="relative">
+                <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center border-4 border-emerald-400/60 shadow-2xl shadow-emerald-500/40 animate-bounce">
+                  <CheckCircle2 className="w-12 h-12 sm:w-14 sm:h-14" />
+                </div>
+                <div className="absolute -inset-2 rounded-full border border-emerald-400/30 animate-ping pointer-events-none" />
               </div>
-              <div className="absolute -inset-2 rounded-full border border-emerald-400/30 animate-ping pointer-events-none" />
-            </div>
 
-            <div className="space-y-2 max-w-md">
-              <h2 className="text-2xl sm:text-4xl font-black text-white font-muol leading-relaxed drop-shadow-md">
+              <h2 className="text-2xl sm:text-3xl font-black text-white font-muol leading-relaxed drop-shadow-md">
                 ការទូទាត់ប្រាក់ជោគជ័យ!
               </h2>
-              <p className="text-xs sm:text-sm text-emerald-300 font-bold font-battambang">
-                {displayState.paidBankName || 'Bakong KHQR'} • ទទួលបានការផ្ទៀងផ្ទាត់រួចរាល់
-              </p>
-            </div>
-
-            <div className="p-5 sm:p-6 bg-slate-950/80 rounded-3xl border-2 border-emerald-500/40 max-w-sm w-full space-y-1.5 shadow-inner">
-              <div className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-                ទឹកប្រាក់ដែលទទួលបាន (Amount Received)
-              </div>
-              <div className="text-3xl sm:text-4xl font-black font-mono text-emerald-300 tracking-tight">
-                {(displayState.paidAmount || displayState.totalKhr).toLocaleString()}{' '}
-                {displayState.paidCurrency || 'KHR'}
+              <div className="flex items-center gap-2 text-xs sm:text-sm text-emerald-300 font-bold">
+                <span>{displayState.paidBankName || 'Bakong KHQR'}</span>
+                <span>•</span>
+                <span>វិក្កយបត្រ #{displayState.orderNumber || '0001'}</span>
+                <span>•</span>
+                <span className="text-amber-300 font-mono font-black text-base">
+                  {(displayState.paidAmount || displayState.totalKhr).toLocaleString()} {displayState.paidCurrency || 'KHR'}
+                </span>
               </div>
             </div>
 
-            <div className="text-xs sm:text-sm text-slate-200 font-battambang max-w-md leading-relaxed">
+            {/* Split Grid: Left = Paperless E-Receipt QR | Right = 5-Star Customer Rating */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 max-w-4xl mx-auto w-full flex-1">
+              {/* Card 1: 📱 Digital E-Receipt QR */}
+              <div className="bg-slate-900/80 border border-emerald-500/30 rounded-3xl p-5 flex flex-col items-center justify-center text-center space-y-3 shadow-xl">
+                <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-emerald-400">
+                  <QrCode className="w-4 h-4" />
+                  <span>📱 វិក្កយបត្រអេឡិចត្រូនិច (Paperless E-Receipt)</span>
+                </div>
+
+                <div className="p-3 bg-white rounded-2xl shadow-md border-2 border-emerald-400/40">
+                  <img
+                    src={`https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(
+                      `SWEET_BAKERY_RECEIPT|STORE:${storeInfo.nameKh || 'Bakery'}|ORDER:${
+                        displayState.orderNumber || '0001'
+                      }|AMOUNT:${(displayState.paidAmount || displayState.totalKhr).toLocaleString()}${
+                        displayState.paidCurrency || 'KHR'
+                      }|DATE:${new Date().toLocaleDateString('en-GB')}`
+                    )}`}
+                    alt="Paperless E-Receipt QR"
+                    className="w-36 h-36 sm:w-44 sm:h-44 object-contain rounded-lg"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <p className="text-xs font-bold text-white font-battambang">
+                    ស្កេនដោយទូរស័ព្ទដៃ ដើម្បីរក្សាទុកវិក្កយបត្រ
+                  </p>
+                  <p className="text-[11px] text-slate-400">
+                    🌱 មិនបាច់បោះពុម្ពក្រដាស • ជួយការពារបរិស្ថាន
+                  </p>
+                </div>
+              </div>
+
+              {/* Card 2: ⭐ 5-Star Customer Rating & Feedback */}
+              <div className="bg-slate-900/80 border border-amber-500/30 rounded-3xl p-5 flex flex-col justify-between shadow-xl">
+                <div>
+                  <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+                    <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-amber-400">
+                      <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
+                      <span>⭐ វាយតម្លៃបទពិសោធន៍ (Rate Service)</span>
+                    </div>
+                    {customerRating && (
+                      <span className="text-[11px] font-black text-amber-300 bg-amber-500/20 px-2 py-0.5 rounded-full border border-amber-500/30">
+                        {customerRating} / 5 ផ្កាយ
+                      </span>
+                    )}
+                  </div>
+
+                  {feedbackSubmitted ? (
+                    <div className="py-8 flex flex-col items-center justify-center text-center space-y-3 animate-in fade-in duration-300">
+                      <div className="w-16 h-16 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center border-2 border-emerald-400/50 shadow-lg">
+                        <Check className="w-8 h-8" />
+                      </div>
+                      <h4 className="text-lg font-black text-white font-muol">
+                        សូមអរគុណច្រើន! 🙏💖
+                      </h4>
+                      <p className="text-xs text-slate-300 font-battambang max-w-xs">
+                        មតិយោបល់ និងការវាយតម្លៃរបស់អ្នក ជាកម្លាំងចិត្តដ៏ធំធេងដល់ក្រុមការងារយើងខ្ញុំ!
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4 py-3">
+                      {/* 5 Big Gold Stars */}
+                      <div className="flex items-center justify-center gap-2 sm:gap-3 py-1">
+                        {[1, 2, 3, 4, 5].map((star) => {
+                          const isFilled = (customerRating || 0) >= star;
+                          return (
+                            <button
+                              key={star}
+                              type="button"
+                              onClick={() => handleRateStar(star)}
+                              className={`p-1.5 sm:p-2 rounded-2xl transition-all transform hover:scale-125 active:scale-95 cursor-pointer ${
+                                isFilled
+                                  ? 'bg-amber-500/20 text-amber-400 shadow-md shadow-amber-500/20 scale-110'
+                                  : 'text-slate-600 hover:text-amber-300'
+                              }`}
+                            >
+                              <Star
+                                className={`w-8 h-8 sm:w-10 sm:h-10 transition-colors ${
+                                  isFilled ? 'fill-amber-400 text-amber-400' : 'text-slate-600'
+                                }`}
+                              />
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      {/* Quick Feedback Chips */}
+                      <div className="space-y-1.5">
+                        <span className="text-[11px] font-bold text-slate-400 block text-center">
+                          តើលោកអ្នកពេញចិត្តអ្វីជាងគេ? (ចុចជ្រើសរើស)
+                        </span>
+                        <div className="flex flex-wrap justify-center gap-2">
+                          {[
+                            '🍰 នំឆ្ងាញ់',
+                            '⚡ សេវារហ័ស',
+                            '💖 បុគ្គលិករួសរាយ',
+                            '✨ ហាងស្អាត',
+                            '💯 តម្លៃសមរម្យ',
+                          ].map((tag) => {
+                            const isSelected = selectedFeedbackTags.includes(tag);
+                            return (
+                              <button
+                                key={tag}
+                                type="button"
+                                onClick={() => handleToggleFeedbackTag(tag)}
+                                className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all border cursor-pointer active:scale-95 ${
+                                  isSelected
+                                    ? 'bg-gradient-to-r from-pink-600 to-rose-500 text-white border-rose-400 shadow-sm'
+                                    : 'bg-slate-800/80 hover:bg-slate-800 text-slate-300 border-slate-700'
+                                }`}
+                              >
+                                {tag}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {!feedbackSubmitted && (
+                  <button
+                    type="button"
+                    onClick={handleSubmitFeedback}
+                    disabled={!customerRating && selectedFeedbackTags.length === 0}
+                    className="w-full py-2.5 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 disabled:opacity-40 text-slate-950 font-black text-xs transition-all shadow-md active:scale-95 cursor-pointer flex items-center justify-center gap-2 mt-2"
+                  >
+                    <span>ផ្ញើការវាយតម្លៃ (Submit Feedback)</span>
+                    <Sparkles className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Bottom Thank You Note */}
+            <div className="text-center text-xs text-slate-400 pt-4 font-battambang">
               🎉 សូមអរគុណច្រើនដែលបានគាំទ្រ {storeInfo.nameKh || 'ហាងរបស់យើងខ្ញុំ'}! សូមអញ្ជើញមកពិសាម្ដងទៀត។
             </div>
           </div>

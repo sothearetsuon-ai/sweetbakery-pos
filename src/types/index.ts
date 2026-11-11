@@ -181,6 +181,8 @@ export interface CompletedSale {
   }[];
   subtotalUsd: number;
   discountUsd: number;
+  discountKhr?: number;
+  promoCode?: string;
   totalUsd: number;
   totalKhr: number;
   paymentMethod: 'CASH_USD' | 'CASH_KHR' | 'KHQR_BAKONG' | 'SPLIT';
@@ -199,6 +201,27 @@ export interface CompletedSale {
   pickupDate?: string;
   pickupTime?: string;
   notes?: string;
+  createdAt: string;
+}
+
+export interface PromoCode {
+  id: string;
+  code: string;
+  discountType: 'PERCENT' | 'FIXED_KHR' | 'FIXED_USD';
+  discountValue: number;
+  minSpendKhr?: number;
+  descriptionKh: string;
+  isActive: boolean;
+  expiresAt?: string;
+  usedCount?: number;
+}
+
+export interface CustomerFeedback {
+  id: string;
+  rating: number; // 1 to 5 stars
+  tags?: string[];
+  orderNumber?: string;
+  comment?: string;
   createdAt: string;
 }
 

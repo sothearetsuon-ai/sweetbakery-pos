@@ -37,6 +37,10 @@ import {
   ChevronRight,
   Lock,
   MessageSquare,
+  Ticket,
+  Tag,
+  Percent,
+  Plus,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { useBakery } from '../../context/BakeryContext';
@@ -55,6 +59,8 @@ import { CakeFlavorsModal } from '../pos/CakeFlavorsModal';
 import { PartyAccessoriesModal } from '../pos/PartyAccessoriesModal';
 import { isSuperAdminAuthenticated } from '../../utils/superAdminAuth';
 import { getStoreId, setStoreId, isDefaultStore, DEFAULT_STORE_ID } from '../../services/firebase';
+import { getStoredPromoCodes, saveStoredPromoCodes } from '../../services/promoService';
+import { PromoCode } from '../../types';
 
 export type SettingsTab = 'store' | 'khqr' | 'staff' | 'backup' | 'firebase' | 'currency' | 'telegram' | 'notifications' | 'updates';
 
@@ -220,6 +226,51 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       isInitializedRef.current = false;
     }
   }, [isOpen, storeInfo, exchangeRate]);
+
+  // Promo & Voucher Codes Manager State
+  const [promoCodes, setPromoCodes] = useState<PromoCode[]>(() => getStoredPromoCodes());
+  const [newPromoCode, setNewPromoCode] = useState('');
+  const [newPromoType, setNewPromoType] = useState<'PERCENT' | 'FIXED_KHR'>('PERCENT');
+  const [newPromoVal, setNewPromoVal] = useState('');
+  const [newPromoMinSpend, setNewPromoMinSpend] = useState('');
+  const [newPromoDesc, setNewPromoDesc] = useState('');
+  const [isAddingPromo, setIsAddingPromo] = useState(false);
+
+  const handleTogglePromo = (id: string) => {
+    soundFx.playPop();
+    const updated = promoCodes.map((p) => (p.id === id ? { ...p, isActive: !p.isActive } : p));
+    setPromoCodes(updated);
+    saveStoredPromoCodes(updated);
+  };
+
+  const handleDeletePromo = (id: string) => {
+    soundFx.playPop();
+    const updated = promoCodes.filter((p) => p.id !== id);
+    setPromoCodes(updated);
+    saveStoredPromoCodes(updated);
+  };
+
+  const handleCreatePromo = () => {
+    if (!newPromoCode.trim() || !newPromoVal.trim()) return;
+    soundFx.playSuccess();
+    const newCode: PromoCode = {
+      id: `promo_${Date.now()}`,
+      code: newPromoCode.trim().toUpperCase(),
+      discountType: newPromoType,
+      discountValue: parseFloat(newPromoVal) || 10,
+      minSpendKhr: parseInt(newPromoMinSpend, 10) || 0,
+      descriptionKh: newPromoDesc.trim() || `បញ្ចុះតម្លៃ ${newPromoVal}${newPromoType === 'PERCENT' ? '%' : ' ៛'}`,
+      isActive: true,
+    };
+    const updated = [newCode, ...promoCodes];
+    setPromoCodes(updated);
+    saveStoredPromoCodes(updated);
+    setNewPromoCode('');
+    setNewPromoVal('');
+    setNewPromoMinSpend('');
+    setNewPromoDesc('');
+    setIsAddingPromo(false);
+  };
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const qrFileInputRef = useRef<HTMLInputElement>(null);
@@ -1233,18 +1284,15 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       </div>
                     </div>
 
-                    {/* Quick Lock & PIN Info Bar */}
-                    <div className="pt-2.5 flex items-center justify-between border-t border-rose-200/60 flex-wrap gap-2">
-                      <p className="text-[10px] text-slate-500">
-                        * PIN ដើមម្ចាស់ហាង៖ <span className="font-mono font-bold text-rose-700 bg-rose-100 px-1.5 py-0.5 rounded">660168</span> | គិតលុយ៖ <span className="font-mono font-bold text-rose-700 bg-rose-100 px-1.5 py-0.5 rounded">0202</span>
-                      </p>
+                    {/* Quick Lock Button */}
+                    <div className="pt-2.5 flex items-center justify-end border-t border-rose-200/60">
                       <button
                         type="button"
                         onClick={() => {
                           onClose();
                           logoutAndLock();
                         }}
-                        className="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-xs active:scale-95 transition-all"
+                        className="px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-xs active:scale-95 transition-all"
                       >
                         <Lock className="w-3.5 h-3.5 text-rose-400" />
                         <span>🔒 ចាក់សោ & បង្ហាញផ្ទាំង Login ភ្លាមៗ</span>
@@ -1309,6 +1357,159 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                         <span>បើកតារាងគ្រឿងបន្ថែម</span>
                         <ChevronRight className="w-4 h-4" />
                       </button>
+                    </div>
+
+                    {/* Promo Codes & Voucher Management */}
+                    <div className="p-4 sm:p-5 rounded-3xl bg-pink-50/70 border-2 border-pink-100 space-y-3 shadow-2xs">
+                      <div className="flex items-center justify-between gap-3 flex-wrap">
+                        <div className="flex items-center gap-3">
+                          <span className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-pink-600 to-rose-500 text-white flex items-center justify-center text-xl shadow-xs">
+                            🎟️
+                          </span>
+                          <div>
+                            <h4 className="font-black text-xs sm:text-sm text-slate-800">
+                              លេខកូដបញ្ចុះតម្លៃ & Voucher (Promo Codes)
+                            </h4>
+                            <p className="text-[11px] text-slate-500">
+                              បង្កើតកូដបញ្ចុះតម្លៃជា % ឬជាលុយរៀល (៛) សម្រាប់ផ្ដល់ជូនភ្ញៀវពេល Checkout
+                            </p>
+                          </div>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            soundFx.playPop();
+                            setIsAddingPromo(!isAddingPromo);
+                          }}
+                          className="px-3.5 py-2 bg-pink-600 hover:bg-pink-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs active:scale-95 flex items-center gap-1 cursor-pointer shrink-0"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                          <span>{isAddingPromo ? 'បិទផ្ទាំង' : '+ បង្កើតកូដថ្មី'}</span>
+                        </button>
+                      </div>
+
+                      {/* Add New Promo Code Form */}
+                      {isAddingPromo && (
+                        <div className="p-3.5 bg-white border border-pink-200 rounded-2xl space-y-2.5 animate-in fade-in duration-200 shadow-sm">
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                            <div>
+                              <label className="text-[10px] font-bold text-slate-500 block mb-0.5">ឈ្មោះកូដ (Code)</label>
+                              <input
+                                type="text"
+                                placeholder="ឧ. SUMMER10"
+                                value={newPromoCode}
+                                onChange={(e) => setNewPromoCode(e.target.value.toUpperCase())}
+                                className="w-full px-3 py-1.5 text-xs border border-slate-200 rounded-xl font-mono font-bold uppercase focus:ring-2 focus:ring-pink-500"
+                              />
+                            </div>
+                            <div>
+                              <label className="text-[10px] font-bold text-slate-500 block mb-0.5">ប្រភេទបញ្ចុះតម្លៃ</label>
+                              <select
+                                value={newPromoType}
+                                onChange={(e) => setNewPromoType(e.target.value as any)}
+                                className="w-full px-3 py-1.5 text-xs border border-slate-200 rounded-xl font-bold bg-white focus:ring-2 focus:ring-pink-500"
+                              >
+                                <option value="PERCENT">គិតជាភាគរយ (%)</option>
+                                <option value="FIXED_KHR">គិតជាលុយរៀល (៛ KHR)</option>
+                              </select>
+                            </div>
+                            <div>
+                              <label className="text-[10px] font-bold text-slate-500 block mb-0.5">
+                                ទំហំបញ្ចុះ {newPromoType === 'PERCENT' ? '(%)' : '(៛ KHR)'}
+                              </label>
+                              <input
+                                type="number"
+                                placeholder={newPromoType === 'PERCENT' ? '15' : '5000'}
+                                value={newPromoVal}
+                                onChange={(e) => setNewPromoVal(e.target.value)}
+                                className="w-full px-3 py-1.5 text-xs border border-slate-200 rounded-xl font-bold focus:ring-2 focus:ring-pink-500"
+                              />
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            <div>
+                              <label className="text-[10px] font-bold text-slate-500 block mb-0.5">ទិញអប្បបរមា (Min Spend ៛)</label>
+                              <input
+                                type="number"
+                                placeholder="ឧ. 40000"
+                                value={newPromoMinSpend}
+                                onChange={(e) => setNewPromoMinSpend(e.target.value)}
+                                className="w-full px-3 py-1.5 text-xs border border-slate-200 rounded-xl font-bold focus:ring-2 focus:ring-pink-500"
+                              />
+                            </div>
+                            <div>
+                              <label className="text-[10px] font-bold text-slate-500 block mb-0.5">ការពិពណ៌នា</label>
+                              <input
+                                type="text"
+                                placeholder="ឧ. បញ្ចុះតម្លៃ 15% សម្រាប់អតិថិជនថ្មី"
+                                value={newPromoDesc}
+                                onChange={(e) => setNewPromoDesc(e.target.value)}
+                                className="w-full px-3 py-1.5 text-xs border border-slate-200 rounded-xl font-bold focus:ring-2 focus:ring-pink-500"
+                              />
+                            </div>
+                          </div>
+
+                          <div className="flex justify-end pt-1">
+                            <button
+                              type="button"
+                              onClick={handleCreatePromo}
+                              disabled={!newPromoCode.trim() || !newPromoVal.trim()}
+                              className="px-4 py-2 bg-gradient-to-r from-pink-600 to-rose-500 hover:brightness-105 disabled:opacity-50 text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer active:scale-95"
+                            >
+                              រក្សាទុកកូដថ្មី
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Promo Codes List */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        {promoCodes.map((p) => (
+                          <div
+                            key={p.id}
+                            className={`p-3 rounded-2xl border flex items-center justify-between gap-2.5 transition-all ${
+                              p.isActive ? 'bg-white border-pink-200 shadow-2xs' : 'bg-slate-50 border-slate-200 opacity-60'
+                            }`}
+                          >
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-1.5">
+                                <span className="font-mono font-black text-xs text-pink-700 bg-pink-100 px-2 py-0.5 rounded-md">
+                                  {p.code}
+                                </span>
+                                <span className="text-[11px] font-bold text-slate-700">
+                                  -{p.discountValue}{p.discountType === 'PERCENT' ? '%' : ' ៛'}
+                                </span>
+                              </div>
+                              <p className="text-[10px] text-slate-500 truncate mt-0.5">{p.descriptionKh}</p>
+                              {Boolean(p.minSpendKhr && p.minSpendKhr > 0) && (
+                                <p className="text-[9px] text-slate-400">ទិញចាប់ពី {p.minSpendKhr?.toLocaleString()} ៛</p>
+                              )}
+                            </div>
+
+                            <div className="flex items-center gap-1 shrink-0">
+                              <button
+                                type="button"
+                                onClick={() => handleTogglePromo(p.id)}
+                                className={`px-2 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${
+                                  p.isActive ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-600'
+                                }`}
+                              >
+                                {p.isActive ? 'បើកដំណើរការ' : 'បិទ'}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDeletePromo(p.id)}
+                                className="w-6 h-6 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-500 flex items-center justify-center transition-colors cursor-pointer"
+                                title="លុបកូដនេះ"
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   </div>
                 </>
