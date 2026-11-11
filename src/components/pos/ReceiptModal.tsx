@@ -1,14 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { X, Printer, CheckCircle2, Sparkles, QrCode, Smartphone, Share2, ExternalLink, Copy } from 'lucide-react';
+import { X, Printer, CheckCircle2 } from 'lucide-react';
 import { CompletedSale } from '../../types';
 import { useBakery } from '../../context/BakeryContext';
 import { t } from '../../utils/translations';
 import { getProductImageUrl } from '../../utils/imagePath';
 import { formatDateTimeDMY, formatDateDMY } from '../../utils/dateUtils';
 import { roundKhr } from '../../utils/currencyUtils';
-import { getEReceiptWebUrl } from '../../utils/eReceiptUrl';
 import { QrCodeImage } from '../common/QrCodeImage';
-import { AddPartyAddonsToSaleModal } from './AddPartyAddonsToSaleModal';
 
 interface ReceiptModalProps {
   sale: CompletedSale | null;
@@ -17,30 +15,18 @@ interface ReceiptModalProps {
   onSaleUpdated?: (sale: CompletedSale) => void;
 }
 
-export const ReceiptModal: React.FC<ReceiptModalProps> = ({ sale, isOpen, onClose, onSaleUpdated }) => {
+export const ReceiptModal: React.FC<ReceiptModalProps> = ({ sale, isOpen, onClose }) => {
   const { lang, exchangeRate, storeInfo } = useBakery();
   const text = t[lang];
 
   const [activeSale, setActiveSale] = useState<CompletedSale | null>(sale);
-  const [isAddPartyOpen, setIsAddPartyOpen] = useState(false);
   const [isPrinting, setIsPrinting] = useState(false);
-  const [showEReceiptQr, setShowEReceiptQr] = useState(false);
 
   useEffect(() => {
     setActiveSale(sale);
   }, [sale]);
 
   const currentSale = activeSale || sale;
-  const eReceiptUrl = currentSale ? getEReceiptWebUrl(currentSale, storeInfo, exchangeRate) : '';
-  const [copiedLink, setCopiedLink] = useState(false);
-
-  const handleCopyEReceiptLink = () => {
-    if (eReceiptUrl && navigator.clipboard) {
-      navigator.clipboard.writeText(eReceiptUrl);
-      setCopiedLink(true);
-      setTimeout(() => setCopiedLink(false), 2000);
-    }
-  };
 
   if (!isOpen || !currentSale) return null;
 
@@ -272,68 +258,8 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({ sale, isOpen, onClos
           </div>
         </div>
 
-        {/* E-Receipt Paperless Expandable Card */}
-        {showEReceiptQr && (
-          <div className="p-4 bg-emerald-50 border-t border-emerald-200 flex flex-col items-center text-center space-y-2.5 animate-in fade-in duration-200 font-battambang">
-            <div className="flex items-center gap-1.5 text-xs font-black text-emerald-800 uppercase">
-              <QrCode className="w-4 h-4 text-emerald-600" />
-              <span>📱 ស្កេនយក E-Receipt លើទូរស័ព្ទ (Paperless)</span>
-            </div>
-            <div className="p-2.5 bg-white rounded-2xl shadow-sm border border-emerald-300 flex items-center justify-center">
-              <QrCodeImage
-                data={eReceiptUrl}
-                size={160}
-                alt="E-Receipt QR"
-                className="w-36 h-36 object-contain rounded-lg"
-              />
-            </div>
-            <p className="text-[11px] text-emerald-800 font-bold max-w-xs">
-              អតិថិជនស្កេនកាមេរ៉ាទូរស័ព្ទ នឹងឃើញវិក្កយបត្រផ្លូវការដូចលើអេក្រង់នេះភ្លាមៗ
-            </p>
-            <div className="flex items-center gap-2 pt-1">
-              <a
-                href={eReceiptUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="px-2.5 py-1 bg-white hover:bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-lg text-[10px] font-bold flex items-center gap-1 transition-all"
-              >
-                <ExternalLink className="w-3 h-3" />
-                <span>មើលគំរូ (Preview)</span>
-              </a>
-              <button
-                type="button"
-                onClick={handleCopyEReceiptLink}
-                className="px-2.5 py-1 bg-white hover:bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-lg text-[10px] font-bold flex items-center gap-1 transition-all cursor-pointer"
-              >
-                <Copy className="w-3 h-3" />
-                <span>{copiedLink ? 'បានចម្លង! ✅' : 'ចម្លងតំណ E-Receipt'}</span>
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Modal Buttons */}
-        <div className="p-3.5 bg-slate-50 border-t border-slate-100 space-y-2">
-          {/* E-Receipt Paperless Toggle Button */}
-          <button
-            type="button"
-            onClick={() => setShowEReceiptQr((prev) => !prev)}
-            className="w-full py-2 bg-emerald-100/70 hover:bg-emerald-100 text-emerald-900 border border-emerald-300 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-2xs active:scale-98"
-          >
-            <Smartphone className="w-3.5 h-3.5 text-emerald-700" />
-            <span>📱 {showEReceiptQr ? 'បិទផ្ទាំង QR E-Receipt' : 'ស្កេនយក E-Receipt លើទូរស័ព្ទ (Paperless)'}</span>
-          </button>
-
-          {/* Post-purchase Add Party Add-ons Button */}
-          <button
-            type="button"
-            onClick={() => setIsAddPartyOpen(true)}
-            className="w-full py-2.5 bg-gradient-to-r from-amber-500 via-rose-500 to-pink-600 hover:from-amber-600 hover:to-pink-700 text-white text-xs font-black rounded-xl flex items-center justify-center gap-1.5 shadow-md shadow-pink-500/20 active:scale-98 transition-all cursor-pointer"
-          >
-            <Sparkles className="w-4 h-4 text-amber-200 animate-pulse" />
-            <span>🎉 + ថែម Party Add-ons (ក្រោយទិញរួច)</span>
-          </button>
-
+        {/* Modal Bottom Actions */}
+        <div className="p-3.5 bg-slate-50 border-t border-slate-100 font-battambang">
           <div className="flex items-center gap-2">
             <button
               type="button"
@@ -343,31 +269,19 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({ sale, isOpen, onClos
                 isPrinting ? 'opacity-70 cursor-not-allowed' : ''
               }`}
             >
-              <Printer className="w-4 h-4" />
+              <Printer className="w-4 h-4 text-emerald-400" />
               <span>{isPrinting ? 'កំពុងរៀបចំ...' : text.printReceipt}</span>
             </button>
             <button
+              type="button"
               onClick={onClose}
-              className="px-4 py-2.5 bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-semibold rounded-xl transition-colors cursor-pointer"
+              className="px-6 py-2.5 bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-semibold rounded-xl transition-colors cursor-pointer active:scale-95"
             >
               {text.close}
             </button>
           </div>
         </div>
       </div>
-
-      {/* Add Party Add-ons to Sale Modal */}
-      <AddPartyAddonsToSaleModal
-        isOpen={isAddPartyOpen}
-        onClose={() => setIsAddPartyOpen(false)}
-        sale={currentSale}
-        onSuccess={(updated) => {
-          setActiveSale(updated);
-          if (onSaleUpdated) {
-            onSaleUpdated(updated);
-          }
-        }}
-      />
     </div>
   );
 };
