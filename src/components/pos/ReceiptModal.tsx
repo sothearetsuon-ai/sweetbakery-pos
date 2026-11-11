@@ -270,7 +270,63 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({ sale, isOpen, onClos
           </div>
         </div>
 
-        {/* Modal Bottom Actions (Print & Close Only) */}
+        {/* Toggle E-Receipt Button */}
+        <div className="px-5 pt-3 pb-1 bg-slate-50 border-t border-slate-100 font-battambang">
+          <button
+            type="button"
+            onClick={() => setShowEReceiptQr((prev) => !prev)}
+            className={`w-full py-2 px-3 rounded-xl border text-xs font-black flex items-center justify-center gap-2 transition-all cursor-pointer ${
+              showEReceiptQr
+                ? 'bg-emerald-600 text-white border-emerald-600 shadow-md shadow-emerald-600/20'
+                : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border-emerald-300'
+            }`}
+          >
+            <Smartphone className="w-4 h-4" />
+            <span>{showEReceiptQr ? 'បិទផ្ទាំង QR វិក្កយបត្រ' : '📱 ស្កេនយក E-Receipt លើទូរស័ព្ទ (Paperless)'}</span>
+          </button>
+        </div>
+
+        {/* E-Receipt Paperless Expandable Card with Pure JS QrCodeImage */}
+        {showEReceiptQr && (
+          <div className="p-4 bg-emerald-50/70 border-t border-emerald-200 flex flex-col items-center text-center space-y-2.5 animate-in fade-in duration-200 font-battambang">
+            <div className="flex items-center gap-1.5 text-xs font-black text-emerald-800 uppercase">
+              <QrCode className="w-4 h-4 text-emerald-600" />
+              <span>📱 ស្កេនយក E-Receipt លើទូរស័ព្ទ (Paperless)</span>
+            </div>
+            <div className="p-2.5 bg-white rounded-2xl shadow-sm border border-emerald-300 flex items-center justify-center">
+              <QrCodeImage
+                data={eReceiptUrl}
+                size={160}
+                alt="E-Receipt QR"
+                className="w-36 h-36 object-contain rounded-lg"
+              />
+            </div>
+            <p className="text-[11px] text-emerald-800 font-bold max-w-xs">
+              អតិថិជនស្កេនកាមេរ៉ាទូរស័ព្ទ នឹងឃើញវិក្កយបត្រផ្លូវការដូចលើអេក្រង់នេះភ្លាមៗ
+            </p>
+            <div className="flex items-center gap-2 pt-1">
+              <a
+                href={eReceiptUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="px-2.5 py-1 bg-white hover:bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-lg text-[10px] font-bold flex items-center gap-1 transition-all"
+              >
+                <ExternalLink className="w-3 h-3" />
+                <span>មើលគំរូ (Preview)</span>
+              </a>
+              <button
+                type="button"
+                onClick={handleCopyEReceiptLink}
+                className="px-2.5 py-1 bg-white hover:bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-lg text-[10px] font-bold flex items-center gap-1 transition-all cursor-pointer"
+              >
+                <Copy className="w-3 h-3" />
+                <span>{copiedLink ? 'បានចម្លង! ✅' : 'ចម្លងតំណ (Copy Link)'}</span>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Modal Bottom Actions */}
         <div className="p-3.5 bg-slate-50 border-t border-slate-100 font-battambang">
           <div className="flex items-center gap-2">
             <button

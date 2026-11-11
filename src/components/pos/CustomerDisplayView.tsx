@@ -3,7 +3,6 @@ import {
   Sparkles,
   ShoppingBag,
   QrCode,
-  ShieldCheck,
   CheckCircle2,
   Clock,
   Phone,
@@ -38,7 +37,6 @@ import {
 import { setStoreId, saveFirestoreDoc, getStoreId } from '../../services/firebase';
 import { getProductImageUrl } from '../../utils/imagePath';
 import { roundKhr } from '../../utils/currencyUtils';
-import { formatDateDMY, formatDateTimeDMY } from '../../utils/dateUtils';
 import { getEReceiptWebUrl } from '../../utils/eReceiptUrl';
 import { QrCodeImage } from '../common/QrCodeImage';
 
@@ -1242,223 +1240,138 @@ export const CustomerDisplayView: React.FC = () => {
               </div>
             </div>
 
-            {/* Split Grid: Left = Pure Official Receipt Slip | Right = Pure E-Receipt QR (NO extra buttons) */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 max-w-5xl mx-auto w-full flex-1 min-h-0 items-start">
-              {/* Left Column (7 cols): Full Official Receipt Paper */}
-              <div className="lg:col-span-7 bg-white text-slate-900 rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col font-sans max-h-[68vh] overflow-y-auto">
-                {/* Header */}
-                <div className="px-5 py-2.5 border-b border-slate-100 flex items-center justify-between bg-slate-50">
-                  <div className="flex items-center gap-2 text-emerald-600 font-bold text-xs font-battambang">
-                    <CheckCircle2 className="w-4 h-4" />
-                    <span>វិក្កយបត្រផ្លូវការ (Official Receipt)</span>
-                  </div>
-                  <div className="flex items-center gap-1.5 text-slate-400 text-[11px] font-mono">
-                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
-                    <span>VERIFIED</span>
-                  </div>
+            {/* Split Grid: Left = Paperless E-Receipt QR | Right = 5-Star Customer Rating */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 max-w-4xl mx-auto w-full flex-1">
+              {/* Card 1: 📱 Digital E-Receipt QR */}
+              <div className="bg-slate-900/90 border-2 border-emerald-500/50 rounded-3xl p-5 flex flex-col items-center justify-center text-center space-y-3.5 shadow-2xl relative group">
+                <div className="flex items-center gap-2 text-xs sm:text-sm font-black uppercase tracking-wider text-emerald-400">
+                  <QrCode className="w-4 h-4 text-emerald-400" />
+                  <span>📱 វិក្កយបត្រអេឡិចត្រូនិច (Paperless E-Receipt)</span>
                 </div>
 
-                <div className="p-5 space-y-3 font-mono text-xs text-slate-900">
-                  {/* Store Header */}
-                  <div className="text-center space-y-1 border-b border-dashed border-slate-300 pb-3 font-battambang">
-                    <div className="w-12 h-12 mx-auto mb-1 rounded-xl overflow-hidden border border-slate-200 p-0.5 bg-white">
-                      <img
-                        src={getProductImageUrl(storeInfo.logoUrl || '/uploads/products/prod_1789651345094_x6k2.jpg')}
-                        alt="Store Logo"
-                        className="w-full h-full object-contain"
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).src = '/uploads/products/prod_1789651345094_x6k2.jpg';
-                        }}
-                      />
-                    </div>
-                    <h2 className="text-sm font-black font-sans uppercase">
-                      {storeInfo.nameEn || 'SWEET BAKERY & CAFE'}
-                    </h2>
-                    <p className="text-[11px] font-bold text-slate-700">
-                      {storeInfo.nameKh || 'ហាងនំខេក ស្វីតបេកខឺរី'}
-                    </p>
-                    {storeInfo.address && (
-                      <p className="text-[10px] text-slate-500">{storeInfo.address}</p>
-                    )}
-                    {storeInfo.phone && (
-                      <p className="text-[10px] text-slate-500">ទូរស័ព្ទ៖ {storeInfo.phone}</p>
-                    )}
-                  </div>
-
-                  {/* Metadata */}
-                  <div className="text-[10px] space-y-1 border-b border-dashed border-slate-300 pb-2 font-battambang">
-                    {(displayState.isDeposit || displayState.completedSale?.isDeposit) && (
-                      <div className="py-1 px-2 bg-amber-100 text-amber-900 font-black text-center rounded-md uppercase tracking-wider text-[10px] mb-1">
-                        *** បង្កាន់ដៃកក់ប្រាក់ (DEPOSIT RECEIPT) ***
-                      </div>
-                    )}
-                    <div className="flex justify-between">
-                      <span>វិក្កយបត្រ (Inv #):</span>
-                      <span className="font-bold font-mono text-slate-900">
-                        {displayState.orderNumber || displayState.completedSale?.orderNumber || '0001'}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>កាលបរិច្ឆេទ (Date):</span>
-                      <span className="font-bold font-mono">
-                        {formatDateTimeDMY(displayState.completedSale?.createdAt || Date.now())}
-                      </span>
-                    </div>
-                    {(displayState.customerName || displayState.completedSale?.customerName) && (
-                      <div className="flex justify-between">
-                        <span>អតិថិជន:</span>
-                        <span className="font-bold text-slate-900">
-                          {displayState.customerName || displayState.completedSale?.customerName}
-                        </span>
-                      </div>
-                    )}
-                    {(displayState.customerPhone || displayState.completedSale?.customerPhone) && (
-                      <div className="flex justify-between">
-                        <span>ទូរស័ព្ទ:</span>
-                        <span className="font-bold font-mono">
-                          {displayState.customerPhone || displayState.completedSale?.customerPhone}
-                        </span>
-                      </div>
-                    )}
-                    <div className="flex justify-between">
-                      <span>បេឡាធិការ (Cashier):</span>
-                      <span>{displayState.cashierName || displayState.completedSale?.cashierName || 'Staff'}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>ការទូទាត់:</span>
-                      <span className="font-bold font-mono">
-                        {displayState.paidBankName || displayState.completedSale?.paymentMethod || 'CASH_KHR'}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Items Table */}
-                  <div className="border-b border-dashed border-slate-300 pb-2">
-                    <table className="w-full text-left font-battambang">
-                      <thead>
-                        <tr className="border-b border-slate-200 text-[10px]">
-                          <th className="py-1">ទំនិញ (Item)</th>
-                          <th className="text-center py-1">ចំនួន</th>
-                          <th className="text-right py-1 font-mono">សរុប (៛)</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100">
-                        {(displayState.completedSale?.items || displayState.items || []).map((item: any, idx: number) => {
-                          const unitKhr = item.unitPriceKhr ?? item.priceKhr ?? (item.priceUsd ? roundKhr(item.priceUsd * exchangeRate) : 0);
-                          const totalItemKhr = roundKhr(unitKhr * (item.quantity || 1));
-                          return (
-                            <tr key={idx} className="text-[11px]">
-                              <td className="py-1.5">
-                                <div className="font-semibold text-slate-800">{item.nameKh || item.nameEn || 'Item'}</div>
-                                <div className="text-[9px] text-slate-400 font-mono">
-                                  {roundKhr(unitKhr).toLocaleString()} ៛ / មុខ
-                                </div>
-                              </td>
-                              <td className="text-center py-1.5 font-bold font-mono">{item.quantity}</td>
-                              <td className="text-right py-1.5 font-bold font-mono">
-                                {totalItemKhr.toLocaleString()} ៛
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-
-                  {/* Totals */}
-                  <div className="space-y-1 text-xs border-b border-dashed border-slate-300 pb-3 font-battambang">
-                    <div className="flex justify-between font-black text-sm pt-1 text-slate-900">
-                      <span>
-                        {(displayState.isDeposit || displayState.completedSale?.isDeposit)
-                          ? 'តម្លៃទំនិញសរុប (Total):'
-                          : 'សរុបត្រូវបង់ (KHR ៛):'}
-                      </span>
-                      <span className="font-mono text-base text-pink-700">
-                        {roundKhr(displayState.totalKhr || displayState.completedSale?.totalKhr || 0).toLocaleString()} ៛
-                      </span>
-                    </div>
-                    <div className="flex justify-between font-bold text-xs text-slate-500 font-mono">
-                      <span>សមមូល (USD $):</span>
-                      <span>${(displayState.totalUsd || displayState.completedSale?.totalUsd || 0).toFixed(2)}</span>
-                    </div>
-
-                    {(displayState.isDeposit || displayState.completedSale?.isDeposit) && (
-                      <div className="mt-1.5 p-2 bg-amber-50 rounded-xl border border-amber-200 text-xs space-y-1">
-                        <div className="flex justify-between font-bold text-amber-900">
-                          <span>ប្រាក់បានកក់ (Deposit):</span>
-                          <span className="font-black font-mono">
-                            {roundKhr(displayState.depositKhr ?? displayState.completedSale?.depositKhr ?? 0).toLocaleString()} ៛
-                          </span>
-                        </div>
-                        <div className="flex justify-between font-black text-rose-600">
-                          <span>នៅខ្វះ (Remaining):</span>
-                          <span className="font-mono">
-                            {roundKhr(displayState.remainingKhr ?? displayState.completedSale?.remainingKhr ?? 0).toLocaleString()} ៛
-                          </span>
-                        </div>
-                      </div>
-                    )}
-
-                    {displayState.paidAmount !== undefined && (
-                      <div className="flex justify-between text-[11px] pt-1">
-                        <span>ប្រាក់ទទួលបាន ({displayState.paidCurrency || 'KHR'}):</span>
-                        <span className="font-mono">
-                          {displayState.paidCurrency === 'KHR'
-                            ? `${roundKhr(displayState.paidAmount).toLocaleString()} ៛`
-                            : `$${displayState.paidAmount.toFixed(2)}`}
-                        </span>
-                      </div>
-                    )}
-                    {displayState.changeKhr !== undefined && displayState.changeKhr > 0 && (
-                      <div className="flex justify-between text-[11px] text-emerald-700 font-bold">
-                        <span>ប្រាក់អាប់ជូន (៛):</span>
-                        <span className="font-mono">
-                          {roundKhr(displayState.changeKhr).toLocaleString()} ៛
-                        </span>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Footer */}
-                  <div className="text-center space-y-1 pt-1 font-battambang">
-                    <p className="text-[11px] font-bold text-slate-800">
-                      សូមអរគុណ! សូមអញ្ជើញមកពិសារម្តងទៀត 🙏
-                    </p>
-                    <p className="text-[8px] text-slate-400">
-                      SweetBakery POS • វិក្កយបត្រផ្លូវការសុក្រឹត
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Right Column (5 cols): 📱 Pure E-Receipt QR Card (NO other buttons) */}
-              <div className="lg:col-span-5 bg-slate-900/90 border-2 border-emerald-500/50 rounded-3xl p-6 flex flex-col items-center justify-center text-center space-y-4 shadow-2xl">
-                <div className="flex items-center gap-2 text-sm sm:text-base font-black uppercase tracking-wider text-emerald-400 font-battambang">
-                  <QrCode className="w-5 h-5 text-emerald-400" />
-                  <span>📱 វិក្កយបត្រអេឡិចត្រូនិច (E-Receipt)</span>
-                </div>
-
-                <div className="p-4 bg-white rounded-3xl shadow-2xl border-4 border-emerald-400/50 flex flex-col items-center justify-center">
+                <div className="p-3.5 bg-white rounded-2xl shadow-xl border-4 border-emerald-400/50 flex flex-col items-center justify-center">
                   <QrCodeImage
                     data={customerEReceiptUrl || `https://sothearetsuon-ai.github.io/sweetbakery-pos/`}
-                    size={220}
+                    size={180}
                     alt="Paperless E-Receipt QR"
-                    className="w-44 h-44 sm:w-52 sm:h-52 object-contain rounded-xl"
+                    className="w-36 h-36 sm:w-44 sm:h-44 object-contain rounded-lg"
                   />
-                  <div className="mt-2 flex items-center gap-1.5 text-xs font-mono font-black text-slate-800">
-                    <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
-                    <span>#{displayState.orderNumber || displayState.completedSale?.orderNumber || '0001'}</span>
+                  <div className="mt-1 flex items-center gap-1 text-[10px] font-mono font-bold text-slate-700">
+                    <Sparkles className="w-3 h-3 text-emerald-600" />
+                    <span>#{displayState.orderNumber || '0001'}</span>
                   </div>
                 </div>
 
-                <div className="space-y-1 font-battambang">
-                  <p className="text-sm font-bold text-white">
-                    ស្កេនដោយទូរស័ព្ទដៃ ដើម្បីរក្សាទុកវិក្កយបត្រ
+                <div className="space-y-1">
+                  <p className="text-xs sm:text-sm font-bold text-white font-battambang">
+                    ស្កេនដោយទូរស័ព្ទដៃ ដើម្បីរក្សាទុកវិក្កយបត្រពេញលេញ
                   </p>
-                  <p className="text-xs text-emerald-300 font-medium">
+                  <p className="text-[11px] text-emerald-300 font-bold">
                     🌱 មិនបាច់បោះពុម្ពក្រដាស • ឃើញទំនិញ តម្លៃ និងហាង ១០០%
                   </p>
                 </div>
+              </div>
+
+              {/* Card 2: ⭐ 5-Star Customer Rating & Feedback */}
+              <div className="bg-slate-900/80 border border-amber-500/30 rounded-3xl p-5 flex flex-col justify-between shadow-xl">
+                <div>
+                  <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+                    <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-amber-400">
+                      <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
+                      <span>⭐ វាយតម្លៃបទពិសោធន៍ (Rate Service)</span>
+                    </div>
+                    {customerRating && (
+                      <span className="text-[11px] font-black text-amber-300 bg-amber-500/20 px-2 py-0.5 rounded-full border border-amber-500/30">
+                        {customerRating} / 5 ផ្កាយ
+                      </span>
+                    )}
+                  </div>
+
+                  {feedbackSubmitted ? (
+                    <div className="py-8 flex flex-col items-center justify-center text-center space-y-3 animate-in fade-in duration-300">
+                      <div className="w-16 h-16 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center border-2 border-emerald-400/50 shadow-lg">
+                        <Check className="w-8 h-8" />
+                      </div>
+                      <h4 className="text-lg font-black text-white font-muol">
+                        សូមអរគុណច្រើន! 🙏💖
+                      </h4>
+                      <p className="text-xs text-slate-300 font-battambang max-w-xs">
+                        មតិយោបល់ និងការវាយតម្លៃរបស់អ្នក ជាកម្លាំងចិត្តដ៏ធំធេងដល់ក្រុមការងារយើងខ្ញុំ!
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4 py-3">
+                      {/* 5 Big Gold Stars */}
+                      <div className="flex items-center justify-center gap-2 sm:gap-3 py-1">
+                        {[1, 2, 3, 4, 5].map((star) => {
+                          const isFilled = (customerRating || 0) >= star;
+                          return (
+                            <button
+                              key={star}
+                              type="button"
+                              onClick={() => handleRateStar(star)}
+                              className={`p-1.5 sm:p-2 rounded-2xl transition-all transform hover:scale-125 active:scale-95 cursor-pointer ${
+                                isFilled
+                                  ? 'bg-amber-500/20 text-amber-400 shadow-md shadow-amber-500/20 scale-110'
+                                  : 'text-slate-600 hover:text-amber-300'
+                              }`}
+                            >
+                              <Star
+                                className={`w-8 h-8 sm:w-10 sm:h-10 transition-colors ${
+                                  isFilled ? 'fill-amber-400 text-amber-400' : 'text-slate-600'
+                                }`}
+                              />
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      {/* Quick Feedback Chips */}
+                      <div className="space-y-1.5">
+                        <span className="text-[11px] font-bold text-slate-400 block text-center">
+                          តើលោកអ្នកពេញចិត្តអ្វីជាងគេ? (ចុចជ្រើសរើស)
+                        </span>
+                        <div className="flex flex-wrap justify-center gap-2">
+                          {[
+                            '🍰 នំឆ្ងាញ់',
+                            '⚡ សេវារហ័ស',
+                            '💖 បុគ្គលិករួសរាយ',
+                            '✨ ហាងស្អាត',
+                            '💯 តម្លៃសមរម្យ',
+                          ].map((tag) => {
+                            const isSelected = selectedFeedbackTags.includes(tag);
+                            return (
+                              <button
+                                key={tag}
+                                type="button"
+                                onClick={() => handleToggleFeedbackTag(tag)}
+                                className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all border cursor-pointer active:scale-95 ${
+                                  isSelected
+                                    ? 'bg-gradient-to-r from-pink-600 to-rose-500 text-white border-rose-400 shadow-sm'
+                                    : 'bg-slate-800/80 hover:bg-slate-800 text-slate-300 border-slate-700'
+                                }`}
+                              >
+                                {tag}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {!feedbackSubmitted && (
+                  <button
+                    type="button"
+                    onClick={handleSubmitFeedback}
+                    disabled={!customerRating && selectedFeedbackTags.length === 0}
+                    className="w-full py-2.5 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 disabled:opacity-40 text-slate-950 font-black text-xs transition-all shadow-md active:scale-95 cursor-pointer flex items-center justify-center gap-2 mt-2"
+                  >
+                    <span>ផ្ញើការវាយតម្លៃ (Submit Feedback)</span>
+                    <Sparkles className="w-3.5 h-3.5" />
+                  </button>
+                )}
               </div>
             </div>
 

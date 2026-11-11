@@ -425,18 +425,6 @@ export const DigitalReceiptView: React.FC = () => {
             </div>
           </div>
         </div>
-
-        {/* Customer Mobile Action Bar (No-Print) - Single Clean Print/Save */}
-        <div className="p-3.5 bg-slate-50 border-t border-slate-100 no-print font-battambang">
-          <button
-            type="button"
-            onClick={handlePrint}
-            className="w-full py-2.5 bg-slate-900 hover:bg-black text-white text-xs font-bold rounded-xl flex items-center justify-center gap-2 transition-all shadow-md active:scale-98 cursor-pointer"
-          >
-            <Printer className="w-4 h-4 text-emerald-400" />
-            <span>🖨️ បោះពុម្ព ឬរក្សាទុកជា PDF (Print / Save)</span>
-          </button>
-        </div>
       </div>
     </div>
   );
