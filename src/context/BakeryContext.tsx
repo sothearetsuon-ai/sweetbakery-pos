@@ -5360,49 +5360,14 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         return a;
       });
       setPartyAddons(updatedPartyAddons);
-      safeSetStorage('bakery_party_addons', JSON.stringify(updatedPartyAddons));
-      syncSaveDoc('settings', 'partyAddons', { items: updatedPartyAddons, updatedAt: nowIso });
     }
 
-    // 1. Immediately atomic save to server
-    fetch('/api/save-sale', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ sale: newSale, updatedProducts }),
-    }).catch(() => {});
-
-    // 2. Optimistic local state & LocalStorage update
-    setSales((prev) => {
-      const updated = [newSale, ...prev.filter((s) => s.id !== newSale.id)];
-      safeSetStorage('bakery_sales', JSON.stringify(updated));
-      saveToLanSync({
-        products: updatedProducts,
-        partyAddons: updatedPartyAddons,
-        sales: updated,
-        customOrders,
-        expenses,
-        storeInfo,
-        flavors,
-        telegramConfig: getStoredTelegramConfig(),
-      }, true);
-      return updated;
-    });
-
+    // 1. Instant optimistic state update (0ms latency for UI)
+    setSales((prev) => [newSale, ...prev.filter((s) => s.id !== newSale.id)]);
     setProducts(updatedProducts);
-    safeSetStorage('bakery_products', JSON.stringify(updatedProducts));
-
-    syncSaveDoc('sales', newSale.id, newSale);
     clearCart();
 
-    // If it's a deposit pre-order, custom cake order alert (notifyTelegramCustomOrder) handles the alert
-    // so we skip notifyTelegramSale here to prevent duplicate alerts.
-    if (!newSale.isDeposit) {
-      notifyTelegramSale(newSale, storeInfo, exchangeRate).catch((err) => {
-        console.error('[BakeryContext] notifyTelegramSale error:', err);
-      });
-    }
-
-    // Update shift sales
+    // Update shift sales immediately
     if (currentShift && currentShift.status === 'OPEN') {
       setCurrentShift({
         ...currentShift,
@@ -5410,6 +5375,55 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         totalOrdersCount: currentShift.totalOrdersCount + 1,
       });
     }
+
+    // 2. Defer all heavy JSON serialization, disk storage & network sync to next tick
+    // so the Checkout -> Receipt UI transition is instantaneous (60fps buttery smooth)
+    setTimeout(() => {
+      try {
+        // LocalStorage persistence in background
+        safeSetStorage('bakery_sales', JSON.stringify([newSale, ...sales.filter((s) => s.id !== newSale.id)]));
+        safeSetStorage('bakery_products', JSON.stringify(updatedProducts));
+        if (Object.keys(soldPartyAddonsMap).length > 0) {
+          safeSetStorage('bakery_party_addons', JSON.stringify(updatedPartyAddons));
+          syncSaveDoc('settings', 'partyAddons', { items: updatedPartyAddons, updatedAt: nowIso });
+        }
+
+        // LAN Sync: only send modified entities, avoiding massive redundant serialization
+        saveToLanSync({
+          products: updatedProducts,
+          partyAddons: updatedPartyAddons,
+          sales: [newSale, ...sales.filter((s) => s.id !== newSale.id)],
+        }, true);
+
+        // Cloud Firestore sync in background
+        syncSaveDoc('sales', newSale.id, newSale);
+        if (changedProducts.length > 0) {
+          if (changedProducts.length === 1) {
+            syncSaveDoc('products', changedProducts[0].id, changedProducts[0].data);
+          } else {
+            batchSaveFirestoreDocs('products', changedProducts).catch(() => {
+              changedProducts.forEach((cp) => syncSaveDoc('products', cp.id, cp.data));
+            });
+          }
+        }
+
+        // Server backup
+        fetch('/api/save-sale', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sale: newSale, updatedProducts }),
+        }).catch(() => {});
+
+        // Telegram Notification in background
+        if (!newSale.isDeposit) {
+          notifyTelegramSale(newSale, storeInfo, exchangeRate).catch((err) => {
+            console.error('[BakeryContext] notifyTelegramSale error:', err);
+          });
+        }
+      } catch (err) {
+        console.warn('[BakeryContext] Deferred completeSale sync error:', err);
+      }
+    }, 10);
 
     return newSale;
   };
@@ -5875,35 +5889,38 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       deductedAddons: finalDeductedAddons.length > 0 ? finalDeductedAddons : undefined,
       createdAt: nowIso,
     };
-    setCustomOrders((prev) => {
-      const updated = [newOrder, ...prev];
-      safeSetStorage('bakery_custom_orders', JSON.stringify(updated));
-      saveToLanSync({
-        products: updatedProducts,
-        partyAddons: updatedPartyAddons,
-        sales,
-        customOrders: updated,
-        expenses,
-        storeInfo,
-        flavors,
-        telegramConfig: getStoredTelegramConfig(),
-      }, true);
-      return updated;
-    });
 
-    // Save to LAN server atomically
-    fetch('/api/save-custom-order', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        order: newOrder,
-        updatedProducts: finalStockDeducted && finalDeductedItems.length > 0 ? updatedProducts : undefined,
-        updatedPartyAddons: finalStockDeducted && finalDeductedAddons.length > 0 ? updatedPartyAddons : undefined,
-      }),
-    }).catch(() => {});
+    // Instant optimistic state update
+    setCustomOrders((prev) => [newOrder, ...prev]);
 
-    syncSaveDoc('customOrders', newOrder.id, newOrder);
-    notifyTelegramCustomOrder(newOrder, storeInfo, exchangeRate);
+    // Defer heavy serialization & sync to next tick
+    setTimeout(() => {
+      try {
+        safeSetStorage('bakery_custom_orders', JSON.stringify([newOrder, ...customOrders]));
+        saveToLanSync({
+          products: updatedProducts,
+          partyAddons: updatedPartyAddons,
+          customOrders: [newOrder, ...customOrders],
+        }, true);
+
+        // Save to LAN server atomically
+        fetch('/api/save-custom-order', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            order: newOrder,
+            updatedProducts: finalStockDeducted && finalDeductedItems.length > 0 ? updatedProducts : undefined,
+            updatedPartyAddons: finalStockDeducted && finalDeductedAddons.length > 0 ? updatedPartyAddons : undefined,
+          }),
+        }).catch(() => {});
+
+        syncSaveDoc('customOrders', newOrder.id, newOrder);
+        notifyTelegramCustomOrder(newOrder, storeInfo, exchangeRate);
+      } catch (err) {
+        console.warn('[BakeryContext] Deferred addCustomOrder sync error:', err);
+      }
+    }, 15);
+
     return newOrder;
   };
 

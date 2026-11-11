@@ -244,14 +244,10 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
     if (isSubmitting) return;
     setIsSubmitting(true);
 
+    // 1. Instant sound feedback
     soundFx.playSuccess();
-    confetti({
-      particleCount: 80,
-      spread: 70,
-      origin: { y: 0.6 },
-      colors: ['#F43F5E', '#FB7185', '#F59E0B', '#10B981', '#6366F1'],
-    });
 
+    // 2. Prepare items and execute instant state update
     const saleItems = cart.map((item) => {
       const itemKhr = roundKhr(item.product.priceKhr ?? (item.product.priceUsd * exchangeRate));
       const itemUsd = Number((itemKhr / exchangeRate).toFixed(2));
@@ -322,15 +318,30 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
       });
     }
 
+    // 3. IMMEDIATELY show Receipt Print Modal and close Checkout Modal (Instant 0ms latency)
+    onSuccess(newSale);
+    onClose();
+
+    // 4. Run secondary animations, Dual-Screen sync & Voice announcement in background
+    // so the modal switch is 100% fluid with zero stutter on Windows/PC
     const paymentBankName = paymentMethod === 'KHQR_BAKONG'
       ? (storeInfo.khqrMerchantName ? `${storeInfo.khqrMerchantName} KHQR` : 'Bakong KHQR')
       : 'សាច់ប្រាក់ (Cash)';
 
-    customerDisplaySync.paymentSuccess(dueNowKhr, 'KHR', paymentBankName);
-    khmerVoiceSoundbox.announcePayment(dueNowKhr, 'KHR', paymentBankName);
-
-    onSuccess(newSale);
-    onClose();
+    setTimeout(() => {
+      try {
+        customerDisplaySync.paymentSuccess(dueNowKhr, 'KHR', paymentBankName);
+        khmerVoiceSoundbox.announcePayment(dueNowKhr, 'KHR', paymentBankName);
+        confetti({
+          particleCount: 60,
+          spread: 60,
+          origin: { y: 0.6 },
+          colors: ['#F43F5E', '#FB7185', '#F59E0B', '#10B981', '#6366F1'],
+        });
+      } catch (e) {
+        console.warn('[Checkout] Background effects error:', e);
+      }
+    }, 40);
   };
 
   // Quick cash buttons (for dueNow amount)

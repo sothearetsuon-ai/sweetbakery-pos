@@ -22,6 +22,8 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({ sale, isOpen, onClos
   const [activeSale, setActiveSale] = useState<CompletedSale | null>(sale);
   const [isAddPartyOpen, setIsAddPartyOpen] = useState(false);
 
+  const [isPrinting, setIsPrinting] = useState(false);
+
   useEffect(() => {
     setActiveSale(sale);
   }, [sale]);
@@ -31,7 +33,18 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({ sale, isOpen, onClos
   if (!isOpen || !currentSale) return null;
 
   const handlePrint = () => {
-    window.print();
+    if (isPrinting) return;
+    setIsPrinting(true);
+    // Allow paint flush so button state updates before Windows Print Spooler dialog opens
+    requestAnimationFrame(() => {
+      setTimeout(() => {
+        try {
+          window.print();
+        } finally {
+          setIsPrinting(false);
+        }
+      }, 50);
+    });
   };
 
   return (
@@ -224,6 +237,8 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({ sale, isOpen, onClos
                     )}`
                   }
                   alt="KHQR / Feedback"
+                  loading="lazy"
+                  decoding="async"
                   className="w-full h-full object-contain"
                 />
               </div>
@@ -253,11 +268,15 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({ sale, isOpen, onClos
 
           <div className="flex items-center gap-2">
             <button
+              type="button"
+              disabled={isPrinting}
               onClick={handlePrint}
-              className="flex-1 py-2.5 bg-slate-900 hover:bg-black text-white text-xs font-bold rounded-xl flex items-center justify-center gap-2 transition-all shadow-md active:scale-98 cursor-pointer"
+              className={`flex-1 py-2.5 bg-slate-900 hover:bg-black text-white text-xs font-bold rounded-xl flex items-center justify-center gap-2 transition-all shadow-md active:scale-98 cursor-pointer ${
+                isPrinting ? 'opacity-70 cursor-not-allowed' : ''
+              }`}
             >
               <Printer className="w-4 h-4" />
-              <span>{text.printReceipt}</span>
+              <span>{isPrinting ? 'កំពុងរៀបចំ...' : text.printReceipt}</span>
             </button>
             <button
               onClick={onClose}
