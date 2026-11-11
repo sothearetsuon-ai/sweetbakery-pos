@@ -1,12 +1,12 @@
 {
-  "version": "2.0.2",
-  "versionCode": 68,
+  "version": "2.0.3",
+  "versionCode": 69,
   "releaseDate": "2026-11-11",
   "releaseNotes": [
-    "⚡ បង្កើនល្បឿនបង់ប្រាក់ និងបោះពុម្ពវិក្កយបត្រ (Instant 0ms Fast Checkout & Receipt Modal) ៖ លែងមានអាការៈគាំង ឬទាក់លើកុំព្យូទ័រ (No UI Freeze/Lag) ដោយបានបំបែកកិច្ចការធ្ងន់ៗ (LocalStorage Serialization, LAN Sync, Firestore Sync, Telegram Alert) ឱ្យដំណើរការនៅ Background (Non-blocking Asynchronous) ធ្វើឱ្យផ្ទាំងវិក្កយបត្រលោតចេញមកភ្លាមៗក្នុងពេល 0.05 វិនាទី។",
-    "🔊 កែលម្អ Khmer Voice Soundbox លើ Windows ៖ ដំណើរការសំឡេងប្រកាសទទួលប្រាក់ដោយឯករាជ្យ មិនទាញ Audio Thread ឬបង្អាក់ចលនា UI ឡើយ។",
-    "🖨️ កែលម្អការបោះពុម្ពវិក្កយបត្រ (Smooth Thermal Printing) ៖ ផ្ដល់ពេលឱ្យ UI ធ្វើបច្ចុប្បន្នភាពរួចរាល់ទើបហៅ Windows Print Spooler ការពារការជាប់គាំងប៊ូតុងបោះពុម្ពវិក្កយបត្រ។",
-    "🖼️ បង្ហាញរូបភាពនំពេញលេញ ១០០% គ្មានកាត់ (100% Uncropped Cake Images on Dual Screen) ៖ រូបនំខេកបង្ហាញពេញតាំងពីក្បាលម៉ូដទៀនដល់ជើងទ្រនំ ព្រមទាំងមានផ្ទាំងចុចពង្រីកមើលរូបធំ 1-Click Lightbox Modal។"
+    "🎯 កំណត់រង្វាន់កងសំណាងតាមចិត្ត (Custom Lucky Wheel Rewards Manager) ៖ ហាងអាចបន្ថែម កែសម្រួល ឬលុបរង្វាន់លើកងបង្វិលសំណាងបានដោយសេរី (ពី ៣ ដល់ ១២ រង្វាន់) រួមមាន ឈ្មោះខ្មែរ/អង់គ្លេស រូប Emoji ពណ៌ផ្ទាំង និងកំណត់ឱកាសឈ្នះ (ងាយត្រូវ ធម្មតា កម្រ)។",
+    "☁️ រក្សាទុក និងសមកាលកម្មលើ Cloud ដោយស្វ័យប្រវត្តិ (Instant Cloud & Local Sync) ៖ រាល់ការកែសម្រួលរង្វាន់កងសំណាងនឹងរក្សាទុកក្នុងកុំព្យូទ័រ និងសមកាលកម្មទៅ Cloud Firestore តាមហាងនីមួយៗ (Tenant Isolation) ភ្លាមៗ។",
+    "🔄 ប៊ូតុងដាក់តាមលំនាំដើម (1-Click Reset to Default) ៖ អាចចុចត្រឡប់ទៅរង្វាន់គំរូ ៦ រង្វាន់ដើមរបស់ Sweet Bakery វិញគ្រប់ពេល។",
+    "⚡ ដំណើរការបង្វិលកងរលូនឥតទាក់ និងគណនាផលឈ្នះត្រឹមត្រូវតាមទម្ងន់ឱកាស (Smooth Dynamic SVG Wheel with Weighted Probability)។"
   ],
   "author": "សុធារិទ្ធ",
   "apkDownloadUrl": "https://sothearetsuon-ai.github.io/sweetbakery-pos/SweetBakery-Android.apk",
