@@ -1,10 +1,11 @@
 {
-  "version": "2.1.1",
-  "versionCode": 77,
+  "version": "2.1.2",
+  "versionCode": 78,
   "releaseDate": "2026-11-11",
   "releaseNotes": [
-    "📱 វិក្កយបត្រអេឡិចត្រូនិចលើអេក្រង់ទី ២ ដូចដើម (Dual Screen E-Receipt & 5-Star Rating) ៖ រក្សាអេក្រង់ទី ២ ឱ្យនៅដូចដើម (កាត QR វិក្កយបត្រអេឡិចត្រូនិចនៅខាងឆ្វេង និងផ្ទាំងវាយតម្លៃផ្កាយ 5-Star នៅខាងស្តាំ)។",
-    "🧾 វិក្កយបត្រលើទូរស័ព្ទដៃបង្ហាញតែវិក្កយបត្រសុទ្ធសាធ (100% Pure Mobile Receipt) ៖ ពេលភ្ញៀវស្កេន QR Code បង្ហាញតែទម្រង់វិក្កយបត្រផ្លូវការសុក្រឹត ដោយមិនជាប់ប៊ូតុងផ្សេងៗឡើយ។"
+    "📥 រក្សាទុកវិក្កយបត្រក្នុងទូរស័ព្ទ (Save E-Receipt to Phone Gallery/Files) ៖ បន្ថែមប៊ូតុងចុច ១ ភ្លាមទាញយករូបភាពវិក្កយបត្រ PNG គុណភាពខ្ពស់ ឬរក្សាទុកក្នុង Files/Photos លើទូរស័ព្ទរបស់ភ្ញៀវដោយផ្ទាល់។",
+    "⚡ កែសម្រួលបញ្ហា QR Code (Ultra-Reliable Offline Vector SVG QR) ៖ ដោះស្រាយបញ្ហា QR Code មិនចេញ (Broken Image) ដោយប្តូរមកប្រើ SVG ផ្ទាល់ ១០០% មិនពឹងផ្អែកលើអ៊ីនធឺណិត និងបង្កើនល្បឿនស្កេនយ៉ាងលឿនរហ័ស។",
+    "✨ វិក្កយបត្រស្អាតឥតខ្ចោះ គ្មានប៊ូតុងរំខាន (Clean Official Mobile Receipt Layout)។"
   ],
   "author": "សុធារិទ្ធ",
   "apkDownloadUrl": "https://sothearetsuon-ai.github.io/sweetbakery-pos/SweetBakery-Android.apk",

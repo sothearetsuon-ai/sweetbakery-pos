@@ -1,20 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   CheckCircle2,
-  Printer,
-  Share2,
-  Phone,
-  MessageCircle,
-  Copy,
-  ShoppingBag,
-  Sparkles,
-  ExternalLink,
+  Download,
   ShieldCheck,
-  Calendar,
-  User,
-  CreditCard,
-  Clock,
+  ShoppingBag,
 } from 'lucide-react';
+import html2canvas from 'html2canvas';
 import { decodeReceiptData, CompactReceiptPayload } from '../../utils/eReceiptUrl';
 import { getProductImageUrl } from '../../utils/imagePath';
 import { formatDateDMY, formatDateTimeDMY } from '../../utils/dateUtils';
@@ -23,8 +14,10 @@ import { QrCodeImage } from '../common/QrCodeImage';
 
 export const DigitalReceiptView: React.FC = () => {
   const [receipt, setReceipt] = useState<CompactReceiptPayload | null>(null);
-  const [copied, setCopied] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
+  const receiptRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     try {
@@ -60,7 +53,6 @@ export const DigitalReceiptView: React.FC = () => {
         try {
           const parsed = JSON.parse(cached);
           if (parsed && parsed.orderNumber) {
-            // Build minimal payload from cached sale
             setReceipt({
               inv: parsed.orderNumber,
               dt: parsed.createdAt || Date.now(),
@@ -108,36 +100,76 @@ export const DigitalReceiptView: React.FC = () => {
     }
   }, []);
 
-  const handlePrint = () => {
-    window.print();
-  };
+  const handleSaveReceipt = async () => {
+    if (!receiptRef.current || isSaving) return;
+    setIsSaving(true);
+    setSaveSuccess(false);
 
-  const handleShare = async () => {
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: `វិក្កយបត្រ ${receipt?.inv || 'SweetBakery'}`,
-          text: `វិក្កយបត្រផ្លូវការ ${receipt?.store.nameKh || 'SweetBakery'} - ${receipt?.inv}`,
-          url: window.location.href,
-        });
-      } catch {
-        handleCopyLink();
+    try {
+      // 1. Capture crystal-clear receipt screenshot using html2canvas
+      const card = receiptRef.current;
+      const canvas = await html2canvas(card, {
+        scale: 3, // 3x retina sharp resolution
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: '#ffffff',
+        logging: false,
+      });
+
+      const fileName = `Receipt-${receipt?.inv || 'SweetBakery'}.png`;
+
+      // 2. Convert to Blob
+      const blob = await new Promise<Blob | null>((resolve) => {
+        canvas.toBlob((b) => resolve(b), 'image/png', 1.0);
+      });
+
+      if (!blob) {
+        throw new Error('Canvas blob creation failed');
       }
-    } else {
-      handleCopyLink();
-    }
-  };
 
-  const handleCopyLink = () => {
-    if (navigator.clipboard) {
-      navigator.clipboard.writeText(window.location.href);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2500);
+      const file = new File([blob], fileName, { type: 'image/png' });
+
+      // 3. Try Native Mobile Web Share (Opens "Save Image" to Photos / Save to Files on iOS/Android)
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        try {
+          await navigator.share({
+            files: [file],
+            title: `វិក្កយបត្រ ${receipt?.inv || 'SweetBakery'}`,
+            text: `វិក្កយបត្រផ្លូវការ ${receipt?.store.nameKh || 'Sweet Bakery'} #${receipt?.inv}`,
+          });
+          setSaveSuccess(true);
+          setTimeout(() => setSaveSuccess(false), 3000);
+          return;
+        } catch (shareErr: any) {
+          // If user dismissed share sheet, don't fallback to forceful download unless error
+          if (shareErr?.name === 'AbortError') {
+            return;
+          }
+        }
+      }
+
+      // 4. Direct Browser Download fallback
+      const blobUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = blobUrl;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 3000);
+    } catch (err) {
+      console.warn('html2canvas image saving failed, falling back to window.print():', err);
+      // Fallback: window.print() (which natively provides "Save as PDF" on mobile browsers)
+      window.print();
+    } finally {
+      setIsSaving(false);
     }
   };
 
   const handleBrowseMenu = () => {
-    // Navigate to customer self-ordering catalog
     const base = window.location.origin + window.location.pathname;
     window.location.href = `${base}?order=true#order`;
   };
@@ -212,7 +244,10 @@ export const DigitalReceiptView: React.FC = () => {
       </div>
 
       {/* Main Official Receipt Card Matching User's Image */}
-      <div className="printable-card bg-white rounded-3xl max-w-sm w-full shadow-2xl border border-slate-100 overflow-hidden flex flex-col font-sans transition-all">
+      <div
+        ref={receiptRef}
+        className="printable-card bg-white rounded-3xl max-w-sm w-full shadow-2xl border border-slate-100 overflow-hidden flex flex-col font-sans transition-all"
+      >
         {/* Card Header with Green Check */}
         <div className="px-5 py-3 border-b border-slate-100 flex items-center justify-between bg-slate-50">
           <div className="flex items-center gap-2 text-emerald-600 font-bold text-xs font-battambang">
@@ -236,7 +271,6 @@ export const DigitalReceiptView: React.FC = () => {
                   alt="Store Logo"
                   className="w-full h-full object-contain"
                   onError={(e) => {
-                    // Fallback to default cake image if path fails
                     (e.target as HTMLImageElement).src = '/uploads/products/prod_1789651345094_x6k2.jpg';
                   }}
                 />
@@ -331,20 +365,17 @@ export const DigitalReceiptView: React.FC = () => {
 
             {/* Totals Calculation - KHR ៛ FIRST */}
             <div className="space-y-1 text-xs border-b border-dashed border-slate-300 pb-3 font-battambang">
-              {/* Grand Total KHR First in Large Font */}
               <div className="flex justify-between font-black text-sm pt-1 text-slate-900">
                 <span>{receipt.isDep ? 'តម្លៃទំនិញសរុប (Total):' : 'សរុបត្រូវបង់ (KHR ៛):'}</span>
                 <span className="font-mono text-base text-pink-700">
                   {roundKhr(receipt.totKhr).toLocaleString()} ៛
                 </span>
               </div>
-              {/* Secondary USD */}
               <div className="flex justify-between font-bold text-xs text-slate-500 font-mono">
                 <span>សមមូល (USD $):</span>
                 <span>${receipt.totUsd.toFixed(2)}</span>
               </div>
 
-              {/* Deposit breakdown if applicable */}
               {receipt.isDep && (
                 <div className="mt-2 p-2 bg-amber-50 rounded-xl border border-amber-200 text-xs space-y-1">
                   <div className="flex justify-between font-bold text-amber-900">
@@ -426,7 +457,33 @@ export const DigitalReceiptView: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* 📥 1-Click Save to Phone Action Button (Clean, Pure, No Distractions) */}
+      <div className="w-full max-w-sm mt-4 mb-8 no-print space-y-2">
+        <button
+          type="button"
+          disabled={isSaving}
+          onClick={handleSaveReceipt}
+          className={`w-full py-3.5 px-4 rounded-2xl text-white font-black text-xs sm:text-sm shadow-xl flex items-center justify-center gap-2.5 transition-all cursor-pointer font-battambang active:scale-98 ${
+            saveSuccess
+              ? 'bg-emerald-600 shadow-emerald-900/30'
+              : 'bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 hover:from-emerald-700 hover:to-teal-700 shadow-emerald-950/40 border border-emerald-400/30'
+          } ${isSaving ? 'opacity-80 cursor-wait' : ''}`}
+        >
+          <Download className={`w-5 h-5 shrink-0 ${isSaving ? 'animate-bounce' : ''}`} />
+          <span>
+            {isSaving
+              ? 'កំពុងរក្សាទុកវិក្កយបត្រ...'
+              : saveSuccess
+              ? 'បានរក្សាទុកវិក្កយបត្រក្នុងទូរស័ព្ទជោគជ័យ! ✅'
+              : '📥 រក្សាទុកវិក្កយបត្រក្នុងទូរស័ព្ទ (Save to Phone)'}
+          </span>
+        </button>
+
+        <p className="text-[10px] text-center text-slate-400 font-battambang">
+          💡 ចុចប៊ូតុងខាងលើ ដើម្បីទាញយករូបភាពវិក្កយបត្រទុកក្នុង Album រូបភាព ឬ Files ទូរស័ព្ទរបស់អ្នក
+        </p>
+      </div>
     </div>
   );
 };
-

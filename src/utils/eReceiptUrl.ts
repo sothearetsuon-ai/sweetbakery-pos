@@ -41,24 +41,39 @@ export interface CompactReceiptPayload {
   };
 }
 
+function cleanShortString(val?: string, maxLen = 120): string | undefined {
+  if (!val || typeof val !== 'string') return undefined;
+  const t = val.trim();
+  if (!t) return undefined;
+  return t.length > maxLen ? t.slice(0, maxLen) : t;
+}
+
+function cleanShortPath(val?: string): string | undefined {
+  if (!val || typeof val !== 'string') return undefined;
+  const t = val.trim();
+  if (!t || t.length > 250) return undefined;
+  if (t.startsWith('data:') || t.startsWith('blob:')) return undefined;
+  return t;
+}
+
 export function encodeReceiptData(sale: CompletedSale, storeInfo: StoreInfo, exchangeRate = 4000): string {
   try {
-    // Only keep clean URL paths, NEVER include large base64 data URLs in URL query params
-    const safeLogo = storeInfo.logoUrl && !storeInfo.logoUrl.startsWith('data:') ? storeInfo.logoUrl : undefined;
-    const safeKhqr = storeInfo.khqrQrImage && !storeInfo.khqrQrImage.startsWith('data:') ? storeInfo.khqrQrImage : undefined;
+    // Only keep clean short URL paths, NEVER include large base64 data URLs in URL query params
+    const safeLogo = cleanShortPath(storeInfo.logoUrl);
+    const safeKhqr = cleanShortPath(storeInfo.khqrQrImage);
 
     const payload: CompactReceiptPayload = {
       inv: sale.orderNumber,
       dt: typeof sale.createdAt === 'string' ? new Date(sale.createdAt).getTime() : (sale.createdAt || Date.now()),
-      cust: sale.customerName || undefined,
-      phone: sale.customerPhone || undefined,
-      cashier: sale.cashierName || 'Staff',
+      cust: cleanShortString(sale.customerName, 60),
+      phone: cleanShortString(sale.customerPhone, 30),
+      cashier: cleanShortString(sale.cashierName, 40) || 'Staff',
       pay: sale.paymentMethod || 'CASH_KHR',
-      items: (sale.items || []).map((item) => {
+      items: (sale.items || []).slice(0, 50).map((item) => {
         const unitKhr = item.priceKhr !== undefined ? roundKhr(item.priceKhr) : roundKhr(item.priceUsd * exchangeRate);
         const totalKhr = roundKhr(unitKhr * item.quantity);
         return {
-          n: item.nameKh || item.nameEn || 'Item',
+          n: cleanShortString(item.nameKh || item.nameEn, 60) || 'Item',
           q: item.quantity,
           u: unitKhr,
           usd: item.priceUsd,
@@ -73,21 +88,21 @@ export function encodeReceiptData(sale: CompletedSale, storeInfo: StoreInfo, exc
       remKhr: sale.remainingKhr,
       remUsd: sale.remainingUsd,
       pickDate: sale.pickupDate,
-      pickTime: sale.pickupTime,
+      pickTime: cleanShortString(sale.pickupTime, 20),
       paidKhr: sale.paidKhr,
       paidUsd: sale.paidUsd,
       changeKhr: sale.changeKhr,
       changeUsd: sale.changeUsd,
       store: {
-        nameKh: storeInfo.nameKh || 'ហាងនំខេក ស្វីតបេកខឺរី',
-        nameEn: storeInfo.nameEn || 'SWEET BAKERY & CAFE',
-        addr: storeInfo.address || '',
-        phone: storeInfo.phone || '',
+        nameKh: cleanShortString(storeInfo.nameKh, 80) || 'ហាងនំខេក ស្វីតបេកខឺរី',
+        nameEn: cleanShortString(storeInfo.nameEn, 80) || 'SWEET BAKERY & CAFE',
+        addr: cleanShortString(storeInfo.address, 120) || '',
+        phone: cleanShortString(storeInfo.phone, 40) || '',
         logo: safeLogo,
-        tagline: storeInfo.tagline || undefined,
+        tagline: cleanShortString(storeInfo.tagline, 80),
         khqrImage: safeKhqr,
-        khqrMerchant: storeInfo.khqrMerchantName || undefined,
-        khqrBakongId: storeInfo.khqrBakongId || undefined,
+        khqrMerchant: cleanShortString(storeInfo.khqrMerchantName, 50),
+        khqrBakongId: cleanShortString(storeInfo.khqrBakongId, 50),
       },
     };
 

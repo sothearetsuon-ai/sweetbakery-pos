@@ -1,7 +1,7 @@
 {
   "name": "bakery-pos-system",
   "private": true,
-  "version": "2.1.1",
+  "version": "2.1.2",
   "type": "module",
   "scripts": {
     "dev": "vite --host",
@@ -16,6 +16,7 @@
     "canvas-confetti": "^1.9.4",
     "clsx": "^2.1.1",
     "firebase": "^12.19.0",
+    "html2canvas": "^1.4.1",
     "lucide-react": "^0.475.0",
     "qrcode": "^1.5.4",
     "react": "^18.3.1",
