@@ -32,10 +32,15 @@ export interface CustomerDisplayState {
   khqrDataUrl?: string;
   isDeposit?: boolean;
   depositKhr?: number;
+  depositUsd?: number;
+  remainingKhr?: number;
+  remainingUsd?: number;
   paidAmount?: number;
   paidCurrency?: 'KHR' | 'USD';
   paidBankName?: string;
   orderNumber?: string;
+  changeKhr?: number;
+  changeUsd?: number;
   customerName?: string;
   customerPhone?: string;
   eReceiptUrl?: string;

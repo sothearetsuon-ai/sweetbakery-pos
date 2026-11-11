@@ -426,9 +426,8 @@ export const DigitalReceiptView: React.FC = () => {
           </div>
         </div>
 
-        {/* Customer Mobile Action Bar (No-Print) */}
-        <div className="p-4 bg-slate-50 border-t border-slate-100 space-y-2.5 no-print font-battambang">
-          {/* Print / Save PDF Button */}
+        {/* Customer Mobile Action Bar (No-Print) - Single Clean Print/Save */}
+        <div className="p-3.5 bg-slate-50 border-t border-slate-100 no-print font-battambang">
           <button
             type="button"
             onClick={handlePrint}
@@ -436,47 +435,6 @@ export const DigitalReceiptView: React.FC = () => {
           >
             <Printer className="w-4 h-4 text-emerald-400" />
             <span>🖨️ បោះពុម្ព ឬរក្សាទុកជា PDF (Print / Save)</span>
-          </button>
-
-          {/* Share & Copy Link Grid */}
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              type="button"
-              onClick={handleShare}
-              className="py-2 px-3 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 transition-all shadow-xs active:scale-98 cursor-pointer"
-            >
-              <Share2 className="w-3.5 h-3.5" />
-              <span>ចែករំលែក</span>
-            </button>
-            <button
-              type="button"
-              onClick={handleCopyLink}
-              className="py-2 px-3 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 transition-all shadow-xs active:scale-98 cursor-pointer"
-            >
-              <Copy className="w-3.5 h-3.5 text-slate-500" />
-              <span>{copied ? 'បានចម្លង! ✅' : 'ចម្លងតំណ'}</span>
-            </button>
-          </div>
-
-          {/* Quick Call or Telegram to Store */}
-          {receipt.store.phone && (
-            <a
-              href={`tel:${receipt.store.phone.split(',')[0].trim()}`}
-              className="w-full py-2 bg-pink-50 hover:bg-pink-100 text-pink-700 border border-pink-200 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all active:scale-98"
-            >
-              <Phone className="w-3.5 h-3.5 text-pink-600" />
-              <span>ទូរស័ព្ទទៅកាន់ហាង៖ {receipt.store.phone.split(',')[0].trim()}</span>
-            </a>
-          )}
-
-          {/* Self-Order Online Portal Link */}
-          <button
-            type="button"
-            onClick={handleBrowseMenu}
-            className="w-full py-2.5 bg-gradient-to-r from-pink-500 via-rose-500 to-amber-500 text-white text-xs font-black rounded-xl flex items-center justify-center gap-1.5 shadow-md shadow-pink-500/20 active:scale-98 transition-all cursor-pointer"
-          >
-            <Sparkles className="w-4 h-4 text-amber-200 animate-pulse" />
-            <span>🎂 មើលម៉ឺនុយហាង & កុម្ម៉ង់នំលើកក្រោយ</span>
           </button>
         </div>
       </div>
