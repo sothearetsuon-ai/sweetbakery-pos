@@ -28,7 +28,7 @@ import {
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { useBakery } from '../../context/BakeryContext';
-import { Product } from '../../types';
+import { Product, CompletedSale } from '../../types';
 import { soundFx } from '../../utils/audio';
 import {
   customerDisplaySync,
@@ -37,6 +37,7 @@ import {
 import { setStoreId, saveFirestoreDoc, getStoreId } from '../../services/firebase';
 import { getProductImageUrl } from '../../utils/imagePath';
 import { roundKhr } from '../../utils/currencyUtils';
+import { getEReceiptWebUrl } from '../../utils/eReceiptUrl';
 
 type DisplayTheme = 'dark' | 'light';
 type IdleTab = 'menu' | 'spotlight' | 'qr';
@@ -72,6 +73,35 @@ export const CustomerDisplayView: React.FC = () => {
       return 'contain';
     }
   });
+
+  const customerEReceiptUrl = useMemo(() => {
+    const saleLike: CompletedSale = {
+      id: displayState.orderNumber || '0001',
+      orderNumber: displayState.orderNumber || '0001',
+      createdAt: new Date().toISOString(),
+      cashierName: displayState.cashierName || 'Staff',
+      items: (displayState.items || []).map((i) => ({
+        productId: i.id,
+        nameKh: i.nameKh,
+        nameEn: i.nameEn,
+        priceKhr: i.unitPriceKhr,
+        priceUsd: i.unitPriceUsd,
+        quantity: i.quantity,
+      })),
+      subtotalUsd: displayState.subtotalUsd,
+      discountUsd: displayState.discountKhr ? displayState.discountKhr / exchangeRate : 0,
+      discountKhr: displayState.discountKhr,
+      totalKhr: displayState.totalKhr,
+      totalUsd: displayState.totalUsd,
+      paymentMethod: (displayState.paidCurrency === 'KHR' ? 'CASH_KHR' : 'CASH_USD') as any,
+      isDeposit: displayState.isDeposit,
+      depositKhr: displayState.depositKhr,
+      depositUsd: displayState.depositKhr ? displayState.depositKhr / exchangeRate : undefined,
+      paidKhr: displayState.paidCurrency === 'KHR' ? displayState.paidAmount : undefined,
+      paidUsd: displayState.paidCurrency === 'USD' ? displayState.paidAmount : undefined,
+    };
+    return getEReceiptWebUrl(saleLike, storeInfo, exchangeRate);
+  }, [displayState, storeInfo, exchangeRate]);
 
   const toggleImageFitMode = () => {
     setImageFitMode((prev) => {
@@ -1047,12 +1077,8 @@ export const CustomerDisplayView: React.FC = () => {
 
                 <div className="p-3 bg-white rounded-2xl shadow-md border-2 border-emerald-400/40">
                   <img
-                    src={`https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(
-                      `SWEET_BAKERY_RECEIPT|STORE:${storeInfo.nameKh || 'Bakery'}|ORDER:${
-                        displayState.orderNumber || '0001'
-                      }|AMOUNT:${(displayState.paidAmount || displayState.totalKhr).toLocaleString()}${
-                        displayState.paidCurrency || 'KHR'
-                      }|DATE:${new Date().toLocaleDateString('en-GB')}`
+                    src={`https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(
+                      customerEReceiptUrl || `https://sothearetsuon-ai.github.io/sweetbakery-pos/`
                     )}`}
                     alt="Paperless E-Receipt QR"
                     className="w-36 h-36 sm:w-44 sm:h-44 object-contain rounded-lg"

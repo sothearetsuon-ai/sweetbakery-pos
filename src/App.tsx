@@ -52,6 +52,7 @@ const LoyaltyRewardsModal = lazy(() => import('./components/crm/LoyaltyRewardsMo
 const AiDemandForecastModal = lazy(() => import('./components/reports/AiDemandForecastModal').then((m) => ({ default: m.AiDemandForecastModal })));
 const InAppChatModal = lazy(() => import('./components/chat/InAppChatModal').then((m) => ({ default: m.InAppChatModal })));
 const CustomerDisplayView = lazy(() => import('./components/pos/CustomerDisplayView').then((m) => ({ default: m.CustomerDisplayView })));
+const DigitalReceiptView = lazy(() => import('./components/pos/DigitalReceiptView').then((m) => ({ default: m.DigitalReceiptView })));
 
 // Sleek modern frosted loading skeleton for seamless view transitions
 const ViewLoadingFallback: React.FC = () => (
@@ -176,6 +177,7 @@ export const App: React.FC = () => {
     const hash = window.location.hash;
     if (params.get('order') === 'true' || hash === '#order' || hash === '#customer-view') return;
     if (params.get('display') === 'true' || hash === '#customer-display') return;
+    if (params.get('receipt') || hash === '#receipt' || hash === '#ereceipt') return;
     if (params.get('demo') === 'true' || hash === '#demo') return;
 
     const isUnlockedSession = sessionStorage.getItem('bakery_real_store_unlocked') === 'true';
@@ -376,6 +378,21 @@ export const App: React.FC = () => {
       setActiveTab(tab);
     }
   };
+
+  // Render dedicated Digital E-Receipt on mobile if in (?receipt=... or #receipt)
+  const isReceiptView =
+    typeof window !== 'undefined' &&
+    (Boolean(new URLSearchParams(window.location.search).get('receipt')) ||
+      window.location.hash === '#receipt' ||
+      window.location.hash === '#ereceipt');
+
+  if (isReceiptView) {
+    return (
+      <Suspense fallback={<ViewLoadingFallback />}>
+        <DigitalReceiptView />
+      </Suspense>
+    );
+  }
 
   // Render dedicated Customer-Facing Secondary Display if in (?display=true or #customer-display)
   const isCustomerDisplay =

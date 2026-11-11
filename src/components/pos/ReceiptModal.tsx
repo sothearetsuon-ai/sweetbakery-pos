@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { X, Printer, CheckCircle2, Sparkles, QrCode, Smartphone, Share2 } from 'lucide-react';
+import { X, Printer, CheckCircle2, Sparkles, QrCode, Smartphone, Share2, ExternalLink, Copy } from 'lucide-react';
 import { CompletedSale } from '../../types';
 import { useBakery } from '../../context/BakeryContext';
 import { t } from '../../utils/translations';
 import { getProductImageUrl } from '../../utils/imagePath';
 import { formatDateTimeDMY, formatDateDMY } from '../../utils/dateUtils';
 import { roundKhr } from '../../utils/currencyUtils';
+import { getEReceiptWebUrl } from '../../utils/eReceiptUrl';
 import { AddPartyAddonsToSaleModal } from './AddPartyAddonsToSaleModal';
 
 interface ReceiptModalProps {
@@ -29,6 +30,16 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({ sale, isOpen, onClos
   }, [sale]);
 
   const currentSale = activeSale || sale;
+  const eReceiptUrl = currentSale ? getEReceiptWebUrl(currentSale, storeInfo, exchangeRate) : '';
+  const [copiedLink, setCopiedLink] = useState(false);
+
+  const handleCopyEReceiptLink = () => {
+    if (eReceiptUrl && navigator.clipboard) {
+      navigator.clipboard.writeText(eReceiptUrl);
+      setCopiedLink(true);
+      setTimeout(() => setCopiedLink(false), 2000);
+    }
+  };
 
   if (!isOpen || !currentSale) return null;
 
@@ -256,29 +267,42 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({ sale, isOpen, onClos
 
         {/* E-Receipt Paperless Expandable Card */}
         {showEReceiptQr && (
-          <div className="p-4 bg-emerald-50 border-t border-emerald-200 flex flex-col items-center text-center space-y-2 animate-in fade-in duration-200">
+          <div className="p-4 bg-emerald-50 border-t border-emerald-200 flex flex-col items-center text-center space-y-2.5 animate-in fade-in duration-200 font-battambang">
             <div className="flex items-center gap-1.5 text-xs font-black text-emerald-800 uppercase">
               <QrCode className="w-4 h-4 text-emerald-600" />
-              <span>📱 ស្កេនយក E-Receipt លើទូរស័ព្ទ</span>
+              <span>📱 ស្កេនយក E-Receipt លើទូរស័ព្ទ (Paperless)</span>
             </div>
-            <div className="p-2 bg-white rounded-2xl shadow-sm border border-emerald-200">
+            <div className="p-2.5 bg-white rounded-2xl shadow-sm border border-emerald-300">
               <img
-                src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(
-                  `SWEET_BAKERY_RECEIPT|STORE:${storeInfo.nameKh || 'Bakery'}|ORDER:${
-                    currentSale.orderNumber
-                  }|TOTAL:${roundKhr(currentSale.totalKhr).toLocaleString()}KHR|$${currentSale.totalUsd.toFixed(
-                    2
-                  )}|DATE:${new Date(currentSale.createdAt).toLocaleDateString('en-GB')}|ITEMS:${currentSale.items
-                    .map((i) => `${i.nameKh}x${i.quantity}`)
-                    .join(';')}`
+                src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(
+                  eReceiptUrl
                 )}`}
                 alt="E-Receipt QR"
-                className="w-32 h-32 object-contain rounded-lg"
+                className="w-36 h-36 object-contain rounded-lg"
               />
             </div>
-            <p className="text-[11px] text-emerald-700 font-bold">
-              អតិថិជនអាចស្កេនកាមេរ៉ាទូរស័ព្ទ ដើម្បីរក្សាទុកបង្កាន់ដៃ
+            <p className="text-[11px] text-emerald-800 font-bold max-w-xs">
+              អតិថិជនស្កេនកាមេរ៉ាទូរស័ព្ទ នឹងឃើញវិក្កយបត្រផ្លូវការដូចលើអេក្រង់នេះភ្លាមៗ
             </p>
+            <div className="flex items-center gap-2 pt-1">
+              <a
+                href={eReceiptUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="px-2.5 py-1 bg-white hover:bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-lg text-[10px] font-bold flex items-center gap-1 transition-all"
+              >
+                <ExternalLink className="w-3 h-3" />
+                <span>មើលគំរូ (Preview)</span>
+              </a>
+              <button
+                type="button"
+                onClick={handleCopyEReceiptLink}
+                className="px-2.5 py-1 bg-white hover:bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-lg text-[10px] font-bold flex items-center gap-1 transition-all cursor-pointer"
+              >
+                <Copy className="w-3 h-3" />
+                <span>{copiedLink ? 'បានចម្លង! ✅' : 'ចម្លងតំណ E-Receipt'}</span>
+              </button>
+            </div>
           </div>
         )}
 
