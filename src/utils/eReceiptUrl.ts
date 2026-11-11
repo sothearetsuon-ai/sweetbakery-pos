@@ -43,6 +43,10 @@ export interface CompactReceiptPayload {
 
 export function encodeReceiptData(sale: CompletedSale, storeInfo: StoreInfo, exchangeRate = 4000): string {
   try {
+    // Only keep clean URL paths, NEVER include large base64 data URLs in URL query params
+    const safeLogo = storeInfo.logoUrl && !storeInfo.logoUrl.startsWith('data:') ? storeInfo.logoUrl : undefined;
+    const safeKhqr = storeInfo.khqrQrImage && !storeInfo.khqrQrImage.startsWith('data:') ? storeInfo.khqrQrImage : undefined;
+
     const payload: CompactReceiptPayload = {
       inv: sale.orderNumber,
       dt: typeof sale.createdAt === 'string' ? new Date(sale.createdAt).getTime() : (sale.createdAt || Date.now()),
@@ -79,9 +83,9 @@ export function encodeReceiptData(sale: CompletedSale, storeInfo: StoreInfo, exc
         nameEn: storeInfo.nameEn || 'SWEET BAKERY & CAFE',
         addr: storeInfo.address || '',
         phone: storeInfo.phone || '',
-        logo: storeInfo.logoUrl || undefined,
+        logo: safeLogo,
         tagline: storeInfo.tagline || undefined,
-        khqrImage: storeInfo.khqrQrImage || undefined,
+        khqrImage: safeKhqr,
         khqrMerchant: storeInfo.khqrMerchantName || undefined,
         khqrBakongId: storeInfo.khqrBakongId || undefined,
       },
@@ -124,7 +128,7 @@ export function getEReceiptWebUrl(sale: CompletedSale, storeInfo: StoreInfo, exc
       window.location.protocol.startsWith('file');
 
     if (!isLocal) {
-      // Use the actual deployed production origin & path (e.g. github pages or custom domain)
+      // Use the actual deployed production origin & path
       const cleanPath = window.location.pathname.endsWith('/') 
         ? window.location.pathname 
         : window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/') + 1);
@@ -135,4 +139,3 @@ export function getEReceiptWebUrl(sale: CompletedSale, storeInfo: StoreInfo, exc
   const separator = baseUrl.includes('?') ? '&' : '?';
   return `${baseUrl}${separator}receipt=${encoded}#receipt`;
 }
-

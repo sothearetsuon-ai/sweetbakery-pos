@@ -38,6 +38,7 @@ import { setStoreId, saveFirestoreDoc, getStoreId } from '../../services/firebas
 import { getProductImageUrl } from '../../utils/imagePath';
 import { roundKhr } from '../../utils/currencyUtils';
 import { getEReceiptWebUrl } from '../../utils/eReceiptUrl';
+import { QrCodeImage } from '../common/QrCodeImage';
 
 type DisplayTheme = 'dark' | 'light';
 type IdleTab = 'menu' | 'spotlight' | 'qr';
@@ -1075,11 +1076,10 @@ export const CustomerDisplayView: React.FC = () => {
                   <span>📱 វិក្កយបត្រអេឡិចត្រូនិច (Paperless E-Receipt)</span>
                 </div>
 
-                <div className="p-3 bg-white rounded-2xl shadow-md border-2 border-emerald-400/40">
-                  <img
-                    src={`https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(
-                      customerEReceiptUrl || `https://sothearetsuon-ai.github.io/sweetbakery-pos/`
-                    )}`}
+                <div className="p-3 bg-white rounded-2xl shadow-md border-2 border-emerald-400/40 flex items-center justify-center">
+                  <QrCodeImage
+                    data={customerEReceiptUrl || `https://sothearetsuon-ai.github.io/sweetbakery-pos/`}
+                    size={176}
                     alt="Paperless E-Receipt QR"
                     className="w-36 h-36 sm:w-44 sm:h-44 object-contain rounded-lg"
                   />

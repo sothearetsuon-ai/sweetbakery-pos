@@ -7,6 +7,7 @@ import { getProductImageUrl } from '../../utils/imagePath';
 import { formatDateTimeDMY, formatDateDMY } from '../../utils/dateUtils';
 import { roundKhr } from '../../utils/currencyUtils';
 import { getEReceiptWebUrl } from '../../utils/eReceiptUrl';
+import { QrCodeImage } from '../common/QrCodeImage';
 import { AddPartyAddonsToSaleModal } from './AddPartyAddonsToSaleModal';
 
 interface ReceiptModalProps {
@@ -237,21 +238,27 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({ sale, isOpen, onClos
               <p className="text-[9px] text-slate-500 font-medium">
                 {storeInfo.tagline || 'នំស្រស់ៗដុតជារៀងរាល់ថ្ងៃ • មានទទួលកុម្ម៉ង់នំខួបកំណើតគ្រប់ម៉ូដ'}
               </p>
-              <div className="w-20 h-20 mx-auto bg-slate-100 p-1 rounded-lg border border-slate-200 overflow-hidden">
-                <img
-                  src={
-                    (storeInfo.khqrQrImage ? getProductImageUrl(storeInfo.khqrQrImage) : undefined) ||
-                    `https://api.qrserver.com/v1/create-qr-code/?size=80x80&data=bakong://pay?merchant=${encodeURIComponent(
+              <div className="w-20 h-20 mx-auto bg-slate-100 p-1 rounded-lg border border-slate-200 overflow-hidden flex items-center justify-center">
+                {storeInfo.khqrQrImage ? (
+                  <img
+                    src={getProductImageUrl(storeInfo.khqrQrImage)}
+                    alt="KHQR / Feedback"
+                    loading="lazy"
+                    decoding="async"
+                    className="w-full h-full object-contain"
+                  />
+                ) : (
+                  <QrCodeImage
+                    data={`bakong://pay?merchant=${encodeURIComponent(
                       storeInfo.khqrMerchantName || 'SWEET_BAKERY'
                     )}&account=${encodeURIComponent(
                       storeInfo.khqrBakongId || 'sweet_bakery@aba'
-                    )}`
-                  }
-                  alt="KHQR / Feedback"
-                  loading="lazy"
-                  decoding="async"
-                  className="w-full h-full object-contain"
-                />
+                    )}`}
+                    size={80}
+                    alt="KHQR / Feedback"
+                    className="w-full h-full object-contain"
+                  />
+                )}
               </div>
               <p className="text-[8px] text-slate-400">
                 {currentSale.paymentMethod === 'KHQR_BAKONG'
@@ -272,11 +279,10 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({ sale, isOpen, onClos
               <QrCode className="w-4 h-4 text-emerald-600" />
               <span>📱 ស្កេនយក E-Receipt លើទូរស័ព្ទ (Paperless)</span>
             </div>
-            <div className="p-2.5 bg-white rounded-2xl shadow-sm border border-emerald-300">
-              <img
-                src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(
-                  eReceiptUrl
-                )}`}
+            <div className="p-2.5 bg-white rounded-2xl shadow-sm border border-emerald-300 flex items-center justify-center">
+              <QrCodeImage
+                data={eReceiptUrl}
+                size={160}
                 alt="E-Receipt QR"
                 className="w-36 h-36 object-contain rounded-lg"
               />

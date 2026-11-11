@@ -19,6 +19,7 @@ import { decodeReceiptData, CompactReceiptPayload } from '../../utils/eReceiptUr
 import { getProductImageUrl } from '../../utils/imagePath';
 import { formatDateDMY, formatDateTimeDMY } from '../../utils/dateUtils';
 import { roundKhr } from '../../utils/currencyUtils';
+import { QrCodeImage } from '../common/QrCodeImage';
 
 export const DigitalReceiptView: React.FC = () => {
   const [receipt, setReceipt] = useState<CompactReceiptPayload | null>(null);
@@ -229,15 +230,17 @@ export const DigitalReceiptView: React.FC = () => {
           <div className="text-slate-900 text-xs font-mono leading-relaxed space-y-3">
             {/* Store Header */}
             <div className="text-center space-y-1 border-b border-dashed border-slate-300 pb-3">
-              {receipt.store.logo && (
-                <div className="w-14 h-14 mx-auto mb-1.5 rounded-xl overflow-hidden border border-slate-200 p-0.5 bg-white">
-                  <img
-                    src={getProductImageUrl(receipt.store.logo)}
-                    alt="Store Logo"
-                    className="w-full h-full object-contain"
-                  />
-                </div>
-              )}
+              <div className="w-14 h-14 mx-auto mb-1.5 rounded-xl overflow-hidden border border-slate-200 p-0.5 bg-white">
+                <img
+                  src={getProductImageUrl(receipt.store.logo || '/uploads/products/prod_1789651345094_x6k2.jpg')}
+                  alt="Store Logo"
+                  className="w-full h-full object-contain"
+                  onError={(e) => {
+                    // Fallback to default cake image if path fails
+                    (e.target as HTMLImageElement).src = '/uploads/products/prod_1789651345094_x6k2.jpg';
+                  }}
+                />
+              </div>
               <h2 className="text-base font-black tracking-tight font-sans text-slate-900 uppercase">
                 {receipt.store.nameEn || 'SWEET BAKERY & CAFE'}
               </h2>
@@ -389,21 +392,27 @@ export const DigitalReceiptView: React.FC = () => {
               <p className="text-[9px] text-slate-500 font-medium">
                 {receipt.store.tagline || 'នំស្រស់ៗដុតជារៀងរាល់ថ្ងៃ • មានទទួលកុម្ម៉ង់នំខួបកំណើតគ្រប់ម៉ូដ'}
               </p>
-              <div className="w-20 h-20 mx-auto bg-slate-50 p-1 rounded-lg border border-slate-200 overflow-hidden shadow-2xs">
-                <img
-                  src={
-                    (receipt.store.khqrImage ? getProductImageUrl(receipt.store.khqrImage) : undefined) ||
-                    `https://api.qrserver.com/v1/create-qr-code/?size=80x80&data=bakong://pay?merchant=${encodeURIComponent(
+              <div className="w-20 h-20 mx-auto bg-slate-50 p-1 rounded-lg border border-slate-200 overflow-hidden shadow-2xs flex items-center justify-center">
+                {receipt.store.khqrImage ? (
+                  <img
+                    src={getProductImageUrl(receipt.store.khqrImage)}
+                    alt="Store KHQR"
+                    loading="lazy"
+                    decoding="async"
+                    className="w-full h-full object-contain"
+                  />
+                ) : (
+                  <QrCodeImage
+                    data={`bakong://pay?merchant=${encodeURIComponent(
                       receipt.store.khqrMerchant || receipt.store.nameEn || 'SWEET_BAKERY'
                     )}&account=${encodeURIComponent(
                       receipt.store.khqrBakongId || 'sweet_bakery@aba'
-                    )}`
-                  }
-                  alt="Store KHQR"
-                  loading="lazy"
-                  decoding="async"
-                  className="w-full h-full object-contain"
-                />
+                    )}`}
+                    size={80}
+                    alt="Store KHQR"
+                    className="w-full h-full object-contain"
+                  />
+                )}
               </div>
               <p className="text-[8px] text-slate-400">
                 {receipt.pay === 'KHQR_BAKONG'
