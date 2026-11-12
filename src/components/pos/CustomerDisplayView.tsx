@@ -41,9 +41,10 @@ import { getEReceiptWebUrl } from '../../utils/eReceiptUrl';
 import { QrCodeImage } from '../common/QrCodeImage';
 import { PhoneChooserModal } from '../common/PhoneChooserModal';
 import { parsePhoneNumbers, dialPhoneNumber } from '../../utils/phoneUtils';
+import { CustomerLuckyWheelModal } from './CustomerLuckyWheelModal';
 
 type DisplayTheme = 'dark' | 'light';
-type IdleTab = 'menu' | 'spotlight' | 'qr' | 'promo';
+type IdleTab = 'menu' | 'spotlight' | 'qr' | 'promo' | 'wheel';
 
 export const CustomerDisplayView: React.FC = () => {
   const { storeInfo, exchangeRate, products, categories } = useBakery();
@@ -56,6 +57,7 @@ export const CustomerDisplayView: React.FC = () => {
   const [carouselIndex, setCarouselIndex] = useState(0);
   const [menuPage, setMenuPage] = useState(0);
   const [idleTab, setIdleTab] = useState<IdleTab>('menu');
+  const [isLuckyWheelModalOpen, setIsLuckyWheelModalOpen] = useState(false);
   const [theme, setTheme] = useState<DisplayTheme>(() => {
     try {
       return (localStorage.getItem('sweetbakery_customer_display_theme') as DisplayTheme) || 'dark';
@@ -369,6 +371,13 @@ export const CustomerDisplayView: React.FC = () => {
       : `${customerOrderUrl}?order=true&promo=app`;
   }, [customerOrderUrl]);
 
+  // Customer Lucky Wheel Spin URL
+  const luckyWheelUrl = useMemo(() => {
+    return customerOrderUrl.includes('?')
+      ? customerOrderUrl.replace('?order=true', '?spin=true').replace('#order', '#spin')
+      : `${customerOrderUrl}?spin=true#spin`;
+  }, [customerOrderUrl]);
+
   const isDark = theme === 'dark';
 
   return (
@@ -543,6 +552,22 @@ export const CustomerDisplayView: React.FC = () => {
                 <span>ប្រូម៉ូសិន App (-{storeInfo.appPromoValue || 10}%)</span>
               </button>
             )}
+
+            {/* Lucky Wheel Spin Tab */}
+            <button
+              type="button"
+              onClick={() => setIdleTab('wheel')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${
+                idleTab === 'wheel'
+                  ? 'bg-gradient-to-r from-purple-600 via-pink-600 to-rose-500 text-white shadow-md shadow-purple-500/20 ring-1 ring-purple-300'
+                  : isDark
+                  ? 'text-purple-300 hover:text-white'
+                  : 'text-purple-700 hover:text-purple-900 bg-purple-50/70'
+              }`}
+            >
+              <Sparkles className="w-3.5 h-3.5 text-amber-300 animate-spin-slow" />
+              <span>🎡 បង្វិលកងឈ្នះរង្វាន់</span>
+            </button>
           </div>
         )}
 
@@ -623,6 +648,14 @@ export const CustomerDisplayView: React.FC = () => {
                 <span className="text-pink-400">•</span>
               </>
             )}
+            <span
+              onClick={() => setIdleTab('wheel')}
+              className="flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-gradient-to-r from-purple-600 via-pink-600 to-rose-500 text-white text-[10px] font-black uppercase tracking-wider shadow-xs shrink-0 cursor-pointer hover:opacity-90 active:scale-95 transition-all"
+            >
+              <Sparkles className="w-3 h-3 text-amber-200 animate-spin-slow" />
+              <span>🎡 ស្កេន QR បង្វិលកងឈ្នះរង្វាន់ (ហ្វ្រី Donut, ភេសជ្ជៈ & បញ្ចុះ 10%)!</span>
+            </span>
+            <span className="text-pink-400">•</span>
             <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-pink-500 text-white text-[10px] font-black uppercase tracking-wider">
               <Flame className="w-3 h-3 text-yellow-200" />
               HOT SPECIAL
@@ -989,6 +1022,125 @@ export const CustomerDisplayView: React.FC = () => {
                   <div className="flex items-center gap-2 text-xs font-bold text-pink-500">
                     <Sparkles className="w-4 h-4" />
                     <span>គាំទ្រទាំង iOS, Android & Telegram Mini App</span>
+                  </div>
+                </div>
+              ) : idleTab === 'wheel' ? (
+                /* Lucky Wheel Spin QR Showcase Mode (idleTab === 'wheel') */
+                <div className="flex-1 flex flex-col items-center justify-between p-4 sm:p-6 text-center overflow-y-auto">
+                  {/* Top Badge & Header */}
+                  <div className="space-y-2 max-w-xl">
+                    <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-gradient-to-r from-purple-600 via-pink-600 to-amber-500 text-white text-xs sm:text-sm font-black shadow-lg shadow-purple-500/30 animate-pulse">
+                      <Sparkles className="w-4 h-4 text-amber-200 animate-spin-slow" />
+                      <span>🎡 កម្មវិធីពិសេស ស្កេនបង្វិលកងឈ្នះរង្វាន់ ១០០%</span>
+                    </div>
+
+                    <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black font-muol bg-gradient-to-r from-purple-500 via-pink-500 to-amber-500 bg-clip-text text-transparent">
+                      បង្វិលកងសំណាង ឈ្នះរង្វាន់ភ្លាមៗ!
+                    </h2>
+
+                    <p className={`text-xs sm:text-sm font-battambang leading-relaxed ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
+                      បើកកាមេរ៉ាទូរស័ព្ទដៃស្កេន QR Code ដើម្បីបង្វិលកងឈ្នះរង្វាន់ នំ Donut ហ្វ្រី ប័ណ្ណបញ្ចុះតម្លៃ ភេសជ្ជៈ និងរង្វាន់ជាច្រើន!
+                    </p>
+                  </div>
+
+                  {/* Middle: QR Code Standee Card & Prize List */}
+                  <div className="my-3 flex flex-col md:flex-row items-center justify-center gap-6 max-w-2xl w-full">
+                    {/* QR Standee Card */}
+                    <div className="p-4 bg-white rounded-3xl shadow-2xl border-4 border-purple-500/50 flex flex-col items-center shrink-0 relative group">
+                      <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-purple-600 to-pink-600 text-white text-[10px] font-black px-3.5 py-0.5 rounded-full shadow-md whitespace-nowrap flex items-center gap-1">
+                        <Sparkles className="w-3 h-3 text-amber-300" />
+                        <span>ស្កេនលេងបង្វិលកង</span>
+                      </div>
+                      <QrCodeImage
+                        data={luckyWheelUrl}
+                        size={210}
+                        className="w-44 h-44 sm:w-52 sm:h-52"
+                      />
+                      <span className="text-[10.5px] font-bold text-purple-700 mt-2 flex items-center gap-1 font-battambang">
+                        <span>📲 ស្កេនតាមទូរស័ព្ទដៃលេងភ្លាមៗ</span>
+                      </span>
+                    </div>
+
+                    {/* Prize Cards Grid */}
+                    <div className="space-y-2.5 text-left w-full max-w-sm font-battambang">
+                      <div className={`p-2.5 rounded-2xl border flex items-center gap-3 transition-transform hover:scale-[1.02] ${isDark ? 'bg-slate-950/60 border-slate-800' : 'bg-purple-50/60 border-purple-100'}`}>
+                        <div className="w-9 h-9 rounded-xl bg-rose-500/20 text-rose-500 flex items-center justify-center text-xl shrink-0">
+                          🧁
+                        </div>
+                        <div className="flex-1">
+                          <div className={`text-xs sm:text-sm font-black ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                            ហ្វ្រី Donut ស្រស់ ១
+                          </div>
+                          <div className={`text-[10.5px] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                            ដុតថ្មីៗជារៀងរាល់ព្រឹក
+                          </div>
+                        </div>
+                        <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-rose-100 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400">FREE</span>
+                      </div>
+
+                      <div className={`p-2.5 rounded-2xl border flex items-center gap-3 transition-transform hover:scale-[1.02] ${isDark ? 'bg-slate-950/60 border-slate-800' : 'bg-purple-50/60 border-purple-100'}`}>
+                        <div className="w-9 h-9 rounded-xl bg-amber-500/20 text-amber-500 flex items-center justify-center text-xl shrink-0">
+                          🎟️
+                        </div>
+                        <div className="flex-1">
+                          <div className={`text-xs sm:text-sm font-black ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                            បញ្ចុះតម្លៃ 10% លើវិក្កយបត្រ
+                          </div>
+                          <div className={`text-[10.5px] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                            កាត់ទឹកប្រាក់ភ្លាមៗនៅបញ្ជរ
+                          </div>
+                        </div>
+                        <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400">-10%</span>
+                      </div>
+
+                      <div className={`p-2.5 rounded-2xl border flex items-center gap-3 transition-transform hover:scale-[1.02] ${isDark ? 'bg-slate-950/60 border-slate-800' : 'bg-purple-50/60 border-purple-100'}`}>
+                        <div className="w-9 h-9 rounded-xl bg-cyan-500/20 text-cyan-500 flex items-center justify-center text-xl shrink-0">
+                          ☕
+                        </div>
+                        <div className="flex-1">
+                          <div className={`text-xs sm:text-sm font-black ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                            ហ្វ្រីភេសជ្ជៈ ១ កែវ
+                          </div>
+                          <div className={`text-[10.5px] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                            តែគុជ កាហ្វេ ឬទឹកផ្លែឈើ
+                          </div>
+                        </div>
+                        <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-cyan-100 dark:bg-cyan-950/50 text-cyan-600 dark:text-cyan-400">FREE</span>
+                      </div>
+
+                      <div className={`p-2.5 rounded-2xl border flex items-center gap-3 transition-transform hover:scale-[1.02] ${isDark ? 'bg-slate-950/60 border-slate-800' : 'bg-purple-50/60 border-purple-100'}`}>
+                        <div className="w-9 h-9 rounded-xl bg-purple-500/20 text-purple-500 flex items-center justify-center text-xl shrink-0">
+                          ⭐
+                        </div>
+                        <div className="flex-1">
+                          <div className={`text-xs sm:text-sm font-black ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                            +50 ពិន្ទុ VIP សន្សំប្តូររង្វាន់
+                          </div>
+                          <div className={`text-[10.5px] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                            សម្រាប់សមាជិក SweetBakery
+                          </div>
+                        </div>
+                        <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-950/50 text-purple-600 dark:text-purple-400">+50 PTS</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Bottom Footer Note & Direct Spin Button */}
+                  <div className="flex flex-wrap items-center justify-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        soundFx.playPop();
+                        setIsLuckyWheelModalOpen(true);
+                      }}
+                      className="px-4 py-2 rounded-2xl bg-gradient-to-r from-purple-600 via-pink-600 to-rose-500 hover:from-purple-700 hover:to-rose-600 text-white text-xs font-black shadow-md shadow-purple-500/20 active:scale-95 transition-all cursor-pointer flex items-center gap-2"
+                    >
+                      <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                      <span>🎯 ឬចុចបង្វិលសាកល្បងលើអេក្រង់នេះ</span>
+                    </button>
+                    <div className={`text-[11px] font-battambang flex items-center gap-2 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                      <span>គាំទ្រទាំង iOS & Android • ស្កេនដោយមិនបាច់ដំឡើង App</span>
+                    </div>
                   </div>
                 </div>
               ) : (
@@ -1744,6 +1896,13 @@ export const CustomerDisplayView: React.FC = () => {
         onClose={() => setIsPhoneChooserOpen(false)}
         phoneString={storeInfo.phone}
         storeName={storeInfo.nameKh || 'Sweet Bakery'}
+      />
+
+      {/* Counter Dual Screen Lucky Wheel On-Screen Modal */}
+      <CustomerLuckyWheelModal
+        isOpen={isLuckyWheelModalOpen}
+        onClose={() => setIsLuckyWheelModalOpen(false)}
+        allowSettings={true}
       />
     </div>
   );

@@ -59,12 +59,14 @@ interface CustomerLuckyWheelModalProps {
   isOpen: boolean;
   onClose: () => void;
   onRewardClaimed?: (reward: LuckyWheelReward) => void;
+  allowSettings?: boolean;
 }
 
 export const CustomerLuckyWheelModal: React.FC<CustomerLuckyWheelModalProps> = ({
   isOpen,
   onClose,
   onRewardClaimed,
+  allowSettings = true,
 }) => {
   const [mode, setMode] = useState<'spin' | 'settings'>('spin');
   const [rewards, setRewards] = useState<LuckyWheelReward[]>(DEFAULT_REWARDS);
@@ -287,7 +289,7 @@ export const CustomerLuckyWheelModal: React.FC<CustomerLuckyWheelModalProps> = (
 
         {/* Top Navigation & Controls */}
         <div className="w-full flex items-center justify-between mb-3 relative z-10">
-          {mode === 'settings' ? (
+          {allowSettings && mode === 'settings' ? (
             <button
               type="button"
               onClick={() => {
@@ -300,7 +302,7 @@ export const CustomerLuckyWheelModal: React.FC<CustomerLuckyWheelModalProps> = (
               <ChevronLeft className="w-4 h-4" />
               <span>ត្រឡប់ទៅកងបង្វិល</span>
             </button>
-          ) : (
+          ) : allowSettings ? (
             <button
               type="button"
               onClick={() => {
@@ -313,6 +315,11 @@ export const CustomerLuckyWheelModal: React.FC<CustomerLuckyWheelModalProps> = (
               <Settings className="w-3.5 h-3.5 text-rose-500" />
               <span>⚙️ កំណត់រង្វាន់</span>
             </button>
+          ) : (
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-pink-50 dark:bg-pink-950/40 text-pink-600 dark:text-pink-400 text-[11px] font-black">
+              <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+              <span>កងសំណាង SweetBakery</span>
+            </div>
           )}
 
           {/* Close modal */}
@@ -465,9 +472,9 @@ export const CustomerLuckyWheelModal: React.FC<CustomerLuckyWheelModalProps> = (
                       soundFx.playPop();
                       onClose();
                     }}
-                    className="px-3 py-1.5 rounded-xl bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 text-slate-700 dark:text-slate-200 text-xs font-bold cursor-pointer transition-all"
+                    className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white text-xs font-black shadow-sm cursor-pointer transition-all flex items-center gap-1 active:scale-95"
                   >
-                    <span>រួចរាល់</span>
+                    <span>🎁 ទទួលរង្វាន់ & មើលមឺនុយ</span>
                   </button>
                 </div>
               </div>

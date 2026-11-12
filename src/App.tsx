@@ -258,15 +258,22 @@ export const App: React.FC = () => {
     };
   }, [performUpdateCheck]);
 
-  // Customer Self-Order Link & Portal Mode
+  // Customer Self-Order Link & Portal Mode (Supports ?order=true, ?spin=true, ?wheel=true, #order, #spin, #wheel)
   const [isCustomerPortalOpen, setIsCustomerPortalOpen] = useState(() => {
     if (typeof window === 'undefined') return false;
     const tgParam = getTelegramStartParam();
+    const params = new URLSearchParams(window.location.search);
+    const hash = window.location.hash;
     return (
-      new URLSearchParams(window.location.search).get('order') === 'true' ||
-      window.location.hash === '#order' ||
+      params.get('order') === 'true' ||
+      params.get('spin') === 'true' ||
+      params.get('wheel') === 'true' ||
+      hash === '#order' ||
+      hash === '#spin' ||
+      hash === '#wheel' ||
       tgParam === 'order' ||
-      tgParam === 'catalog'
+      tgParam === 'catalog' ||
+      tgParam === 'spin'
     );
   });
   const [isCustomerOrderLinkModalOpen, setIsCustomerOrderLinkModalOpen] = useState(false);

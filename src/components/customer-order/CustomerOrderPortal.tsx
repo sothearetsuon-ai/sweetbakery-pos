@@ -30,6 +30,9 @@ import {
   MapPin,
   Bot,
   ArrowLeft,
+  Gift,
+  Flame,
+  Trophy,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { useBakery } from '../../context/BakeryContext';
@@ -50,6 +53,7 @@ import { ChatMessage } from '../../types';
 import { CustomerExpressOrderModal } from './CustomerExpressOrderModal';
 import { PhoneChooserModal } from '../common/PhoneChooserModal';
 import { parsePhoneNumbers, dialPhoneNumber } from '../../utils/phoneUtils';
+import { CustomerLuckyWheelModal, LuckyWheelReward } from '../pos/CustomerLuckyWheelModal';
 
 const CAKE_SIZES = [
   { id: '1.5 ទឹក', label: '1.5 ទឹក (~15cm)', desc: 'សម្រាប់ 2-4 នាក់', priceUsd: 12 },
@@ -350,6 +354,31 @@ export const CustomerOrderPortal: React.FC<CustomerOrderPortalProps> = ({ onBack
     } else {
       setIsPhoneChooserOpen(true);
     }
+  };
+
+  // Lucky Spin Wheel Modal & Claimed Prize State
+  const [isLuckyWheelOpen, setIsLuckyWheelOpen] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    const params = new URLSearchParams(window.location.search);
+    const hash = window.location.hash;
+    return params.get('spin') === 'true' || params.get('wheel') === 'true' || hash === '#spin' || hash === '#wheel';
+  });
+
+  const [claimedReward, setClaimedReward] = useState<LuckyWheelReward | null>(() => {
+    if (typeof window === 'undefined') return null;
+    try {
+      const saved = sessionStorage.getItem('sweetbakery_portal_won_reward');
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
+
+  const handleRewardClaimed = (reward: LuckyWheelReward) => {
+    setClaimedReward(reward);
+    try {
+      sessionStorage.setItem('sweetbakery_portal_won_reward', JSON.stringify(reward));
+    } catch {}
   };
 
   // AI Ordering Assistant Modal State
@@ -731,6 +760,7 @@ export const CustomerOrderPortal: React.FC<CustomerOrderPortalProps> = ({ onBack
         specialNotes.trim(),
         addonNames ? `គ្រឿងបន្ថែម៖ ${addonNames}` : '',
         customerTelegram.trim() ? `Telegram: ${customerTelegram.trim()}` : '',
+        claimedReward ? `🎁 រង្វាន់កងសំណាង: ${claimedReward.labelKh}` : '',
       ]
         .filter(Boolean)
         .join(' • ');
@@ -1053,33 +1083,107 @@ export const CustomerOrderPortal: React.FC<CustomerOrderPortalProps> = ({ onBack
         {/* ========================================================================= */}
         {step === 1 && (
           <div className="space-y-5 animate-in fade-in duration-300">
-            {/* Hero Card */}
-            <div className="bg-gradient-to-r from-[#FF6F68] via-[#FA5E57] to-[#E64C47] text-white rounded-3xl p-5 sm:p-7 shadow-xl shadow-[#E64C47]/20 relative overflow-hidden">
-              <div className="relative z-10 max-w-lg space-y-2">
-                <span className="px-3 py-1 bg-white/20 backdrop-blur-md rounded-full text-xs font-black tracking-wide inline-flex items-center gap-1">
-                  <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-                  <span>កុម្ម៉ង់នំខួបកំណើតតាមចិត្ត ជាមួយប្រាក់កក់ងាយស្រួល</span>
-                </span>
-                <h2 className="text-2xl sm:text-3xl font-black tracking-tight leading-tight">
-                  នំខួបកំណើតស្រស់ថ្មីៗ ដុតជារៀងរាល់ថ្ងៃ
+            {/* Prominent Promotion & Lucky Wheel Showcase Banner */}
+            <div className="bg-gradient-to-r from-[#FF5252] via-[#F43F5E] to-[#E11D48] text-white rounded-3xl p-5 sm:p-7 shadow-xl shadow-rose-500/25 relative overflow-hidden">
+              <div className="relative z-10 max-w-xl space-y-3">
+                {/* Badges row */}
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="px-3 py-1 bg-white/20 backdrop-blur-md rounded-full text-xs font-black tracking-wide inline-flex items-center gap-1.5 shadow-xs">
+                    <Sparkles className="w-3.5 h-3.5 text-amber-300 animate-spin-slow" />
+                    <span>ប្រូម៉ូសិនពិសេស & កងសំណាង</span>
+                  </span>
+                  {storeInfo.appPromoEnabled !== false && (
+                    <span className="px-3 py-1 bg-amber-400 text-amber-950 rounded-full text-xs font-black tracking-wide inline-flex items-center gap-1 shadow-xs animate-pulse">
+                      <Gift className="w-3.5 h-3.5" />
+                      <span>
+                        បញ្ចុះតម្លៃ{' '}
+                        {storeInfo.appPromoType === 'FIXED_KHR'
+                          ? `${(storeInfo.appPromoValue || 5000).toLocaleString()} ៛`
+                          : `${storeInfo.appPromoValue || 10}%`}{' '}
+                        ស្វ័យប្រវត្តិ
+                      </span>
+                    </span>
+                  )}
+                </div>
+
+                {/* Big Bold Headline */}
+                <h2 className="text-2xl sm:text-3xl font-black font-muol tracking-tight leading-tight text-white drop-shadow-sm">
+                  {storeInfo.appPromoEnabled !== false
+                    ? storeInfo.appPromoType === 'FIXED_KHR'
+                      ? `បញ្ចុះតម្លៃ ${(storeInfo.appPromoValue || 5000).toLocaleString()} ៛ ភ្លាមៗ!`
+                      : `បញ្ចុះតម្លៃ ${storeInfo.appPromoValue || 10}% រាល់ការកុម្ម៉ង់តាម App!`
+                    : 'ប្រូម៉ូសិនពិសេស & បង្វិលកងឈ្នះរង្វាន់!'}
                 </h2>
-                <p className="text-xs sm:text-sm text-pink-100 font-medium">
-                  ជ្រើសរើសម៉ូដនំក្នុងមឺនុយ ឬបញ្ចូលរូបភាពគំរូនំដែលអ្នកស្រឡាញ់ដើម្បីឱ្យជាងនំយើងខ្ញុំធ្វើជូន!
+
+                {/* Subtitle / Description */}
+                <p className="text-xs sm:text-sm text-pink-100 font-medium font-battambang leading-relaxed">
+                  {storeInfo.appPromoBannerTextKh ||
+                    'កុម្ម៉ង់នំខួបកំណើត ឬនំបុ័ងតាមទូរស័ព្ទដៃផ្ទាល់ ដើម្បីទទួលបានការបញ្ចុះតម្លៃស្វ័យប្រវត្តិ ព្រមទាំងបង្វិលកងឈ្នះរង្វាន់នំហ្វ្រី និងភេសជ្ជៈជាច្រើន!'}
                 </p>
-                <div className="pt-2 flex flex-wrap gap-2">
+
+                {/* Claimed prize highlight if customer has won */}
+                {claimedReward && (
+                  <div className="p-2.5 sm:p-3 bg-white/15 backdrop-blur-md border border-white/30 rounded-2xl flex items-center justify-between text-xs animate-in zoom-in-95">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xl">{claimedReward.icon}</span>
+                      <div>
+                        <div className="font-black text-amber-200">អ្នកបានឈ្នះ៖ {claimedReward.labelKh}</div>
+                        <div className="text-[10.5px] text-pink-100">បានកត់ត្រាភ្ជាប់ជាមួយការកុម្ម៉ង់របស់អ្នកស្វ័យប្រវត្តិ 🎉</div>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setIsLuckyWheelOpen(true)}
+                      className="px-2.5 py-1 bg-white/20 hover:bg-white/30 text-white rounded-xl text-[10.5px] font-bold transition-all cursor-pointer"
+                    >
+                      បង្វិលម្ដងទៀត
+                    </button>
+                  </div>
+                )}
+
+                {/* Interactive Action Buttons */}
+                <div className="pt-1 flex flex-wrap gap-2.5">
+                  {/* Lucky Wheel Spin Button */}
                   <button
-                    onClick={handleStartCustomDesign}
-                    className="px-4 py-2.5 bg-white text-[#C93833] hover:bg-[#FFF5F2] rounded-2xl text-xs font-black transition-all shadow-md active:scale-95 cursor-pointer flex items-center gap-1.5"
+                    type="button"
+                    onClick={() => {
+                      soundFx.playPop();
+                      setIsLuckyWheelOpen(true);
+                    }}
+                    className="px-4 py-2.5 bg-gradient-to-r from-amber-400 via-amber-300 to-yellow-400 hover:from-amber-300 hover:to-yellow-300 text-amber-950 rounded-2xl text-xs sm:text-sm font-black transition-all shadow-lg shadow-amber-950/20 active:scale-95 cursor-pointer flex items-center gap-2 group ring-2 ring-amber-200"
                   >
-                    <span>🎨 កុម្ម៉ង់ម៉ូដតាមរូបភាពផ្ទាល់ខ្លួន</span>
+                    <span className="text-base group-hover:rotate-45 transition-transform">🎡</span>
+                    <span>បង្វិលកងឈ្នះរង្វាន់</span>
+                    <Sparkles className="w-3.5 h-3.5 text-amber-800 animate-spin-slow" />
+                  </button>
+
+                  {/* Custom Design Button */}
+                  <button
+                    type="button"
+                    onClick={handleStartCustomDesign}
+                    className="px-4 py-2.5 bg-white text-[#C93833] hover:bg-[#FFF5F2] rounded-2xl text-xs sm:text-sm font-black transition-all shadow-md active:scale-95 cursor-pointer flex items-center gap-1.5"
+                  >
+                    <span>🎨 កុម្ម៉ង់ម៉ូដតាមរូបភាព</span>
                     <ArrowRight className="w-3.5 h-3.5" />
                   </button>
                 </div>
+
+                {/* Rewards preview ticker chips */}
+                <div className="pt-1 flex items-center gap-1.5 overflow-x-auto no-scrollbar text-[10.5px] text-pink-100 font-bold">
+                  <span className="text-amber-200">រង្វាន់រួមមាន៖</span>
+                  <span className="px-2 py-0.5 rounded-full bg-white/10 shrink-0">🧁 ហ្វ្រី Donut</span>
+                  <span className="px-2 py-0.5 rounded-full bg-white/10 shrink-0">🎟️ បញ្ចុះ 10%</span>
+                  <span className="px-2 py-0.5 rounded-full bg-white/10 shrink-0">☕ ហ្វ្រីភេសជ្ជៈ</span>
+                  <span className="px-2 py-0.5 rounded-full bg-white/10 shrink-0">⭐ +50 ពិន្ទុ VIP</span>
+                </div>
               </div>
 
-              {/* Decorative Background Shape */}
-              <div className="absolute right-[-20px] bottom-[-20px] text-8xl sm:text-9xl opacity-20 select-none pointer-events-none">
-                🎂
+              {/* Decorative Background Elements */}
+              <div className="absolute right-[-15px] bottom-[-20px] text-8xl sm:text-9xl opacity-20 select-none pointer-events-none transition-transform group-hover:scale-105">
+                🎡
+              </div>
+              <div className="absolute right-24 -top-8 text-6xl opacity-15 select-none pointer-events-none">
+                🎁
               </div>
             </div>
 
@@ -2458,6 +2562,14 @@ export const CustomerOrderPortal: React.FC<CustomerOrderPortalProps> = ({ onBack
         onClose={() => setIsPhoneChooserOpen(false)}
         phoneString={storeInfo.phone}
         storeName={storeInfo.nameKh || 'Sweet Bakery'}
+      />
+
+      {/* Customer Lucky Spin Wheel Modal (allowSettings false for customer protection) */}
+      <CustomerLuckyWheelModal
+        isOpen={isLuckyWheelOpen}
+        onClose={() => setIsLuckyWheelOpen(false)}
+        onRewardClaimed={handleRewardClaimed}
+        allowSettings={false}
       />
     </div>
   );

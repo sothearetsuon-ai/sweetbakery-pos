@@ -1,10 +1,10 @@
 {
-  "version": "2.1.3",
-  "versionCode": 79,
+  "version": "2.1.4",
+  "versionCode": 80,
   "releaseDate": "2026-11-12",
   "releaseNotes": [
-    "📞 ផ្ទាំងជ្រើសរើសលេខទូរស័ព្ទមុនពេលខល (Smart Phone Number Chooser) ៖ ដោះស្រាយបញ្ហាចុចខលលោតលេខទាំង ២ ជាប់គ្នា ដោយបន្ថែមផ្ទាំងជ្រើសរើសលេខ និងប្រព័ន្ធទូរស័ព្ទ (Metfone, Smart, Cellcard) យ៉ាងច្បាស់លាស់មុនពេលខលចេញ។",
-    "✨ ដំណើរការរលូនទាំងលើផ្ទាំងភ្ញៀវ Dual Screen, ផ្ទាំងកុម្ម៉ង់នំ Mobile Web Portal, Showcase និង E-Receipt។"
+    "🎉 ផ្ទាំងប្រូម៉ូសិនធំទូលាយ & បង្វិលកងឈ្នះរង្វាន់ (Prominent Promotions & Lucky Wheel Showcase) ៖ កែប្រែផ្ទាំងខាងលើក្នុងផ្ទាំងកុម្ម៉ង់អតិថិជន (Customer Order Portal) ឱ្យបង្ហាញពីប្រូម៉ូសិនបញ្ចុះតម្លៃរបស់ហាងយ៉ាងច្បាស់លាស់ ធំទូលាយ និងទាក់ទាញ ជំនួសការបង្ហាញតូចនៅរបារខាងក្រោម។",
+    "🎡 ស្កេន QR លេងបង្វិលកងចាប់រង្វាន់លើផ្ទាំងភ្ញៀវ (Lucky Wheel Spin QR on Dual Screen) ៖ បន្ថែម QR Code លើអេក្រង់ទី ២ សម្រាប់ភ្ញៀវស្កេនតាមទូរស័ព្ទដៃ ដើម្បីលេងបង្វិលកងឈ្នះរង្វាន់ភ្លាមៗ (ហ្វ្រី Donut, បញ្ចុះតម្លៃ 10%, ហ្វ្រីភេសជ្ជៈ, ពិន្ទុ VIP) ព្រមទាំងកត់ត្រារង្វាន់ចូលក្នុងការកុម្ម៉ង់ស្វ័យប្រវត្តិ។"
   ],
   "author": "សុធារិទ្ធ",
   "apkDownloadUrl": "https://sothearetsuon-ai.github.io/sweetbakery-pos/SweetBakery-Android.apk",
