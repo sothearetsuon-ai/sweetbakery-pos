@@ -46,6 +46,8 @@ import { StoreLocationModal } from '../common/StoreLocationModal';
 import { ContactModal } from '../common/ContactModal';
 import { roundKhr } from '../../utils/currencyUtils';
 import { CustomerExpressOrderModal } from '../customer-order/CustomerExpressOrderModal';
+import { PhoneChooserModal } from '../common/PhoneChooserModal';
+import { parsePhoneNumbers, dialPhoneNumber } from '../../utils/phoneUtils';
 
 // Iconic Chef Hat SVG matching the bakery logo aesthetic
 export const ChefHatIcon: React.FC<{ className?: string }> = ({ className = 'w-6 h-6' }) => (
@@ -364,6 +366,19 @@ export const CustomerShowcase: React.FC = () => {
   // Express 30-Second Fast Order State
   const [expressOrderProduct, setExpressOrderProduct] = useState<Product | null>(null);
 
+  // Phone Chooser Modal State
+  const [isPhoneChooserOpen, setIsPhoneChooserOpen] = useState(false);
+
+  const handlePhoneCallClick = () => {
+    soundFx.playPop();
+    const list = parsePhoneNumbers(storeInfo.phone);
+    if (list.length === 1) {
+      dialPhoneNumber(list[0].digits);
+    } else {
+      setIsPhoneChooserOpen(true);
+    }
+  };
+
   // Lightbox slideshow state
   const [lightboxImgIdx, setLightboxImgIdx] = useState(0);
   const [isLightboxAutoPlay, setIsLightboxAutoPlay] = useState(true);
@@ -662,10 +677,15 @@ export const CustomerShowcase: React.FC = () => {
         <div className="relative z-10 bg-chocolate-pattern px-3 sm:px-8 py-3.5 sm:py-5 flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4 border-t border-[#4A241A]">
           {/* Real Store Phone & Address Pill Box */}
           <div className="flex items-center justify-center gap-2 sm:gap-3 px-3.5 sm:px-5 py-2 sm:py-2.5 rounded-full bg-[#1F0E09] border border-[#E6514D]/60 shadow-lg text-white w-full sm:w-auto">
-            <div className="flex items-center gap-1.5 text-emerald-400 font-black text-xs sm:text-sm shrink-0">
+            <button
+              type="button"
+              onClick={handlePhoneCallClick}
+              className="flex items-center gap-1.5 text-emerald-400 hover:text-emerald-300 font-black text-xs sm:text-sm shrink-0 transition-colors cursor-pointer"
+              title="ចុចដើម្បីជ្រើសរើសលេខខលទាក់ទង"
+            >
               <Phone className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-400" />
-              <span>{storeInfo.phone || '012 345 678'}</span>
-            </div>
+              <span className="underline decoration-emerald-500/40">{storeInfo.phone || '012 345 678'}</span>
+            </button>
             <span className="text-white/30">•</span>
             <button
               type="button"
@@ -1215,6 +1235,14 @@ export const CustomerShowcase: React.FC = () => {
         isOpen={!!expressOrderProduct}
         onClose={() => setExpressOrderProduct(null)}
         product={expressOrderProduct}
+      />
+
+      {/* Phone Chooser Modal */}
+      <PhoneChooserModal
+        isOpen={isPhoneChooserOpen}
+        onClose={() => setIsPhoneChooserOpen(false)}
+        phoneString={storeInfo.phone}
+        storeName={storeInfo.nameKh || 'Sweet Bakery'}
       />
     </div>
   );

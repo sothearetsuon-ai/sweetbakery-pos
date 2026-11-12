@@ -56,6 +56,8 @@ import {
 } from '../../services/liveChatService';
 import { Product, StoreInfo, ChatMessage } from '../../types';
 import { soundFx } from '../../utils/audio';
+import { PhoneChooserModal } from '../common/PhoneChooserModal';
+import { parsePhoneNumbers, dialPhoneNumber } from '../../utils/phoneUtils';
 import { getProductImageUrl } from '../../utils/imagePath';
 
 interface CustomerAiGuideModalProps {
@@ -87,6 +89,7 @@ export const CustomerAiGuideModal: React.FC<CustomerAiGuideModalProps> = ({
 }) => {
   // Navigation Tabs: 'chat' (AI Q&A) | 'browse' (Cake Catalog) | 'store-chat' (Live Store Contact)
   const [activeTab, setActiveTab] = useState<'chat' | 'browse' | 'store-chat'>(initialTab);
+  const [isPhoneChooserOpen, setIsPhoneChooserOpen] = useState(false);
 
   useEffect(() => {
     if (isOpen && initialTab) {
@@ -483,7 +486,13 @@ export const CustomerAiGuideModal: React.FC<CustomerAiGuideModalProps> = ({
     } else if (action.type === 'OPEN_TELEGRAM' && action.payload?.url) {
       window.open(action.payload.url, '_blank', 'noopener,noreferrer');
     } else if (action.type === 'CALL_PHONE' && action.payload?.phone) {
-      window.location.href = `tel:${action.payload.phone}`;
+      soundFx.playPop();
+      const list = parsePhoneNumbers(action.payload.phone || storePhone);
+      if (list.length === 1) {
+        dialPhoneNumber(list[0].digits);
+      } else {
+        setIsPhoneChooserOpen(true);
+      }
     } else if (action.type === 'SET_SIZE_BUDGET' && onApplySizeBudget && action.payload) {
       onApplySizeBudget(action.payload.khr, action.payload.size);
     } else if (action.type === 'SET_FLAVOR' && onApplyFlavor && action.payload) {
@@ -1342,15 +1351,23 @@ export const CustomerAiGuideModal: React.FC<CustomerAiGuideModalProps> = ({
                 </div>
 
                 <div className="flex items-center gap-1.5 shrink-0">
-                  <a
-                    href={`tel:${storePhone}`}
-                    onClick={() => soundFx.playPop()}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      soundFx.playPop();
+                      const list = parsePhoneNumbers(storePhone);
+                      if (list.length === 1) {
+                        dialPhoneNumber(list[0].digits);
+                      } else {
+                        setIsPhoneChooserOpen(true);
+                      }
+                    }}
                     className="p-1.5 px-2.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 text-[11px] font-black flex items-center gap-1 transition-all active:scale-95 cursor-pointer shadow-2xs"
                     title="ខលទាន់ហេតុការណ៍"
                   >
                     <Phone className="w-3 h-3" />
                     <span className="hidden sm:inline">{storePhone}</span>
-                  </a>
+                  </button>
 
                   {telegramUrl && (
                     <a
@@ -1578,6 +1595,13 @@ export const CustomerAiGuideModal: React.FC<CustomerAiGuideModalProps> = ({
             </div>
           </div>
         )}
+        {/* Phone Chooser Modal */}
+        <PhoneChooserModal
+          isOpen={isPhoneChooserOpen}
+          onClose={() => setIsPhoneChooserOpen(false)}
+          phoneString={storePhone}
+          storeName={storeInfo?.nameKh || context.storeName || 'Sweet Bakery'}
+        />
       </div>
     </div>
   );

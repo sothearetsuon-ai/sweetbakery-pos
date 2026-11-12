@@ -39,6 +39,8 @@ import { getProductImageUrl } from '../../utils/imagePath';
 import { roundKhr } from '../../utils/currencyUtils';
 import { getEReceiptWebUrl } from '../../utils/eReceiptUrl';
 import { QrCodeImage } from '../common/QrCodeImage';
+import { PhoneChooserModal } from '../common/PhoneChooserModal';
+import { parsePhoneNumbers, dialPhoneNumber } from '../../utils/phoneUtils';
 
 type DisplayTheme = 'dark' | 'light';
 type IdleTab = 'menu' | 'spotlight' | 'qr' | 'promo';
@@ -74,6 +76,18 @@ export const CustomerDisplayView: React.FC = () => {
       return 'contain';
     }
   });
+
+  const [isPhoneChooserOpen, setIsPhoneChooserOpen] = useState(false);
+
+  const handlePhoneClick = () => {
+    soundFx.playPop();
+    const list = parsePhoneNumbers(storeInfo.phone);
+    if (list.length === 1) {
+      dialPhoneNumber(list[0].digits);
+    } else if (list.length > 1) {
+      setIsPhoneChooserOpen(true);
+    }
+  };
 
   const customerEReceiptUrl = useMemo(() => {
     if (displayState.eReceiptUrl) return displayState.eReceiptUrl;
@@ -449,8 +463,15 @@ export const CustomerDisplayView: React.FC = () => {
               {storeInfo.phone && (
                 <>
                   <span className="text-slate-500">•</span>
-                  <Phone className="w-3 h-3 text-emerald-400 shrink-0" />
-                  <span>{storeInfo.phone}</span>
+                  <button
+                    type="button"
+                    onClick={handlePhoneClick}
+                    className="flex items-center gap-1 hover:text-emerald-300 transition-colors cursor-pointer"
+                    title="ចុចដើម្បីជ្រើសរើសលេខខលទាក់ទង"
+                  >
+                    <Phone className="w-3 h-3 text-emerald-400 shrink-0" />
+                    <span className="underline decoration-emerald-500/40">{storeInfo.phone}</span>
+                  </button>
                 </>
               )}
             </p>
@@ -616,10 +637,15 @@ export const CustomerDisplayView: React.FC = () => {
           </div>
 
           {storeInfo.phone && (
-            <div className="hidden sm:flex items-center gap-1.5 text-[11px] font-mono text-emerald-400 font-bold shrink-0 ml-4">
+            <button
+              type="button"
+              onClick={handlePhoneClick}
+              className="hidden sm:flex items-center gap-1.5 text-[11px] font-mono text-emerald-400 hover:text-emerald-300 font-bold shrink-0 ml-4 transition-colors cursor-pointer"
+              title="ចុចដើម្បីជ្រើសរើសលេខខលទាក់ទង"
+            >
               <Phone className="w-3 h-3" />
-              <span>{storeInfo.phone}</span>
-            </div>
+              <span className="underline decoration-emerald-500/40">{storeInfo.phone}</span>
+            </button>
           )}
         </div>
       )}
@@ -1201,13 +1227,16 @@ export const CustomerDisplayView: React.FC = () => {
                   >
                     {storeInfo.khqrMerchantName || storeInfo.nameKh || 'Sweet Bakery'}
                   </h4>
-                  <p
-                    className={`text-[10px] truncate ${
-                      isDark ? 'text-slate-400' : 'text-slate-500'
+                  <button
+                    type="button"
+                    onClick={handlePhoneClick}
+                    className={`text-[10px] truncate text-left transition-colors cursor-pointer hover:underline ${
+                      isDark ? 'text-slate-400 hover:text-emerald-300' : 'text-slate-500 hover:text-pink-600'
                     }`}
+                    title="ចុចដើម្បីជ្រើសរើសលេខខលទាក់ទង"
                   >
                     {storeInfo.phone || 'ស្កេនបង់ប្រាក់ ឬកុម្ម៉ង់នំ'}
-                  </p>
+                  </button>
                 </div>
               </div>
             </div>
@@ -1710,6 +1739,12 @@ export const CustomerDisplayView: React.FC = () => {
           </div>
         </div>
       )}
+      <PhoneChooserModal
+        isOpen={isPhoneChooserOpen}
+        onClose={() => setIsPhoneChooserOpen(false)}
+        phoneString={storeInfo.phone}
+        storeName={storeInfo.nameKh || 'Sweet Bakery'}
+      />
     </div>
   );
 };

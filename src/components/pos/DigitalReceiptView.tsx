@@ -11,13 +11,27 @@ import { getProductImageUrl } from '../../utils/imagePath';
 import { formatDateDMY, formatDateTimeDMY } from '../../utils/dateUtils';
 import { roundKhr } from '../../utils/currencyUtils';
 import { QrCodeImage } from '../common/QrCodeImage';
+import { PhoneChooserModal } from '../common/PhoneChooserModal';
+import { parsePhoneNumbers, dialPhoneNumber } from '../../utils/phoneUtils';
 
 export const DigitalReceiptView: React.FC = () => {
   const [receipt, setReceipt] = useState<CompactReceiptPayload | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [isPhoneChooserOpen, setIsPhoneChooserOpen] = useState(false);
   const receiptRef = useRef<HTMLDivElement>(null);
+
+  const handlePhoneCallClick = () => {
+    const phoneStr = receipt?.store.phone;
+    if (!phoneStr) return;
+    const list = parsePhoneNumbers(phoneStr);
+    if (list.length === 1) {
+      dialPhoneNumber(list[0].digits);
+    } else {
+      setIsPhoneChooserOpen(true);
+    }
+  };
 
   useEffect(() => {
     try {
@@ -285,7 +299,14 @@ export const DigitalReceiptView: React.FC = () => {
                 <p className="text-[10px] text-slate-500 font-battambang">{receipt.store.addr}</p>
               )}
               {receipt.store.phone && (
-                <p className="text-[10px] text-slate-500 font-battambang">ទូរស័ព្ទ៖ {receipt.store.phone}</p>
+                <button
+                  type="button"
+                  onClick={handlePhoneCallClick}
+                  className="text-[10px] text-slate-500 hover:text-pink-600 font-battambang block mx-auto underline decoration-slate-300 transition-colors cursor-pointer"
+                  title="ចុចដើម្បីជ្រើសរើសលេខខលទាក់ទងហាង"
+                >
+                  ទូរស័ព្ទ៖ {receipt.store.phone}
+                </button>
               )}
             </div>
 
@@ -484,6 +505,14 @@ export const DigitalReceiptView: React.FC = () => {
           💡 ចុចប៊ូតុងខាងលើ ដើម្បីទាញយករូបភាពវិក្កយបត្រទុកក្នុង Album រូបភាព ឬ Files ទូរស័ព្ទរបស់អ្នក
         </p>
       </div>
+
+      {/* Phone Chooser Modal */}
+      <PhoneChooserModal
+        isOpen={isPhoneChooserOpen}
+        onClose={() => setIsPhoneChooserOpen(false)}
+        phoneString={receipt.store.phone}
+        storeName={receipt.store.nameKh || 'Sweet Bakery'}
+      />
     </div>
   );
 };

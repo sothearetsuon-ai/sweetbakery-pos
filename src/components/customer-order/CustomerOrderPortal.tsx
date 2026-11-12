@@ -48,6 +48,8 @@ import { AiCakeAnalysisModal } from '../common/AiCakeAnalysisModal';
 import { getCustomerSessionId, subscribeToChatMessages, markChatAsRead } from '../../services/liveChatService';
 import { ChatMessage } from '../../types';
 import { CustomerExpressOrderModal } from './CustomerExpressOrderModal';
+import { PhoneChooserModal } from '../common/PhoneChooserModal';
+import { parsePhoneNumbers, dialPhoneNumber } from '../../utils/phoneUtils';
 
 const CAKE_SIZES = [
   { id: '1.5 ទឹក', label: '1.5 ទឹក (~15cm)', desc: 'សម្រាប់ 2-4 នាក់', priceUsd: 12 },
@@ -336,6 +338,19 @@ export const CustomerOrderPortal: React.FC<CustomerOrderPortalProps> = ({ onBack
 
   // Store Location In-App Modal State
   const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
+
+  // Phone Chooser Modal State
+  const [isPhoneChooserOpen, setIsPhoneChooserOpen] = useState(false);
+
+  const handlePhoneCallClick = () => {
+    soundFx.playPop();
+    const list = parsePhoneNumbers(storeInfo.phone);
+    if (list.length === 1) {
+      dialPhoneNumber(list[0].digits);
+    } else {
+      setIsPhoneChooserOpen(true);
+    }
+  };
 
   // AI Ordering Assistant Modal State
   const [isAiGuideOpen, setIsAiGuideOpen] = useState(false);
@@ -896,7 +911,14 @@ export const CustomerOrderPortal: React.FC<CustomerOrderPortalProps> = ({ onBack
                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                 <span>បើកទទួលការកុម្ម៉ង់ជារៀងរាល់ថ្ងៃ</span>
                 <span className="text-slate-300">•</span>
-                <span className="text-slate-500">{storeInfo.phone || '012 345 678'}</span>
+                <button
+                  type="button"
+                  onClick={handlePhoneCallClick}
+                  className="text-slate-500 hover:text-pink-600 cursor-pointer underline decoration-slate-300"
+                  title="ចុចដើម្បីជ្រើសរើសលេខខលទាក់ទង"
+                >
+                  {storeInfo.phone || '012 345 678'}
+                </button>
               </p>
             </div>
           </div>
@@ -916,13 +938,15 @@ export const CustomerOrderPortal: React.FC<CustomerOrderPortalProps> = ({ onBack
               <span className="hidden sm:inline">ជំនួយការ AI</span>
             </button>
 
-            <a
-              href={`tel:${storeInfo.phone || '012345678'}`}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-xl text-xs font-bold transition-all border border-rose-200/80 active:scale-95 shadow-2xs"
+            <button
+              type="button"
+              onClick={handlePhoneCallClick}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-xl text-xs font-bold transition-all border border-rose-200/80 active:scale-95 shadow-2xs cursor-pointer"
+              title="ជ្រើសរើសលេខដើម្បីខលទាក់ទង"
             >
               <Phone className="w-3.5 h-3.5" />
               <span>ទំនាក់ទំនង</span>
-            </a>
+            </button>
           </div>
         </div>
 
@@ -2283,13 +2307,14 @@ export const CustomerOrderPortal: React.FC<CustomerOrderPortalProps> = ({ onBack
                   <span>💬 ឆាតផ្ទាល់ជាមួយអ្នកលក់ (Live In-App Chat)</span>
                 </button>
 
-                <a
-                  href={`tel:${storeInfo.phone || '012345678'}`}
-                  className="flex-1 py-2.5 bg-pink-600 hover:bg-pink-700 text-white rounded-2xl text-xs font-black transition-all flex items-center justify-center gap-1.5 shadow-md shadow-pink-500/20 active:scale-95"
+                <button
+                  type="button"
+                  onClick={handlePhoneCallClick}
+                  className="flex-1 py-2.5 bg-pink-600 hover:bg-pink-700 text-white rounded-2xl text-xs font-black transition-all flex items-center justify-center gap-1.5 shadow-md shadow-pink-500/20 active:scale-95 cursor-pointer"
                 >
                   <Phone className="w-4 h-4" />
                   <span>ខលទាក់ទង ({storeInfo.phone || '012 345 678'})</span>
-                </a>
+                </button>
 
                 <button
                   type="button"
@@ -2425,6 +2450,14 @@ export const CustomerOrderPortal: React.FC<CustomerOrderPortalProps> = ({ onBack
         isOpen={!!expressProduct}
         onClose={() => setExpressProduct(null)}
         product={expressProduct}
+      />
+
+      {/* Phone Chooser Modal */}
+      <PhoneChooserModal
+        isOpen={isPhoneChooserOpen}
+        onClose={() => setIsPhoneChooserOpen(false)}
+        phoneString={storeInfo.phone}
+        storeName={storeInfo.nameKh || 'Sweet Bakery'}
       />
     </div>
   );

@@ -22,6 +22,8 @@ import { useBakery } from '../../context/BakeryContext';
 import { soundFx } from '../../utils/audio';
 import { getProductImageUrl } from '../../utils/imagePath';
 import { roundKhr } from '../../utils/currencyUtils';
+import { PhoneChooserModal } from '../common/PhoneChooserModal';
+import { parsePhoneNumbers, dialPhoneNumber } from '../../utils/phoneUtils';
 
 interface CustomerExpressOrderModalProps {
   isOpen: boolean;
@@ -215,11 +217,17 @@ ${name.trim() ? `• ឈ្មោះភ្ញៀវ៖ ${name.trim()}` : ''}
     window.open(telegramUrl, '_blank');
   };
 
+  const [isPhoneChooserOpen, setIsPhoneChooserOpen] = useState(false);
+
   // 1-Click Phone Call
   const handleCallBakery = () => {
     soundFx.playPop();
-    const rawPhone = (storeInfo.phone || '012629160').replace(/[^0-9]/g, '');
-    window.location.href = `tel:${rawPhone}`;
+    const list = parsePhoneNumbers(storeInfo.phone);
+    if (list.length === 1) {
+      dialPhoneNumber(list[0].digits);
+    } else {
+      setIsPhoneChooserOpen(true);
+    }
   };
 
   return (
@@ -646,6 +654,13 @@ ${name.trim() ? `• ឈ្មោះភ្ញៀវ៖ ${name.trim()}` : ''}
           )}
         </div>
       </div>
+      {/* Phone Chooser Modal */}
+      <PhoneChooserModal
+        isOpen={isPhoneChooserOpen}
+        onClose={() => setIsPhoneChooserOpen(false)}
+        phoneString={storeInfo.phone}
+        storeName={storeInfo.nameKh || 'Sweet Bakery'}
+      />
     </div>
   );
 };

@@ -1,11 +1,10 @@
 {
-  "version": "2.1.2",
-  "versionCode": 78,
-  "releaseDate": "2026-11-11",
+  "version": "2.1.3",
+  "versionCode": 79,
+  "releaseDate": "2026-11-12",
   "releaseNotes": [
-    "📥 រក្សាទុកវិក្កយបត្រក្នុងទូរស័ព្ទ (Save E-Receipt to Phone Gallery/Files) ៖ បន្ថែមប៊ូតុងចុច ១ ភ្លាមទាញយករូបភាពវិក្កយបត្រ PNG គុណភាពខ្ពស់ ឬរក្សាទុកក្នុង Files/Photos លើទូរស័ព្ទរបស់ភ្ញៀវដោយផ្ទាល់។",
-    "⚡ កែសម្រួលបញ្ហា QR Code (Ultra-Reliable Offline Vector SVG QR) ៖ ដោះស្រាយបញ្ហា QR Code មិនចេញ (Broken Image) ដោយប្តូរមកប្រើ SVG ផ្ទាល់ ១០០% មិនពឹងផ្អែកលើអ៊ីនធឺណិត និងបង្កើនល្បឿនស្កេនយ៉ាងលឿនរហ័ស។",
-    "✨ វិក្កយបត្រស្អាតឥតខ្ចោះ គ្មានប៊ូតុងរំខាន (Clean Official Mobile Receipt Layout)។"
+    "📞 ផ្ទាំងជ្រើសរើសលេខទូរស័ព្ទមុនពេលខល (Smart Phone Number Chooser) ៖ ដោះស្រាយបញ្ហាចុចខលលោតលេខទាំង ២ ជាប់គ្នា ដោយបន្ថែមផ្ទាំងជ្រើសរើសលេខ និងប្រព័ន្ធទូរស័ព្ទ (Metfone, Smart, Cellcard) យ៉ាងច្បាស់លាស់មុនពេលខលចេញ។",
+    "✨ ដំណើរការរលូនទាំងលើផ្ទាំងភ្ញៀវ Dual Screen, ផ្ទាំងកុម្ម៉ង់នំ Mobile Web Portal, Showcase និង E-Receipt។"
   ],
   "author": "សុធារិទ្ធ",
   "apkDownloadUrl": "https://sothearetsuon-ai.github.io/sweetbakery-pos/SweetBakery-Android.apk",
