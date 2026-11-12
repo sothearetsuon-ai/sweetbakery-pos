@@ -37,6 +37,7 @@ import { t } from '../../utils/translations';
 import { Product } from '../../types';
 import { soundFx } from '../../utils/audio';
 import { AddProductModal } from '../pos/AddProductModal';
+import { BatchCatalogUploadModal } from './BatchCatalogUploadModal';
 import { KioskSlideshowModal } from './KioskSlideshowModal';
 import { SelectDesignPriceModal } from './SelectDesignPriceModal';
 import { NewCustomOrderModal } from '../custom-orders/NewCustomOrderModal';
@@ -242,10 +243,10 @@ const ShowcaseCardComponent: React.FC<ShowcaseCardProps> = ({
         )}
 
         <div className="pt-2 border-t border-[#F8EAE5] flex items-center justify-between gap-1.5 flex-wrap">
-          {hidePrices ? (
+          {hidePrices || (product.priceUsd === 0 && (product.priceKhr || 0) === 0) ? (
             <span className="text-[11px] font-bold text-[#A82B27] bg-[#FFEAE7] px-2.5 py-1 rounded-xl flex items-center gap-1 border border-[#FFCCC6]">
               <Sparkles className="w-3 h-3 text-[#E6514D]" />
-              <span>តម្លៃតាមម៉ូដ</span>
+              <span>តម្លៃតាមម៉ូដ & ទំហំ</span>
             </span>
           ) : (
             <div>
@@ -330,6 +331,7 @@ export const CustomerShowcase: React.FC = () => {
   const [previewProduct, setPreviewProduct] = useState<Product | null>(null);
   const [productToEdit, setProductToEdit] = useState<Product | null>(null);
   const [isAddProductOpen, setIsAddProductOpen] = useState(false);
+  const [isBatchUploadOpen, setIsBatchUploadOpen] = useState(false);
   const [isKioskOpen, setIsKioskOpen] = useState(false);
   const [orderConfirmed, setOrderConfirmed] = useState(false);
 
@@ -751,10 +753,25 @@ export const CustomerShowcase: React.FC = () => {
               <span>ស្លាយ TV</span>
             </button>
 
+            {/* Bulk Upload Multiple Cake Photos */}
+            <button
+              type="button"
+              onClick={() => {
+                soundFx.playPop();
+                setIsBatchUploadOpen(true);
+              }}
+              className="px-3.5 sm:px-4 py-2 sm:py-2.5 bg-gradient-to-r from-purple-600 via-pink-600 to-rose-600 hover:brightness-110 text-white font-black rounded-2xl shadow-lg shadow-purple-600/30 transition-all active:scale-95 flex items-center gap-1.5 text-xs cursor-pointer ring-2 ring-purple-300/40"
+              title="Upload រូបភាពនំកាតាឡុកម្តងច្រើនក្នុងពេលតែមួយ (Bulk Upload)"
+            >
+              <Upload className="w-3.5 h-3.5 sm:w-4 sm:h-4 stroke-[3]" />
+              <span>+ រូបកាតាឡុកច្រើន</span>
+            </button>
+
             {/* Add Product Modal */}
             <button
               onClick={() => {
                 soundFx.playPop();
+                setProductToEdit(null);
                 setIsAddProductOpen(true);
               }}
               className="px-3.5 sm:px-4 py-2 sm:py-2.5 bg-gradient-to-r from-[#FF6F68] to-[#E6514D] hover:brightness-110 text-white font-black rounded-2xl shadow-lg transition-all active:scale-95 flex items-center gap-1.5 text-xs cursor-pointer"
@@ -870,6 +887,20 @@ export const CustomerShowcase: React.FC = () => {
             />
           </div>
 
+          {/* Bulk Upload Button */}
+          <button
+            type="button"
+            onClick={() => {
+              soundFx.playPop();
+              setIsBatchUploadOpen(true);
+            }}
+            className="px-3.5 sm:px-4 py-2 bg-gradient-to-r from-purple-600 via-pink-600 to-rose-600 hover:brightness-110 text-white font-black rounded-2xl text-xs shadow-md shadow-purple-600/25 flex items-center gap-1.5 active:scale-95 cursor-pointer transition-all shrink-0"
+            title="Upload រូបភាពនំកាតាឡុកម្តងច្រើនក្នុងពេលតែមួយ (Bulk Upload)"
+          >
+            <Upload className="w-3.5 h-3.5 stroke-[3]" />
+            <span>+ Upload រូបច្រើន</span>
+          </button>
+
           <button
             type="button"
             onClick={() => {
@@ -880,9 +911,9 @@ export const CustomerShowcase: React.FC = () => {
             className="px-3.5 sm:px-4 py-2 bg-gradient-to-r from-[#FF6F68] to-[#E6514D] hover:brightness-110 text-white font-black rounded-2xl text-xs shadow-md shadow-[#E6514D]/25 flex items-center gap-1.5 active:scale-95 cursor-pointer transition-all shrink-0"
             title="Upload រូបភាព ឬបញ្ចូលម៉ូដនំថ្មី"
           >
-            <Upload className="w-3.5 h-3.5 stroke-[3]" />
-            <span className="hidden sm:inline">+ Upload រូបនំថ្មី</span>
-            <span className="sm:hidden">+ នំថ្មី</span>
+            <Plus className="w-3.5 h-3.5 stroke-[3]" />
+            <span className="hidden sm:inline">+ នំថ្មី</span>
+            <span className="sm:hidden">+ នំ</span>
           </button>
         </div>
       </div>
@@ -1100,7 +1131,7 @@ export const CustomerShowcase: React.FC = () => {
                 </div>
 
                 {/* Price Section: either fixed or custom sizing message */}
-                {hidePrices ? (
+                {hidePrices || (previewProduct.priceUsd === 0 && (previewProduct.priceKhr || 0) === 0) ? (
                   <div className="p-3 bg-gradient-to-r from-pink-50 to-amber-50 border border-pink-200/80 rounded-2xl space-y-1">
                     <span className="text-xs font-black text-pink-700 flex items-center gap-1.5">
                       <Sparkles className="w-4 h-4 text-pink-500" />
@@ -1271,8 +1302,27 @@ export const CustomerShowcase: React.FC = () => {
         onClose={() => setIsContactModalOpen(false)}
       />
 
+      {/* Batch Catalog Multiple Images Upload Modal */}
+      <BatchCatalogUploadModal
+        isOpen={isBatchUploadOpen}
+        onClose={() => setIsBatchUploadOpen(false)}
+      />
+
       {/* Mobile Floating Action Button (FAB) to Add Cake & Upload Photos anywhere */}
-      <div className="fixed bottom-20 right-4 z-40 md:hidden animate-in fade-in zoom-in duration-300">
+      <div className="fixed bottom-20 right-4 z-40 md:hidden flex flex-col items-end gap-2 animate-in fade-in zoom-in duration-300">
+        <button
+          type="button"
+          onClick={() => {
+            soundFx.playPop();
+            setIsBatchUploadOpen(true);
+          }}
+          className="h-11 px-3.5 rounded-full bg-gradient-to-r from-purple-600 via-pink-600 to-rose-600 text-white font-black text-xs shadow-2xl shadow-purple-600/50 flex items-center gap-1.5 border-2 border-white/60 active:scale-95 transition-transform cursor-pointer"
+          title="Upload រូបកាតាឡុកច្រើនសន្លឹកក្នុងពេលតែមួយ"
+        >
+          <Upload className="w-3.5 h-3.5" />
+          <span>+ រូបច្រើនសន្លឹក</span>
+        </button>
+
         <button
           type="button"
           onClick={() => {
@@ -1280,10 +1330,10 @@ export const CustomerShowcase: React.FC = () => {
             setProductToEdit(null);
             setIsAddProductOpen(true);
           }}
-          className="h-12 px-4 rounded-full bg-gradient-to-r from-[#FF6F68] to-[#E6514D] text-white font-black text-xs shadow-2xl shadow-rose-500/50 flex items-center gap-2 border-2 border-white/60 active:scale-95 transition-transform cursor-pointer"
+          className="h-10 px-3.5 rounded-full bg-white text-[#E6514D] font-black text-xs shadow-xl border border-rose-200 flex items-center gap-1.5 active:scale-95 transition-transform cursor-pointer"
         >
-          <Camera className="w-4 h-4" />
-          <span>+ Upload រូបនំ</span>
+          <Plus className="w-3.5 h-3.5" />
+          <span>+ នំថ្មី</span>
         </button>
       </div>
       {/* Express 30-Second Fast Order Drawer */}

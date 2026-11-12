@@ -586,6 +586,7 @@ interface BakeryContextType {
   categories: Category[];
   products: Product[];
   addProduct: (product: Omit<Product, 'id'>) => void;
+  batchAddProducts: (productsData: Array<Omit<Product, 'id'>>) => Product[];
   updateProduct: (product: Product) => void;
   deleteProduct: (productId: string) => void;
   restockProduct: (productId: string, additionalStock: number) => void;
@@ -4762,6 +4763,46 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
   };
 
+  const batchAddProducts = (productsData: Array<Omit<Product, 'id'>>): Product[] => {
+    if (!productsData || productsData.length === 0) return [];
+    isUpdatingFromLan.current = false;
+    if (lanSyncTimer.current) clearTimeout(lanSyncTimer.current);
+
+    const nowBase = Date.now();
+    const createdList: Product[] = productsData.map((data, idx) => {
+      const nowIso = new Date(nowBase + idx * 5).toISOString();
+      return {
+        ...data,
+        id: `p-${nowBase}-${idx}-${Math.random().toString(36).substring(2, 7)}`,
+        createdAt: nowIso,
+        updatedAt: nowIso,
+      };
+    });
+
+    setProducts((prev) => {
+      const updated = sortProductsNewestFirst([...createdList, ...prev]);
+      safeSetStorage('bakery_products', JSON.stringify(updated));
+      broadcastCustomerSync({
+        type: 'PRODUCTS_SYNC',
+        products: updated,
+      });
+      return updated;
+    });
+
+    // Save atomically to server and cloud
+    for (const p of createdList) {
+      fetch('/api/save-product', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ product: p }),
+      }).catch((err) => console.error('Error saving batch product to LAN:', err));
+
+      syncSaveDoc('products', p.id, p);
+    }
+
+    return createdList;
+  };
+
   const updateProduct = (product: Product) => {
     const updatedProd: Product = {
       ...product,
@@ -7169,6 +7210,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         categories,
         products,
         addProduct,
+        batchAddProducts,
         updateProduct,
         deleteProduct,
         restockProduct,

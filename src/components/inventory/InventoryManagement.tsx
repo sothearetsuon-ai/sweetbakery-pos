@@ -26,6 +26,7 @@ import {
   Flame,
   PackageX,
   Tag,
+  Upload,
 } from 'lucide-react';
 import { useBakery } from '../../context/BakeryContext';
 import { t } from '../../utils/translations';
@@ -33,6 +34,7 @@ import { Ingredient, Product, Recipe, CakeBoxLabelData, ProductDisplayTarget } f
 import { soundFx } from '../../utils/audio';
 import { getProductImageUrl } from '../../utils/imagePath';
 import { AddProductModal } from '../pos/AddProductModal';
+import { BatchCatalogUploadModal } from '../showcase/BatchCatalogUploadModal';
 import { PartyAccessoriesModal } from '../pos/PartyAccessoriesModal';
 import { AddEditIngredientModal } from './AddEditIngredientModal';
 import { AddEditRecipeModal } from './AddEditRecipeModal';
@@ -102,6 +104,7 @@ export const InventoryManagement: React.FC = () => {
 
   // Product Add / Edit / Delete modal states
   const [isAddProductOpen, setIsAddProductOpen] = useState(false);
+  const [isBatchCatalogUploadOpen, setIsBatchCatalogUploadOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [productToDelete, setProductToDelete] = useState<Product | null>(null);
 
@@ -321,18 +324,34 @@ export const InventoryManagement: React.FC = () => {
           </button>
 
           {activeTab === 'cakes' ? (
-            <button
-              onClick={() => {
-                soundFx.playPop();
-                setDefaultAddCategory('birthday');
-                setEditingProduct(null);
-                setIsAddProductOpen(true);
-              }}
-              className="px-3.5 py-2 bg-gradient-to-r from-pink-600 to-rose-500 hover:from-pink-700 hover:to-rose-600 text-white rounded-xl text-xs font-black shadow-md shadow-pink-600/20 flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all"
-            >
-              <Plus className="w-4 h-4 stroke-[3]" />
-              <span>+ បន្ថែមនំថ្មី</span>
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  soundFx.playPop();
+                  setIsBatchCatalogUploadOpen(true);
+                }}
+                className="px-3.5 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:brightness-110 text-white rounded-xl text-xs font-black shadow-md shadow-purple-600/20 flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all"
+                title="Upload រូបភាពនំកាតាឡុកម្តងច្រើនសន្លឹកក្នុងពេលតែមួយ (Bulk Upload)"
+              >
+                <Upload className="w-4 h-4 stroke-[3]" />
+                <span className="hidden sm:inline">+ Upload រូបកាតាឡុកច្រើន</span>
+                <span className="sm:hidden">+ រូបច្រើន</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  soundFx.playPop();
+                  setDefaultAddCategory('birthday');
+                  setEditingProduct(null);
+                  setIsAddProductOpen(true);
+                }}
+                className="px-3.5 py-2 bg-gradient-to-r from-pink-600 to-rose-500 hover:from-pink-700 hover:to-rose-600 text-white rounded-xl text-xs font-black shadow-md shadow-pink-600/20 flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all"
+              >
+                <Plus className="w-4 h-4 stroke-[3]" />
+                <span>+ បន្ថែមនំថ្មី</span>
+              </button>
+            </div>
           ) : activeTab === 'decorations' ? (
             <div className="flex items-center gap-2">
               <button
@@ -1822,6 +1841,12 @@ export const InventoryManagement: React.FC = () => {
         }}
         productToEdit={editingProduct}
         defaultCategoryId={defaultAddCategory}
+      />
+
+      {/* Batch Catalog Multiple Images Upload Modal */}
+      <BatchCatalogUploadModal
+        isOpen={isBatchCatalogUploadOpen}
+        onClose={() => setIsBatchCatalogUploadOpen(false)}
       />
 
       {/* Party Accessories & Addons Management Modal */}
