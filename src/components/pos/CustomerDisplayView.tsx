@@ -628,9 +628,110 @@ export const CustomerDisplayView: React.FC = () => {
       </header>
 
       {/* ========================================================================= */}
-      {/* PROMOTIONAL TICKER BANNER (Runs on all states except full paid celebration) */}
+      {/* PROMOTIONAL TICKER / HERO BANNER */}
       {/* ========================================================================= */}
-      {displayState.status !== 'paid' && (
+      {displayState.status === 'idle' ? (
+        /* Large Rich Promotional & Lucky Wheel Hero Banner (From User Request & Attachment) */
+        <div className="px-3 sm:px-5 pt-3 shrink-0 z-10">
+          <div className="bg-gradient-to-r from-[#FF5252] via-[#FF5E62] to-[#FF4565] rounded-3xl p-4 sm:p-5 text-white shadow-xl shadow-rose-500/15 border border-white/20 relative overflow-hidden flex flex-col md:flex-row items-center justify-between gap-4">
+            {/* Background decorative cake watermark */}
+            <div className="absolute -right-6 -bottom-6 opacity-15 pointer-events-none select-none text-9xl">
+              🎂
+            </div>
+
+            {/* Left Content */}
+            <div className="space-y-2 z-1 max-w-2xl text-left font-battambang">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/20 backdrop-blur-md text-[11px] sm:text-xs font-bold text-white border border-white/30 shadow-xs">
+                <Sparkles className="w-3.5 h-3.5 text-amber-200" />
+                <span>{storeInfo.appPromoBadgeTextKh || 'កុម្ម៉ង់នំខួបកំណើតតាមចិត្ត ជាមួយប្រាក់កក់ងាយស្រួល'}</span>
+              </div>
+
+              <h2 className="text-xl sm:text-2xl lg:text-3xl font-black font-muol text-white tracking-tight drop-shadow-xs leading-tight">
+                {storeInfo.appPromoTitleKh || 'នំខួបកំណើតស្រស់ថ្មីៗ ដុតជារៀងរាល់ថ្ងៃ'}
+              </h2>
+
+              <p className="text-xs sm:text-sm text-white/95 font-battambang leading-relaxed">
+                {storeInfo.appPromoBannerTextKh || 'ជ្រើសរើសម៉ូដនំក្នុងម៉ឺនុយ ឬបញ្ចូលរូបភាពគំរូដែលអ្នកស្រឡាញ់ដើម្បីឱ្យជាងនំយើងខ្ញុំធ្វើជូន!'}
+              </p>
+
+              <div className="pt-1 flex flex-wrap items-center gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    soundFx.playPop();
+                    setIdleTab('qr');
+                  }}
+                  className="px-4 py-2 bg-white text-[#E11D48] hover:bg-rose-50 rounded-2xl text-xs sm:text-sm font-black transition-all shadow-md active:scale-95 cursor-pointer flex items-center gap-1.5 font-battambang"
+                >
+                  <span>🎨 កុម្ម៉ង់ម៉ូដតាមរូបភាពផ្ទាល់ខ្លួន</span>
+                  <ChevronRight className="w-4 h-4 text-[#E11D48]" />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    soundFx.playPop();
+                    setIsLuckyWheelModalOpen(true);
+                  }}
+                  className="px-3.5 py-2 bg-gradient-to-r from-amber-400 to-yellow-300 text-amber-950 rounded-2xl text-xs sm:text-sm font-black transition-all shadow-md active:scale-95 cursor-pointer flex items-center gap-1.5 font-battambang ring-1 ring-amber-200"
+                >
+                  <span className="text-sm">🎡</span>
+                  <span>ចុចបង្វិលកងលើអេក្រង់</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Right: Lucky Wheel QR Standee Card */}
+            <div className="z-1 shrink-0 flex items-center gap-3">
+              <div
+                onClick={() => {
+                  soundFx.playPop();
+                  setIsLuckyWheelModalOpen(true);
+                }}
+                className="bg-white/95 backdrop-blur-md text-slate-800 p-3 rounded-2xl shadow-xl border-2 border-white/90 flex items-center gap-3 shrink-0 cursor-pointer hover:scale-[1.02] active:scale-95 transition-all group ring-2 ring-pink-300/40"
+                title="ស្កេន QR តាមទូរស័ព្ទដៃ ឬចុចដើម្បីលេងបង្វិលកងលើអេក្រង់"
+              >
+                <div className="relative p-1 bg-white rounded-xl shadow-xs border border-purple-200">
+                  <QrCodeImage
+                    data={luckyWheelUrl}
+                    size={80}
+                    className="w-20 h-20 rounded-lg"
+                  />
+                  <div className="absolute -top-2 -right-2 bg-gradient-to-r from-amber-500 to-yellow-400 text-amber-950 text-[9px] font-black px-1.5 py-0.5 rounded-full shadow-xs flex items-center gap-0.5">
+                    <Sparkles className="w-2.5 h-2.5 animate-spin-slow" />
+                    <span>១០០%</span>
+                  </div>
+                </div>
+                <div className="text-left font-battambang">
+                  <div className="flex items-center gap-1 text-xs font-black text-purple-700">
+                    <span className="text-base group-hover:rotate-45 transition-transform">🎡</span>
+                    <span>ស្កេនលេងបង្វិលកង</span>
+                  </div>
+                  <div className="text-xs font-black text-rose-600 mt-0.5">
+                    ឈ្នះរង្វាន់ភ្លាមៗ! 🎉
+                  </div>
+                  <div className="text-[10px] text-slate-500 mt-0.5 flex items-center gap-1">
+                    <span>🧁 Donut</span>
+                    <span>•</span>
+                    <span>🎟️ 10%</span>
+                    <span>•</span>
+                    <span>☕ ភេសជ្ជៈ</span>
+                  </div>
+                  <div className="text-[10px] font-bold text-indigo-600 mt-1 flex items-center gap-1">
+                    <span>📱 ស្កេន ឬ 👉 ចុចលើអេក្រង់</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Decorative Cake Graphic on far right (matching user attachment) */}
+              <div className="hidden xl:flex items-center justify-center opacity-40 select-none text-7xl filter drop-shadow-md pr-1">
+                🎂
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : displayState.status !== 'paid' ? (
+        /* Compact Ticker for Active Sale Order so cart has maximum room */
         <div
           className={`px-4 py-2 border-b flex items-center justify-between text-xs font-bold overflow-hidden shrink-0 z-10 ${
             isDark
@@ -649,10 +750,10 @@ export const CustomerDisplayView: React.FC = () => {
               </>
             )}
             <span
-              onClick={() => setIdleTab('wheel')}
+              onClick={() => setIsLuckyWheelModalOpen(true)}
               className="flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-gradient-to-r from-purple-600 via-pink-600 to-rose-500 text-white text-[10px] font-black uppercase tracking-wider shadow-xs shrink-0 cursor-pointer hover:opacity-90 active:scale-95 transition-all"
             >
-              <Sparkles className="w-3 h-3 text-amber-200 animate-spin-slow" />
+              <Sparkles className="w-3.5 h-3.5 text-amber-200 animate-spin-slow" />
               <span>🎡 ស្កេន QR បង្វិលកងឈ្នះរង្វាន់ (ហ្វ្រី Donut, ភេសជ្ជៈ & បញ្ចុះ 10%)!</span>
             </span>
             <span className="text-pink-400">•</span>
@@ -681,7 +782,7 @@ export const CustomerDisplayView: React.FC = () => {
             </button>
           )}
         </div>
-      )}
+      ) : null}
 
       {/* ========================================================================= */}
       {/* MAIN VIEWPORT: State-Driven Dynamic Customer Presentation */}

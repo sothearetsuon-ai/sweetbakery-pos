@@ -202,10 +202,14 @@ export const runPeriodicNotificationChecks = (params: {
   const config = getStoredNotificationConfig();
 
   const now = new Date();
-  const todayStr = now.toISOString().slice(0, 10);
-  const currentHours = String(now.getHours()).padStart(2, '0');
-  const currentMins = String(now.getMinutes()).padStart(2, '0');
-  const currentTimeStr = `${currentHours}:${currentMins}`;
+  // Always calculate date and time in Cambodia timezone (Asia/Phnom_Penh, UTC+7)
+  const todayStr = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Phnom_Penh' }).format(now);
+  const currentTimeStr = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Asia/Phnom_Penh',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).format(now);
 
   // 1-3. Device Desktop & Sound Reminders (Only if local device notifications are enabled)
   if (config.enabled) {
@@ -360,9 +364,16 @@ export const runPeriodicNotificationChecks = (params: {
         return;
       }
       const reportTime = tgConfig.dailyReportTime || '21:00';
-      // Trigger whenever current time is at or past the scheduled report time today (e.g. >= 21:00)
-      if (currentTimeStr >= reportTime) {
-        const tag = `tg-daily-report-${todayStr}`;
+      // Only trigger if scheduled report time has arrived in Cambodia timezone
+      // If configured for evening (>= 18:00), ensure it does not fire prematurely during morning/daytime
+      const [rH] = reportTime.split(':').map((n) => parseInt(n, 10));
+      const [cH] = currentTimeStr.split(':').map((n) => parseInt(n, 10));
+      const isEveningSched = (rH || 21) >= 18;
+      const isTimeReached = currentTimeStr >= reportTime;
+
+      if (isTimeReached && (!isEveningSched || (cH || 0) >= 18)) {
+        const todaySales = (params.sales || []).filter((s) => (s.createdAt || '').slice(0, 10) === todayStr);
+        const tag = `tg-daily-report-${todayStr}-s${todaySales.length}`;
         if (!hasFiredToday(tag, todayStr)) {
           sendTelegramDailyReport({
             sales: params.sales || [],

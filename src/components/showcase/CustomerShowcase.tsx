@@ -172,11 +172,10 @@ const ShowcaseCardComponent: React.FC<ShowcaseCardProps> = ({
                 onError={(e) => {
                   (e.target as HTMLImageElement).src = fallbackCake;
                 }}
-                className={`w-full h-full object-cover absolute inset-0 transition-opacity duration-500 ease-out transform-gpu group-hover:scale-105 ${
-                  isActive
+                className={`w-full h-full object-cover absolute inset-0 transition-opacity duration-500 ease-out transform-gpu group-hover:scale-105 ${isActive
                     ? 'opacity-100 z-10'
                     : 'opacity-0 z-0 pointer-events-none'
-                }`}
+                  }`}
               />
             );
           })
@@ -215,9 +214,8 @@ const ShowcaseCardComponent: React.FC<ShowcaseCardProps> = ({
             {images.map((_, idx) => (
               <span
                 key={idx}
-                className={`h-1.5 rounded-full transition-all duration-300 ${
-                  idx === currentIdx ? 'w-4 bg-[#FF6F68]' : 'w-1.5 bg-white/60'
-                }`}
+                className={`h-1.5 rounded-full transition-all duration-300 ${idx === currentIdx ? 'w-4 bg-[#FF6F68]' : 'w-1.5 bg-white/60'
+                  }`}
               />
             ))}
           </div>
@@ -623,51 +621,48 @@ export const CustomerShowcase: React.FC = () => {
                   {categories
                     .filter((cat) => cat.id !== 'party')
                     .map((cat) => {
-                    const isActive = selectedCategory === cat.id;
-                    const catName = lang === 'km' ? cat.nameKh : cat.nameEn;
-                    const nonPartyCount = products.filter((p) => p.categoryId !== 'party').length;
-                    const count = cat.id === 'all'
-                      ? nonPartyCount
-                      : products.filter((p) => p.categoryId === cat.id).length;
+                      const isActive = selectedCategory === cat.id;
+                      const catName = lang === 'km' ? cat.nameKh : cat.nameEn;
+                      const nonPartyCount = products.filter((p) => p.categoryId !== 'party').length;
+                      const count = cat.id === 'all'
+                        ? nonPartyCount
+                        : products.filter((p) => p.categoryId === cat.id).length;
 
-                    return (
-                      <button
-                        key={cat.id}
-                        type="button"
-                        onClick={() => {
-                          soundFx.playPop();
-                          setSelectedCategory(cat.id);
-                        }}
-                        className={`w-full relative flex items-center justify-between px-4 sm:px-5 py-2.5 sm:py-3 rounded-full text-xs font-black transition-all cursor-pointer select-none ${
-                          isActive
-                            ? 'bg-gradient-to-r from-amber-400 via-amber-300 to-amber-400 text-slate-950 shadow-lg shadow-amber-500/30 scale-102 ring-2 ring-white font-black'
-                            : 'bg-white text-slate-800 hover:bg-rose-50 hover:text-[#E6514D] shadow-sm'
-                        }`}
-                      >
-                        {/* Pointer Arrow */}
-                        <span
-                          className={`renah-arrow-tag ${
-                            isActive ? 'renah-arrow-tag-active' : ''
-                          }`}
-                        />
-
-                        <div className="flex items-center gap-2.5 min-w-0">
-                          <span className="shrink-0">{getCategoryIcon(cat.icon)}</span>
-                          <span className="truncate font-battambang text-xs sm:text-[13px] tracking-normal">
-                            {catName}
-                          </span>
-                        </div>
-
-                        <span
-                          className={`text-[10px] font-black px-2.5 py-0.5 rounded-full shrink-0 ml-1.5 ${
-                            isActive ? 'bg-black/10 text-slate-900' : 'bg-rose-50 text-rose-700'
-                          }`}
+                      return (
+                        <button
+                          key={cat.id}
+                          type="button"
+                          onClick={() => {
+                            soundFx.playPop();
+                            setSelectedCategory(cat.id);
+                          }}
+                          className={`w-full relative flex items-center justify-between px-4 sm:px-5 py-2.5 sm:py-3 rounded-full text-xs font-black transition-all cursor-pointer select-none ${isActive
+                              ? 'bg-gradient-to-r from-amber-400 via-amber-300 to-amber-400 text-slate-950 shadow-lg shadow-amber-500/30 scale-102 ring-2 ring-white font-black'
+                              : 'bg-white text-slate-800 hover:bg-rose-50 hover:text-[#E6514D] shadow-sm'
+                            }`}
                         >
-                          {count} មុខ
-                        </span>
-                      </button>
-                    );
-                  })}
+                          {/* Pointer Arrow */}
+                          <span
+                            className={`renah-arrow-tag ${isActive ? 'renah-arrow-tag-active' : ''
+                              }`}
+                          />
+
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <span className="shrink-0">{getCategoryIcon(cat.icon)}</span>
+                            <span className="truncate font-battambang text-xs sm:text-[13px] tracking-normal">
+                              {catName}
+                            </span>
+                          </div>
+
+                          <span
+                            className={`text-[10px] font-black px-2.5 py-0.5 rounded-full shrink-0 ml-1.5 ${isActive ? 'bg-black/10 text-slate-900' : 'bg-rose-50 text-rose-700'
+                              }`}
+                          >
+                            {count} មុខ
+                          </span>
+                        </button>
+                      );
+                    })}
                 </div>
               </div>
             </div>
@@ -720,11 +715,10 @@ export const CustomerShowcase: React.FC = () => {
             <button
               type="button"
               onClick={handleToggleHidePrices}
-              className={`px-3 sm:px-4 py-2 sm:py-2.5 rounded-2xl font-black text-xs transition-all flex items-center gap-1.5 sm:gap-2 border shadow-lg cursor-pointer ${
-                hidePrices
+              className={`px-3 sm:px-4 py-2 sm:py-2.5 rounded-2xl font-black text-xs transition-all flex items-center gap-1.5 sm:gap-2 border shadow-lg cursor-pointer ${hidePrices
                   ? 'bg-amber-500/25 hover:bg-amber-500/35 text-amber-200 border-amber-400/40 ring-2 ring-amber-300/30'
                   : 'bg-white/10 hover:bg-white/20 text-white border-white/20'
-              }`}
+                }`}
               title="ចុចដើម្បីប្តូររវាងលាក់តម្លៃ (សម្រាប់ភ្ញៀវមើល) ឬបង្ហាញតម្លៃ"
             >
               {hidePrices ? (
@@ -811,11 +805,10 @@ export const CustomerShowcase: React.FC = () => {
                 soundFx.playPop();
                 setShowcasePlacementFilter('catalog');
               }}
-              className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 ${
-                showcasePlacementFilter === 'catalog'
+              className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 ${showcasePlacementFilter === 'catalog'
                   ? 'bg-purple-600 text-white shadow-xs'
                   : 'text-slate-600 hover:text-slate-900'
-              }`}
+                }`}
             >
               <span>📖 កាតាឡុកម៉ូដនំ</span>
             </button>
@@ -825,11 +818,10 @@ export const CustomerShowcase: React.FC = () => {
                 soundFx.playPop();
                 setShowcasePlacementFilter('showcase');
               }}
-              className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 ${
-                showcasePlacementFilter === 'showcase'
+              className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 ${showcasePlacementFilter === 'showcase'
                   ? 'bg-pink-600 text-white shadow-xs'
                   : 'text-slate-600 hover:text-slate-900'
-              }`}
+                }`}
             >
               <span>🧊 នំក្នុងទូរស្រាប់</span>
             </button>
@@ -839,11 +831,10 @@ export const CustomerShowcase: React.FC = () => {
                 soundFx.playPop();
                 setShowcasePlacementFilter('all');
               }}
-              className={`px-2.5 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer active:scale-95 ${
-                showcasePlacementFilter === 'all'
+              className={`px-2.5 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer active:scale-95 ${showcasePlacementFilter === 'all'
                   ? 'bg-slate-900 text-white shadow-xs'
                   : 'text-slate-500 hover:text-slate-800'
-              }`}
+                }`}
             >
               <span>ទាំងអស់</span>
             </button>
@@ -1004,11 +995,10 @@ export const CustomerShowcase: React.FC = () => {
                     key={idx}
                     src={getProductImageUrl(img)}
                     alt={`${previewProduct.nameKh} ${idx + 1}`}
-                    className={`w-full h-full object-cover absolute inset-0 transition-all duration-700 ease-in-out ${
-                      idx === lightboxImgIdx
+                    className={`w-full h-full object-cover absolute inset-0 transition-all duration-700 ease-in-out ${idx === lightboxImgIdx
                         ? 'opacity-100 scale-100 z-10'
                         : 'opacity-0 scale-95 z-0 pointer-events-none'
-                    }`}
+                      }`}
                   />
                 ))}
 
@@ -1095,11 +1085,10 @@ export const CustomerShowcase: React.FC = () => {
                           soundFx.playPop();
                           setLightboxImgIdx(idx);
                         }}
-                        className={`w-11 h-11 rounded-lg overflow-hidden border-2 shrink-0 transition-all cursor-pointer ${
-                          isActive
+                        className={`w-11 h-11 rounded-lg overflow-hidden border-2 shrink-0 transition-all cursor-pointer ${isActive
                             ? 'border-pink-500 ring-2 ring-pink-500/40 scale-105'
                             : 'border-white/20 opacity-60 hover:opacity-100 hover:border-pink-300'
-                        }`}
+                          }`}
                       >
                         <img src={getProductImageUrl(img)} alt={`Thumb ${idx + 1}`} className="w-full h-full object-cover" />
                       </button>

@@ -30,6 +30,8 @@ export interface StoreInfo {
   appPromoType?: 'PERCENT' | 'FIXED_KHR';
   appPromoValue?: number;
   appPromoMinSpendKhr?: number;
+  appPromoBadgeTextKh?: string;
+  appPromoTitleKh?: string;
   appPromoBannerTextKh?: string;
 }
 

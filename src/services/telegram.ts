@@ -1313,7 +1313,15 @@ export const generateDailyMonthlySummaryReportText = (params: DailyReportParams)
   const dateFormatted = formatDateDMY(todayStr);
 
   const storeTitle = escapeHtml(storeInfo?.nameKh || 'ហាងនំ SweetBakery');
-  const timeDisplay = reportTimeLabel || now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+  const realTimeStr = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Asia/Phnom_Penh',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).format(now);
+  const timeDisplay = reportTimeLabel && reportTimeLabel !== realTimeStr
+    ? `${realTimeStr}`
+    : realTimeStr;
 
   // Intelligent AI Insights Summary
   let aiInsightText = '';
@@ -1437,30 +1445,47 @@ export const sendTelegramDailyReport = async (
   }
 
   const now = new Date();
-  const todayStr = params.targetDate || params.dateStr || now.toISOString().slice(0, 10);
+  const todayStr = params.targetDate || params.dateStr || new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Phnom_Penh' }).format(now);
   const timeSlot = config.dailyReportTime || '21:00';
   // Strictly lock by date so that duplicate reports can never fire for the same calendar day
   const eventKey = `daily_report_${todayStr}`;
 
+  const todaySales = (params.sales || []).filter((s) => (s.createdAt || '').slice(0, 10) === todayStr);
+  const todaySalesCount = todaySales.length;
+  const todaySalesKhr = todaySales.reduce(
+    (sum, s) => sum + (s.totalKhr || Math.round(s.totalUsd * (params.exchangeRate || 4100))),
+    0
+  );
+
   if (!isManual) {
-    if (hasTelegramEventFired(eventKey) || inFlightDailyReportEvents.has(eventKey)) {
+    if (inFlightDailyReportEvents.has(eventKey)) {
       return {
         success: true,
-        message: 'របាយការណ៍ប្រចាំថ្ងៃត្រូវបានផ្ញើរួចហើយសម្រាប់ថ្ងៃនេះ',
+        message: 'របាយការណ៍ប្រចាំថ្ងៃកំពុងដំណើរការផ្ញើ...',
       };
     }
     inFlightDailyReportEvents.add(eventKey);
 
     // Cross-device cloud deduplication: check if another device (e.g. Phone or PC) already sent it today
     try {
-      const cloudLog = await getFirestoreDoc<{ sentAt: number }>('daily_report_logs', eventKey);
+      const cloudLog = await getFirestoreDoc<{
+        sentAt: number;
+        salesCount?: number;
+        salesKhr?: number;
+      }>('daily_report_logs', eventKey);
+
       if (cloudLog && cloudLog.sentAt) {
-        markTelegramEventFired(eventKey);
-        inFlightDailyReportEvents.delete(eventKey);
-        return {
-          success: true,
-          message: 'របាយការណ៍ប្រចាំថ្ងៃត្រូវបានផ្ញើរួចហើយសម្រាប់ថ្ងៃនេះតាមរយៈឧបករណ៍ផ្សេង',
-        };
+        const prevCount = cloudLog.salesCount ?? -1;
+        const prevKhr = cloudLog.salesKhr ?? -1;
+        // If an earlier report was sent with the same or greater sales, skip duplicate
+        if (prevCount >= todaySalesCount && prevKhr >= todaySalesKhr) {
+          inFlightDailyReportEvents.delete(eventKey);
+          return {
+            success: true,
+            message: 'របាយការណ៍ប្រចាំថ្ងៃត្រូវបានផ្ញើរួចហើយសម្រាប់ថ្ងៃនេះ',
+          };
+        }
+        // If data has increased (e.g. earlier run had 0 sales, but now sales occurred), allow updated report!
       }
     } catch (e) {}
   }
@@ -1501,6 +1526,8 @@ export const sendTelegramDailyReport = async (
         sentAt: Date.now(),
         date: todayStr,
         recipients: targetChatIds,
+        salesCount: todaySalesCount,
+        salesKhr: todaySalesKhr,
       }).catch(() => {});
 
       if (!targetDesc) {

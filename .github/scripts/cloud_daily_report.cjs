@@ -550,7 +550,7 @@ async function main() {
   const chatId = telegramSettings.chatId || '-5528089668';
   const adminChatId = (telegramSettings.adminChatId || '8970210109').trim();
   const recipientMode = telegramSettings.dailyReportRecipient || 'BOTH';
-  const scheduledTime = telegramSettings.dailyReportTime || '21:00';
+  const scheduledTime = telegramSettings.dailyReportTime || '20:00';
   const isEnabled = telegramSettings.enabled !== false;
   const notifyDailyReport = telegramSettings.notifyDailyReport !== false;
   const exchangeRate = currencySettings?.exchangeRate || 4100;
