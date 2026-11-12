@@ -29,7 +29,7 @@ import {
 } from 'lucide-react';
 import { useBakery } from '../../context/BakeryContext';
 import { t } from '../../utils/translations';
-import { Ingredient, Product, Recipe, CakeBoxLabelData } from '../../types';
+import { Ingredient, Product, Recipe, CakeBoxLabelData, ProductDisplayTarget } from '../../types';
 import { soundFx } from '../../utils/audio';
 import { getProductImageUrl } from '../../utils/imagePath';
 import { AddProductModal } from '../pos/AddProductModal';
@@ -69,9 +69,23 @@ export const InventoryManagement: React.FC = () => {
   const [restockAmount, setRestockAmount] = useState<string>('10');
   const [activeTab, setActiveTab] = useState<'cakes' | 'decorations' | 'stock' | 'costing'>('cakes');
   const [productFilter, setProductFilter] = useState<'all' | 'out' | 'low'>('all');
+  const [placementFilter, setPlacementFilter] = useState<'all' | 'showcase' | 'catalog'>('all');
   const [defaultAddCategory, setDefaultAddCategory] = useState<string>('birthday');
   const [isPartyAccessoriesOpen, setIsPartyAccessoriesOpen] = useState(false);
   const [isSyncingStock, setIsSyncingStock] = useState(false);
+
+  const handleQuickTogglePlacement = async (e: React.MouseEvent, prod: Product) => {
+    e.stopPropagation();
+    soundFx.playPop();
+    const current = prod.displayTarget || 'SHOWCASE';
+    const nextTarget: ProductDisplayTarget =
+      current === 'SHOWCASE' ? 'CATALOG' : current === 'CATALOG' ? 'BOTH' : 'SHOWCASE';
+
+    await updateProduct({
+      ...prod,
+      displayTarget: nextTarget,
+    });
+  };
 
   const handleSyncStock = async () => {
     setIsSyncingStock(true);
@@ -159,10 +173,28 @@ export const InventoryManagement: React.FC = () => {
 
     if (!matchesSearch) return false;
 
+    // Filter by display target placement if viewing cakes tab
+    if (activeTab === 'cakes') {
+      if (placementFilter === 'showcase') {
+        const isShowcase = prod.displayTarget === 'SHOWCASE' || prod.displayTarget === 'BOTH' || !prod.displayTarget;
+        if (!isShowcase) return false;
+      } else if (placementFilter === 'catalog') {
+        const isCatalog = prod.displayTarget === 'CATALOG' || prod.displayTarget === 'BOTH';
+        if (!isCatalog) return false;
+      }
+    }
+
     if (productFilter === 'out') return prod.stockQty === 0;
     if (productFilter === 'low') return prod.stockQty <= 5 && prod.stockQty > 0;
     return true;
   });
+
+  const showcaseCakesCount = cakeProducts.filter(
+    (p) => p.displayTarget === 'SHOWCASE' || p.displayTarget === 'BOTH' || !p.displayTarget
+  ).length;
+  const catalogCakesCount = cakeProducts.filter(
+    (p) => p.displayTarget === 'CATALOG' || p.displayTarget === 'BOTH'
+  ).length;
 
   const outOfStockCakesCount = cakeProducts.filter((p) => p.stockQty === 0).length;
   const lowStockCakesCount = cakeProducts.filter((p) => p.stockQty <= 5 && p.stockQty > 0).length;
@@ -453,7 +485,7 @@ export const InventoryManagement: React.FC = () => {
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex-1 flex flex-col">
           {/* Filters row */}
           <div className="p-3 bg-slate-50/70 border-b border-slate-100 flex items-center justify-between gap-2 flex-wrap">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <span className="text-xs font-bold text-slate-500">តម្រង៖</span>
               <button
                 onClick={() => setProductFilter('all')}
@@ -491,6 +523,67 @@ export const InventoryManagement: React.FC = () => {
                   {lowStockCurrentCount}
                 </span>
               </button>
+
+              {/* Placement Filter for Cakes */}
+              {activeTab === 'cakes' && (
+                <div className="flex items-center gap-1 pl-2 border-l border-slate-200">
+                  <span className="text-xs font-bold text-slate-400 hidden sm:inline">ទីតាំង៖</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      soundFx.playPop();
+                      setPlacementFilter('showcase');
+                    }}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1 cursor-pointer ${
+                      placementFilter === 'showcase'
+                        ? 'bg-pink-600 text-white shadow-xs'
+                        : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'
+                    }`}
+                    title="នំដាក់តាំងក្នុងទូរ (ផ្ទាំង POS លក់)"
+                  >
+                    <span>🧊 ក្នុងទូរ (POS)</span>
+                    <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded-full ${
+                      placementFilter === 'showcase' ? 'bg-white/20 text-white font-bold' : 'bg-slate-100 text-slate-600'
+                    }`}>
+                      {showcaseCakesCount}
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      soundFx.playPop();
+                      setPlacementFilter('catalog');
+                    }}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1 cursor-pointer ${
+                      placementFilter === 'catalog'
+                        ? 'bg-purple-600 text-white shadow-xs'
+                        : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'
+                    }`}
+                    title="រូបភាពនំ Upload ពីក្រៅសម្រាប់ភ្ញៀវមើលម៉ូដកុម្ម៉ង់ (មិនបង្ហាញលើ POS)"
+                  >
+                    <span>📖 កាតាឡុក</span>
+                    <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded-full ${
+                      placementFilter === 'catalog' ? 'bg-white/20 text-white font-bold' : 'bg-slate-100 text-slate-600'
+                    }`}>
+                      {catalogCakesCount}
+                    </span>
+                  </button>
+
+                  {placementFilter !== 'all' && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        soundFx.playPop();
+                        setPlacementFilter('all');
+                      }}
+                      className="text-[11px] text-slate-400 hover:text-slate-600 underline cursor-pointer px-1"
+                    >
+                      បង្ហាញទាំងអស់
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
             <span className="text-[11px] text-slate-400 font-medium">
               បង្ហាញ {filteredProducts.length} មុខ
@@ -535,6 +628,30 @@ export const InventoryManagement: React.FC = () => {
                         <div className="text-[11px] text-slate-400 truncate">
                           {prod.nameEn}
                         </div>
+                        {activeTab === 'cakes' && (
+                          <div className="pt-0.5">
+                            <button
+                              type="button"
+                              onClick={(e) => handleQuickTogglePlacement(e, prod)}
+                              className={`px-2 py-0.5 rounded-md text-[9.5px] font-black border transition-all cursor-pointer inline-flex items-center gap-1 active:scale-95 ${
+                                prod.displayTarget === 'CATALOG'
+                                  ? 'bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100'
+                                  : prod.displayTarget === 'BOTH'
+                                  ? 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100'
+                                  : 'bg-pink-50 text-pink-700 border-pink-200 hover:bg-pink-100'
+                              }`}
+                              title="ចុចដើម្បីប្តូរទីតាំងបង្ហាញ៖ នំក្នុងទូរ (POS) ↔ កាតាឡុក (ភ្ញៀវ) ↔ ទាំងពីរ"
+                            >
+                              <span>
+                                {prod.displayTarget === 'CATALOG'
+                                  ? '📖 កាតាឡុក'
+                                  : prod.displayTarget === 'BOTH'
+                                  ? '🌟 ទាំងពីរ'
+                                  : '🧊 ក្នុងទូរ (POS)'}
+                              </span>
+                            </button>
+                          </div>
+                        )}
                         <div className="text-xs font-black text-pink-600 mt-0.5">
                           {priceKhr.toLocaleString()} ៛ <span className="text-[10px] text-slate-400 font-semibold">(${prod.priceUsd.toFixed(2)})</span>
                         </div>
@@ -658,6 +775,30 @@ export const InventoryManagement: React.FC = () => {
                                 <div className="text-[11px] text-slate-400">
                                   {prod.nameEn}
                                 </div>
+                                {activeTab === 'cakes' && (
+                                  <div className="pt-0.5">
+                                    <button
+                                      type="button"
+                                      onClick={(e) => handleQuickTogglePlacement(e, prod)}
+                                      className={`px-2 py-0.5 rounded-md text-[10px] font-black border transition-all cursor-pointer inline-flex items-center gap-1 active:scale-95 ${
+                                        prod.displayTarget === 'CATALOG'
+                                          ? 'bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100'
+                                          : prod.displayTarget === 'BOTH'
+                                          ? 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100'
+                                          : 'bg-pink-50 text-pink-700 border-pink-200 hover:bg-pink-100'
+                                      }`}
+                                      title="ចុចដើម្បីប្តូរទីតាំងបង្ហាញ៖ នំក្នុងទូរ (POS) ↔ កាតាឡុក (ភ្ញៀវ) ↔ ទាំងពីរ"
+                                    >
+                                      <span>
+                                        {prod.displayTarget === 'CATALOG'
+                                          ? '📖 កាតាឡុក'
+                                          : prod.displayTarget === 'BOTH'
+                                          ? '🌟 ទាំងពីរ'
+                                          : '🧊 ក្នុងទូរ (POS)'}
+                                      </span>
+                                    </button>
+                                  </div>
+                                )}
                               </div>
                             </div>
                           </td>

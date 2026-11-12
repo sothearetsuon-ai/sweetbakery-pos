@@ -144,6 +144,22 @@ export const PosTerminal: React.FC = () => {
     }
   });
   const [stockFilter, setStockFilter] = useState<'all' | 'in_stock' | 'out_of_stock'>('all');
+  // Display Target Filter: 'showcase' (នំដាក់តាំងក្នុងទូរ) vs 'catalog' (កាតាឡុកគំរូនំ) vs 'all'
+  const [posDisplayFilter, setPosDisplayFilter] = useState<'showcase' | 'catalog' | 'all'>(() => {
+    try {
+      return (localStorage.getItem('sweetbakery_pos_display_target_filter') as 'showcase' | 'catalog' | 'all') || 'showcase';
+    } catch {
+      return 'showcase';
+    }
+  });
+
+  const handleDisplayFilterChange = (filter: 'showcase' | 'catalog' | 'all') => {
+    soundFx.playPop();
+    setPosDisplayFilter(filter);
+    try {
+      localStorage.setItem('sweetbakery_pos_display_target_filter', filter);
+    } catch {}
+  };
   const [isSortMenuOpen, setIsSortMenuOpen] = useState(false);
   const sortMenuRef = useRef<HTMLDivElement>(null);
 
@@ -348,14 +364,42 @@ export const PosTerminal: React.FC = () => {
   };
 
   // Category-filtered products (excluding decoration materials / party supplies from POS)
-  const baseCategoryProducts = useMemo(() => {
+  const categoryNonPartyProducts = useMemo(() => {
     return products.filter((p) => {
       if (p.categoryId === 'party') return false;
       return selectedCategory === 'all' || p.categoryId === selectedCategory;
     });
   }, [products, selectedCategory]);
 
-  // Current category stock counts
+  // Counts by placement within current category
+  const showcaseCount = useMemo(() => {
+    return categoryNonPartyProducts.filter(
+      (p) => p.displayTarget === 'SHOWCASE' || p.displayTarget === 'BOTH' || !p.displayTarget
+    ).length;
+  }, [categoryNonPartyProducts]);
+
+  const catalogCount = useMemo(() => {
+    return categoryNonPartyProducts.filter(
+      (p) => p.displayTarget === 'CATALOG' || p.displayTarget === 'BOTH'
+    ).length;
+  }, [categoryNonPartyProducts]);
+
+  // Base products for POS considering the selected display placement filter
+  const baseCategoryProducts = useMemo(() => {
+    return categoryNonPartyProducts.filter((p) => {
+      if (posDisplayFilter === 'showcase') {
+        // Only physical showcase cakes in the display cabinet (exclude catalog-only models)
+        return p.displayTarget === 'SHOWCASE' || p.displayTarget === 'BOTH' || !p.displayTarget;
+      }
+      if (posDisplayFilter === 'catalog') {
+        // Outside sample catalog pictures
+        return p.displayTarget === 'CATALOG' || p.displayTarget === 'BOTH';
+      }
+      return true; // 'all'
+    });
+  }, [categoryNonPartyProducts, posDisplayFilter]);
+
+  // Current category stock counts (respecting the active display placement filter)
   const inStockCount = useMemo(() => {
     return baseCategoryProducts.filter((p) => Number(p.stockQty ?? 0) > 0).length;
   }, [baseCategoryProducts]);
@@ -799,9 +843,61 @@ export const PosTerminal: React.FC = () => {
             })}
           </div>
 
-          {/* Stock Filter & Smart Sort Bar */}
+          {/* Placement Switcher & Stock Filter Bar */}
           <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-rose-100/70 text-xs">
-            {/* Left: Stock Status Filters */}
+            {/* Left 1: Display Placement Switcher (Showcase vs Outside Catalog) */}
+            <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-2xl border border-slate-200/80 shadow-2xs overflow-x-auto scrollbar-none">
+              <button
+                type="button"
+                onClick={() => handleDisplayFilterChange('showcase')}
+                className={`px-2.5 sm:px-3 py-1 rounded-xl text-[11px] sm:text-xs font-black transition-all flex items-center gap-1.5 active:scale-95 cursor-pointer whitespace-nowrap ${
+                  posDisplayFilter === 'showcase'
+                    ? 'bg-white text-pink-700 shadow-xs ring-1 ring-slate-200'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+                title="បង្ហាញតែនំដែលមានជាក់ស្តែងក្នុងទូរបង្ហាញ (Physical Display Cabinet)"
+              >
+                <span>🧊 នំដាក់តាំងក្នុងទូរ</span>
+                <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded-md ${
+                  posDisplayFilter === 'showcase' ? 'bg-pink-100 text-pink-700 font-bold' : 'bg-slate-200/70 text-slate-500'
+                }`}>
+                  {showcaseCount}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleDisplayFilterChange('catalog')}
+                className={`px-2.5 sm:px-3 py-1 rounded-xl text-[11px] sm:text-xs font-black transition-all flex items-center gap-1.5 active:scale-95 cursor-pointer whitespace-nowrap ${
+                  posDisplayFilter === 'catalog'
+                    ? 'bg-purple-600 text-white shadow-xs shadow-purple-600/30'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+                title="បង្ហាញរូបភាពនំដែល Upload ពីក្រៅសម្រាប់ភ្ញៀវមើលម៉ូដកុម្ម៉ង់ (Outside Sample Catalog)"
+              >
+                <span>📖 កាតាឡុកគំរូនំ</span>
+                <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded-md ${
+                  posDisplayFilter === 'catalog' ? 'bg-white/25 text-white font-bold' : 'bg-slate-200/70 text-slate-500'
+                }`}>
+                  {catalogCount}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleDisplayFilterChange('all')}
+                className={`px-2 sm:px-2.5 py-1 rounded-xl text-[11px] font-black transition-all active:scale-95 cursor-pointer whitespace-nowrap ${
+                  posDisplayFilter === 'all'
+                    ? 'bg-slate-900 text-white shadow-xs'
+                    : 'text-slate-500 hover:text-slate-800'
+                }`}
+                title="បង្ហាញទាំងអស់"
+              >
+                <span>ទាំងអស់</span>
+              </button>
+            </div>
+
+            {/* Left 2: Stock Status Filters */}
             <div className="flex items-center gap-1 sm:gap-1.5 overflow-x-auto scrollbar-none py-0.5">
               <span className="text-[11px] font-bold text-slate-400 hidden lg:inline mr-0.5">ស្តុក៖</span>
               <button

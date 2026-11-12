@@ -7,7 +7,7 @@ import { soundFx } from '../../utils/audio';
 import { compressImageFile } from '../../utils/imageCompressor';
 import { CameraCaptureModal } from '../common/CameraCaptureModal';
 import { getProductImageUrl } from '../../utils/imagePath';
-import { Product } from '../../types';
+import { Product, ProductDisplayTarget } from '../../types';
 
 interface AddProductModalProps {
   isOpen: boolean;
@@ -35,6 +35,7 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
   const [stockQty, setStockQty] = useState('');
   const [unit, setUnit] = useState(defaultCategoryId === 'party' ? 'ដុំ' : 'នំ');
   const [description, setDescription] = useState('');
+  const [displayTarget, setDisplayTarget] = useState<ProductDisplayTarget>('SHOWCASE');
   
   const isParty = categoryId === 'party';
 
@@ -65,6 +66,7 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
       setStockQty(productToEdit.stockQty !== undefined && productToEdit.stockQty !== null ? String(productToEdit.stockQty) : '');
       setUnit(productToEdit.unit || 'នំ');
       setDescription(productToEdit.description || '');
+      setDisplayTarget(productToEdit.displayTarget || 'SHOWCASE');
       const prodImages = productToEdit.images && productToEdit.images.length > 0
         ? productToEdit.images
         : productToEdit.imageUrl
@@ -82,6 +84,7 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
       setStockQty('');
       setUnit(defaultCategoryId === 'party' ? 'ដុំ' : 'នំ');
       setDescription('');
+      setDisplayTarget('SHOWCASE');
       setImages([]);
       setPrimaryIndex(0);
     }
@@ -189,6 +192,7 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
           costPriceKhr: numCostKhr,
           stockQty: finalStock,
           unit,
+          displayTarget,
           description: description.trim(),
           imageUrl: finalPrimary,
           images: finalImages.length > 0 ? finalImages : [finalPrimary],
@@ -205,6 +209,7 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
           costPriceKhr: numCostKhr,
           stockQty: finalStock,
           unit,
+          displayTarget,
           description: description.trim(),
           imageUrl: finalPrimary,
           images: finalImages.length > 0 ? finalImages : [finalPrimary],
@@ -304,6 +309,86 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
               >
                 <span>🎉 សម្ភារៈ & គ្រឿងតុបតែង (Party Supplies)</span>
               </button>
+            </div>
+          )}
+
+          {/* Target Display Placement: Showcase (POS) vs Catalog Only vs Both */}
+          {!isParty && (
+            <div className="p-3.5 bg-gradient-to-r from-pink-50/70 via-rose-50/50 to-purple-50/70 rounded-2xl border border-pink-200/80 space-y-2">
+              <label className="block text-xs font-black text-slate-800 flex items-center justify-between">
+                <span className="flex items-center gap-1.5">
+                  <span>📍 ទីតាំងបង្ហាញនំ (Display Placement)</span>
+                </span>
+                <span className="text-[10.5px] font-bold text-pink-600 bg-white px-2 py-0.5 rounded-md border border-pink-200 shadow-2xs">
+                  {displayTarget === 'SHOWCASE'
+                    ? '🧊 នំដាក់តាំងក្នុងទូរ (POS)'
+                    : displayTarget === 'CATALOG'
+                    ? '📖 កាតាឡុកសម្រាប់ភ្ញៀវ'
+                    : '🌟 ទាំងពីរ (POS & កាតាឡុក)'}
+                </span>
+              </label>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    soundFx.playPop();
+                    setDisplayTarget('SHOWCASE');
+                  }}
+                  className={`p-2.5 rounded-xl text-left border transition-all cursor-pointer ${
+                    displayTarget === 'SHOWCASE'
+                      ? 'bg-white border-pink-500 shadow-xs ring-2 ring-pink-500/20'
+                      : 'bg-white/60 border-slate-200 hover:bg-white hover:border-slate-300'
+                  }`}
+                >
+                  <div className="flex items-center gap-1.5 font-black text-xs text-slate-900">
+                    <span>🧊 នំតាំងក្នុងទូរ (POS)</span>
+                  </div>
+                  <p className="text-[10px] text-slate-500 mt-0.5 leading-tight font-medium">
+                    សម្រាប់នំមានស្រាប់ក្នុងទូរ បុគ្គលិកគិតលុយលក់ភ្លាមៗ
+                  </p>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    soundFx.playPop();
+                    setDisplayTarget('CATALOG');
+                  }}
+                  className={`p-2.5 rounded-xl text-left border transition-all cursor-pointer ${
+                    displayTarget === 'CATALOG'
+                      ? 'bg-white border-purple-500 shadow-xs ring-2 ring-purple-500/20'
+                      : 'bg-white/60 border-slate-200 hover:bg-white hover:border-slate-300'
+                  }`}
+                >
+                  <div className="flex items-center gap-1.5 font-black text-xs text-purple-800">
+                    <span>📖 កាតាឡុកភ្ញៀវមើល</span>
+                  </div>
+                  <p className="text-[10px] text-slate-500 mt-0.5 leading-tight font-medium">
+                    រូបភាព upload ពីក្រៅ សម្រាប់ភ្ញៀវមើលម៉ូដ (មិនលោតចូល POS)
+                  </p>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    soundFx.playPop();
+                    setDisplayTarget('BOTH');
+                  }}
+                  className={`p-2.5 rounded-xl text-left border transition-all cursor-pointer ${
+                    displayTarget === 'BOTH'
+                      ? 'bg-white border-amber-500 shadow-xs ring-2 ring-amber-500/20'
+                      : 'bg-white/60 border-slate-200 hover:bg-white hover:border-slate-300'
+                  }`}
+                >
+                  <div className="flex items-center gap-1.5 font-black text-xs text-amber-800">
+                    <span>🌟 បង្ហាញទាំងពីរ</span>
+                  </div>
+                  <p className="text-[10px] text-slate-500 mt-0.5 leading-tight font-medium">
+                    បង្ហាញទាំងលើផ្ទាំង POS និងលើកាតាឡុកសម្រាប់ភ្ញៀវ
+                  </p>
+                </button>
+              </div>
             </div>
           )}
 

@@ -117,6 +117,16 @@ const PortalCatalogCardComponent: React.FC<PortalCatalogCardProps> = ({
           <Sparkles className="w-3 h-3 text-yellow-200" />
           <span>⚡ កុម្ម៉ង់រហ័ស 30s</span>
         </button>
+
+        {product.displayTarget === 'SHOWCASE' ? (
+          <span className="px-2 py-0.5 rounded-full text-[9px] font-black bg-white/90 text-pink-700 border border-pink-200/80 shadow-xs flex items-center gap-0.5 backdrop-blur-xs">
+            <span>🧊 មានក្នុងទូរ</span>
+          </span>
+        ) : product.displayTarget === 'CATALOG' ? (
+          <span className="px-2 py-0.5 rounded-full text-[9px] font-black bg-white/90 text-purple-700 border border-purple-200/80 shadow-xs flex items-center gap-0.5 backdrop-blur-xs">
+            <span>📖 ម៉ូដកុម្ម៉ង់</span>
+          </span>
+        ) : null}
       </div>
 
       <div
@@ -516,9 +526,32 @@ export const CustomerOrderPortal: React.FC<CustomerOrderPortalProps> = ({ onBack
     inscription,
   }), [storeInfo, exchangeRate, products, inStockFlavors, outOfStockFlavors, step, customCakeName, finalSize, cakePriceKhr, finalFlavor, inscription]);
 
+  // Catalog Placement Filter: 'catalog' (ម៉ូដគំរូកុម្ម៉ង់) vs 'showcase' (នំស្រស់មានក្នុងទូរ) vs 'all'
+  const [catalogPlacementFilter, setCatalogPlacementFilter] = useState<'catalog' | 'showcase' | 'all'>('catalog');
+
+  const catalogDesignsCount = useMemo(() => {
+    return products.filter((p) => p.categoryId !== 'party' && (p.displayTarget === 'CATALOG' || p.displayTarget === 'BOTH' || !p.displayTarget)).length;
+  }, [products]);
+
+  const readyShowcaseCount = useMemo(() => {
+    return products.filter((p) => p.categoryId !== 'party' && (p.displayTarget === 'SHOWCASE' || p.displayTarget === 'BOTH')).length;
+  }, [products]);
+
   // Filtered Products for Catalog
   const filteredProducts = useMemo(() => {
     return products.filter((p) => {
+      // Exclude party items from cake catalog
+      if (p.categoryId === 'party') return false;
+
+      // Filter by placement:
+      if (catalogPlacementFilter === 'catalog') {
+        const isTarget = p.displayTarget === 'CATALOG' || p.displayTarget === 'BOTH' || !p.displayTarget;
+        if (!isTarget) return false;
+      } else if (catalogPlacementFilter === 'showcase') {
+        const isTarget = p.displayTarget === 'SHOWCASE' || p.displayTarget === 'BOTH';
+        if (!isTarget) return false;
+      }
+
       const matchesSearch =
         !searchQuery.trim() ||
         p.nameKh.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -527,7 +560,7 @@ export const CustomerOrderPortal: React.FC<CustomerOrderPortalProps> = ({ onBack
         selectedCategory === 'all' || p.categoryId === selectedCategory;
       return matchesSearch && matchesCategory;
     });
-  }, [products, searchQuery, selectedCategory]);
+  }, [products, searchQuery, selectedCategory, catalogPlacementFilter]);
 
   // Calculations
   const addonsTotalUsd = useMemo(() => {
@@ -1084,13 +1117,14 @@ export const CustomerOrderPortal: React.FC<CustomerOrderPortalProps> = ({ onBack
         {step === 1 && (
           <div className="space-y-5 animate-in fade-in duration-300">
             {/* Prominent Promotion & Lucky Wheel Showcase Banner */}
-            <div className="bg-gradient-to-r from-[#FF5252] via-[#F43F5E] to-[#E11D48] text-white rounded-3xl p-5 sm:p-7 shadow-xl shadow-rose-500/25 relative overflow-hidden">
+            {/* Hero Card / Banner matching original cake order design */}
+            <div className="bg-gradient-to-r from-[#FF6F68] via-[#FA5E57] to-[#E64C47] text-white rounded-3xl p-5 sm:p-7 shadow-xl shadow-[#E64C47]/20 relative overflow-hidden">
               <div className="relative z-10 max-w-xl space-y-3">
                 {/* Badges row */}
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="px-3 py-1 bg-white/20 backdrop-blur-md rounded-full text-xs font-black tracking-wide inline-flex items-center gap-1.5 shadow-xs">
-                    <Sparkles className="w-3.5 h-3.5 text-amber-300 animate-spin-slow" />
-                    <span>ប្រូម៉ូសិនពិសេស & កងសំណាង</span>
+                    <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                    <span>កុម្ម៉ង់នំខួបកំណើតតាមចិត្ត ជាមួយប្រាក់កក់ងាយស្រួល</span>
                   </span>
                   {storeInfo.appPromoEnabled !== false && (
                     <span className="px-3 py-1 bg-amber-400 text-amber-950 rounded-full text-xs font-black tracking-wide inline-flex items-center gap-1 shadow-xs animate-pulse">
@@ -1108,17 +1142,13 @@ export const CustomerOrderPortal: React.FC<CustomerOrderPortalProps> = ({ onBack
 
                 {/* Big Bold Headline */}
                 <h2 className="text-2xl sm:text-3xl font-black font-muol tracking-tight leading-tight text-white drop-shadow-sm">
-                  {storeInfo.appPromoEnabled !== false
-                    ? storeInfo.appPromoType === 'FIXED_KHR'
-                      ? `បញ្ចុះតម្លៃ ${(storeInfo.appPromoValue || 5000).toLocaleString()} ៛ ភ្លាមៗ!`
-                      : `បញ្ចុះតម្លៃ ${storeInfo.appPromoValue || 10}% រាល់ការកុម្ម៉ង់តាម App!`
-                    : 'ប្រូម៉ូសិនពិសេស & បង្វិលកងឈ្នះរង្វាន់!'}
+                  នំខួបកំណើតស្រស់ថ្មីៗ ដុតជារៀងរាល់ថ្ងៃ
                 </h2>
 
                 {/* Subtitle / Description */}
                 <p className="text-xs sm:text-sm text-pink-100 font-medium font-battambang leading-relaxed">
                   {storeInfo.appPromoBannerTextKh ||
-                    'កុម្ម៉ង់នំខួបកំណើត ឬនំបុ័ងតាមទូរស័ព្ទដៃផ្ទាល់ ដើម្បីទទួលបានការបញ្ចុះតម្លៃស្វ័យប្រវត្តិ ព្រមទាំងបង្វិលកងឈ្នះរង្វាន់នំហ្វ្រី និងភេសជ្ជៈជាច្រើន!'}
+                    'ជ្រើសរើសម៉ូដនំក្នុងម៉ឺនុយ ឬបញ្ជូលរូបភាពគំរូដែលអ្នកស្រឡាញ់ដើម្បីឱ្យជាងនំយើងខ្ញុំធ្វើជូន!'}
                 </p>
 
                 {/* Claimed prize highlight if customer has won */}
@@ -1143,6 +1173,16 @@ export const CustomerOrderPortal: React.FC<CustomerOrderPortalProps> = ({ onBack
 
                 {/* Interactive Action Buttons */}
                 <div className="pt-1 flex flex-wrap gap-2.5">
+                  {/* Custom Design Button */}
+                  <button
+                    type="button"
+                    onClick={handleStartCustomDesign}
+                    className="px-4 py-2.5 bg-white text-[#C93833] hover:bg-[#FFF5F2] rounded-2xl text-xs sm:text-sm font-black transition-all shadow-md active:scale-95 cursor-pointer flex items-center gap-1.5"
+                  >
+                    <span>🎨 កុម្ម៉ង់ម៉ូដតាមរូបភាពផ្ទាល់ខ្លួន</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
+
                   {/* Lucky Wheel Spin Button */}
                   <button
                     type="button"
@@ -1156,21 +1196,11 @@ export const CustomerOrderPortal: React.FC<CustomerOrderPortalProps> = ({ onBack
                     <span>បង្វិលកងឈ្នះរង្វាន់</span>
                     <Sparkles className="w-3.5 h-3.5 text-amber-800 animate-spin-slow" />
                   </button>
-
-                  {/* Custom Design Button */}
-                  <button
-                    type="button"
-                    onClick={handleStartCustomDesign}
-                    className="px-4 py-2.5 bg-white text-[#C93833] hover:bg-[#FFF5F2] rounded-2xl text-xs sm:text-sm font-black transition-all shadow-md active:scale-95 cursor-pointer flex items-center gap-1.5"
-                  >
-                    <span>🎨 កុម្ម៉ង់ម៉ូដតាមរូបភាព</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </button>
                 </div>
 
                 {/* Rewards preview ticker chips */}
                 <div className="pt-1 flex items-center gap-1.5 overflow-x-auto no-scrollbar text-[10.5px] text-pink-100 font-bold">
-                  <span className="text-amber-200">រង្វាន់រួមមាន៖</span>
+                  <span className="text-amber-200">រង្វាន់កងសំណាង៖</span>
                   <span className="px-2 py-0.5 rounded-full bg-white/10 shrink-0">🧁 ហ្វ្រី Donut</span>
                   <span className="px-2 py-0.5 rounded-full bg-white/10 shrink-0">🎟️ បញ្ចុះ 10%</span>
                   <span className="px-2 py-0.5 rounded-full bg-white/10 shrink-0">☕ ហ្វ្រីភេសជ្ជៈ</span>
@@ -1179,11 +1209,11 @@ export const CustomerOrderPortal: React.FC<CustomerOrderPortalProps> = ({ onBack
               </div>
 
               {/* Decorative Background Elements */}
-              <div className="absolute right-[-15px] bottom-[-20px] text-8xl sm:text-9xl opacity-20 select-none pointer-events-none transition-transform group-hover:scale-105">
-                🎡
+              <div className="absolute right-[-20px] bottom-[-20px] text-8xl sm:text-9xl opacity-20 select-none pointer-events-none">
+                🎂
               </div>
               <div className="absolute right-24 -top-8 text-6xl opacity-15 select-none pointer-events-none">
-                🎁
+                🎡
               </div>
             </div>
 
@@ -1221,6 +1251,76 @@ export const CustomerOrderPortal: React.FC<CustomerOrderPortalProps> = ({ onBack
                 <span className="hidden sm:inline">សួរ AI ឥឡូវនេះ</span>
                 <ChevronRight className="w-4 h-4" />
               </div>
+            </div>
+
+            {/* Catalog Placement Switcher: Catalog Designs (Uploaded) vs Ready in Showcase */}
+            <div className="flex flex-wrap items-center justify-between gap-2 p-1.5 bg-slate-100/90 rounded-2xl border border-rose-100/80">
+              <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none py-0.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    soundFx.playPop();
+                    setCatalogPlacementFilter('catalog');
+                  }}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap active:scale-95 ${
+                    catalogPlacementFilter === 'catalog'
+                      ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-xs'
+                      : 'bg-white text-slate-600 hover:text-slate-900'
+                  }`}
+                  title="រូបភាពគំរូដែល Upload សម្រាប់ជ្រើសរើសម៉ូដកុម្ម៉ង់ទុក"
+                >
+                  <span>📖 កាតាឡុកម៉ូដនំកុម្ម៉ង់</span>
+                  <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded-md ${
+                    catalogPlacementFilter === 'catalog' ? 'bg-white/20 text-white font-bold' : 'bg-slate-100 text-slate-500'
+                  }`}>
+                    {catalogDesignsCount}
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    soundFx.playPop();
+                    setCatalogPlacementFilter('showcase');
+                  }}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap active:scale-95 ${
+                    catalogPlacementFilter === 'showcase'
+                      ? 'bg-pink-600 text-white shadow-xs'
+                      : 'bg-white text-slate-600 hover:text-slate-900'
+                  }`}
+                  title="នំដុតរួចមានជាក់ស្តែងក្នុងទូរ អាចមកយកភ្លាមៗបាន"
+                >
+                  <span>🧊 នំស្រស់មានក្នុងទូរស្រាប់</span>
+                  <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded-md ${
+                    catalogPlacementFilter === 'showcase' ? 'bg-white/20 text-white font-bold' : 'bg-slate-100 text-slate-500'
+                  }`}>
+                    {readyShowcaseCount}
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    soundFx.playPop();
+                    setCatalogPlacementFilter('all');
+                  }}
+                  className={`px-2.5 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer whitespace-nowrap active:scale-95 ${
+                    catalogPlacementFilter === 'all'
+                      ? 'bg-slate-900 text-white shadow-xs'
+                      : 'bg-white/60 text-slate-500 hover:text-slate-800'
+                  }`}
+                >
+                  <span>ទាំងអស់</span>
+                </button>
+              </div>
+
+              <span className="text-[11px] text-slate-500 font-medium px-2 hidden md:inline">
+                {catalogPlacementFilter === 'catalog'
+                  ? '🎨 រូបភាពគំរូសម្រាប់កុម្ម៉ង់ទុកមុន'
+                  : catalogPlacementFilter === 'showcase'
+                  ? '✨ នំដុតរួចមានក្នុងទូរ អាចទិញយកភ្លាមៗ'
+                  : '🎂 បង្ហាញគ្រប់មុខនំ'}
+              </span>
             </div>
 
             {/* Filter & Search Bar */}

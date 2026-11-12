@@ -40,6 +40,8 @@ export interface Category {
   icon: string;
 }
 
+export type ProductDisplayTarget = 'SHOWCASE' | 'CATALOG' | 'BOTH';
+
 export interface Product {
   id: string;
   nameKh: string;
@@ -54,6 +56,7 @@ export interface Product {
   stockQty: number;
   unit: string;
   isCustom?: boolean;
+  displayTarget?: ProductDisplayTarget; // 'SHOWCASE' = នំដាក់តាំងក្នុងទូរ (ផ្ទាំង POS), 'CATALOG' = កាតាឡុកសម្រាប់ភ្ញៀវមើល, 'BOTH' = ទាំងពីរ
   description?: string;
   barcode?: string;
   recipeId?: string;

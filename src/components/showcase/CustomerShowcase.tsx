@@ -325,6 +325,7 @@ export const CustomerShowcase: React.FC = () => {
   };
 
   const [selectedCategory, setSelectedCategory] = useState('all');
+  const [showcasePlacementFilter, setShowcasePlacementFilter] = useState<'catalog' | 'showcase' | 'all'>('catalog');
   const [searchQuery, setSearchQuery] = useState('');
   const [previewProduct, setPreviewProduct] = useState<Product | null>(null);
   const [productToEdit, setProductToEdit] = useState<Product | null>(null);
@@ -412,6 +413,15 @@ export const CustomerShowcase: React.FC = () => {
       // Exclude party & decoration accessories from customer catalog/showcase
       if (p.categoryId === 'party') return false;
 
+      // Filter by placement:
+      if (showcasePlacementFilter === 'catalog') {
+        const isTarget = p.displayTarget === 'CATALOG' || p.displayTarget === 'BOTH' || !p.displayTarget;
+        if (!isTarget) return false;
+      } else if (showcasePlacementFilter === 'showcase') {
+        const isTarget = p.displayTarget === 'SHOWCASE' || p.displayTarget === 'BOTH';
+        if (!isTarget) return false;
+      }
+
       const matchCategory = selectedCategory === 'all' || p.categoryId === selectedCategory;
       const q = searchQuery.toLowerCase().trim();
       const matchSearch =
@@ -424,7 +434,7 @@ export const CustomerShowcase: React.FC = () => {
     });
 
     return sortProductsNewestFirst(list);
-  }, [products, selectedCategory, searchQuery]);
+  }, [products, selectedCategory, searchQuery, showcasePlacementFilter]);
 
   // Real products with images for circular showcase cutouts & centerpiece showpiece (excluding party supplies)
   const showcaseProducts = useMemo(() => {
@@ -774,8 +784,54 @@ export const CustomerShowcase: React.FC = () => {
 
       {/* Filter Status & Search Bar */}
       <div className="flex flex-wrap items-center justify-between gap-4">
-        {/* Active Category Indicator Chip */}
-        <div className="flex items-center gap-2">
+        {/* Active Category Indicator Chip & Placement Switcher */}
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Placement Switcher: Catalog vs Showcase */}
+          <div className="flex items-center gap-1 bg-white p-1 rounded-2xl border border-[#F2DBD3] shadow-2xs">
+            <button
+              type="button"
+              onClick={() => {
+                soundFx.playPop();
+                setShowcasePlacementFilter('catalog');
+              }}
+              className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 ${
+                showcasePlacementFilter === 'catalog'
+                  ? 'bg-purple-600 text-white shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <span>📖 កាតាឡុកម៉ូដនំ</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                soundFx.playPop();
+                setShowcasePlacementFilter('showcase');
+              }}
+              className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 ${
+                showcasePlacementFilter === 'showcase'
+                  ? 'bg-pink-600 text-white shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <span>🧊 នំក្នុងទូរស្រាប់</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                soundFx.playPop();
+                setShowcasePlacementFilter('all');
+              }}
+              className={`px-2.5 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer active:scale-95 ${
+                showcasePlacementFilter === 'all'
+                  ? 'bg-slate-900 text-white shadow-xs'
+                  : 'text-slate-500 hover:text-slate-800'
+              }`}
+            >
+              <span>ទាំងអស់</span>
+            </button>
+          </div>
+
           <span className="text-xs font-black text-slate-700 bg-white px-3.5 py-2 rounded-2xl border border-[#F2DBD3] shadow-2xs flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
             <span>
