@@ -17,12 +17,14 @@ import {
   ArrowRight,
   RotateCcw,
   CheckCircle2,
+  Receipt,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { useBakery } from '../../context/BakeryContext';
 import { PartyAddon, Product } from '../../types';
 import { soundFx } from '../../utils/audio';
 import { roundKhr } from '../../utils/currencyUtils';
+import { NewExpenseModal } from '../expenses/NewExpenseModal';
 
 interface PartyAccessoriesModalProps {
   isOpen: boolean;
@@ -69,6 +71,9 @@ export const PartyAccessoriesModal: React.FC<PartyAccessoriesModalProps> = ({
 
   // Delete confirmation
   const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  // Record Expense & Restock Modal State
+  const [expenseModalAddonId, setExpenseModalAddonId] = useState<string | null>(null);
 
   // Retroactive past sales deduction state
   const [isReconcileOpen, setIsReconcileOpen] = useState(false);
@@ -906,30 +911,44 @@ export const PartyAccessoriesModal: React.FC<PartyAccessoriesModalProps> = ({
 
                   {/* Quick Restock Drawer */}
                   {isRestocking && (
-                    <div className="p-2 bg-emerald-50/80 rounded-xl border border-emerald-200 flex items-center justify-between gap-1.5 animate-in fade-in duration-150">
-                      <span className="text-[10px] font-bold text-emerald-900 flex items-center gap-1">
-                        <PackagePlus className="w-3 h-3 text-emerald-600" />
-                        <span>ថែមស្តុកភ្លាមៗ:</span>
-                      </span>
-                      <div className="flex items-center gap-1">
-                        {[10, 20, 50].map((amt) => (
+                    <div className="p-2.5 bg-emerald-50/90 rounded-xl border border-emerald-200 space-y-2 animate-in fade-in duration-150">
+                      <div className="flex items-center justify-between gap-1.5">
+                        <span className="text-[10px] font-bold text-emerald-900 flex items-center gap-1">
+                          <PackagePlus className="w-3 h-3 text-emerald-600" />
+                          <span>ថែមស្តុកភ្លាមៗ:</span>
+                        </span>
+                        <div className="flex items-center gap-1">
+                          {[10, 20, 50].map((amt) => (
+                            <button
+                              key={amt}
+                              type="button"
+                              onClick={() => handleQuickRestock(addon.id, amt)}
+                              className="px-2 py-0.5 bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-black rounded-lg transition-all cursor-pointer active:scale-95 shadow-2xs"
+                            >
+                              +{amt}
+                            </button>
+                          ))}
                           <button
-                            key={amt}
                             type="button"
-                            onClick={() => handleQuickRestock(addon.id, amt)}
-                            className="px-2 py-0.5 bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-black rounded-lg transition-all cursor-pointer active:scale-95 shadow-2xs"
+                            onClick={() => setRestockingId(null)}
+                            className="p-0.5 text-slate-400 hover:text-slate-600"
                           >
-                            +{amt}
+                            <X className="w-3 h-3" />
                           </button>
-                        ))}
-                        <button
-                          type="button"
-                          onClick={() => setRestockingId(null)}
-                          className="p-0.5 text-slate-400 hover:text-slate-600"
-                        >
-                          <X className="w-3 h-3" />
-                        </button>
+                        </div>
                       </div>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setRestockingId(null);
+                          setExpenseModalAddonId(addon.id);
+                        }}
+                        className="w-full py-1 px-2 bg-white hover:bg-purple-50 text-purple-700 border border-purple-200 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
+                      >
+                        <Receipt className="w-3 h-3 text-purple-600" />
+                        <span>📝 កត់ត្រាចំណាយ & បញ្ចូលស្តុកស្វ័យប្រវត្តិ</span>
+                      </button>
                     </div>
                   )}
 
@@ -995,6 +1014,16 @@ export const PartyAccessoriesModal: React.FC<PartyAccessoriesModalProps> = ({
           </button>
         </div>
       </div>
+
+      {/* Record Expense & Auto-Restock Modal */}
+      {expenseModalAddonId && (
+        <NewExpenseModal
+          isOpen={!!expenseModalAddonId}
+          onClose={() => setExpenseModalAddonId(null)}
+          initialPartyAddonId={expenseModalAddonId}
+          initialExpenseType="SUPPLY"
+        />
+      )}
     </div>
   );
 };

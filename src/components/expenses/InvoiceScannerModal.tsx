@@ -58,6 +58,8 @@ export const InvoiceScannerModal: React.FC<InvoiceScannerModalProps> = ({
     ingredients,
     addIngredient,
     restockIngredient,
+    partyAddons,
+    restockPartyAddon,
     exchangeRate,
     reserveFund,
     currentStaff,
@@ -375,6 +377,17 @@ export const InvoiceScannerModal: React.FC<InvoiceScannerModalProps> = ({
                 costPerUnitUsd: Number((item.unitPriceKhr / exchangeRate).toFixed(2)),
                 supplier: supplier.trim(),
               });
+            }
+          } else if (item.addToStock && item.mainType === 'SUPPLY') {
+            const trimmedName = item.name.trim().toLowerCase();
+            const matchedAddon = partyAddons.find(
+              (a) =>
+                a.nameKh.toLowerCase() === trimmedName ||
+                trimmedName.includes(a.nameKh.toLowerCase()) ||
+                a.nameKh.toLowerCase().includes(trimmedName)
+            );
+            if (matchedAddon) {
+              restockPartyAddon(matchedAddon.id, item.quantity);
             }
           }
         });

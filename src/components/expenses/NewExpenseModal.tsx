@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import {
   X,
   Receipt,
@@ -38,6 +38,8 @@ interface NewExpenseModalProps {
   onClose: () => void;
   expenseToEdit?: Expense | null;
   onOpenScanner?: () => void;
+  initialPartyAddonId?: string;
+  initialExpenseType?: ExpenseType;
 }
 
 interface CommonUnitItem {
@@ -113,9 +115,13 @@ const QUICK_INGREDIENTS = [
 ];
 
 const QUICK_SUPPLIES = [
+  { label: '🎩 មួកខួបកំណើត (Pack 5)', cat: 'SUPPLIES' as ExpenseCategory, unit: 'កញ្ចប់ (pack)', unitPriceKhr: 1500, supplier: 'Party Supplies' },
+  { label: '🕯️ ទៀនលេខ 0-9 ពណ៌មាស', cat: 'SUPPLIES' as ExpenseCategory, unit: 'ដុំ (pcs)', unitPriceKhr: 2500, supplier: 'Party Supplies' },
+  { label: '🎆 ទៀនកាំជ្រួចភ្លើង (Fountain)', cat: 'SUPPLIES' as ExpenseCategory, unit: 'ដើម', unitPriceKhr: 1200, supplier: 'Party Supplies' },
+  { label: '❄️ ស្រាយបាញ់ព្រិល/ខ្សែពណ៌', cat: 'SUPPLIES' as ExpenseCategory, unit: 'ដប', unitPriceKhr: 1500, supplier: 'Party Supplies' },
+  { label: '✨ ស្លាក Happy Birthday Acrylic', cat: 'SUPPLIES' as ExpenseCategory, unit: 'ដុំ (pcs)', unitPriceKhr: 2500, supplier: 'Party Supplies' },
+  { label: '🎂 កាតជូនពរប្រណិត', cat: 'SUPPLIES' as ExpenseCategory, unit: 'សន្លឹក', unitPriceKhr: 2000, supplier: 'Party Supplies' },
   { label: '📦 ប្រអប់នំខេកកញ្ចក់ថ្លា 8-Inch', cat: 'PACKAGING' as ExpenseCategory, unit: 'ប្រអប់ (box)', unitPriceKhr: 3500, supplier: 'Cambodia Packaging' },
-  { label: '🎂 ស្លាក Topper រីករាយថ្ងៃខួបកំណើត', cat: 'SUPPLIES' as ExpenseCategory, unit: 'ដុំ (pcs)', unitPriceKhr: 1500, supplier: 'Party Supplies' },
-  { label: '🕯️ ទៀនខួបកំណើតពណ៌មាស Spiral', cat: 'SUPPLIES' as ExpenseCategory, unit: 'កញ្ចប់ (pack)', unitPriceKhr: 2000, supplier: 'Party Supplies' },
   { label: '🎀 ខ្សែបូចងប្រអប់នំ Satin Ribbon', cat: 'PACKAGING' as ExpenseCategory, unit: 'ដុំ (pcs)', unitPriceKhr: 6000, supplier: 'ផ្សារអូឡាំពិក' },
   { label: '🔪 កាំបិតកាត់នំ & សមជ័រអនាម័យ', cat: 'SUPPLIES' as ExpenseCategory, unit: 'ឈុត', unitPriceKhr: 800, supplier: 'Cambodia Packaging' },
   { label: '🛍️ ថង់យួរក្រដាសកាតុងពិសេស', cat: 'PACKAGING' as ExpenseCategory, unit: 'ដុំ (pcs)', unitPriceKhr: 2000, supplier: 'Khmer Packaging' },
@@ -144,6 +150,8 @@ export const NewExpenseModal: React.FC<NewExpenseModalProps> = ({
   onClose,
   expenseToEdit,
   onOpenScanner,
+  initialPartyAddonId,
+  initialExpenseType,
 }) => {
   const {
     lang,
@@ -155,12 +163,16 @@ export const NewExpenseModal: React.FC<NewExpenseModalProps> = ({
     staffMembers,
     ingredients,
     restockIngredient,
+    partyAddons,
+    restockPartyAddon,
     reserveFund,
   } = useBakery();
 
-  const [expenseType, setExpenseType] = useState<ExpenseType>('INGREDIENT');
+  const [expenseType, setExpenseType] = useState<ExpenseType>(initialExpenseType || 'INGREDIENT');
   const [selectedIngredientId, setSelectedIngredientId] = useState<string>('');
   const [autoRestock, setAutoRestock] = useState<boolean>(true);
+  const [selectedPartyAddonId, setSelectedPartyAddonId] = useState<string>(initialPartyAddonId || '');
+  const [autoRestockPartyAddon, setAutoRestockPartyAddon] = useState<boolean>(true);
   const [supplier, setSupplier] = useState<string>('');
 
   const [itemCode, setItemCode] = useState('');
@@ -206,6 +218,8 @@ export const NewExpenseModal: React.FC<NewExpenseModalProps> = ({
           : 'GENERAL');
       setExpenseType(type);
       setSelectedIngredientId(expenseToEdit.ingredientId || '');
+      setSelectedPartyAddonId(expenseToEdit.partyAddonId || '');
+      setAutoRestockPartyAddon(true);
       setSupplier(expenseToEdit.supplier || '');
       const extractedCode = expenseToEdit.itemCode || (expenseToEdit.notes?.match(/Code:\s*([A-Za-z0-9_-]+)/i)?.[1]) || (expenseToEdit.id?.startsWith('exp-cake-') && expenseToEdit.id.replace('exp-cake-', '').startsWith('P') ? expenseToEdit.id.replace('exp-cake-', '') : '') || '';
       setItemCode(extractedCode);
@@ -234,10 +248,23 @@ export const NewExpenseModal: React.FC<NewExpenseModalProps> = ({
       setRetailUnit(expenseToEdit.retailUnit || 'ដុំ (pcs)');
       setProfitMarginPct(expenseToEdit.retailProfitMarginPct ? String(expenseToEdit.retailProfitMarginPct) : '30');
     } else {
-      setExpenseType('INGREDIENT');
+      if (initialPartyAddonId) {
+        setExpenseType('SUPPLY');
+        setSelectedPartyAddonId(initialPartyAddonId);
+        const matched = partyAddons.find((a) => a.id === initialPartyAddonId);
+        if (matched) {
+          setTitle(matched.nameKh);
+          setCategory('SUPPLIES');
+          setUnit(matched.nameKh.includes('Pack') ? 'កញ្ចប់ (pack)' : 'ដុំ (pcs)');
+        }
+      } else {
+        setExpenseType(initialExpenseType || 'INGREDIENT');
+        setSelectedPartyAddonId('');
+      }
       setSelectedIngredientId('');
       setSupplier('');
       setAutoRestock(true);
+      setAutoRestockPartyAddon(true);
       setItemCode('');
       setTitle('');
       setCategory('INGREDIENTS');
@@ -312,6 +339,36 @@ export const NewExpenseModal: React.FC<NewExpenseModalProps> = ({
       }
     }
   };
+
+  const handleSelectPartyAddon = (addonId: string) => {
+    setSelectedPartyAddonId(addonId);
+    if (!addonId) return;
+    const matched = partyAddons.find((a) => a.id === addonId);
+    if (matched) {
+      soundFx.playPop();
+      setTitle(matched.nameKh);
+      setCategory('SUPPLIES');
+      const defaultUnit = matched.nameKh.includes('Pack') ? 'កញ្ចប់ (pack)' : 'ដុំ (pcs)';
+      setUnit(defaultUnit);
+      if (!unitPriceKhr) {
+        const estCostKhr = matched.priceKhr ? Math.round((matched.priceKhr * 0.6) / 100) * 100 : 2000;
+        setUnitPriceKhr(estCostKhr.toString());
+        const q = parseFloat(quantity) || 1;
+        setAmountKhr(roundKhr(estCostKhr * q).toString());
+      }
+    }
+  };
+
+  const detectedPartyAddon = useMemo(() => {
+    if (expenseType !== 'SUPPLY' || !title.trim() || selectedPartyAddonId) return null;
+    const clean = title.trim().toLowerCase();
+    return partyAddons.find(
+      (a) =>
+        a.nameKh.toLowerCase() === clean ||
+        clean.includes(a.nameKh.toLowerCase()) ||
+        a.nameKh.toLowerCase().includes(clean)
+    );
+  }, [expenseType, title, selectedPartyAddonId, partyAddons]);
 
   const numQuantity = parseFloat(quantity) || 1;
   const numUnitPriceKhr = roundKhr(parseFloat(unitPriceKhr) || 0);
@@ -412,6 +469,7 @@ export const NewExpenseModal: React.FC<NewExpenseModalProps> = ({
       expenseType,
       category: finalCategory,
       ingredientId: expenseType === 'INGREDIENT' && selectedIngredientId ? selectedIngredientId : undefined,
+      partyAddonId: expenseType === 'SUPPLY' ? (selectedPartyAddonId || (detectedPartyAddon ? detectedPartyAddon.id : undefined)) : undefined,
       supplier: supplier.trim() || undefined,
       quantity: numQuantity,
       unit: unit.trim() || 'ដុំ',
@@ -438,6 +496,8 @@ export const NewExpenseModal: React.FC<NewExpenseModalProps> = ({
       date,
     };
 
+    const targetPartyAddonId = selectedPartyAddonId || (autoRestockPartyAddon && detectedPartyAddon ? detectedPartyAddon.id : undefined);
+
     if (expenseToEdit) {
       updateExpense(expenseToEdit.id, expensePayload);
     } else {
@@ -446,12 +506,19 @@ export const NewExpenseModal: React.FC<NewExpenseModalProps> = ({
       if (expenseType === 'INGREDIENT' && selectedIngredientId && autoRestock && numQuantity > 0) {
         restockIngredient(selectedIngredientId, numQuantity);
       }
+      // Auto-restock party addon/accessories in inventory if enabled
+      if (expenseType === 'SUPPLY' && targetPartyAddonId && autoRestockPartyAddon && numQuantity > 0) {
+        const finalAddQty = isWholesaleCalcOpen && numItemsPerPack > 0 ? numQuantity * numItemsPerPack : numQuantity;
+        restockPartyAddon(targetPartyAddonId, finalAddQty);
+      }
     }
 
     // Reset Form
     setTitle('');
     setItemCode('');
     setSelectedIngredientId('');
+    setSelectedPartyAddonId('');
+    setAutoRestockPartyAddon(true);
     setSupplier('');
     setQuantity('1');
     setUnitPriceKhr('');
@@ -711,6 +778,71 @@ export const NewExpenseModal: React.FC<NewExpenseModalProps> = ({
                   />
                   <span>
                     បញ្ចូលចំនួននេះបន្ថែមទៅក្នុងស្តុកគ្រឿងផ្សំ Inventory ដោយស្វ័យប្រវត្តិ (+{quantity} {unit})
+                  </span>
+                </label>
+              )}
+            </div>
+          )}
+
+          {/* SUPPLY MODE: Link with Party Accessories Stock */}
+          {expenseType === 'SUPPLY' && partyAddons.length > 0 && !expenseToEdit && (
+            <div className="p-3 bg-purple-50/70 border border-purple-200/90 rounded-2xl space-y-2">
+              <div className="flex items-center justify-between text-xs">
+                <span className="font-bold text-purple-950 flex items-center gap-1.5">
+                  <span>🎉</span>
+                  <span>ភ្ជាប់ជាមួយសម្ភារៈ Party Accessories ក្នុងស្តុក (កត់ចូលស្តុកស្វ័យប្រវត្តិ)៖</span>
+                </span>
+                {selectedPartyAddonId && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedPartyAddonId('');
+                    }}
+                    className="text-[10px] text-purple-700 hover:underline font-bold"
+                  >
+                    សម្អាតការភ្ជាប់
+                  </button>
+                )}
+              </div>
+              <select
+                value={selectedPartyAddonId}
+                onChange={(e) => handleSelectPartyAddon(e.target.value)}
+                className="w-full px-3 py-2 text-xs font-bold text-slate-800 bg-white border border-purple-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/20"
+              >
+                <option value="">-- ជ្រើសរើសសម្ភារៈកម្មវិធី (មួក, ទៀន, ស្លាក...) ឬវាយបញ្ចូលឈ្មោះខាងក្រោម --</option>
+                {partyAddons.map((addon) => (
+                  <option key={addon.id} value={addon.id}>
+                    {addon.nameKh} (ស្តុកបច្ចុប្បន្ន: {addon.stockQty ?? 0} {addon.nameKh.includes('Pack') ? 'កញ្ចប់' : 'ដុំ'}) - លក់ {addon.priceKhr ? addon.priceKhr.toLocaleString() + ' ៛' : '$' + addon.priceUsd}
+                  </option>
+                ))}
+              </select>
+
+              {/* Detected auto-match hint banner if user typed or selected chip */}
+              {detectedPartyAddon && !selectedPartyAddonId && (
+                <div className="flex items-center justify-between bg-white/90 border border-purple-300 px-2.5 py-1.5 rounded-xl text-xs">
+                  <span className="text-purple-900 font-medium">
+                    💡 រកឃើញសម្ភារៈត្រូវគ្នា៖ <strong className="text-purple-950 font-bold">{detectedPartyAddon.nameKh}</strong> (ស្តុក: {detectedPartyAddon.stockQty ?? 0})
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => handleSelectPartyAddon(detectedPartyAddon.id)}
+                    className="px-2 py-0.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-[11px] font-bold transition-colors cursor-pointer"
+                  >
+                    ភ្ជាប់ឥឡូវនេះ
+                  </button>
+                </div>
+              )}
+
+              {selectedPartyAddonId && (
+                <label className="flex items-center gap-2 pt-1 text-xs font-bold text-purple-900 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={autoRestockPartyAddon}
+                    onChange={(e) => setAutoRestockPartyAddon(e.target.checked)}
+                    className="w-4 h-4 rounded text-purple-600 focus:ring-purple-500 accent-purple-600"
+                  />
+                  <span>
+                    បញ្ចូលចំនួននេះបន្ថែមទៅក្នុងស្តុកសម្ភារៈ Party Accessories ដោយស្វ័យប្រវត្តិ (+{isWholesaleCalcOpen ? totalRetailItems : (parseFloat(quantity) || 1)} {unit})
                   </span>
                 </label>
               )}

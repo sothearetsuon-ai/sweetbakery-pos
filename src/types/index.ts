@@ -274,6 +274,7 @@ export interface Expense {
   expenseType?: ExpenseType; // 'INGREDIENT' (ចំណាយគ្រឿងផ្សំ), 'SUPPLY' (ទិញសម្ភារៈ), 'GENERAL' (ចំណាយទូទៅ)
   category: ExpenseCategory;
   ingredientId?: string;     // ភ្ជាប់ទៅគ្រឿងផ្សំក្នុងស្តុក inventory (បើមាន)
+  partyAddonId?: string;     // ភ្ជាប់ទៅសម្ភារៈ/គ្រឿងបន្ថែមកម្មវិធី Party Accessories (បើមាន)
   supplier?: string;         // ហាង ឬអ្នកផ្គត់ផ្គង់
   quantity?: number;       // ចំនួន (e.g. 5, 10, 2.5)
   unit?: string;           // ខ្នាត (e.g. គីឡូ, ប្រអប់, ដប, កញ្ចប់, បាវ, ដុំ)
