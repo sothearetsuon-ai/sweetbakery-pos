@@ -206,6 +206,17 @@ export const NewExpenseModal: React.FC<NewExpenseModalProps> = ({
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const detectedPartyAddon = useMemo(() => {
+    if (expenseType !== 'SUPPLY' || !title.trim() || selectedPartyAddonId) return null;
+    const clean = title.trim().toLowerCase();
+    return partyAddons.find(
+      (a) =>
+        a.nameKh.toLowerCase() === clean ||
+        clean.includes(a.nameKh.toLowerCase()) ||
+        a.nameKh.toLowerCase().includes(clean)
+    );
+  }, [expenseType, title, selectedPartyAddonId, partyAddons]);
+
   // Pre-fill fields when editing an existing expense
   useEffect(() => {
     if (expenseToEdit) {
@@ -358,17 +369,6 @@ export const NewExpenseModal: React.FC<NewExpenseModalProps> = ({
       }
     }
   };
-
-  const detectedPartyAddon = useMemo(() => {
-    if (expenseType !== 'SUPPLY' || !title.trim() || selectedPartyAddonId) return null;
-    const clean = title.trim().toLowerCase();
-    return partyAddons.find(
-      (a) =>
-        a.nameKh.toLowerCase() === clean ||
-        clean.includes(a.nameKh.toLowerCase()) ||
-        a.nameKh.toLowerCase().includes(clean)
-    );
-  }, [expenseType, title, selectedPartyAddonId, partyAddons]);
 
   const numQuantity = parseFloat(quantity) || 1;
   const numUnitPriceKhr = roundKhr(parseFloat(unitPriceKhr) || 0);

@@ -10,8 +10,8 @@ android {
         applicationId "com.bakery.sweetpos"
         minSdk 24
         targetSdk 34
-        versionCode 84
-        versionName "2.1.8"
+        versionCode 85
+        versionName "2.1.9"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
