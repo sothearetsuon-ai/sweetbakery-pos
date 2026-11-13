@@ -150,6 +150,19 @@ function getCambodiaDateStr(d = new Date()) {
   }).format(d);
 }
 
+// Helper: Convert any ISO date or timestamp string to Cambodia Date (YYYY-MM-DD)
+function toCambodiaDateStr(isoOrDateStr) {
+  if (!isoOrDateStr) return '';
+  const d = new Date(isoOrDateStr);
+  if (isNaN(d.getTime())) return String(isoOrDateStr).slice(0, 10);
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Phnom_Penh',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(d);
+}
+
 // Helper: Get Cambodia Time String (HH:mm)
 function getCambodiaTimeStr(d = new Date()) {
   return new Intl.DateTimeFormat('en-GB', {
@@ -216,7 +229,7 @@ function generateReportHtml(params) {
   const currentMonthStr = targetDate.slice(0, 7); // YYYY-MM
 
   // Filter Sales for Target Date
-  const todaySales = sales.filter((s) => (s.createdAt || '').slice(0, 10) === targetDate);
+  const todaySales = sales.filter((s) => toCambodiaDateStr(s.createdAt) === targetDate);
   const todaySalesCount = todaySales.length;
   const todaySalesUsd = todaySales.reduce((sum, s) => sum + (s.totalUsd || 0), 0);
   const todaySalesKhr = todaySales.reduce(
@@ -240,7 +253,7 @@ function generateReportHtml(params) {
 
   // Custom cake orders created or for today
   const todayOrders = customOrders.filter(
-    (o) => (o.createdAt || o.pickupDate || '').slice(0, 10) === targetDate
+    (o) => toCambodiaDateStr(o.createdAt || o.pickupDate) === targetDate
   );
   const todayOrdersDepositsKhr = todayOrders.reduce(
     (sum, o) => sum + (o.depositKhr || Math.round((o.depositUsd || 0) * exchangeRate)),
@@ -249,7 +262,7 @@ function generateReportHtml(params) {
 
   // Filter Expenses for Today
   const isIngExpense = (e) => e.expenseType === 'INGREDIENT' || e.category === 'INGREDIENTS';
-  const todayExpenses = expenses.filter((e) => (e.date || e.createdAt || '').slice(0, 10) === targetDate);
+  const todayExpenses = expenses.filter((e) => toCambodiaDateStr(e.date || e.createdAt) === targetDate);
   const todayExpensesCount = todayExpenses.length;
   const todayExpensesUsd = todayExpenses.reduce((sum, e) => sum + (e.amountUsd || 0), 0);
   const todayExpensesKhr = todayExpenses.reduce(
@@ -282,7 +295,7 @@ function generateReportHtml(params) {
     .slice(0, 4);
 
   // Month-to-date (MTD)
-  const monthSales = sales.filter((s) => (s.createdAt || '').slice(0, 7) === currentMonthStr);
+  const monthSales = sales.filter((s) => toCambodiaDateStr(s.createdAt).slice(0, 7) === currentMonthStr);
   const monthSalesCount = monthSales.length;
   const monthSalesUsd = monthSales.reduce((sum, s) => sum + (s.totalUsd || 0), 0);
   const monthSalesKhr = monthSales.reduce(
@@ -290,7 +303,7 @@ function generateReportHtml(params) {
     0
   );
 
-  const monthExpenses = expenses.filter((e) => (e.date || e.createdAt || '').slice(0, 7) === currentMonthStr);
+  const monthExpenses = expenses.filter((e) => toCambodiaDateStr(e.date || e.createdAt).slice(0, 7) === currentMonthStr);
   const monthExpensesUsd = monthExpenses.reduce((sum, e) => sum + (e.amountUsd || 0), 0);
   const monthExpensesKhr = monthExpenses.reduce(
     (sum, e) => sum + (e.amountKhr || Math.round((e.amountUsd || 0) * exchangeRate)),
@@ -399,10 +412,18 @@ async function sendReportForDate({
   }
 
   // Calculate snapshot of target date to detect changes
-  const targetSales = sales.filter((s) => (s.createdAt || '').slice(0, 10) === targetDate);
-  const targetExpenses = expenses.filter((e) => (e.date || e.createdAt || '').slice(0, 10) === targetDate);
+  const targetSales = sales.filter((s) => toCambodiaDateStr(s.createdAt) === targetDate);
+  const targetExpenses = expenses.filter((e) => toCambodiaDateStr(e.date || e.createdAt) === targetDate);
   const targetSalesUsd = targetSales.reduce((sum, s) => sum + (s.totalUsd || 0), 0);
+  const targetSalesKhr = targetSales.reduce(
+    (sum, s) => sum + (s.totalKhr || Math.round((s.totalUsd || 0) * exchangeRate)),
+    0
+  );
   const targetExpensesUsd = targetExpenses.reduce((sum, e) => sum + (e.amountUsd || 0), 0);
+  const targetExpensesKhr = targetExpenses.reduce(
+    (sum, e) => sum + (e.amountKhr || Math.round((e.amountUsd || 0) * exchangeRate)),
+    0
+  );
 
   if (existingLog && !isForce && !isDryRun) {
     const prevSalesCount = existingLog.salesCount ?? -1;
@@ -497,8 +518,10 @@ async function sendReportForDate({
       recipients: targetChatIds,
       salesCount: targetSales.length,
       salesUsd: targetSalesUsd,
+      salesKhr: targetSalesKhr,
       expensesCount: targetExpenses.length,
       expensesUsd: targetExpensesUsd,
+      expensesKhr: targetExpensesKhr,
       source: 'CLOUD_BOT',
     });
     console.log(`✅ Daily report for ${targetDate} successfully processed and logged!`);
@@ -614,8 +637,8 @@ async function main() {
   } catch (e) {}
 
   if (!yesterdayLog) {
-    const yesterdaySales = sales.filter((s) => (s.createdAt || '').slice(0, 10) === cambodiaYesterday);
-    const yesterdayExpenses = expenses.filter((e) => (e.date || e.createdAt || '').slice(0, 10) === cambodiaYesterday);
+    const yesterdaySales = sales.filter((s) => toCambodiaDateStr(s.createdAt) === cambodiaYesterday);
+    const yesterdayExpenses = expenses.filter((e) => toCambodiaDateStr(e.date || e.createdAt) === cambodiaYesterday);
     if (yesterdaySales.length > 0 || yesterdayExpenses.length > 0) {
       console.log(`[Auto Catchup] Missed daily report detected for yesterday (${cambodiaYesterday}) with ${yesterdaySales.length} sales, ${yesterdayExpenses.length} expenses. Delivering catchup report now...`);
       await sendReportForDate({

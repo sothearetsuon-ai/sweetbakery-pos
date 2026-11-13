@@ -1,11 +1,11 @@
 {
-  "version": "2.2.0",
-  "versionCode": 86,
+  "version": "2.2.1",
+  "versionCode": 87,
   "releaseDate": "2026-11-13",
   "releaseNotes": [
-    "⚡ ជួសជុលបញ្ហា Error #310 ពេលចុចកុម្ម៉ង់រហ័ស 30 វិនាទី (Fix React Error #310 on Express Order 30s) ៖ កែសម្រួលលំដាប់ Hooks ទាំងអស់ក្នុងផ្ទាំង CustomerExpressOrderModal ឱ្យដំណើរការរលូន ១០០% លើគ្រប់ឧបករណ៍។",
-    "💡 ជួសជុលបញ្ហាលោតសារដាស់តឿនវិក្កយបត្រភ្លើង (Fix Electricity / Utility Bill Due Alert for Paid Bills) ៖ បិទ និងសម្អាតការលោតសារដាស់តឿនកាលបរិច្ឆេទបង់ថ្លៃអគ្គិសនី/EDC នៅពេលដែលវិក្កយបត្រត្រូវបានទូទាត់រួចរាល់ ទាំងលើកុំព្យូទ័រ និងទូរសព្ទដៃ។",
-    "🔄 ធ្វើឱ្យការ Sync និង Deduplication ទិន្នន័យចំណាយរវាង Cloud និង Desktop មានភាពសុក្រឹតបំផុត (Smart Expense Auto-Heal & Reconciliation)។"
+    "🤖 ផ្ញើរបាយការណ៍បូកសរុបការលក់ស្វ័យប្រវត្តិតាម Cloud ២៤/៧ (24/7 Cloud Automated Telegram Daily Report) ៖ ប្រព័ន្ធដំណើរការដោយស្វ័យប្រវត្តិលើ Cloud ផ្ញើរបាយការណ៍ចូល Telegram ទៀងទាត់ទោះបីជាបិទកុំព្យូទ័រ និងមិនបើក App ក៏ដោយ។",
+    "🎯 កែតម្រូវទិន្នន័យរបាយការណ៍ឱ្យសុក្រឹត ១០០% (Fix 0 Sales & Duplicate Telegram Report) ៖ គណនាម៉ោង និងកាលបរិច្ឆេទតាមស្តង់ដារម៉ោងកម្ពុជា (Asia/Phnom_Penh) និងលុបបំបាត់ការផ្ញើស្ទួនទាំងស្រុង (Cloud Deduplication)។",
+    "⚡ ជួសជុលបញ្ហា Error #310 ពេលចុចកុម្ម៉ង់រហ័ស 30 វិនាទី និងកែចំណាយ ដំណើរការរលូន ១០០% លើគ្រប់ឧបករណ៍។"
   ],
   "author": "សុធារិទ្ធ",
   "apkDownloadUrl": "https://sothearetsuon-ai.github.io/sweetbakery-pos/SweetBakery-Android.apk",

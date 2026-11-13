@@ -6,6 +6,7 @@ import {
   getStoredTelegramConfig,
   getStoredTelegramConfigAsync,
   isDemoModeActive,
+  toCambodiaDateStr,
 } from './telegram';
 
 const STORAGE_KEY = 'bakery_notification_config';
@@ -410,8 +411,8 @@ export const runPeriodicNotificationChecks = (params: {
       const isTimeReached = currentTimeStr >= reportTime;
 
       if (isTimeReached && (!isEveningSched || (cH || 0) >= 18)) {
-        const todaySales = (params.sales || []).filter((s) => (s.createdAt || '').slice(0, 10) === todayStr);
-        const tag = `tg-daily-report-${todayStr}-s${todaySales.length}`;
+        const todaySales = (params.sales || []).filter((s) => toCambodiaDateStr(s.createdAt) === todayStr);
+        const tag = `tg-daily-report-${todayStr}`;
         if (!hasFiredToday(tag, todayStr)) {
           sendTelegramDailyReport({
             sales: params.sales || [],
@@ -424,10 +425,12 @@ export const runPeriodicNotificationChecks = (params: {
             .then((res) => {
               if (res.success) {
                 markFiredToday(tag, todayStr);
-                sendDeviceNotification('📊 បានផ្ញើរបាយការណ៍បូកសរុបទៅ Telegram', {
-                  body: `របាយការណ៍បូកសរុបការលក់ និងចំណាយប្រចាំថ្ងៃ-ខែ ត្រូវបានផ្ញើចូល Telegram ជោគជ័យ!`,
-                  tag,
-                });
+                if (!res.message?.includes('រួចហើយ')) {
+                  sendDeviceNotification('📊 បានផ្ញើរបាយការណ៍បូកសរុបទៅ Telegram', {
+                    body: `របាយការណ៍បូកសរុបការលក់ និងចំណាយប្រចាំថ្ងៃ-ខែ ត្រូវបានផ្ញើចូល Telegram ជោគជ័យ!`,
+                    tag,
+                  });
+                }
               } else {
                 console.warn('[Auto Daily Report] Telegram send failed:', res.message);
               }

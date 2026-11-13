@@ -1193,6 +1193,19 @@ export interface DailyReportParams {
   reportTrigger?: 'SCHEDULED' | 'APP_CLOSE' | 'SHIFT_CLOSE' | 'MANUAL';
 }
 
+// Helper: Convert any ISO date or timestamp string to Cambodia Date (YYYY-MM-DD)
+export const toCambodiaDateStr = (isoOrDateStr?: string | null): string => {
+  if (!isoOrDateStr) return '';
+  const d = new Date(isoOrDateStr);
+  if (isNaN(d.getTime())) return String(isoOrDateStr).slice(0, 10);
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Phnom_Penh',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(d);
+};
+
 /**
  * Generate formatted HTML report summarizing daily & monthly sales and expenses with AI insights
  */
@@ -1210,11 +1223,11 @@ export const generateDailyMonthlySummaryReportText = (params: DailyReportParams)
   } = params;
 
   const now = new Date();
-  const todayStr = targetDate || dateStr || now.toISOString().slice(0, 10);
+  const todayStr = targetDate || dateStr || toCambodiaDateStr(now.toISOString());
   const currentMonthStr = todayStr.slice(0, 7); // YYYY-MM
 
-  // Filter Sales for Today
-  const todaySales = sales.filter((s) => (s.createdAt || '').slice(0, 10) === todayStr);
+  // Filter Sales for Today in Cambodia Timezone
+  const todaySales = sales.filter((s) => toCambodiaDateStr(s.createdAt) === todayStr);
   const todaySalesCount = todaySales.length;
   const todaySalesUsd = todaySales.reduce((sum, s) => sum + s.totalUsd, 0);
   const todaySalesKhr = todaySales.reduce(
@@ -1238,7 +1251,7 @@ export const generateDailyMonthlySummaryReportText = (params: DailyReportParams)
 
   // Custom cake orders created or for today
   const todayOrders = customOrders.filter(
-    (o) => (o.createdAt || o.pickupDate || '').slice(0, 10) === todayStr
+    (o) => toCambodiaDateStr(o.createdAt || o.pickupDate) === todayStr
   );
   const todayOrdersDepositsKhr = todayOrders.reduce(
     (sum, o) => sum + (o.depositKhr || Math.round(o.depositUsd * exchangeRate)),
@@ -1247,7 +1260,7 @@ export const generateDailyMonthlySummaryReportText = (params: DailyReportParams)
 
   // Filter Expenses for Today
   const isIngExpense = (e: any) => e.expenseType === 'INGREDIENT' || e.category === 'INGREDIENTS';
-  const todayExpenses = expenses.filter((e) => (e.date || e.createdAt || '').slice(0, 10) === todayStr);
+  const todayExpenses = expenses.filter((e) => toCambodiaDateStr(e.date || e.createdAt) === todayStr);
   const todayExpensesCount = todayExpenses.length;
   const todayExpensesUsd = todayExpenses.reduce((sum, e) => sum + e.amountUsd, 0);
   const todayExpensesKhr = todayExpenses.reduce(
@@ -1279,8 +1292,8 @@ export const generateDailyMonthlySummaryReportText = (params: DailyReportParams)
     .sort((a, b) => b[1] - a[1])
     .slice(0, 4);
 
-  // Month-to-date (MTD)
-  const monthSales = sales.filter((s) => (s.createdAt || '').slice(0, 7) === currentMonthStr);
+  // Month-to-date (MTD) in Cambodia Timezone
+  const monthSales = sales.filter((s) => toCambodiaDateStr(s.createdAt).slice(0, 7) === currentMonthStr);
   const monthSalesCount = monthSales.length;
   const monthSalesUsd = monthSales.reduce((sum, s) => sum + s.totalUsd, 0);
   const monthSalesKhr = monthSales.reduce(
@@ -1288,7 +1301,7 @@ export const generateDailyMonthlySummaryReportText = (params: DailyReportParams)
     0
   );
 
-  const monthExpenses = expenses.filter((e) => (e.date || e.createdAt || '').slice(0, 7) === currentMonthStr);
+  const monthExpenses = expenses.filter((e) => toCambodiaDateStr(e.date || e.createdAt).slice(0, 7) === currentMonthStr);
   const monthExpensesUsd = monthExpenses.reduce((sum, e) => sum + e.amountUsd, 0);
   const monthExpensesKhr = monthExpenses.reduce(
     (sum, e) => sum + (e.amountKhr || Math.round(e.amountUsd * exchangeRate)),
@@ -1450,8 +1463,9 @@ export const sendTelegramDailyReport = async (
   // Strictly lock by date so that duplicate reports can never fire for the same calendar day
   const eventKey = `daily_report_${todayStr}`;
 
-  const todaySales = (params.sales || []).filter((s) => (s.createdAt || '').slice(0, 10) === todayStr);
+  const todaySales = (params.sales || []).filter((s) => toCambodiaDateStr(s.createdAt) === todayStr);
   const todaySalesCount = todaySales.length;
+  const todaySalesUsd = todaySales.reduce((sum, s) => sum + (s.totalUsd || 0), 0);
   const todaySalesKhr = todaySales.reduce(
     (sum, s) => sum + (s.totalKhr || Math.round(s.totalUsd * (params.exchangeRate || 4100))),
     0
@@ -1466,26 +1480,32 @@ export const sendTelegramDailyReport = async (
     }
     inFlightDailyReportEvents.add(eventKey);
 
-    // Cross-device cloud deduplication: check if another device (e.g. Phone or PC) already sent it today
+    // Cross-device cloud deduplication: check if 24/7 Cloud Bot or another device already sent it today
     try {
       const cloudLog = await getFirestoreDoc<{
-        sentAt: number;
+        sentAt: number | string;
         salesCount?: number;
         salesKhr?: number;
+        salesUsd?: number;
+        source?: string;
       }>('daily_report_logs', eventKey);
 
       if (cloudLog && cloudLog.sentAt) {
         const prevCount = cloudLog.salesCount ?? -1;
         const prevKhr = cloudLog.salesKhr ?? -1;
-        // If an earlier report was sent with the same or greater sales, skip duplicate
-        if (prevCount >= todaySalesCount && prevKhr >= todaySalesKhr) {
+        const prevUsd = cloudLog.salesUsd ?? -1;
+        // If an earlier report was sent with the same or greater sales, or already sent by cloud bot, skip duplicate
+        const isSameOrGreater =
+          prevCount >= todaySalesCount &&
+          (prevKhr >= todaySalesKhr || (prevUsd >= 0 && prevUsd >= todaySalesUsd - 0.05));
+
+        if (isSameOrGreater || cloudLog.source === 'CLOUD_BOT') {
           inFlightDailyReportEvents.delete(eventKey);
           return {
             success: true,
-            message: 'របាយការណ៍ប្រចាំថ្ងៃត្រូវបានផ្ញើរួចហើយសម្រាប់ថ្ងៃនេះ',
+            message: 'របាយការណ៍ប្រចាំថ្ងៃត្រូវបានផ្ញើរួចហើយ (24/7 Cloud Automated Bot / Already Sent)',
           };
         }
-        // If data has increased (e.g. earlier run had 0 sales, but now sales occurred), allow updated report!
       }
     } catch (e) {}
   }
@@ -1527,6 +1547,7 @@ export const sendTelegramDailyReport = async (
         date: todayStr,
         recipients: targetChatIds,
         salesCount: todaySalesCount,
+        salesUsd: todaySalesUsd,
         salesKhr: todaySalesKhr,
       }).catch(() => {});
 
