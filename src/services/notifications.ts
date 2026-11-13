@@ -290,9 +290,47 @@ export const runPeriodicNotificationChecks = (params: {
   if (config.remindExpenseDueDate !== false && Array.isArray(params.expenses)) {
     params.expenses.forEach((expense) => {
       // ពិនិត្យតែចំណាយដែលមិនទាន់បង់ (UNPAID) និងមានថ្ងៃផុតកំណត់
-      // ប្រសិនបើបានបង់រួចហើយ ឬបង់មុនកាលកំណត់ (PAID / paidAt) មិនបាច់ផ្តល់ដំណឹងទៀតឡើយ!
-      const isPaid = expense.paymentStatus === 'PAID' || !!expense.paidAt;
+      // ប្រសិនបើបានបង់រួចហើយ ឬបង់មុនកាលកំណត់ (PAID / paidAt / notes បញ្ជាក់ថាបង់រួច) មិនបាច់ផ្តល់ដំណឹងទៀតឡើយ!
+      const isPaid =
+        expense.paymentStatus === 'PAID' ||
+        !!expense.paidAt ||
+        (expense.notes && /(បង់រួច|បានបង់|paid|រួចរាល់)/i.test(expense.notes)) ||
+        (expense.title && /(បង់រួច|បានបង់|paid)/i.test(expense.title));
+
       if (isPaid) return;
+
+      // ពិនិត្យពិសេសសម្រាប់វិក្កយបត្រភ្លើង/EDC/អគ្គិសនី៖ ប្រសិនបើមានចំណាយអគ្គិសនីណាផ្សេងទៀតបានបង់រួចហើយ គឺចាត់ទុកថាបង់រួច
+      const isElectricity = /អគ្គិសនី|EDC|ភ្លើង|utility/i.test(expense.title) || expense.category === 'UTILITIES';
+      if (isElectricity) {
+        const hasPaidMatching = params.expenses.some(
+          (e) =>
+            e.id !== expense.id &&
+            (/អគ្គិសនី|EDC|ភ្លើង/i.test(e.title) || e.category === 'UTILITIES') &&
+            (e.paymentStatus === 'PAID' || !!e.paidAt || (e.notes && /(បង់រួច|បានបង់|paid|រួចរាល់)/i.test(e.notes)))
+        );
+
+        if (hasPaidMatching) {
+          // Auto-heal local item so it never alerts again
+          expense.paymentStatus = 'PAID';
+          expense.paidAt = expense.paidAt || todayStr;
+          expense.dueDate = undefined;
+          try {
+            const raw = localStorage.getItem('bakery_expenses');
+            if (raw) {
+              const list: Expense[] = JSON.parse(raw);
+              const idx = list.findIndex((e) => e.id === expense.id);
+              if (idx >= 0) {
+                list[idx].paymentStatus = 'PAID';
+                list[idx].paidAt = list[idx].paidAt || todayStr;
+                list[idx].dueDate = undefined;
+                localStorage.setItem('bakery_expenses', JSON.stringify(list));
+              }
+            }
+          } catch (e) {}
+          return;
+        }
+      }
+
       if (expense.paymentStatus !== 'UNPAID' || !expense.dueDate) return;
 
       const [dYear, dMonth, dDay] = expense.dueDate.split('-').map(Number);

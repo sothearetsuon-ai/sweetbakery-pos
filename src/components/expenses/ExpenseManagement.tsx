@@ -285,7 +285,6 @@ export const ExpenseManagement: React.FC<ExpenseManagementProps> = ({
         paymentStatus: 'PAID' as const,
         notes: 'វិក្កយបត្រ EDC ប្រចាំខែ',
         date: today,
-        dueDate: today,
       },
     ];
 
@@ -419,6 +418,7 @@ export const ExpenseManagement: React.FC<ExpenseManagementProps> = ({
     updateExpense(expense.id, {
       paymentStatus: 'PAID',
       paidAt: new Date().toISOString().slice(0, 10),
+      dueDate: undefined,
     });
   };
 

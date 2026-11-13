@@ -430,7 +430,7 @@ export const isExpensePaidFromReserve = (exp?: Partial<Expense> | null) => {
   return isPaid && exp.paymentMethod === 'RESERVE_FUND';
 };
 
-// Helper to auto-migrate any 2024 expense dates to 2026
+// Helper to auto-migrate any 2024 expense dates to 2026 and clean up paid due dates
 export const autoMigrateExpenseDates = (items: Expense[]): Expense[] => {
   let changed = false;
   const migrated = items.map((e) => {
@@ -438,6 +438,8 @@ export const autoMigrateExpenseDates = (items: Expense[]): Expense[] => {
     let newDate = e.date;
     let newCreatedAt = e.createdAt;
     let newDueDate = e.dueDate;
+    let newPaymentStatus = e.paymentStatus;
+    let newPaidAt = e.paidAt;
 
     if (e.date && e.date.includes('2024')) {
       newDate = e.date.replace(/2024/g, '2026');
@@ -452,6 +454,28 @@ export const autoMigrateExpenseDates = (items: Expense[]): Expense[] => {
       itemChanged = true;
     }
 
+    // Auto-heal paid status: If marked paid, paidAt set, or notes indicate payment completed, clear dueDate
+    const isCompleted =
+      e.paymentStatus === 'PAID' ||
+      !!e.paidAt ||
+      (e.notes && /(បង់រួច|បានបង់|paid|រួចរាល់)/i.test(e.notes)) ||
+      (e.title && /(បង់រួច|បានបង់|paid)/i.test(e.title));
+
+    if (isCompleted) {
+      if (e.paymentStatus !== 'PAID') {
+        newPaymentStatus = 'PAID';
+        itemChanged = true;
+      }
+      if (!newPaidAt) {
+        newPaidAt = newDate || new Date().toISOString().slice(0, 10);
+        itemChanged = true;
+      }
+      if (newDueDate) {
+        newDueDate = undefined;
+        itemChanged = true;
+      }
+    }
+
     if (itemChanged) {
       changed = true;
       return {
@@ -459,6 +483,8 @@ export const autoMigrateExpenseDates = (items: Expense[]): Expense[] => {
         date: newDate,
         createdAt: newCreatedAt,
         dueDate: newDueDate,
+        paymentStatus: newPaymentStatus,
+        paidAt: newPaidAt,
       };
     }
     return e;
@@ -470,7 +496,7 @@ export const autoMigrateExpenseDates = (items: Expense[]): Expense[] => {
 // Helper to cleanly deduplicate and merge expenses (strictly guarantees no duplicate items and respects deletions)
 export const cleanDeduplicateExpenses = (items: Expense[]): Expense[] => {
   const deletedIds = loadDeletedIds('expenses');
-  const mockExpenseIds = new Set(['exp-1', 'exp-2', 'exp-4', 'exp-5', 'exp-6', 'exp-7']);
+  const mockExpenseIds = new Set(['exp-1', 'exp-2', 'exp-3', 'exp-4', 'exp-5', 'exp-6', 'exp-7']);
 
   const nonMock = (Array.isArray(items) ? items : []).filter((e) => {
     if (!e || !e.id || mockExpenseIds.has(e.id) || deletedIds.has(e.id)) return false;
@@ -491,7 +517,25 @@ export const cleanDeduplicateExpenses = (items: Expense[]): Expense[] => {
     const amt = Number(exp.amountUsd || 0).toFixed(2);
     const sig = `${d}|${cleanTitle}|${amt}`;
 
-    if (seenSignatures.has(sig)) continue;
+    if (seenSignatures.has(sig)) {
+      if (exp.paymentStatus === 'PAID' || !!exp.paidAt) {
+        const existingIdx = result.findIndex(
+          (r) =>
+            normalizeDateToYMD(r.date || r.createdAt || '') === d &&
+            (r.title || '').replace(/\s+/g, ' ').trim().toLowerCase() === cleanTitle &&
+            Number(r.amountUsd || 0).toFixed(2) === amt
+        );
+        if (existingIdx >= 0) {
+          result[existingIdx] = {
+            ...result[existingIdx],
+            paymentStatus: 'PAID',
+            paidAt: exp.paidAt || result[existingIdx].paidAt || new Date().toISOString().slice(0, 10),
+            dueDate: undefined,
+          };
+        }
+      }
+      continue;
+    }
     seenSignatures.add(sig);
 
     result.push({

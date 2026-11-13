@@ -1,11 +1,11 @@
 {
-  "version": "2.1.9",
-  "versionCode": 85,
-  "releaseDate": "2026-11-12",
+  "version": "2.2.0",
+  "versionCode": 86,
+  "releaseDate": "2026-11-13",
   "releaseNotes": [
-    "🛠️ ជួសជុលបញ្ហា Error ពេលចុចកែចំណាយ (Fix React Error #310 on Edit Expense) ៖ កែសម្រួលលំដាប់ Hooks ក្នុង NewExpenseModal ឱ្យដំណើរការត្រឹមត្រូវ ១០០% តាមស្តង់ដារ React ជៀសវាងការគាំងនៅពេលចុចកែប្រែទិន្នន័យចំណាយចាស់។",
-    "🎉 បញ្ចូលស្តុកសម្ភារៈកម្មវិធីស្វ័យប្រវត្តិតាមការចំណាយ (Automatic Party Accessories Restocking) ៖ ពេលកត់ត្រាចំណាយទិញសម្ភារៈ (ដូចជា មួកខួបកំណើត, ទៀនលេខ, ទៀនកាំជ្រួច, ស្លាក Acrylic, ស្ព្រាយបាញ់...) ប្រព័ន្ធនឹងបន្ថែមចំនួនស្តុកចូលក្នុង Party Accessories ដោយស្វ័យប្រវត្តិ។",
-    "🤖 គាំទ្រការស្កេនវិក្កយបត្របញ្ចូលស្តុកសម្ភារៈ (AI Invoice Scanner Auto-Restock for Party Supplies) ៖ ពេលស្កេនបុងចំណាយសម្ភារៈតាមកាមេរ៉ា ឬរូបភាព ប្រព័ន្ធឆ្លាតវៃនឹងផ្គូផ្គង និងបញ្ចូលចំនួនស្តុកចូល Party Accessories ភ្លាមៗ។"
+    "⚡ ជួសជុលបញ្ហា Error #310 ពេលចុចកុម្ម៉ង់រហ័ស 30 វិនាទី (Fix React Error #310 on Express Order 30s) ៖ កែសម្រួលលំដាប់ Hooks ទាំងអស់ក្នុងផ្ទាំង CustomerExpressOrderModal ឱ្យដំណើរការរលូន ១០០% លើគ្រប់ឧបករណ៍។",
+    "💡 ជួសជុលបញ្ហាលោតសារដាស់តឿនវិក្កយបត្រភ្លើង (Fix Electricity / Utility Bill Due Alert for Paid Bills) ៖ បិទ និងសម្អាតការលោតសារដាស់តឿនកាលបរិច្ឆេទបង់ថ្លៃអគ្គិសនី/EDC នៅពេលដែលវិក្កយបត្រត្រូវបានទូទាត់រួចរាល់ ទាំងលើកុំព្យូទ័រ និងទូរសព្ទដៃ។",
+    "🔄 ធ្វើឱ្យការ Sync និង Deduplication ទិន្នន័យចំណាយរវាង Cloud និង Desktop មានភាពសុក្រឹតបំផុត (Smart Expense Auto-Heal & Reconciliation)។"
   ],
   "author": "សុធារិទ្ធ",
   "apkDownloadUrl": "https://sothearetsuon-ai.github.io/sweetbakery-pos/SweetBakery-Android.apk",

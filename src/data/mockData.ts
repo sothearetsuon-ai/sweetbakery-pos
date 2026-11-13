@@ -819,6 +819,7 @@ export const demoExpenses: Expense[] = [
     amountKhr: 348500,
     paidBy: 'គណនេយ្យ (Admin)',
     paymentMethod: 'BANK_TRANSFER',
+    paymentStatus: 'PAID',
     notes: 'វិក្កយបត្រ EDC ប្រចាំខែ',
     date: '2026-09-12',
     createdAt: '2026-09-12T14:30:00Z',

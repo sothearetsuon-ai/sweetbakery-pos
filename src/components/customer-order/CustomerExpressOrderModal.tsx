@@ -83,6 +83,7 @@ export const CustomerExpressOrderModal: React.FC<CustomerExpressOrderModalProps>
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [completedOrder, setCompletedOrder] = useState<CustomCakeOrder | null>(null);
   const [isCopiedOrderNum, setIsCopiedOrderNum] = useState(false);
+  const [isPhoneChooserOpen, setIsPhoneChooserOpen] = useState(false);
 
   // Sync initial price when product changes
   useEffect(() => {
@@ -120,8 +121,6 @@ export const CustomerExpressOrderModal: React.FC<CustomerExpressOrderModalProps>
     return 'នំ ២ ជាន់ ឬទំហំធំពិសេស សម្រាប់ 20+ នាក់';
   }, [cakePriceKhr]);
 
-  if (!isOpen || !product) return null;
-
   // Quick Date Selectors
   const setToday = () => {
     soundFx.playPop();
@@ -138,6 +137,7 @@ export const CustomerExpressOrderModal: React.FC<CustomerExpressOrderModalProps>
 
   // Submit Order directly into Bakery POS System
   const handleConfirmOrder = () => {
+    if (!product) return;
     if (cakePriceKhr <= 0) {
       soundFx.playPop();
       alert('សូមវាយបញ្ចូលតម្លៃ ឬថវិកានំដែលលោកអ្នកចង់បាន!');
@@ -196,6 +196,7 @@ export const CustomerExpressOrderModal: React.FC<CustomerExpressOrderModalProps>
 
   // 1-Click Order via Telegram
   const handleOrderViaTelegram = () => {
+    if (!product) return;
     soundFx.playPop();
     const storeTelegram = (storeInfo.telegramUsername || '').replace(/^@/, '') || 'sweetbakery_admin';
 
@@ -217,8 +218,6 @@ ${name.trim() ? `• ឈ្មោះភ្ញៀវ៖ ${name.trim()}` : ''}
     window.open(telegramUrl, '_blank');
   };
 
-  const [isPhoneChooserOpen, setIsPhoneChooserOpen] = useState(false);
-
   // 1-Click Phone Call
   const handleCallBakery = () => {
     soundFx.playPop();
@@ -229,6 +228,8 @@ ${name.trim() ? `• ឈ្មោះភ្ញៀវ៖ ${name.trim()}` : ''}
       setIsPhoneChooserOpen(true);
     }
   };
+
+  if (!isOpen || !product) return null;
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-md flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-200">
