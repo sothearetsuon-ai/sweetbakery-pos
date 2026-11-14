@@ -404,6 +404,16 @@ export const App: React.FC = () => {
     }
   };
 
+  // Auto-bind storeId if passed via query params (e.g. from Customer Display QR or link)
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const urlStoreId = new URLSearchParams(window.location.search).get('storeId');
+      if (urlStoreId && urlStoreId.trim()) {
+        setStoreId(urlStoreId.trim());
+      }
+    }
+  }, []);
+
   // Render dedicated Digital E-Receipt on mobile if in (?receipt=... or #receipt)
   if (isReceiptView) {
     return (
@@ -418,16 +428,6 @@ export const App: React.FC = () => {
     typeof window !== 'undefined' &&
     (new URLSearchParams(window.location.search).get('display') === 'true' ||
       window.location.hash === '#customer-display');
-
-  // Auto-bind storeId if passed via query params (e.g. from Customer Display QR or link)
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const urlStoreId = new URLSearchParams(window.location.search).get('storeId');
-      if (urlStoreId && urlStoreId.trim()) {
-        setStoreId(urlStoreId.trim());
-      }
-    }
-  }, []);
 
   if (isCustomerDisplay) {
     return (

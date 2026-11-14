@@ -1,11 +1,10 @@
 {
-  "version": "2.2.1",
-  "versionCode": 87,
-  "releaseDate": "2026-11-13",
+  "version": "2.2.2",
+  "versionCode": 88,
+  "releaseDate": "2026-11-14",
   "releaseNotes": [
-    "🤖 ផ្ញើរបាយការណ៍បូកសរុបការលក់ស្វ័យប្រវត្តិតាម Cloud ២៤/៧ (24/7 Cloud Automated Telegram Daily Report) ៖ ប្រព័ន្ធដំណើរការដោយស្វ័យប្រវត្តិលើ Cloud ផ្ញើរបាយការណ៍ចូល Telegram ទៀងទាត់ទោះបីជាបិទកុំព្យូទ័រ និងមិនបើក App ក៏ដោយ។",
-    "🎯 កែតម្រូវទិន្នន័យរបាយការណ៍ឱ្យសុក្រឹត ១០០% (Fix 0 Sales & Duplicate Telegram Report) ៖ គណនាម៉ោង និងកាលបរិច្ឆេទតាមស្តង់ដារម៉ោងកម្ពុជា (Asia/Phnom_Penh) និងលុបបំបាត់ការផ្ញើស្ទួនទាំងស្រុង (Cloud Deduplication)។",
-    "⚡ ជួសជុលបញ្ហា Error #310 ពេលចុចកុម្ម៉ង់រហ័ស 30 វិនាទី និងកែចំណាយ ដំណើរការរលូន ១០០% លើគ្រប់ឧបករណ៍។"
+    "🛑 លុបបំបាត់ការផ្ញើរបាយការណ៍ស្ទួនពេលបើក App (Stop POS App Auto-Sending Duplicate Daily Report) ៖ បិទការផ្ញើស្វ័យប្រវត្តិចេញពី POS App ពេលបើកកម្មវិធី ដោយប្រគល់ភារកិច្ចនេះឱ្យ 24/7 Cloud Bot ទទួលខុសត្រូវផ្តាច់មុខ ១០០%។",
+    "🤖 ពង្រឹង Cloud Telegram Bot កាន់តែសុក្រឹត ៖ ដំណើរការដោយស្វ័យប្រវត្តិតាម Cloud ទោះបីមិនបើក App ឬបិទកុំព្យូទ័រក៏ដោយ ហើយអ្នកប្រើប្រាស់នៅតែអាចចុចប៊ូតុង «ផ្ញើរបាយការណ៍» ដោយផ្ទាល់ដៃពីផ្ទាំង Reports បានគ្រប់ពេល។"
   ],
   "author": "សុធារិទ្ធ",
   "apkDownloadUrl": "https://sothearetsuon-ai.github.io/sweetbakery-pos/SweetBakery-Android.apk",

@@ -2,11 +2,8 @@ import { NotificationConfig, CustomCakeOrder, Expense, Ingredient, StoreInfo, Co
 import { soundFx } from '../utils/audio';
 import {
   notifyTelegramExpenseDueAlert,
-  sendTelegramDailyReport,
   getStoredTelegramConfig,
-  getStoredTelegramConfigAsync,
   isDemoModeActive,
-  toCambodiaDateStr,
 } from './telegram';
 
 const STORAGE_KEY = 'bakery_notification_config';
@@ -395,51 +392,4 @@ export const runPeriodicNotificationChecks = (params: {
       }
     });
   }
-
-  // 5. Daily & Monthly Summary Report to Telegram (Default at 21:00 or 09:00 as configured)
-  getStoredTelegramConfigAsync()
-    .then((tgConfig) => {
-      if (!tgConfig.enabled || tgConfig.notifyDailyReport === false || !tgConfig.botToken) {
-        return;
-      }
-      const reportTime = tgConfig.dailyReportTime || '21:00';
-      // Only trigger if scheduled report time has arrived in Cambodia timezone
-      // If configured for evening (>= 18:00), ensure it does not fire prematurely during morning/daytime
-      const [rH] = reportTime.split(':').map((n) => parseInt(n, 10));
-      const [cH] = currentTimeStr.split(':').map((n) => parseInt(n, 10));
-      const isEveningSched = (rH || 21) >= 18;
-      const isTimeReached = currentTimeStr >= reportTime;
-
-      if (isTimeReached && (!isEveningSched || (cH || 0) >= 18)) {
-        const todaySales = (params.sales || []).filter((s) => toCambodiaDateStr(s.createdAt) === todayStr);
-        const tag = `tg-daily-report-${todayStr}`;
-        if (!hasFiredToday(tag, todayStr)) {
-          sendTelegramDailyReport({
-            sales: params.sales || [],
-            expenses: params.expenses || [],
-            customOrders: params.customOrders || [],
-            storeInfo: params.storeInfo,
-            exchangeRate: params.exchangeRate,
-            targetDate: todayStr,
-          })
-            .then((res) => {
-              if (res.success) {
-                markFiredToday(tag, todayStr);
-                if (!res.message?.includes('រួចហើយ')) {
-                  sendDeviceNotification('📊 បានផ្ញើរបាយការណ៍បូកសរុបទៅ Telegram', {
-                    body: `របាយការណ៍បូកសរុបការលក់ និងចំណាយប្រចាំថ្ងៃ-ខែ ត្រូវបានផ្ញើចូល Telegram ជោគជ័យ!`,
-                    tag,
-                  });
-                }
-              } else {
-                console.warn('[Auto Daily Report] Telegram send failed:', res.message);
-              }
-            })
-            .catch((err) => {
-              console.error('[Auto Daily Report] Failed to send report to Telegram:', err);
-            });
-        }
-      }
-    })
-    .catch(() => {});
 };
