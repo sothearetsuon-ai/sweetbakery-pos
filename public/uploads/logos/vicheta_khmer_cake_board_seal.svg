@@ -1,0 +1,118 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 600" width="100%" height="100%">
+  <defs>
+    <!-- Metallic Gold Foil Gradient -->
+    <linearGradient id="sealGoldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#e5c07b" />
+      <stop offset="25%" stop-color="#fff5cc" />
+      <stop offset="50%" stop-color="#d4af37" />
+      <stop offset="75%" stop-color="#fdf2bb" />
+      <stop offset="100%" stop-color="#aa771c" />
+    </linearGradient>
+
+    <!-- Royal Burgundy Velvet Background -->
+    <linearGradient id="burgundyBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4c0519" />
+      <stop offset="50%" stop-color="#881337" />
+      <stop offset="100%" stop-color="#3b0312" />
+    </linearGradient>
+
+    <!-- Arc Paths -->
+    <path id="sealArcTop" d="M 80,300 A 220,220 0 0,1 520,300" fill="none" />
+    <path id="sealArcBottom" d="M 100,300 A 200,200 0 0,0 500,300" fill="none" />
+    <path id="sealSubTop" d="M 125,300 A 175,175 0 0,1 475,300" fill="none" />
+  </defs>
+
+  <style>
+    .khmer-font-bold {
+      font-family: 'Kantumruy Pro', 'Battambang', 'Khmer OS Muol Light', 'Segoe UI', sans-serif;
+      font-weight: 900;
+    }
+    .khmer-font-regular {
+      font-family: 'Battambang', 'Kantumruy Pro', sans-serif;
+      font-weight: 700;
+    }
+  </style>
+
+  <!-- Outer Cut Edge Indicator -->
+  <circle cx="300" cy="300" r="294" fill="none" stroke="#e2e8f0" stroke-width="1" stroke-dasharray="4,4" />
+
+  <!-- Main Background Badge - Deep Royal Burgundy -->
+  <circle cx="300" cy="300" r="290" fill="url(#burgundyBg)" stroke="url(#sealGoldGrad)" stroke-width="10" filter="drop-shadow(0 6px 20px rgba(0,0,0,0.35))" />
+
+  <!-- Outer Intricate Gold Star / Spoke Ring -->
+  <circle cx="300" cy="300" r="268" fill="none" stroke="url(#sealGoldGrad)" stroke-width="3" stroke-dasharray="8,6" />
+
+  <!-- Inner Gold Ring -->
+  <circle cx="300" cy="300" r="255" fill="none" stroke="url(#sealGoldGrad)" stroke-width="2" />
+
+  <!-- Center Circle Frame - Warm Ivory for high contrast -->
+  <circle cx="300" cy="300" r="148" fill="#fffdfa" stroke="url(#sealGoldGrad)" stroke-width="4" filter="drop-shadow(0 4px 12px rgba(0,0,0,0.25))" />
+
+  <!-- TOP KHMER TEXT: ★ ហាងនំខេក និងនំបុ័ង វិជ្ជតា ★ -->
+  <text fill="url(#sealGoldGrad)" class="khmer-font-bold" font-size="29px" letter-spacing="1px" filter="drop-shadow(0 2px 4px rgba(0,0,0,0.5))">
+    <textPath href="#sealArcTop" startOffset="50%" text-anchor="middle">
+      ★ ហាងនំខេក និងនំបុ័ង វិជ្ជតា ★
+    </textPath>
+  </text>
+
+  <!-- SUBTITLE KHMER TEXT: នំខួបកំណើតប្រណិត • នំបុ័ងស្រស់រាល់ថ្ងៃ -->
+  <text fill="#fef08a" class="khmer-font-regular" font-size="16px" letter-spacing="1.5px">
+    <textPath href="#sealSubTop" startOffset="50%" text-anchor="middle">
+      • នំខួបកំណើតប្រណិត • នំបុ័ងស្រស់រាល់ថ្ងៃ •
+    </textPath>
+  </text>
+
+  <!-- CENTER GRAPHIC: Royal Crown & Cake -->
+  <g transform="translate(300, 275)">
+    <!-- Little Crown on top -->
+    <path d="M -16,-56 L -20,-72 L -8,-64 L 0,-76 L 8,-64 L 20,-72 L 16,-56 Z" fill="url(#sealGoldGrad)" stroke="#aa771c" stroke-width="1" />
+    <circle cx="0" cy="-76" r="2.5" fill="#ffffff" />
+    <circle cx="-20" cy="-72" r="2" fill="#ffffff" />
+    <circle cx="20" cy="-72" r="2" fill="#ffffff" />
+
+    <!-- Stand -->
+    <path d="M -65,55 L 65,55 Q 70,55 70,60 Q 70,65 65,65 L -65,65 Q -70,65 -70,60 Q -70,55 -65,55 Z" fill="url(#sealGoldGrad)" />
+    <path d="M -18,65 L -8,85 L 8,85 L 18,65 Z" fill="url(#sealGoldGrad)" />
+    <ellipse cx="0" cy="85" rx="32" ry="5" fill="url(#sealGoldGrad)" />
+
+    <!-- Cake Bottom Tier -->
+    <rect x="-56" y="5" width="112" height="48" rx="6" fill="#fff7ed" stroke="url(#sealGoldGrad)" stroke-width="2.5" />
+    <path d="M -56,5 C -46,18 -36,5 -26,18 C -16,5 -6,18 4,5 C 14,18 24,5 34,18 C 44,5 56,18 56,5 L 56,0 L -56,0 Z" fill="#881337" />
+
+    <!-- Cake Top Tier -->
+    <rect x="-38" y="-35" width="76" height="40" rx="5" fill="#ffffff" stroke="url(#sealGoldGrad)" stroke-width="2" />
+    <path d="M -38,-35 C -30,-25 -22,-35 -14,-25 C -6,-35 2,-25 10,-35 C 18,-25 26,-35 38,-35 L 38,-38 L -38,-38 Z" fill="url(#sealGoldGrad)" opacity="0.7" />
+
+    <!-- Cherries -->
+    <circle cx="-18" cy="-40" r="5" fill="#dc2626" />
+    <circle cx="0" cy="-42" r="6" fill="#dc2626" />
+    <circle cx="18" cy="-40" r="5" fill="#dc2626" />
+
+    <!-- Candle & Flame -->
+    <rect x="-3" y="-62" width="6" height="22" rx="2" fill="url(#sealGoldGrad)" />
+    <path d="M 0,-76 C 4,-70 5,-66 0,-63 C -5,-66 -4,-70 0,-76 Z" fill="#f59e0b" filter="drop-shadow(0 0 5px #fde047)" />
+  </g>
+
+  <!-- CENTER BANNER: វិជ្ជតា -->
+  <g transform="translate(300, 375)">
+    <rect x="-85" y="-18" width="170" height="34" rx="8" fill="url(#burgundyBg)" stroke="url(#sealGoldGrad)" stroke-width="2" filter="drop-shadow(0 3px 6px rgba(0,0,0,0.3))" />
+    <text x="0" y="6" class="khmer-font-bold" font-size="22px" fill="url(#sealGoldGrad)" letter-spacing="2px" text-anchor="middle">
+      វិជ្ជតា
+    </text>
+  </g>
+
+  <!-- EST 2026 Badge -->
+  <g transform="translate(300, 416)">
+    <text x="0" y="0" class="khmer-font-regular" font-size="13px" font-weight="900" fill="#78350f" letter-spacing="2px" text-anchor="middle">
+      • បង្កើតឡើងឆ្នាំ ២០២៦ (EST. 2026) •
+    </text>
+  </g>
+
+  <!-- BOTTOM KHMER PHONE NUMBERS -->
+  <text fill="url(#sealGoldGrad)" class="khmer-font-bold" font-size="24px" letter-spacing="1.5px" filter="drop-shadow(0 2px 4px rgba(0,0,0,0.5))">
+    <textPath href="#sealArcBottom" startOffset="50%" text-anchor="middle">
+      ☎ ០៩៧ ២៨៩ ៤៥៣៦ • ០៦៦ ៥២៨ ១៦០
+    </textPath>
+  </text>
+</svg>
+

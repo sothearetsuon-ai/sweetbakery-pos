@@ -1,0 +1,117 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 600" width="100%" height="100%">
+  <defs>
+    <!-- Soft Rose Gold Gradient -->
+    <linearGradient id="pinkRoseGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f43f5e" />
+      <stop offset="30%" stop-color="#fda4af" />
+      <stop offset="70%" stop-color="#fb7185" />
+      <stop offset="100%" stop-color="#e11d48" />
+    </linearGradient>
+
+    <!-- Warm Pastel Pink Background -->
+    <linearGradient id="sweetPinkBg" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#fff5f5" />
+      <stop offset="100%" stop-color="#ffe4e6" />
+    </linearGradient>
+
+    <!-- Deep Berry Gradient for Banner -->
+    <linearGradient id="berryGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#be123c" />
+      <stop offset="100%" stop-color="#881337" />
+    </linearGradient>
+
+    <!-- Arc Paths -->
+    <path id="pinkArcTop" d="M 80,300 A 220,220 0 0,1 520,300" fill="none" />
+    <path id="pinkArcBottom" d="M 100,300 A 200,200 0 0,0 500,300" fill="none" />
+    <path id="pinkSubTop" d="M 125,300 A 175,175 0 0,1 475,300" fill="none" />
+  </defs>
+
+  <style>
+    .khmer-font-bold {
+      font-family: 'Kantumruy Pro', 'Battambang', 'Khmer OS Muol Light', 'Segoe UI', sans-serif;
+      font-weight: 900;
+    }
+    .khmer-font-regular {
+      font-family: 'Battambang', 'Kantumruy Pro', sans-serif;
+      font-weight: 700;
+    }
+  </style>
+
+  <!-- Outer Cut Edge Indicator -->
+  <circle cx="300" cy="300" r="294" fill="none" stroke="#e2e8f0" stroke-width="1" stroke-dasharray="4,4" />
+
+  <!-- Main Background Badge -->
+  <circle cx="300" cy="300" r="290" fill="url(#sweetPinkBg)" stroke="url(#pinkRoseGrad)" stroke-width="9" />
+
+  <!-- Outer Scalloped / Dot Ring -->
+  <circle cx="300" cy="300" r="268" fill="none" stroke="#fb7185" stroke-width="3" stroke-dasharray="6,6" />
+
+  <!-- Inner Rose Ring -->
+  <circle cx="300" cy="300" r="255" fill="none" stroke="url(#pinkRoseGrad)" stroke-width="2" />
+
+  <!-- Center Circle Frame -->
+  <circle cx="300" cy="300" r="148" fill="#ffffff" stroke="url(#pinkRoseGrad)" stroke-width="3.5" filter="drop-shadow(0 4px 12px rgba(225,29,72,0.18))" />
+
+  <!-- TOP KHMER TEXT: 🌸 ហាងនំខេក និងនំបុ័ង វិជ្ជតា 🌸 -->
+  <text fill="#881337" class="khmer-font-bold" font-size="28px" letter-spacing="1px">
+    <textPath href="#pinkArcTop" startOffset="50%" text-anchor="middle">
+      🌸 ហាងនំខេក និងនំបុ័ង វិជ្ជតា 🌸
+    </textPath>
+  </text>
+
+  <!-- SUBTITLE KHMER TEXT: ផ្អែមឆ្ងាញ់ជាប់ចិត្ត ស្រស់ៗរាល់ថ្ងៃ -->
+  <text fill="#e11d48" class="khmer-font-regular" font-size="16px" letter-spacing="1.5px">
+    <textPath href="#pinkSubTop" startOffset="50%" text-anchor="middle">
+      • ផ្អែមឆ្ងាញ់ជាប់ចិត្ត ស្រស់ៗរាល់ថ្ងៃ •
+    </textPath>
+  </text>
+
+  <!-- CENTER GRAPHIC: Cute Strawberry Cake -->
+  <g transform="translate(300, 275)">
+    <!-- Stand -->
+    <path d="M -65,55 L 65,55 Q 70,55 70,60 Q 70,65 65,65 L -65,65 Q -70,65 -70,60 Q -70,55 -65,55 Z" fill="url(#pinkRoseGrad)" />
+    <path d="M -18,65 L -8,85 L 8,85 L 18,65 Z" fill="url(#pinkRoseGrad)" />
+    <ellipse cx="0" cy="85" rx="32" ry="5" fill="url(#pinkRoseGrad)" />
+
+    <!-- Cake Bottom Tier -->
+    <rect x="-56" y="5" width="112" height="48" rx="8" fill="#fff1f2" stroke="url(#pinkRoseGrad)" stroke-width="2.5" />
+    <path d="M -56,5 C -46,18 -36,5 -26,18 C -16,5 -6,18 4,5 C 14,18 24,5 34,18 C 44,5 56,18 56,5 L 56,0 L -56,0 Z" fill="#f43f5e" />
+
+    <!-- Cake Top Tier -->
+    <rect x="-38" y="-35" width="76" height="40" rx="6" fill="#ffffff" stroke="url(#pinkRoseGrad)" stroke-width="2" />
+    <path d="M -38,-35 C -30,-25 -22,-35 -14,-25 C -6,-35 2,-25 10,-35 C 18,-25 26,-35 38,-35 L 38,-38 L -38,-38 Z" fill="#fda4af" />
+
+    <!-- Strawberries & Cherries -->
+    <circle cx="-18" cy="-40" r="5" fill="#e11d48" />
+    <circle cx="0" cy="-42" r="6" fill="#e11d48" />
+    <circle cx="18" cy="-40" r="5" fill="#e11d48" />
+
+    <!-- Candle & Flame -->
+    <rect x="-3" y="-62" width="6" height="22" rx="2" fill="url(#pinkRoseGrad)" />
+    <path d="M 0,-76 C 4,-70 5,-66 0,-63 C -5,-66 -4,-70 0,-76 Z" fill="#f59e0b" filter="drop-shadow(0 0 5px #fde047)" />
+    <circle cx="0" cy="-66" r="2" fill="#ffffff" />
+  </g>
+
+  <!-- CENTER BANNER: វិជ្ជតា នំខេក -->
+  <g transform="translate(300, 375)">
+    <rect x="-95" y="-18" width="190" height="34" rx="17" fill="url(#berryGrad)" stroke="url(#pinkRoseGrad)" stroke-width="2" filter="drop-shadow(0 3px 6px rgba(136,19,55,0.3))" />
+    <text x="0" y="6" class="khmer-font-bold" font-size="20px" fill="#ffffff" letter-spacing="1.5px" text-anchor="middle">
+      វិជ្ជតា នំខេក
+    </text>
+  </g>
+
+  <!-- EST 2026 Badge -->
+  <g transform="translate(300, 416)">
+    <text x="0" y="0" class="khmer-font-regular" font-size="13px" font-weight="900" fill="#9f1239" letter-spacing="2px" text-anchor="middle">
+      • នំខួបកំណើតស្រស់ៗ • បង្កើតឆ្នាំ ២០២៦ •
+    </text>
+  </g>
+
+  <!-- BOTTOM KHMER PHONE NUMBERS -->
+  <text fill="#881337" class="khmer-font-bold" font-size="23.5px" letter-spacing="1.5px">
+    <textPath href="#pinkArcBottom" startOffset="50%" text-anchor="middle">
+      ទូរស័ព្ទ៖ 097 289 4536 / 066 528 160
+    </textPath>
+  </text>
+</svg>
+

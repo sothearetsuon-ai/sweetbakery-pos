@@ -1,0 +1,119 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 600" width="100%" height="100%">
+  <defs>
+    <!-- Dark Mocha Espresso -->
+    <linearGradient id="espressoGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#451a03" />
+      <stop offset="100%" stop-color="#291102" />
+    </linearGradient>
+
+    <!-- Warm Honey Amber -->
+    <linearGradient id="honeyGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#d97706" />
+      <stop offset="50%" stop-color="#f59e0b" />
+      <stop offset="100%" stop-color="#b45309" />
+    </linearGradient>
+
+    <!-- Kraft Cream Paper Background -->
+    <linearGradient id="kraftBg" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#fefce8" />
+      <stop offset="100%" stop-color="#fef3c7" />
+    </linearGradient>
+
+    <!-- Arc Paths -->
+    <path id="kraftArcTop" d="M 80,300 A 220,220 0 0,1 520,300" fill="none" />
+    <path id="kraftArcBottom" d="M 100,300 A 200,200 0 0,0 500,300" fill="none" />
+    <path id="kraftSubTop" d="M 125,300 A 175,175 0 0,1 475,300" fill="none" />
+  </defs>
+
+  <style>
+    .khmer-font-bold {
+      font-family: 'Kantumruy Pro', 'Battambang', 'Khmer OS Muol Light', 'Segoe UI', sans-serif;
+      font-weight: 900;
+    }
+    .khmer-font-regular {
+      font-family: 'Battambang', 'Kantumruy Pro', sans-serif;
+      font-weight: 700;
+    }
+  </style>
+
+  <!-- Outer Cut Edge Indicator -->
+  <circle cx="300" cy="300" r="294" fill="none" stroke="#e2e8f0" stroke-width="1" stroke-dasharray="4,4" />
+
+  <!-- Main Background Badge -->
+  <circle cx="300" cy="300" r="290" fill="url(#kraftBg)" stroke="url(#espressoGrad)" stroke-width="9" />
+
+  <!-- Wheat / Rope Pattern Ring -->
+  <circle cx="300" cy="300" r="268" fill="none" stroke="url(#honeyGrad)" stroke-width="3.5" stroke-dasharray="6,4" />
+
+  <!-- Inner Ring -->
+  <circle cx="300" cy="300" r="255" fill="none" stroke="url(#espressoGrad)" stroke-width="2" />
+
+  <!-- Center Circle Frame -->
+  <circle cx="300" cy="300" r="148" fill="#ffffff" stroke="url(#honeyGrad)" stroke-width="3" filter="drop-shadow(0 4px 10px rgba(69,26,3,0.12))" />
+
+  <!-- TOP KHMER TEXT: 🌾 ហាងនំខេក និងនំបុ័ង វិជ្ជតា 🌾 -->
+  <text fill="#451a03" class="khmer-font-bold" font-size="28px" letter-spacing="1px">
+    <textPath href="#kraftArcTop" startOffset="50%" text-anchor="middle">
+      🌾 ហាងនំខេក និងនំបុ័ង វិជ្ជតា 🌾
+    </textPath>
+  </text>
+
+  <!-- SUBTITLE KHMER TEXT: នំបុ័ងស្រស់ៗ • នំខេកខួបកំណើតប្រណិត -->
+  <text fill="#b45309" class="khmer-font-regular" font-size="15.5px" letter-spacing="1.5px">
+    <textPath href="#kraftSubTop" startOffset="50%" text-anchor="middle">
+      • នំបុ័ងស្រស់ៗ • នំខេកខួបកំណើត •
+    </textPath>
+  </text>
+
+  <!-- CENTER GRAPHIC: Artisan Wheat Sheaf & Birthday Cake -->
+  <g transform="translate(300, 275)">
+    <!-- Wheat Ears Left & Right -->
+    <path d="M -90,20 Q -80,0 -85,-20 Q -75,-10 -75,10 Z" fill="url(#honeyGrad)" />
+    <path d="M 90,20 Q 80,0 85,-20 Q 75,-10 75,10 Z" fill="url(#honeyGrad)" />
+
+    <!-- Stand -->
+    <path d="M -65,55 L 65,55 Q 70,55 70,60 Q 70,65 65,65 L -65,65 Q -70,65 -70,60 Q -70,55 -65,55 Z" fill="url(#espressoGrad)" />
+    <path d="M -18,65 L -8,85 L 8,85 L 18,65 Z" fill="url(#espressoGrad)" />
+    <ellipse cx="0" cy="85" rx="32" ry="5" fill="url(#espressoGrad)" />
+
+    <!-- Cake Bottom Tier -->
+    <rect x="-56" y="5" width="112" height="48" rx="6" fill="#fffbeb" stroke="url(#espressoGrad)" stroke-width="2.5" />
+    <path d="M -56,5 C -46,18 -36,5 -26,18 C -16,5 -6,18 4,5 C 14,18 24,5 34,18 C 44,5 56,18 56,5 L 56,0 L -56,0 Z" fill="url(#honeyGrad)" />
+
+    <!-- Cake Top Tier -->
+    <rect x="-38" y="-35" width="76" height="40" rx="5" fill="#ffffff" stroke="url(#espressoGrad)" stroke-width="2" />
+    <path d="M -38,-35 C -30,-25 -22,-35 -14,-25 C -6,-35 2,-25 10,-35 C 18,-25 26,-35 38,-35 L 38,-38 L -38,-38 Z" fill="#b45309" opacity="0.6" />
+
+    <!-- Figs / Toppings -->
+    <circle cx="-18" cy="-40" r="5" fill="#78350f" />
+    <circle cx="0" cy="-42" r="6" fill="#b45309" />
+    <circle cx="18" cy="-40" r="5" fill="#78350f" />
+
+    <!-- Candle & Flame -->
+    <rect x="-3" y="-62" width="6" height="22" rx="2" fill="url(#honeyGrad)" />
+    <path d="M 0,-76 C 4,-70 5,-66 0,-63 C -5,-66 -4,-70 0,-76 Z" fill="#f59e0b" filter="drop-shadow(0 0 5px #fde047)" />
+  </g>
+
+  <!-- CENTER BANNER: វិជ្ជតា -->
+  <g transform="translate(300, 375)">
+    <rect x="-85" y="-18" width="170" height="34" rx="8" fill="url(#espressoGrad)" stroke="url(#honeyGrad)" stroke-width="2" filter="drop-shadow(0 3px 6px rgba(0,0,0,0.2))" />
+    <text x="0" y="6" class="khmer-font-bold" font-size="22px" fill="#ffffff" letter-spacing="2px" text-anchor="middle">
+      វិជ្ជតា
+    </text>
+  </g>
+
+  <!-- EST 2026 Badge -->
+  <g transform="translate(300, 416)">
+    <text x="0" y="0" class="khmer-font-regular" font-size="13px" font-weight="900" fill="#78350f" letter-spacing="2px" text-anchor="middle">
+      • បង្កើតឡើងឆ្នាំ ២០២៦ (EST. 2026) •
+    </text>
+  </g>
+
+  <!-- BOTTOM KHMER PHONE NUMBERS -->
+  <text fill="#451a03" class="khmer-font-bold" font-size="23.5px" letter-spacing="1.5px">
+    <textPath href="#kraftArcBottom" startOffset="50%" text-anchor="middle">
+      ទូរស័ព្ទ៖ 097 289 4536 / 066 528 160
+    </textPath>
+  </text>
+</svg>
+

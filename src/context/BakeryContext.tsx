@@ -220,10 +220,10 @@ export const demoStoreInfo: StoreInfo = {
 };
 
 export const defaultStoreInfo: StoreInfo = {
-  nameKh: 'ហាងនំខកនិងនំបុ័ងវិជ្ជតា',
-  nameEn: 'SweetBakery & Cafe',
-  logoUrl: '/uploads/products/prod_1789651345094_x6k2.jpg',
-  phone: '0978707000',
+  nameKh: 'ហាងនំខេកនិងនំបុ័ងវិជ្ជតា',
+  nameEn: 'Vicheta Bakery & Cafe',
+  logoUrl: '/uploads/logos/vicheta_khmer_sweet_pink.svg',
+  phone: '097 289 4536 / 066 528 160',
   address: 'រតនៈគីរី អូរយ៉ាដាវ',
   mapsUrl: 'https://www.google.com/maps/place/%E1%9E%A0%E1%9E%B6%E1%9E%84%E1%9E%93%E1%9F%86%E1%9E%81%E1%9F%81%E1%9E%80%E1%9E%A2%E1%9E%BC%E1%9E%9A%E1%9E%99%E1%9F%89%E1%9E%B6%E1%9E%8A%E1%9E%B6%E1%9E%9C/@13.6703078,107.3446576,15z/data=!4m7!3m6!1s0x316c55bd358df1af:0xfb9f7bddaf65d259!4b1!8m2!3d13.6708499!4d107.346106!16s%2Fg%2F11n9w1vt9r',
   tagline: 'នំខេកឆ្ងាញ់ប្រណិត ស្រស់ៗរាល់ថ្ងៃ • មានទទួលកុម្ម៉ង់គ្រប់ម៉ូដ',
