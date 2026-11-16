@@ -1,0 +1,98 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 600" width="100%" height="100%">
+  <defs>
+    <!-- Gradients -->
+    <linearGradient id="goldGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#bf953f" />
+      <stop offset="25%" stop-color="#fcf6ba" />
+      <stop offset="50%" stop-color="#b38728" />
+      <stop offset="75%" stop-color="#fbf5b7" />
+      <stop offset="100%" stop-color="#aa771c" />
+    </linearGradient>
+    <linearGradient id="creamBg" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#fffdfa" />
+      <stop offset="100%" stop-color="#fbf6ee" />
+    </linearGradient>
+    <linearGradient id="roseGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#e11d48" />
+      <stop offset="100%" stop-color="#be123c" />
+    </linearGradient>
+
+    <!-- Arc Paths for Curved Text -->
+    <!-- Top Arc Path (Clockwise) -->
+    <path id="topTextArc" d="M 85,300 A 215,215 0 0,1 515,300" fill="none" />
+    <!-- Bottom Arc Path (Clockwise from bottom-left to bottom-right) -->
+    <path id="bottomTextArc" d="M 105,300 A 195,195 0 0,0 495,300" fill="none" />
+  </defs>
+
+  <!-- Background Circle Badge -->
+  <circle cx="300" cy="300" r="290" fill="url(#creamBg)" stroke="url(#goldGradient)" stroke-width="10" />
+
+  <!-- Outer Beaded / Dotted Luxury Ring -->
+  <circle cx="300" cy="300" r="268" fill="none" stroke="url(#goldGradient)" stroke-width="3" stroke-dasharray="4,6" />
+
+  <!-- Inner Solid Gold Ring -->
+  <circle cx="300" cy="300" r="255" fill="none" stroke="url(#goldGradient)" stroke-width="2" />
+
+  <!-- Center Decorative Circle Frame -->
+  <circle cx="300" cy="300" r="145" fill="#ffffff" stroke="url(#goldGradient)" stroke-width="4" filter="drop-shadow(0 4px 10px rgba(179,135,40,0.15))" />
+
+  <!-- TOP TEXT: ហាងនំខេក និងនំបុ័ង វិជ្ជតា (VICHETA BAKERY) -->
+  <text fill="#78350f" font-family="'Battambang', 'Khmer OS Battambang', 'Segoe UI', sans-serif" font-weight="900" font-size="28px" letter-spacing="2px">
+    <textPath href="#topTextArc" startOffset="50%" text-anchor="middle">
+      ★ ហាងនំខេក និងនំបុ័ង វិជ្ជតា ★
+    </textPath>
+  </text>
+
+  <!-- Subtitle Arc Text: VICHETA BAKERY -->
+  <path id="subTopArc" d="M 125,300 A 175,175 0 0,1 475,300" fill="none" />
+  <text fill="#b38728" font-family="'Playfair Display', Georgia, serif" font-weight="800" font-size="19px" letter-spacing="4px">
+    <textPath href="#subTopArc" startOffset="50%" text-anchor="middle">
+      • VICHETA BAKERY &amp; CAFE •
+    </textPath>
+  </text>
+
+  <!-- CENTER ICON: Elegant Birthday Cake with Candle and Cream Swirls -->
+  <g transform="translate(300, 290)">
+    <!-- Cake Base / Stand Platter -->
+    <path d="M -70,55 L 70,55 Q 75,55 75,60 Q 75,65 70,65 L -70,65 Q -75,65 -75,60 Q -75,55 -70,55 Z" fill="url(#goldGradient)" />
+    <path d="M -20,65 L -10,85 L 10,85 L 20,65 Z" fill="url(#goldGradient)" />
+    <ellipse cx="0" cy="85" rx="35" ry="5" fill="url(#goldGradient)" />
+
+    <!-- Cake Bottom Tier -->
+    <rect x="-60" y="5" width="120" height="50" rx="6" fill="#fdf2e9" stroke="url(#goldGradient)" stroke-width="2.5" />
+    <!-- Cream drip / frosting bottom tier -->
+    <path d="M -60,5 C -50,18 -40,5 -30,18 C -20,5 -10,18 0,5 C 10,18 20,5 30,18 C 40,5 50,18 60,5 L 60,0 L -60,0 Z" fill="#e11d48" />
+
+    <!-- Cake Top Tier -->
+    <rect x="-42" y="-35" width="84" height="40" rx="5" fill="#ffffff" stroke="url(#goldGradient)" stroke-width="2" />
+    <!-- Cream drip top tier -->
+    <path d="M -42,-35 C -35,-25 -28,-35 -21,-25 C -14,-35 -7,-25 0,-35 C 7,-25 14,-35 21,-25 C 28,-35 35,-25 42,-35 L 42,-38 L -42,-38 Z" fill="#b38728" opacity="0.6" />
+
+    <!-- Cherries / Berries on top -->
+    <circle cx="-20" cy="-40" r="5" fill="#e11d48" />
+    <circle cx="0" cy="-42" r="6" fill="#e11d48" />
+    <circle cx="20" cy="-40" r="5" fill="#e11d48" />
+
+    <!-- Elegant Candle -->
+    <rect x="-3" y="-62" width="6" height="22" rx="2" fill="url(#goldGradient)" />
+    <!-- Candle Flame Glowing -->
+    <path d="M 0,-76 C 4,-70 5,-66 0,-63 C -5,-66 -4,-70 0,-76 Z" fill="#f59e0b" filter="drop-shadow(0 0 4px #fbbf24)" />
+    <circle cx="0" cy="-66" r="2" fill="#ffffff" />
+  </g>
+
+  <!-- EST 2026 Ribbon Badge below cake -->
+  <g transform="translate(300, 395)">
+    <rect x="-65" y="-14" width="130" height="28" rx="14" fill="url(#goldGradient)" filter="drop-shadow(0 2px 4px rgba(0,0,0,0.15))" />
+    <text x="0" y="5" font-family="'Playfair Display', 'Battambang', serif" font-size="14px" font-weight="900" fill="#ffffff" letter-spacing="2px" text-anchor="middle">
+      EST. 2026
+    </text>
+  </g>
+
+  <!-- BOTTOM TEXT: 097 289 4536 • 066 528 160 -->
+  <text fill="#881337" font-family="'Battambang', 'Segoe UI', sans-serif" font-weight="900" font-size="24px" letter-spacing="1.5px">
+    <textPath href="#bottomTextArc" startOffset="50%" text-anchor="middle">
+      📞 097 289 4536 • 066 528 160
+    </textPath>
+  </text>
+</svg>
+

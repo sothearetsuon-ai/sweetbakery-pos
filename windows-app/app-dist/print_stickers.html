@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="km">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ព្រីនតែមបិទបាតនំខេក — ហាងនំខេក វិជ្ជតា</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Battambang:wght@400;700;900&family=Playfair+Display:ital,wght@0,600;0,800;1,600&display=swap');
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Battambang', sans-serif;
+      background: #f8fafc;
+      color: #1e293b;
+      padding: 24px;
+    }
+
+    .no-print-bar {
+      max-width: 900px;
+      margin: 0 auto 24px auto;
+      background: white;
+      padding: 20px 24px;
+      border-radius: 16px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+      border: 1px solid #e2e8f0;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .controls {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    select, button {
+      font-family: inherit;
+      font-size: 14px;
+      padding: 8px 16px;
+      border-radius: 8px;
+      border: 1px solid #cbd5e1;
+      background: white;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .btn-print {
+      background: #e11d48;
+      color: white;
+      border: none;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 20px;
+      border-radius: 10px;
+      box-shadow: 0 4px 12px rgba(225, 29, 72, 0.25);
+    }
+    .btn-print:hover {
+      background: #be123c;
+    }
+
+    /* A4 Paper Mockup */
+    .a4-sheet {
+      width: 210mm;
+      min-height: 297mm;
+      margin: 0 auto;
+      background: white;
+      padding: 12mm 10mm;
+      box-shadow: 0 4px 30px rgba(0,0,0,0.1);
+      display: grid;
+      align-content: start;
+      justify-content: center;
+      gap: 8mm 6mm;
+    }
+
+    /* Grid variations */
+    .grid-4cm {
+      grid-template-columns: repeat(4, 40mm);
+      gap: 8mm 6mm;
+    }
+    .grid-4cm .sticker {
+      width: 40mm;
+      height: 40mm;
+    }
+
+    .grid-5cm {
+      grid-template-columns: repeat(3, 50mm);
+      gap: 10mm 10mm;
+    }
+    .grid-5cm .sticker {
+      width: 50mm;
+      height: 50mm;
+    }
+
+    .grid-35mm {
+      grid-template-columns: repeat(5, 35mm);
+      gap: 6mm 4mm;
+    }
+    .grid-35mm .sticker {
+      width: 35mm;
+      height: 35mm;
+    }
+
+    .sticker {
+      position: relative;
+      border-radius: 50%;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+      border: 0.5px dashed #cbd5e1;
+      page-break-inside: avoid;
+    }
+
+    .sticker img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    @media print {
+      body {
+        background: transparent !important;
+        padding: 0 !important;
+      }
+      .no-print-bar {
+        display: none !important;
+      }
+      .a4-sheet {
+        box-shadow: none !important;
+        margin: 0 !important;
+        width: 100% !important;
+        padding: 10mm 8mm !important;
+      }
+      .sticker {
+        border: 0.2px dashed #e2e8f0 !important;
+        box-shadow: none !important;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="no-print-bar">
+    <div>
+      <h2 style="font-size: 18px; font-weight: 900; color: #881337;">🎂 ផ្ទាំងព្រីនតែមបិទបាតនំ (Cake Board Stickers)</h2>
+      <p style="font-size: 12px; color: #64748b; margin-top: 2px;">ហាងនំខេក និងនំបុ័ង វិជ្ជតា • 📞 097 289 4536 / 066 528 160 • EST. 2026</p>
+    </div>
+
+    <div class="controls">
+      <label style="font-size: 13px; font-weight: 700;">ជ្រើសរើសម៉ូដ Logo៖</label>
+      <select id="logoSelect" onchange="updateStickers()">
+        <optgroup label="⭐ ជម្រើសដែលបងបានជ្រើសរើស (Selected Favorites)">
+          <option value="uploads/logos/vicheta_khmer_sweet_pink.svg" selected>🌸 ម៉ូដទី២៖ Sweet Pink ផ្កាឈូកស្រស់ (ពេញ ១ សន្លឹក A4)</option>
+          <option value="uploads/logos/vicheta_khmer_cake_board_seal.svg">🍷 ម៉ូដទី៣៖ VIP Cake Board Seal ត្រាមាសក្រហម (ពេញ ១ សន្លឹក A4)</option>
+          <option value="COMBO_2_3">✨ ម៉ូដចម្រុះ Combo (ពាក់កណ្តាលម៉ូដទី២ + ពាក់កណ្តាលម៉ូដទី៣)</option>
+        </optgroup>
+        <optgroup label="🇰🇭 ម៉ូដអក្សរខ្មែរផ្សេងទៀត (Other Khmer Badges)">
+          <option value="uploads/logos/vicheta_khmer_royal_gold.svg">👑 ម៉ូដទី១៖ អក្សរខ្មែរមាសប្រណិត Royal Gold</option>
+          <option value="uploads/logos/vicheta_khmer_artisan_kraft.svg">🌾 ម៉ូដទី៤៖ អក្សរខ្មែរកួរស្រូវសាលី Artisan Kraft</option>
+        </optgroup>
+        <optgroup label="✨ ម៉ូដ 3D HD (English Badges)">
+          <option value="uploads/logos/vicheta_logo_2026_gold_luxury.jpg">🌟 3D HD Gold Luxury (EST. 2026)</option>
+          <option value="uploads/logos/vicheta_logo_2026_pastel_rose.jpg">🎀 3D HD Pastel Rose (EST. 2026)</option>
+        </optgroup>
+      </select>
+
+      <label style="font-size: 13px; font-weight: 700;">ទំហំតែម៖</label>
+      <select id="sizeSelect" onchange="updateStickers()">
+        <option value="4cm" selected>៤.០ ស.ម (40mm - ណែនាំបំផុត ២៤ តែម)</option>
+        <option value="5cm">៥.០ ស.ម (50mm - សម្រាប់នំធំ ១៥ តែម)</option>
+        <option value="35mm">៣.៥ ស.ម (35mm - ខ្នាតតូច ៣៥ តែម)</option>
+      </select>
+
+      <button type="button" class="btn-print" onclick="window.print()">
+        🖨️ បោះពុម្ពសន្លឹក A4 (Print)
+      </button>
+    </div>
+  </div>
+
+  <div id="a4Sheet" class="a4-sheet grid-4cm">
+    <!-- Generated dynamically -->
+  </div>
+
+  <script>
+    function updateStickers() {
+      const logoUrl = document.getElementById('logoSelect').value;
+      const size = document.getElementById('sizeSelect').value;
+      const sheet = document.getElementById('a4Sheet');
+
+      sheet.className = 'a4-sheet grid-' + size;
+      sheet.innerHTML = '';
+
+      let count = 24;
+      if (size === '5cm') count = 15;
+      if (size === '35mm') count = 35;
+
+      const pinkLogo = 'uploads/logos/vicheta_khmer_sweet_pink.svg';
+      const sealLogo = 'uploads/logos/vicheta_khmer_cake_board_seal.svg';
+
+      for (let i = 0; i < count; i++) {
+        const item = document.createElement('div');
+        item.className = 'sticker';
+        const img = document.createElement('img');
+        
+        if (logoUrl === 'COMBO_2_3') {
+          // Half and half combo
+          img.src = (i < Math.floor(count / 2)) ? pinkLogo : sealLogo;
+        } else {
+          img.src = logoUrl;
+        }
+
+        img.alt = 'Vicheta Bakery Sticker';
+        item.appendChild(img);
+        sheet.appendChild(item);
+      }
+    }
+
+    // Initial render
+    updateStickers();
+  </script>
+</body>
+</html>
