@@ -1104,20 +1104,20 @@ export const CustomerDisplayView: React.FC = () => {
                 </div>
               ) : idleTab === 'qr' ? (
                 /* Store KHQR Standee & Online Order QR Mode */
-                <div className="flex-1 flex flex-col items-center justify-center text-center p-3 sm:p-5 space-y-3 overflow-y-auto max-h-full">
-                  <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-pink-500 to-rose-500 text-white flex items-center justify-center text-2xl shadow-lg shadow-pink-500/25 shrink-0">
+                <div className="flex-1 flex flex-col items-center justify-center text-center p-2 sm:p-4 space-y-2 overflow-y-auto max-h-full">
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-tr from-pink-500 to-rose-500 text-white flex items-center justify-center text-xl sm:text-2xl shadow-lg shadow-pink-500/25 shrink-0">
                     📱
                   </div>
-                  <div className="space-y-1 shrink-0">
+                  <div className="space-y-0.5 shrink-0">
                     <h3
-                      className={`text-lg sm:text-xl md:text-2xl font-black font-muol ${
+                      className={`text-base sm:text-lg md:text-xl font-black font-muol ${
                         isDark ? 'text-white' : 'text-slate-900'
                       }`}
                     >
                       ស្កេនមើលម៉ូដនំ & កុម្ម៉ង់តាមទូរស័ព្ទដៃ
                     </h3>
                     <p
-                      className={`text-xs sm:text-sm font-battambang max-w-md ${
+                      className={`text-[11px] sm:text-xs font-battambang max-w-md ${
                         isDark ? 'text-slate-400' : 'text-slate-500'
                       }`}
                     >
@@ -1127,30 +1127,30 @@ export const CustomerDisplayView: React.FC = () => {
 
                   <div
                     onClick={() => setIsKhqrZoomOpen(true)}
-                    className="p-3 sm:p-4 bg-white rounded-3xl shadow-2xl border-4 border-pink-500/40 inline-flex flex-col items-center cursor-zoom-in group hover:scale-[1.02] transition-transform shrink-0"
+                    className="p-2 sm:p-3 bg-white rounded-2xl sm:rounded-3xl shadow-xl border-2 sm:border-4 border-pink-500/40 inline-flex flex-col items-center cursor-zoom-in group hover:scale-[1.02] transition-transform shrink-0"
                     title="ចុចដើម្បីមើល QR ធំពេញអេក្រង់ (Click to view full screen)"
                   >
                     {storeInfo.khqrQrImage ? (
                       <img
                         src={getProductImageUrl(storeInfo.khqrQrImage)}
                         alt="Store Order QR"
-                        className="max-h-[34vh] sm:max-h-[40vh] max-w-[240px] sm:max-w-[280px] w-auto h-auto object-contain rounded-2xl drop-shadow-sm"
+                        className="max-h-[22vh] sm:max-h-[26vh] max-w-[200px] sm:max-w-[240px] w-auto h-auto object-contain rounded-xl drop-shadow-sm"
                       />
                     ) : (
                       <QrCodeImage
                         data={customerOrderUrl}
-                        size={220}
-                        className="w-44 h-44 sm:w-52 sm:h-52"
+                        size={170}
+                        className="w-36 h-36 sm:w-44 sm:h-44"
                       />
                     )}
-                    <div className="mt-2 text-[11px] font-bold text-slate-600 flex items-center gap-1 group-hover:text-pink-600 transition-colors">
-                      <ZoomIn className="w-3.5 h-3.5 text-pink-500" />
+                    <div className="mt-1.5 text-[10px] sm:text-[11px] font-bold text-slate-600 flex items-center gap-1 group-hover:text-pink-600 transition-colors">
+                      <ZoomIn className="w-3 h-3 text-pink-500" />
                       <span>ចុចលើរូបដើម្បីពង្រីកពេញអេក្រង់</span>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2 text-xs font-bold text-pink-500 shrink-0">
-                    <Sparkles className="w-4 h-4" />
+                  <div className="flex items-center gap-1.5 text-[11px] sm:text-xs font-bold text-pink-500 shrink-0">
+                    <Sparkles className="w-3.5 h-3.5" />
                     <span>គាំទ្រទាំង iOS, Android & Telegram Mini App</span>
                   </div>
                 </div>
